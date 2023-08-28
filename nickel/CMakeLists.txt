@@ -1,0 +1,5 @@
+aux_source_directory(src nickel_src)
+add_library(${engine_name} STATIC ${nickel_src})
+target_compile_features(${engine_name} PUBLIC cxx_std_17)
+target_link_libraries(${engine_name} PUBLIC glfw glad gecs stb_image)
+target_include_directories(${engine_name} PUBLIC ./include)
