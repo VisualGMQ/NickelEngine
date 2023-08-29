@@ -1,5 +1,10 @@
 aux_source_directory(src nickel_src)
+aux_source_directory(src/window nickel_src)
+aux_source_directory(src/renderer nickel_src)
+aux_source_directory(src/input nickel_src)
+
 add_library(${engine_name} STATIC ${nickel_src})
 target_compile_features(${engine_name} PUBLIC cxx_std_17)
-target_link_libraries(${engine_name} PUBLIC glfw glad gecs stb_image)
+target_link_libraries(${engine_name} PUBLIC glfw glad gecs stb_image toml++)
 target_include_directories(${engine_name} PUBLIC ./include)
+target_precompile_headers(${engine_name} PRIVATE include/pch.hpp)

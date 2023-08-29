@@ -9,6 +9,11 @@ set(engine_name nickel)
 add_subdirectory(3rdlibs)
 add_subdirectory(nickel)
 
+option(NICKEL_BUILD_SANDBOX "build sandbox" ON)
+if (NICKEL_BUILD_SANDBOX)
+    add_subdirectory(sandbox)
+endif()
+
 option(NICKEL_BUILD_EDITOR "build editor" ON)
 if (NICKEL_BUILD_EDITOR)
     add_subdirectory(editor)

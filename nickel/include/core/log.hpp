@@ -131,11 +131,11 @@ class LoggerMgr final {
     }
 };
 
-#define LOGT(...) logger::LoggerMgr::Instance().GetDefault().Trace(__FUNCTION__, __FILE__, __LINE__, ## __VA_ARGS__)
-#define LOGD(...) logger::LoggerMgr::Instance().GetDefault().Debug(__FUNCTION__, __FILE__, __LINE__, ## __VA_ARGS__)
-#define LOGI(...) logger::LoggerMgr::Instance().GetDefault().Info(__FUNCTION__, __FILE__, __LINE__, ## __VA_ARGS__)
-#define LOGW(...) logger::LoggerMgr::Instance().GetDefault().Warning(__FUNCTION__, __FILE__, __LINE__, ## __VA_ARGS__)
-#define LOGE(...) logger::LoggerMgr::Instance().GetDefault().Error(__FUNCTION__, __FILE__, __LINE__, ## __VA_ARGS__)
-#define LOGF(...) logger::LoggerMgr::Instance().GetDefault().FatalError(__FUNCTION__, __FILE__, __LINE__, ## __VA_ARGS__)
+#define LOGT(tag, ...) logger::LoggerMgr::Instance().GetDefault().Trace(__FUNCTION__, __FILE__, __LINE__, "[", tag, "]:", ## __VA_ARGS__)
+#define LOGD(tag, ...) logger::LoggerMgr::Instance().GetDefault().Debug(__FUNCTION__, __FILE__, __LINE__, "[", tag, "]:", ## __VA_ARGS__)
+#define LOGI(tag, ...) logger::LoggerMgr::Instance().GetDefault().Info(__FUNCTION__, __FILE__, __LINE__, "[", tag, "]:", ## __VA_ARGS__)
+#define LOGW(tag, ...) logger::LoggerMgr::Instance().GetDefault().Warning(__FUNCTION__, __FILE__, __LINE__,"[", tag, "]:", ## __VA_ARGS__)
+#define LOGE(tag, ...) logger::LoggerMgr::Instance().GetDefault().Error(__FUNCTION__, __FILE__, __LINE__,"[", tag, "]:", ## __VA_ARGS__)
+#define LOGF(tag, ...) logger::LoggerMgr::Instance().GetDefault().FatalError(__FUNCTION__, __FILE__, __LINE__,"[", tag, "]:", ## __VA_ARGS__)
 
 }  // namespace logger
