@@ -1,6 +1,6 @@
-[submodule "3rdlibs/gecs"]
-	path = 3rdlibs/gecs
-	url = https://github.com/VisualGMQ/gecs.git
 [submodule "3rdlibs/glfw"]
 	path = 3rdlibs/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "3rdlibs/gecs"]
+	path = 3rdlibs/gecs
+	url = https://github.com/VisualGMQ/gecs.git
