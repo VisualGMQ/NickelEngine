@@ -1,4 +1,3 @@
-set(GECS_BUILD_TEST OFF)
 add_subdirectory(gecs)
 
 add_subdirectory(glad)
