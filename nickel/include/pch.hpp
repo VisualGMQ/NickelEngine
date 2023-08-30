@@ -2,6 +2,8 @@
 
 #include "toml++/toml.hpp"
 
+#include "debugbreak.hpp"
+
 #include "stb_image.h"
 #include "glad/glad.h"
 

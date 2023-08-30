@@ -723,24 +723,14 @@ using Mat44 = Mat<CGMATH_NUMERIC_TYPE, 4, 4>;
 
 inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
                          float near, float far) {
+    // clang-format off
     return Mat44::FromRow({
-        2.0f / (right - left),
-        0.0f,
-        0.0f,
-        (left + right) / (left - right),
-        0.0f,
-        2.0f / (top - bottom),
-        0.0f,
-        (bottom + top) / (bottom - top),
-        0.0f,
-        0.0f,
-        2.0f / (far - near),
-        (near + far) / (near - far),
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
+        2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
+                         0.0f, 2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
+                         0.0f,                  0.0f, 2.0f / (far - near),     (near + far) / (near - far),
+                         0.0f,                  0.0f,                0.0f,                            1.0f,
     });
+    // clang-format on
 }
 
 inline Mat44 CreateTranslation(const Vec3& position) {

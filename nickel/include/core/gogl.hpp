@@ -134,6 +134,7 @@ private:
 };
 
 enum class PrimitiveType {
+    Unknown,
     Points,
     LineStrip,
     LineLoop,
