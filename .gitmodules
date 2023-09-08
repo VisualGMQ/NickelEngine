@@ -4,3 +4,6 @@
 [submodule "3rdlibs/gecs"]
 	path = 3rdlibs/gecs
 	url = https://github.com/VisualGMQ/gecs.git
+[submodule "3rdlibs/mirrow"]
+	path = 3rdlibs/mirrow
+	url = https://github.com/VisualGMQ/mirrow.git

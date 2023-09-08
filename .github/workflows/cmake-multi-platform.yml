@@ -56,6 +56,11 @@ jobs:
 
     - name: pull submodules
       run: git submodule update --init --recursive
+
+    - name: Install GLFW
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt install libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules xorg-dev
+
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
