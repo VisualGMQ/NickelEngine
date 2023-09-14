@@ -157,7 +157,7 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
 std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
     std::ifstream file("shader/vertex.shader");
     if (file.fail()) {
-        LOGE(RendererErr, "read vertex shader failed");
+        LOGE(log_tag::Renderer, "read vertex shader failed");
         return nullptr;
     }
     std::string vertex_source((std::istreambuf_iterator<char>(file)),
@@ -167,7 +167,7 @@ std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
 
     file.open("shader/frag.shader");
     if (file.fail()) {
-        LOGE(RendererErr, "read vertex shader failed");
+        LOGE(log_tag::Renderer, "read vertex shader failed");
         return nullptr;
     }
     std::string frag_source((std::istreambuf_iterator<char>(file)),

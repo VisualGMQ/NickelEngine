@@ -3,7 +3,7 @@
 #include "glad/glad.h"
 #include "log.hpp"
 #include "cgmath.hpp"
-#include "core/errort.hpp"
+#include "core/log_tag.hpp"
 #include <unordered_map>
 #include <optional>
 
@@ -50,7 +50,7 @@ inline const char* GLError2Str(GLenum error) {
     expr; \
     auto e = glGetError(); \
     if (e != GL_NO_ERROR) { \
-        LOGE(GLErr, gogl::GLError2Str(e)); \
+        LOGE(log_tag::GL, gogl::GLError2Str(e)); \
     } \
 } while(0)
 
@@ -59,7 +59,7 @@ inline const char* GLError2Str(GLenum error) {
     auto value = expr; \
     GLenum e = glGetError(); \
     if (e != GL_NO_ERROR) { \
-        LOGE(GLErr, gogl::GLError2Str(e)); \
+        LOGE(log_tag::GL, gogl::GLError2Str(e)); \
     } \
     return value; \
 }()
@@ -104,7 +104,7 @@ public:
         GL_CALL(glGetShaderiv(id_, GL_COMPILE_STATUS, &success));
         if(!success) {
             GL_CALL(glGetShaderInfoLog(id_, 1024, NULL, infoLog));
-            LOGF(GLErr, type2str(type), " shader compile failed:\r\n", infoLog);
+            LOGF(log_tag::GL, type2str(type), " shader compile failed:\r\n", infoLog);
         }
     }
 
@@ -207,7 +207,7 @@ public:
         GL_CALL(glGetProgramiv(id_, GL_LINK_STATUS, &success));
         if(!success) {
             glGetProgramInfoLog(id_, 1024, NULL, infoLog);
-            LOGF(GLErr, "shader link failed:\r\n", infoLog);
+            LOGF(log_tag::GL, "shader link failed:\r\n", infoLog);
         }
     }
 
@@ -223,7 +223,7 @@ public:
         GL_CALL(glGetProgramiv(id_, GL_LINK_STATUS, &success));
         if(!success) {
             glGetProgramInfoLog(id_, 1024, NULL, infoLog);
-            LOGF(GLErr, "shader link failed:\r\n", infoLog);
+            LOGF(log_tag::GL, "shader link failed:\r\n", infoLog);
         }
     }
 
@@ -241,7 +241,7 @@ public:
         Use();
         auto loc = GL_RET_CALL(glGetUniformLocation(id_, name.data()));
         if (loc == -1) {
-            LOGE(GLErr, "don't has uniform ", name);
+            LOGE(log_tag::GL, "don't has uniform ", name);
         } else {
             GL_CALL(glUniformMatrix4fv(loc, 1, GL_FALSE, m.data));
         }
@@ -251,7 +251,7 @@ public:
         Use();
         auto loc = GL_RET_CALL(glGetUniformLocation(id_, name.data()));
         if (loc == -1) {
-            LOGE(GLErr, "don't has uniform ", name);
+            LOGE(log_tag::GL, "don't has uniform ", name);
         } else {
             GL_CALL(glUniform3f(loc, v.x, v.y, v.z));
         }
@@ -261,7 +261,7 @@ public:
         Use();
         auto loc = GL_RET_CALL(glGetUniformLocation(id_, name.data()));
         if (loc == -1) {
-            LOGE(GLErr, "don't has uniform ", name);
+            LOGE(log_tag::GL, "don't has uniform ", name);
         } else {
             GL_CALL(glUniform1i(loc, value));
         }
@@ -269,7 +269,7 @@ public:
 
     void DrawArray(PrimitiveType type, uint64_t first, uint64_t count) {
         if (type_ != Type::Graphics) {
-            LOGE(GLErr, "your shader isn't graphics shader");
+            LOGE(log_tag::GL, "your shader isn't graphics shader");
         } else {
             GL_CALL(glDrawArrays(Primitive2GL(type), first, count));
         }
@@ -277,7 +277,7 @@ public:
 
     void DrawElements(PrimitiveType type, uint64_t count, GLenum dataType, uint64_t offset) {
         if (type_ != Type::Graphics) {
-            LOGE(GLErr, "your shader isn't graphics shader");
+            LOGE(log_tag::GL, "your shader isn't graphics shader");
         } else {
             GL_CALL(glDrawElements(Primitive2GL(type), count, dataType, (void*)offset));
         }
@@ -285,7 +285,7 @@ public:
 
     void DispatchCompute(uint64_t x, uint64_t y, uint64_t z) {
         if (type_ != Type::Compute) {
-            LOGE(GLErr, "your shader isn't graphics shader");
+            LOGE(log_tag::GL, "your shader isn't graphics shader");
         } else {
             GL_CALL(glDispatchCompute(x, y, z));
         }
@@ -455,7 +455,7 @@ public:
             type_ != BufferType::TransformFeedback &&
             type_ != BufferType::UniformBuffer &&
             type_ != BufferType::ShaderStorage) {
-            LOGW(GLErr, "the buffer type don't support bind to base");
+            LOGW(log_tag::GL, "the buffer type don't support bind to base");
         } else {
             GL_CALL(glBindBufferBase(BufferType2GL(type_), slot, id_));
         }
@@ -691,7 +691,7 @@ inline uint8_t GetAttributeTypeCount(Attribute::Type type) {
         case Attribute::Type::Mat3: return 3 * 3;
         case Attribute::Type::Mat4: return 4 * 4;
     }
-    LOGW(GLErr, "Unknown attribute type");
+    LOGW(log_tag::GL, "Unknown attribute type");
     return 0;
 }
 
@@ -705,7 +705,7 @@ inline uint8_t GetAttributeTypeSize(Attribute::Type type) {
         case Attribute::Type::Mat3: return 4 * typeCount;
         case Attribute::Type::Mat4: return 4 * typeCount;
     }
-    LOGW(GLErr, "Unknown attribute type");
+    LOGW(log_tag::GL, "Unknown attribute type");
     return 0;
 }
 

@@ -1,4 +1,6 @@
 #include "window/window.hpp"
+#include "refl/window.hpp"
+#include "config/config.hpp"
 
 namespace nickel {
 
@@ -39,36 +41,27 @@ Window::~Window() {
     glfwDestroyWindow(window_);
 }
 
-WindowBuilder WindowBuilder::FromConfig(const std::string& filename) {
-    WindowBuilder builder = Default();
-    toml::parse_result result = toml::parse_file(filename);
-    if (!result) {
-        LOGE(ConfigErr, "create window from ", filename,
-             " failed, use default config");
+WindowBuilder WindowBuilder::FromConfig(std::string_view filename) {
+    WindowBuilder::Data data = WindowBuilder::Data::Default();
+    auto parseResult = toml::parse_file(filename);
+    if (parseResult.failed() || parseResult.table().find("window") == parseResult.table().end()) {
+        LOGW(log_tag::Config, "Read window config from ", filename, " failed. Use default config. Error: ", parseResult.error());
     } else {
-        auto& tbl = result.table();
-        if (auto window_tbl = tbl["window"].as_table(); !window_tbl) {
-            LOGW(ConfigErr, "window config invalid, please check ", filename);
-        } else {
-            toml::table& window = *window_tbl;
-            if (auto title = window["title"].value<std::string>();
-                title.has_value()) {
-                builder.Title(title.value());
-            }
-            if (auto size = window["size"].as_array();
-                size && size->size() == 2) {
-                builder.Size(
-                    {static_cast<float>(size->at(0).value<int>().value()),
-                     static_cast<float>(size->at(1).value<int>().value())});
-            }
-        }
+        data = mirrow::serd::srefl::deserialize<WindowBuilder::Data>(*parseResult.table()["window"].as_table());
     }
 
-    return builder;
+    return WindowBuilder(data);
+}
+
+WindowBuilder::Data WindowBuilder::Data::Default() {
+    return {
+        config::DefaultWindowTitle,
+        {config::DefaultWindowWidth, config::DefaultWindowHeight}
+    };
 }
 
 WindowBuilder WindowBuilder::Default() {
-    return WindowBuilder().Title("nickel engine").Size({640, 480});
+    return WindowBuilder(WindowBuilder::Data::Default());
 }
 
 }  // namespace nickel

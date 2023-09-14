@@ -5,6 +5,7 @@
 #include <cassert>
 #include "debugbreak.hpp"
 #include "log.hpp"
+#include "log_tag.hpp"
 
 //! @addtogroup utilities
 //! @{
@@ -14,7 +15,7 @@
 //! @param msg  log fatal messge while assert
 #define Assert(expr, msg) do { \
     if (!(expr)) { \
-        LOGF(msg); \
+        LOGF("Assert", msg); \
         debug_break(); \
     } \
 } while(0)

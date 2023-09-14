@@ -2,6 +2,7 @@
 
 #include "core/cgmath.hpp"
 #include "core/gogl.hpp"
+#include "core/log_tag.hpp"
 #include <iterator>
 #include <optional>
 

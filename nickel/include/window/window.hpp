@@ -1,11 +1,11 @@
 #pragma once
 
-#include "pch.hpp"
 #include "config/config.hpp"
-#include "core/log.hpp"
 #include "core/cgmath.hpp"
-#include "core/errort.hpp"
 #include "core/gogl.hpp"
+#include "core/log.hpp"
+#include "core/log_tag.hpp"
+#include "pch.hpp"
 
 namespace nickel {
 
@@ -13,6 +13,7 @@ class Window final {
 public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
+
     Window(Window&& o) {
         window_ = o.window_;
         o.window_ = nullptr;
@@ -32,32 +33,33 @@ public:
     bool ShouldClose() const;
     void SwapBuffer() const;
 
+    void* Raw() { return window_; }
+
 private:
     GLFWwindow* window_;
 };
 
 class WindowBuilder final {
 public:
-    auto& Title(const std::string& title) {
-        title_ = title;
-        return *this;
-    }
+    struct Data {
+        std::string title;
+        cgmath::Vec2 size;
 
-    auto& Size(const cgmath::Vec2& size) {
-        size_ = size;
-        return *this;
-    }
+        static Data Default();
+    };
 
-    static WindowBuilder FromConfig(const std::string& filename);
+    WindowBuilder(const Data& data) : buildData_(data) {}
+
+    static WindowBuilder FromConfig(std::string_view filename);
     static WindowBuilder Default();
 
     Window Build() {
-        return Window(title_, static_cast<int>(size_.x), static_cast<int>(size_.y));
+        return Window(buildData_.title, static_cast<int>(buildData_.size.x),
+                      static_cast<int>(buildData_.size.y));
     }
 
 private:
-    std::string title_;
-    cgmath::Vec2 size_;
+    Data buildData_;
 };
 
-}
+}  // namespace nickel
