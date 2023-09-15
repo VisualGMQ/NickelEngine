@@ -1,84 +1,97 @@
 #pragma once
 
 #include "core/cgmath.hpp"
+#include "input/device.hpp"
 #include "pch.hpp"
-#include "window/event.hpp"
 
 namespace nickel {
 
-void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent>,
-                        gecs::event_dispatcher<MouseMotionEvent>,
-                        gecs::event_dispatcher<KeyboardEvent>);
-
-template <typename T>
-struct Button {
-    T btn;
-    bool isPress = false;
-    bool lastState = false;
-
-    bool IsPressed() const { return !lastState && isPress; }
-
-    bool IsReleased() const { return lastState && !isPress; }
-
-    bool IsPressing() const { return lastState && isPress; }
-
-    bool IsReleasing() const { return !lastState && !isPress; }
+enum class State {
+    Unknown,
+    Pressed,
+    Pressing,
+    Released,
+    Releasing,
 };
 
-using KeyButton = Button<Key>;
+struct InputActionState final {
+    InputActionState(State state) : state_(state) {}
 
-class Keyboard {
+    bool IsPressed() const { return state_ == State::Pressed; }
+
+    bool IsPressing() const { return state_ == State::Pressing; }
+
+    bool IsReleased() const { return state_ == State::Released; }
+
+    bool IsReleasing() const { return state_ == State::Releasing; }
+
+private:
+    State state_ = State::Unknown;
+};
+
+/**
+ * @brief an input wrapper for hidding different between keyboard and touch
+ * devices
+ */
+class BasicInput {
 public:
-    friend void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent>,
-                                   gecs::event_dispatcher<MouseMotionEvent>,
-                                   gecs::event_dispatcher<KeyboardEvent>);
+    virtual InputActionState GetActionState(
+        const std::string& action) const = 0;
+    virtual cgmath::Vec2 Axis() const = 0;
 
-    Keyboard();
+    virtual ~BasicInput() = default;
+};
 
-    const KeyButton& Key(Key key) const {
-        return buttons_[static_cast<size_t>(key)];
+/**
+ * @brief input for keyboard devices
+ */
+class KeyboardInput : public BasicInput {
+public:
+    KeyboardInput(Keyboard& keyboard,
+                  std::unordered_map<std::string, Key>&& actions)
+        : keyboard_(keyboard), actions_(std::move(actions)) {}
+
+    KeyboardInput(Keyboard& keyboard,
+                  const std::unordered_map<std::string, Key>& actions)
+        : keyboard_(keyboard), actions_(actions) {}
+
+    InputActionState GetActionState(const std::string& action) const override;
+    cgmath::Vec2 Axis() const override;
+
+private:
+    std::unordered_map<std::string, Key> actions_;
+    Keyboard& keyboard_;
+};
+
+/**
+ * @brief  input for touchable devices(like Phone)
+ */
+class TouchInput : public BasicInput {
+    InputActionState GetActionState(const std::string& action) const override;
+    cgmath::Vec2 Axis() const override;
+};
+
+/**
+ * @brief a wrapper for RawInput, used for bind in Lua
+ */
+class Input final {
+public:
+    Input() = default;
+
+    Input(std::unique_ptr<BasicInput>&& input) : input_(std::move(input)) {}
+
+    InputActionState GetActionState(const std::string& action) const {
+        Assert(input_, "input is nullptr");
+        return input_->GetActionState(action);
     }
 
-    static void Update(gecs::resource<gecs::mut<Keyboard>> keyboard);
+    cgmath::Vec2 Axis() const {
+        Assert(input_, "input is nullptr");
+        return input_->Axis();
+    }
 
 private:
-    KeyButton buttons_[static_cast<size_t>(Key::KEY_LAST)];
-
-    static void keyboardEventHandle(const KeyboardEvent& event,
-                               gecs::resource<gecs::mut<Keyboard>> keyboard);
-};
-
-using MouseButton = Button<MouseButtonType>;
-
-class Mouse {
-public:
-    friend void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent>,
-                                   gecs::event_dispatcher<MouseMotionEvent>,
-                                   gecs::event_dispatcher<KeyboardEvent>);
-
-    cgmath::Vec2 Position() const { return position_; }
-
-    cgmath::Vec2 Offset() const { return offset_; }
-
-    const MouseButton& LeftBtn() const { return buttons_[0]; }
-
-    const MouseButton& MiddleBtn() const { return buttons_[1]; }
-
-    const MouseButton& RightBtn() const { return buttons_[2]; }
-
-    static void Update(gecs::resource<gecs::mut<Mouse>>);
-
-private:
-    cgmath::Vec2 position_;
-    cgmath::Vec2 offset_;
-    MouseButton buttons_[3] = {MouseButton{MouseButtonType::Left},
-                               MouseButton{MouseButtonType::Right},
-                               MouseButton{MouseButtonType::Middle}};
-
-    static void mouseMotionEventHandle(const MouseMotionEvent& event,
-                                  gecs::resource<gecs::mut<Mouse>> mouse);
-    static void mouseBtnEventHandle(const MouseButtonEvent& event,
-                               gecs::resource<gecs::mut<Mouse>> mouse);
+    std::unique_ptr<BasicInput> input_;
 };
 
 }  // namespace nickel

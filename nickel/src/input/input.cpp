@@ -2,51 +2,55 @@
 
 namespace nickel {
 
-Keyboard::Keyboard() {
-    for (int i = 0; i < static_cast<int>(Key::KEY_LAST); i++) {
-        buttons_[i].btn = static_cast<::nickel::Key>(i);
+InputActionState KeyboardInput::GetActionState(
+    const std::string& action) const {
+    if (auto it = actions_.find(action); it != actions_.end()) {
+        auto key = keyboard_.Key(it->second);
+        if (key.IsPressed()) {
+            return InputActionState(State::Pressed);
+        } else if (key.IsReleased()) {
+            return InputActionState(State::Released);
+        } else if (key.IsPressing()) {
+            return InputActionState(State::Pressing);
+        } else {
+            return InputActionState(State::Releasing);
+        }
+    } else {
+        LOGW("[Input]: can't find action ", action,
+             ", did you define it in game_conf.lua?");
+        return InputActionState(State::Unknown);
     }
 }
 
-void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent> btn,
-                        gecs::event_dispatcher<MouseMotionEvent> motion,
-                        gecs::event_dispatcher<KeyboardEvent> keyboard) {
-    motion.sink().add<Mouse::mouseMotionEventHandle>();
-    btn.sink().add<Mouse::mouseBtnEventHandle>();
-    keyboard.sink().add<Keyboard::keyboardEventHandle>();
-}
-
-void Keyboard::keyboardEventHandle(const KeyboardEvent& event,
-                              gecs::resource<gecs::mut<Keyboard>> keyboard) {
-    auto& key = keyboard->buttons_[static_cast<uint32_t>(event.key)];
-    key.lastState = key.isPress;
-    key.isPress = event.action != Action::Release ? true : false;
-}
-
-void Mouse::mouseMotionEventHandle(const MouseMotionEvent& event,
-                              gecs::resource<gecs::mut<Mouse>> mouse) {
-    mouse->offset_ = event.position - mouse->offset_;
-    mouse->offset_ = event.position;
-}
-
-void Mouse::mouseBtnEventHandle(const MouseButtonEvent& event,
-                           gecs::resource<gecs::mut<Mouse>> mouse) {
-    auto& btn = mouse->buttons_[static_cast<uint32_t>(event.btn)];
-
-    btn.lastState = btn.isPress;
-    btn.isPress = event.action != Action::Release ? true : false;
-}
-
-void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
-    for (auto& key : keyboard->buttons_)  {
-        key.lastState = key.isPress;
+cgmath::Vec2 KeyboardInput::Axis() const {
+    cgmath::Vec2 axis;
+    if (auto state = GetActionState("left");
+        state.IsPressed() || state.IsPressing()) {
+        axis.x -= 1;
     }
+    if (auto state = GetActionState("right");
+        state.IsPressed() || state.IsPressing()) {
+        axis.x += 1;
+    }
+    if (auto state = GetActionState("up");
+        state.IsPressed() || state.IsPressing()) {
+        axis.y += 1;
+    }
+    if (auto state = GetActionState("down");
+        state.IsPressed() || state.IsPressing()) {
+        axis.y -= 1;
+    }
+    return axis;
 }
 
-void Mouse::Update(gecs::resource<gecs::mut<Mouse>> mouse) {
-    for (auto& btn : mouse->buttons_) {
-        btn.lastState = btn.isPress;
-    }
+InputActionState TouchInput::GetActionState(const std::string& action) const {
+    Assert(false, "not implemented");
+    return InputActionState{State::Unknown};
+}
+
+cgmath::Vec2 TouchInput::Axis() const {
+    Assert(false, "not implemented");
+    return cgmath::Vec2{};
 }
 
 }  // namespace nickel

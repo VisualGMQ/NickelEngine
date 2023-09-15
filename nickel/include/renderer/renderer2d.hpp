@@ -42,7 +42,7 @@ public:
 
     void SetViewport(const cgmath::Vec2& offset, const cgmath::Vec2& size);
 
-    void SetLineWidth(int width) { GL_CALL(glLineWidth(width)); }
+    void SetLineWidth(float width) { GL_CALL(glLineWidth(width)); }
 
     void SetClearColor(const cgmath::Vec4& color) {
         GL_CALL(glClearColor(color.x, color.y, color.z, color.w));

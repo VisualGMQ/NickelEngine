@@ -1,6 +1,7 @@
 #include "config/config.hpp"
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
+#include "input/device.hpp"
 #include "input/input.hpp"
 #include "pch.hpp"
 #include "window/event.hpp"
@@ -33,12 +34,43 @@ void VideoSystemShutdown(gecs::commands cmds) {
 }
 
 void InputSystemInit(gecs::commands cmds,
-                     gecs::event_dispatcher<MouseButtonEvent> mouseBtn,
-                     gecs::event_dispatcher<MouseMotionEvent> mouseMotion,
-                     gecs::event_dispatcher<KeyboardEvent> keyboard) {
-    cmds.emplace_resource<Keyboard>();
+                     gecs::event_dispatcher<MouseButtonEvent> mouseBtnDispatcher,
+                     gecs::event_dispatcher<MouseMotionEvent> mouseMotionDispatcher,
+                     gecs::event_dispatcher<KeyboardEvent> keyboardDispatcher) {
+    auto& keyboard = cmds.emplace_resource<Keyboard>();
     cmds.emplace_resource<Mouse>();
-    ConnectInput2Event(mouseBtn, mouseMotion, keyboard);
+    ConnectInput2Event(mouseBtnDispatcher, mouseMotionDispatcher, keyboardDispatcher);
+
+    std::unordered_map<std::string, Key> actions = {
+        {    "up", Key::W},
+        {  "down", Key::S},
+        {  "left", Key::A},
+        { "right", Key::D},
+        {"attack", Key::J},
+        {  "jump", Key::K}
+    };
+    // read actions from config file
+    // IMPROVE: use serd to auto-parse
+    auto parseResult = toml::parse_file("./nickel-config.toml");
+    if (!parseResult) {
+        LOGW(log_tag::Config, "parse ", "nickel-config.toml" " failed, use default actions.\nError: ", parseResult.error());
+    } else {
+        const auto& tbl = parseResult.table(); 
+        if (!tbl["input-action"].is_table()) {
+            LOGW(log_tag::Config, "\"input-action\" table not exists, use default actions");
+        } else {
+            for (auto& [key, value] : tbl) {
+                if (!value.is_string()) {
+                    LOGW(log_tag::Config, "value of input action ", key, " is not string!");
+                } else {
+                    actions[std::string(key.str())] = GetKeyFromName(value.as_string()->get());
+                }
+            }
+        }
+    }
+
+    cmds.emplace_resource<Input>(
+        std::make_unique<KeyboardInput>(keyboard, actions));
 }
 
 int main(int argc, char** argv) {

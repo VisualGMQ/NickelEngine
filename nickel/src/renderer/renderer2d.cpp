@@ -18,7 +18,9 @@ Renderer2D::Renderer2D() {
 
 void Renderer2D::SetViewport(const cgmath::Vec2& offset,
                              const cgmath::Vec2& size) {
-    GL_CALL(glViewport(offset.x, offset.y, size.w, size.h));
+    GL_CALL(glViewport(
+        static_cast<GLsizei>(offset.x), static_cast<GLsizei>(offset.y),
+        static_cast<GLsizei>(size.w), static_cast<GLsizei>(size.h)));
     shader_->Use();
     shader_->SetMat4("Project",
                      cgmath::CreateOrtho(0, size.w, 0.0, size.h, -1.0, 1.0));
@@ -113,8 +115,8 @@ void Renderer2D::FillFan(const cgmath::Vec2& center, float radius,
                          center.y + radius * std::sin(radians)};
         vertices[i].color = color;
         if (sampler) {
-            cgmath::Vec2 size(sampler->texture->Width(),
-                              sampler->texture->Height());
+            cgmath::Vec2 size(static_cast<float>(sampler->texture->Width()),
+                              static_cast<float>(sampler->texture->Height()));
             vertices[i].texcoord =
                 sampler->center +
                 sampler->radius *
@@ -142,8 +144,8 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
                          center.y + radius * std::sin(radians)};
         vertices[i].color = color;
         if (sampler) {
-            cgmath::Vec2 size(sampler->texture->Width(),
-                              sampler->texture->Height());
+            cgmath::Vec2 size(static_cast<float>(sampler->texture->Width()),
+                              static_cast<float>(sampler->texture->Height()));
             vertices[i].texcoord =
                 sampler->center +
                 sampler->radius *
