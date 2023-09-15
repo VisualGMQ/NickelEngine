@@ -3,6 +3,7 @@
 #include "core/cgmath.hpp"
 #include "core/gogl.hpp"
 #include "core/log_tag.hpp"
+#include "renderer/texture.hpp"
 #include <iterator>
 #include <optional>
 
@@ -98,6 +99,10 @@ public:
                     const std::optional<CircleSampler>& sampler = std::nullopt,
                     uint32_t slice = 20);
 
+    void DrawTexture(const Texture& texture, const cgmath::Rect& src,
+                     const cgmath::Vec2& size, const cgmath::Vec4& color,
+                     const cgmath::Mat44& model = cgmath::Mat44::Identity());
+
 private:
     std::unique_ptr<gogl::Shader> shader_;
     std::unique_ptr<gogl::Texture> whiteTexture_;
@@ -109,7 +114,7 @@ private:
     void draw(gogl::PrimitiveType primitive, Vertices vertices,
               const Indices& indices,
               const cgmath::Mat44& model = cgmath::Mat44::Identity(),
-              gogl::Texture* texture = nullptr);
+              const gogl::Texture* texture = nullptr);
 
     std::unique_ptr<gogl::Shader> initShader();
     std::unique_ptr<gogl::Texture> initWhiteTexture();
@@ -121,9 +126,9 @@ private:
 template <typename Vertices, typename Indices>
 void Renderer2D::draw(gogl::PrimitiveType primitive, Vertices vertices,
                       const Indices& indices, const cgmath::Mat44& model,
-                      gogl::Texture* texture) {
-    static_assert(std::is_same_v<Vertices::value_type, Vertex>);
-    static_assert(std::is_same_v<Indices::value_type, uint32_t>);
+                      const gogl::Texture* texture) {
+    static_assert(std::is_same_v<typename Vertices::value_type, Vertex>);
+    static_assert(std::is_same_v<typename Indices::value_type, uint32_t>);
     if (indices.empty()) {
         indicesBuffer_->Unbind();
     } else {

@@ -44,6 +44,7 @@ class Mat;
 using Vec2 = Vec<CGMATH_NUMERIC_TYPE, 2>;
 using Vec3 = Vec<CGMATH_NUMERIC_TYPE, 3>;
 using Vec4 = Vec<CGMATH_NUMERIC_TYPE, 4>;
+using Color = Vec4;
 
 template <typename T, unsigned int N>
 std::ostream& operator<<(std::ostream& o, const Vec<T, N>& v) {
@@ -310,8 +311,16 @@ public:
     explicit Vec(T x) : x(x), y{} {}
 
     Vec(T x, T y) : x(x), y(y) {}
+    
+    Vec(const Vec&) = default;
+    Vec& operator=(const Vec&) = default;
 
     auto Dot(const Vec<T, 2>& o) const { return cgmath::Dot(*this, o); }
+
+    void Set(T x, T y) {
+        this->x = x;
+        this->y = y;
+    }
 
     auto operator+=(const Vec<T, 2>& o) {
         *this = *this + o;
@@ -350,12 +359,6 @@ public:
     void Normalize() { *this = cgmath::Normalize(*this); }
 
     auto Cross(const Vec<T, 2>& o) const { return cgmath::Cross(*this, o); }
-
-    Vec& operator=(const Vec& o) {
-        this->x = o.x;
-        this->y = o.y;
-        return *this;
-    }
 };
 
 template <typename T>
@@ -380,8 +383,16 @@ public:
     Vec(T x, T y) : x(x), y(y), z{} {}
 
     Vec(T x, T y, T z) : x(x), y(y), z(z) {}
+    Vec(const Vec&) = default;
+    Vec& operator=(const Vec&) = default;
 
     auto Dot(const Vec<T, 3>& o) const { return cgmath::Dot(*this, o); }
+
+    void Set(T x, T y, T z) {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+    }
 
     auto operator+=(const Vec<T, 3>& o) {
         *this = *this + o;
@@ -420,13 +431,6 @@ public:
     void Normalize() { *this = cgmath::Normalize(*this); }
 
     auto Cross(const Vec<T, 3>& o) { return cgmath::Cross(*this, o); }
-
-    Vec& operator=(const Vec& o) {
-        this->x = o.x;
-        this->y = o.y;
-        this->z = o.z;
-        return *this;
-    }
 };
 
 template <typename T>
@@ -453,8 +457,17 @@ public:
     Vec(T x, T y, T z) : x(x), y(y), z(z), w{} {}
 
     Vec(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+    Vec(const Vec&) = default;
+    Vec& operator=(const Vec&) = default;
 
     auto Dot(const Vec<T, 4>& o) const { return cgmath::Dot(*this, o); }
+
+    void Set(T x, T y, T z, T w) {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+        this->w = w;
+    }
 
     auto operator+=(const Vec<T, 4>& o) {
         *this = *this + o;
@@ -491,14 +504,6 @@ public:
     auto Length() const { return Length(*this); }
 
     void Normalize() const { *this = Normalize(*this); }
-
-    Vec& operator=(const Vec& o) {
-        this->x = o.x;
-        this->y = o.y;
-        this->z = o.z;
-        this->w = o.w;
-        return *this;
-    }
 };
 
 // basic Mat class
@@ -863,6 +868,8 @@ struct Rect {
         : position(position), size(size) {}
 
     Rect(float x, float y, float w, float h) : position({x, y}), size({w, h}) {}
+    Rect(const Rect&) = default;
+    Rect& operator=(const Rect&) = default;
 };
 
 struct SRT final {

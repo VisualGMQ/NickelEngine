@@ -156,6 +156,23 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
          cgmath::Mat44::Identity(), sampler ? sampler->texture : nullptr);
 }
 
+void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
+                             const cgmath::Vec2& size,
+                             const cgmath::Vec4& color,
+                             const cgmath::Mat44& model) {
+    // clang-format off
+    std::array<Vertex, 4> vertices = {
+        Vertex{     {0, 0},                     {src.x / size.w, src.y / size.h}, color},
+        Vertex{{size.w, 0},           {(src.x + src.w) / size.w, src.y / size.h}, color},
+        Vertex{{0, size.h},           {src.x / size.w, (src.y + src.h) / size.h}, color},
+        Vertex{       size, {(src.x + src.w) / size.w, (src.y + src.h) / size.h}, color},
+    };
+    // clang-format on
+    std::array<uint32_t, 6> indices = {0, 1, 2, 1, 2, 3};
+    draw(gogl::PrimitiveType::Triangles, vertices, indices, model,
+         texture.texture_.get());
+}
+
 std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
     std::ifstream file("shader/vertex.shader");
     if (file.fail()) {

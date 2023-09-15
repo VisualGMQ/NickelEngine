@@ -3,7 +3,9 @@
 #include "core/log_tag.hpp"
 #include "input/device.hpp"
 #include "input/input.hpp"
+#include "misc/timer.hpp"
 #include "pch.hpp"
+#include "renderer/sprite.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
 
@@ -21,6 +23,10 @@ void VideoSystemInit(gecs::commands cmds) {
     cmds.emplace_resource<EventPoller>(EventPoller{});
     EventPoller::AssociatePollerAndECS(*world.cur_registry());
     EventPoller::ConnectPoller2Events(window);
+
+    cmds.emplace_resource<Time>();
+    cmds.emplace_resource<TextureManager>();
+    cmds.emplace_resource<TimerManager>();
 }
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
@@ -33,13 +39,15 @@ void VideoSystemShutdown(gecs::commands cmds) {
     cmds.remove_resource<Window>();
 }
 
-void InputSystemInit(gecs::commands cmds,
-                     gecs::event_dispatcher<MouseButtonEvent> mouseBtnDispatcher,
-                     gecs::event_dispatcher<MouseMotionEvent> mouseMotionDispatcher,
-                     gecs::event_dispatcher<KeyboardEvent> keyboardDispatcher) {
+void InputSystemInit(
+    gecs::commands cmds,
+    gecs::event_dispatcher<MouseButtonEvent> mouseBtnDispatcher,
+    gecs::event_dispatcher<MouseMotionEvent> mouseMotionDispatcher,
+    gecs::event_dispatcher<KeyboardEvent> keyboardDispatcher) {
     auto& keyboard = cmds.emplace_resource<Keyboard>();
     cmds.emplace_resource<Mouse>();
-    ConnectInput2Event(mouseBtnDispatcher, mouseMotionDispatcher, keyboardDispatcher);
+    ConnectInput2Event(mouseBtnDispatcher, mouseMotionDispatcher,
+                       keyboardDispatcher);
 
     std::unordered_map<std::string, Key> actions = {
         {    "up", Key::W},
@@ -50,20 +58,27 @@ void InputSystemInit(gecs::commands cmds,
         {  "jump", Key::K}
     };
     // read actions from config file
-    // IMPROVE: use serd to auto-parse
+    // IMPROVE: use serd to auto-parse(now serd don't support serialize
+    // unordered_map)
     auto parseResult = toml::parse_file("./nickel-config.toml");
     if (!parseResult) {
-        LOGW(log_tag::Config, "parse ", "nickel-config.toml" " failed, use default actions.\nError: ", parseResult.error());
+        LOGW(log_tag::Config, "parse ",
+             "nickel-config.toml"
+             " failed, use default actions.\nError: ",
+             parseResult.error());
     } else {
-        const auto& tbl = parseResult.table(); 
+        const auto& tbl = parseResult.table();
         if (!tbl["input-action"].is_table()) {
-            LOGW(log_tag::Config, "\"input-action\" table not exists, use default actions");
+            LOGW(log_tag::Config,
+                 "\"input-action\" table not exists, use default actions");
         } else {
             for (auto& [key, value] : tbl) {
                 if (!value.is_string()) {
-                    LOGW(log_tag::Config, "value of input action ", key, " is not string!");
+                    LOGW(log_tag::Config, "value of input action ", key,
+                         " is not string!");
                 } else {
-                    actions[std::string(key.str())] = GetKeyFromName(value.as_string()->get());
+                    actions[std::string(key.str())] =
+                        GetKeyFromName(value.as_string()->get());
                 }
             }
         }
@@ -90,7 +105,9 @@ int main(int argc, char** argv) {
         .regist_update_system<VideoSystemUpdate>()
         // other input handle event must put here(after mouse/keyboard update)
         .regist_update_system<Mouse::Update>()
-        .regist_update_system<Keyboard::Update>();
+        .regist_update_system<Keyboard::Update>()
+        .regist_update_system<SpriteBundle::RenderSprite>()
+        .regist_update_system<Time::Update>();
     world.start_with("MainReg");
 
     world.startup();
