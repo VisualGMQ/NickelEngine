@@ -24,7 +24,7 @@ protected:
 
 class Camera2D : public BaseCamera {
 public:
-    Camera2D(const geom::Cube&);
+    Camera2D(float left, float right, float top, float bottom, float near, float far);
 
     void MoveTo(const cgmath::Vec2& position) {
         position_ = position;
@@ -48,6 +48,32 @@ private:
     cgmath::Vec2 position_;
     cgmath::Vec2 scale_;
     geom::Cube cube_;
+};
+
+class Camera final {
+public:
+    enum class Type {
+        Dimension2,
+        Dimension3,
+    };
+
+    Camera(Camera2D&& camera): camera_(std::make_unique<Camera2D>(camera)), type_(Type::Dimension2) {}
+
+    const cgmath::Mat44& View() const { return camera_->View(); }
+    const cgmath::Mat44& Project() const { return camera_->Project(); }
+
+    Type GetType() const { return type_; }
+    Camera2D* as_2d() {
+        if (type_ == Type::Dimension2) {
+            return static_cast<Camera2D*>(camera_.get());
+        } else {
+            return nullptr;
+        }
+    }
+
+private:
+    std::unique_ptr<BaseCamera> camera_;
+    Type type_;
 };
 
 }  // namespace nickel

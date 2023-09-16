@@ -8,10 +8,14 @@
 #include "renderer/sprite.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
+#include "renderer/camera.hpp"
+#include "misc/dllopen.hpp"
 
 using namespace nickel;
 
-gecs::world world;
+std::unique_ptr<gecs::world> world;
+
+void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& reg);
 
 void ErrorCallback(int error, const char* description) {
     LOGE(log_tag::Glfw, description);
@@ -21,22 +25,33 @@ void VideoSystemInit(gecs::commands cmds) {
     auto& window = cmds.emplace_resource<Window>(
         WindowBuilder::FromConfig("./nickel-config.toml").Build());
     cmds.emplace_resource<EventPoller>(EventPoller{});
-    EventPoller::AssociatePollerAndECS(*world.cur_registry());
+    EventPoller::AssociatePollerAndECS(*world->cur_registry());
     EventPoller::ConnectPoller2Events(window);
 
     cmds.emplace_resource<Time>();
     cmds.emplace_resource<TextureManager>();
     cmds.emplace_resource<TimerManager>();
+
+    auto windowSize = window.Size();
+
+    auto& renderer2d = cmds.emplace_resource<Renderer2D>();
+    renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
+    cmds.emplace_resource<Camera>(Camera2D{0, windowSize.w, 0.0, windowSize.h, -1.0, 1.0});
+}
+
+void BootstrapCallSystem() {
+    BootstrapSystem(*world, *world->cur_registry());
 }
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
-                       gecs::resource<Window> window) {
+                       gecs::resource<Window> window,
+                       gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
     poller->Poll();
     window->SwapBuffer();
+    renderer2d->Clear();
 }
 
 void VideoSystemShutdown(gecs::commands cmds) {
-    cmds.remove_resource<Window>();
 }
 
 void InputSystemInit(
@@ -98,26 +113,34 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    auto& main_reg = world.regist_registry("MainReg");
-    main_reg.regist_startup_system<VideoSystemInit>()
+    world = std::make_unique<gecs::world>();
+
+    auto& main_reg = world->regist_registry("MainReg");
+    main_reg
+        // startup systems
+        .regist_startup_system<VideoSystemInit>()
         .regist_startup_system<InputSystemInit>()
+        .regist_startup_system<BootstrapCallSystem>()
+        // shutdown systems
         .regist_shutdown_system<VideoSystemShutdown>()
+        // update systems
         .regist_update_system<VideoSystemUpdate>()
         // other input handle event must put here(after mouse/keyboard update)
         .regist_update_system<Mouse::Update>()
         .regist_update_system<Keyboard::Update>()
         .regist_update_system<SpriteBundle::RenderSprite>()
         .regist_update_system<Time::Update>();
-    world.start_with("MainReg");
+    world->start_with("MainReg");
 
-    world.startup();
+    world->startup();
     auto window = main_reg.res<Window>();
 
     while (!window->ShouldClose()) {
-        world.update();
+        world->update();
     }
 
-    world.shutdown();
+    world->shutdown();
+    world.reset();
     glfwTerminate();
     return 0;
 }

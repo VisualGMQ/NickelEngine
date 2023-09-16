@@ -21,9 +21,16 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
     GL_CALL(glViewport(
         static_cast<GLsizei>(offset.x), static_cast<GLsizei>(offset.y),
         static_cast<GLsizei>(size.w), static_cast<GLsizei>(size.h)));
+}
+
+void Renderer2D::BeginRender(const Camera& camera) {
     shader_->Use();
-    shader_->SetMat4("Project",
-                     cgmath::CreateOrtho(0, size.w, 0.0, size.h, -1.0, 1.0));
+    shader_->SetMat4("Project", camera.Project());
+    shader_->SetMat4("View", camera.View());
+}
+
+void Renderer2D::EndRender() {
+    // shader_->Unuse();
 }
 
 template <typename Vertices, typename Indices>
@@ -174,9 +181,10 @@ void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
 }
 
 std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
-    std::ifstream file("shader/vertex.shader");
+    std::string_view vertexShaderFilename = "nickel/shader/vertex.shader";
+    std::ifstream file(vertexShaderFilename.data());
     if (file.fail()) {
-        LOGE(log_tag::Renderer, "read vertex shader failed");
+        LOGE(log_tag::Renderer, "read vertex shader ", vertexShaderFilename, " failed");
         return nullptr;
     }
     std::string vertex_source((std::istreambuf_iterator<char>(file)),
@@ -184,9 +192,11 @@ std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
     gogl::ShaderModule vertexModel(gogl::ShaderModule::Type::Vertex,
                                    vertex_source);
 
-    file.open("shader/frag.shader");
+    std::string_view fragShaderFilename = "nickel/shader/frag.shader";
+    file.close();
+    file.open(fragShaderFilename);
     if (file.fail()) {
-        LOGE(log_tag::Renderer, "read vertex shader failed");
+        LOGE(log_tag::Renderer, "read fragment shader ", fragShaderFilename, " failed");
         return nullptr;
     }
     std::string frag_source((std::istreambuf_iterator<char>(file)),

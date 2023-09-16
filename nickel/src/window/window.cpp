@@ -37,6 +37,20 @@ void Window::SwapBuffer() const {
     glfwSwapBuffers(window_);
 }
 
+cgmath::Vec2 Window::Size() const {
+    int w, h;
+    glfwGetWindowSize(window_, &w, &h);
+    return {static_cast<float>(w), static_cast<float>(h)};
+}
+
+void Window::Resize(int w, int h) {
+    glfwSetWindowSize(window_, w, h);
+}
+
+void Window::SetTitle(const std::string& title) {
+    glfwSetWindowTitle(window_, title.c_str());
+}
+
 Window::~Window() {
     glfwDestroyWindow(window_);
 }

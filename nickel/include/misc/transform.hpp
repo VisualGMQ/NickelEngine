@@ -12,23 +12,38 @@ enum Flip {
 };
 
 struct Transform final {
-    cgmath::Vec2 position = cgmath::Vec2{};
+    cgmath::Vec2 translation = cgmath::Vec2{};
     float rotation = 0;  // in degress
     cgmath::Vec2 scale = {1, 1};
 
+    auto& SetRotation(float degrees) {
+        rotation = degrees;
+        return *this;
+    }
+
+    auto& SetScale(const cgmath::Vec2& scale) {
+        this->scale = scale;
+        return *this;
+    }
+
+    auto& SetTranslation(const cgmath::Vec2& trans) {
+        translation = trans;
+        return *this;
+    }
+
     cgmath::Mat44 ToMat() const {
-        return cgmath::CreateZRotation(cgmath::Deg2Rad(rotation)) *
-               cgmath::CreateScale(cgmath::Vec3{scale.x, scale.y, 1.0}) *
-               cgmath::CreateTranslation(
-                   cgmath::Vec3{position.x, position.y, 0.0});
+        return cgmath::CreateTranslation(
+                   cgmath::Vec3{translation.x, translation.y, 0.0}) *
+               cgmath::CreateZRotation(cgmath::Deg2Rad(rotation)) *
+               cgmath::CreateScale(cgmath::Vec3{scale.x, scale.y, 1.0});
     }
 
-    static Transform Create(const cgmath::Vec2& position, float rotation,
+    static Transform Create(const cgmath::Vec2& translation, float rotation,
                             const cgmath::Vec2& scale) {
-        return {position, rotation, scale};
+        return {translation, rotation, scale};
     }
 
-    static Transform FromPosition(const cgmath::Vec2& position) {
+    static Transform FromTranslation(const cgmath::Vec2& position) {
         return {position};
     }
 

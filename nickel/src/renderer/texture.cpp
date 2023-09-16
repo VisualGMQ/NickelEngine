@@ -37,9 +37,11 @@ Texture::Texture(Texture&& o) : handle_(TextureHandle::Null()) {
     swap(*this, o);
 }
 
-TextureHandle TextureManager::Load(const std::string& filename, const gogl::Sampler& sampler) {
+TextureHandle TextureManager::Load(const std::string& filename,
+                                   const gogl::Sampler& sampler) {
     TextureHandle handle = TextureHandle::Create();
-    auto texture = std::unique_ptr<Texture>(new Texture{handle, filename, sampler});
+    auto texture = std::unique_ptr<Texture>(
+        new Texture{handle, addRootPath(filename), sampler});
     if (texture) {
         storeNewItem(handle, std::move(texture));
         return handle;
@@ -48,8 +50,10 @@ TextureHandle TextureManager::Load(const std::string& filename, const gogl::Samp
     }
 }
 
-std::unique_ptr<Texture> TextureManager::CreateSolitary(void* data, int w, int h, const gogl::Sampler& sampler) {
-    return std::unique_ptr<Texture>(new Texture{TextureHandle::Null(), data, w, h, sampler});
+std::unique_ptr<Texture> TextureManager::CreateSolitary(
+    void* data, int w, int h, const gogl::Sampler& sampler) {
+    return std::unique_ptr<Texture>(
+        new Texture{TextureHandle::Null(), data, w, h, sampler});
 }
 
 }  // namespace nickel

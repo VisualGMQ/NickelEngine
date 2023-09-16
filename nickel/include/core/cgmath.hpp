@@ -12,6 +12,10 @@
 #include <utility>
 #include <vector>
 
+#include "core/assert.hpp"
+
+namespace nickel {
+
 namespace cgmath {
 
 // some forward declare for Vec
@@ -311,7 +315,7 @@ public:
     explicit Vec(T x) : x(x), y{} {}
 
     Vec(T x, T y) : x(x), y(y) {}
-    
+
     Vec(const Vec&) = default;
     Vec& operator=(const Vec&) = default;
 
@@ -383,6 +387,7 @@ public:
     Vec(T x, T y) : x(x), y(y), z{} {}
 
     Vec(T x, T y, T z) : x(x), y(y), z(z) {}
+
     Vec(const Vec&) = default;
     Vec& operator=(const Vec&) = default;
 
@@ -457,6 +462,7 @@ public:
     Vec(T x, T y, T z) : x(x), y(y), z(z), w{} {}
 
     Vec(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+
     Vec(const Vec&) = default;
     Vec& operator=(const Vec&) = default;
 
@@ -593,7 +599,8 @@ public:
     }
 
     T& Get(int x, int y) {
-        assert(x >= 0 && y >= 0 && x < Col && y < Row);
+        Assert(x >= 0 && y >= 0 && x < Col && y < Row,
+               "access matrix out of bound");
 
 #ifdef CGMATH_MATRIX_ROW_FIRST
         return data[x + y * Col];
@@ -739,93 +746,53 @@ inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
 }
 
 inline Mat44 CreateTranslation(const Vec3& position) {
+    // clang-format off
     return Mat44::FromRow({
-        1.0f,
-        0.0f,
-        0.0f,
-        position.x,
-        0.0f,
-        1.0f,
-        0.0f,
-        position.y,
-        0.0f,
-        0.0f,
-        1.0f,
-        position.z,
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
+        1.0f, 0.0f, 0.0f, position.x,
+        0.0f, 1.0f, 0.0f, position.y,
+        0.0f, 0.0f, 1.0f, position.z,
+        0.0f, 0.0f, 0.0f, 1.0f,
     });
+    // clang-format on
 }
 
 inline Mat44 CreateZRotation(float radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
+    // clang-format off
     return Mat44::FromRow({
-        cos,
-        -sin,
-        0.0f,
-        0.0f,
-        sin,
-        cos,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
+         cos, -sin, 0.0f, 0.0f,
+         sin,  cos, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
     });
+    // clang-format on
 }
 
 inline Mat44 CreateXRotation(float radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
+    // clang-format off
     return Mat44::FromRow({
-        1.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        cos,
-        -sin,
-        0.0f,
-        0.0f,
-        sin,
-        cos,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f,  cos, -sin, 0.0f,
+        0.0f,  sin,  cos, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
     });
+    // clang-format on
 }
 
 inline Mat44 CreateYRotation(float radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
+    // clang-format off
     return Mat44::FromRow({
-        cos,
-        0.0f,
-        sin,
-        0.0f,
-        0.0f,
-        1.0f,
-        0.0,
-        0.0f,
-        -sin,
-        -sin,
-        cos,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
+         cos, 0.0f,  sin, 0.0f,
+        0.0f, 1.0f,  0.0, 0.0f,
+        -sin, -sin,  cos, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
     });
+    // clang-format on
 }
 
 inline Mat44 CreateXYZRotation(const cgmath::Vec3& r) {
@@ -833,24 +800,14 @@ inline Mat44 CreateXYZRotation(const cgmath::Vec3& r) {
 }
 
 inline Mat44 CreateScale(const Vec3& scale) {
+    // clang-format off
     return Mat44::FromRow({
-        scale.x,
-        0.0,
-        0.0f,
-        0.0f,
-        0.0f,
-        scale.y,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        scale.z,
-        0.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        1.0f,
+        scale.x,     0.0,    0.0f, 0.0f,
+           0.0f, scale.y,    0.0f, 0.0f,
+           0.0f,    0.0f, scale.z, 0.0f,
+           0.0f,    0.0f,    0.0f, 1.0f,
     });
+    // clang-format on
 }
 
 struct Rect {
@@ -868,6 +825,7 @@ struct Rect {
         : position(position), size(size) {}
 
     Rect(float x, float y, float w, float h) : position({x, y}), size({w, h}) {}
+
     Rect(const Rect&) = default;
     Rect& operator=(const Rect&) = default;
 };
@@ -885,4 +843,11 @@ struct SRT final {
     }
 };
 
+template <typename T>
+int Sign(T value) {
+    return value < 0 ? -1 : (value > 0 ? 1 : 0);
+}
+
 }  // namespace cgmath
+
+}  // namespace nickel

@@ -4,6 +4,7 @@
 #include "core/cgmath.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/renderer2d.hpp"
+#include "renderer/camera.hpp"
 #include "pch.hpp"
 
 namespace nickel {
@@ -13,15 +14,15 @@ namespace nickel {
  */
 struct Sprite final {
     cgmath::Color color = {1.0, 1.0, 1.0, 1.0};
-    cgmath::Rect region;
-    cgmath::Vec2 customSize;
+    std::optional<cgmath::Rect> region;
+    std::optional<cgmath::Vec2> customSize;
     cgmath::Vec2 anchor;
 
     static Sprite Default() {
         return Sprite{
             cgmath::Color{1.0, 1.0, 1.0, 1.0},
-            cgmath::Rect{0, 0, -1, -1},
-            cgmath::Vec2{-1, -1},
+            std::nullopt,
+            std::nullopt,
             cgmath::Vec2{},
         };
     }
@@ -29,7 +30,7 @@ struct Sprite final {
     static Sprite FromRegion(const cgmath::Rect& region) {
         auto sprite = Sprite::Default();
         sprite.region = region;
-        sprite.customSize.Set(region.w, region.h);
+        sprite.customSize = cgmath::Vec2{region.w, region.h};
         return sprite;
     }
 
@@ -48,7 +49,8 @@ struct SpriteBundle final {
 
     static void RenderSprite(gecs::querier<SpriteBundle, Transform>,
                              gecs::resource<gecs::mut<Renderer2D>>,
-                             gecs::resource<TextureManager> textureMgr);
+                             gecs::resource<TextureManager> textureMgr,
+                             gecs::resource<Camera> camera);
 };
 
 struct SpriteBundleSolitary final {

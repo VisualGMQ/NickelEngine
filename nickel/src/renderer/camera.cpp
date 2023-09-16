@@ -2,11 +2,12 @@
 
 namespace nickel {
 
-Camera2D::Camera2D(const geom::Cube& cube): cube_(cube) {
-    project_ = cgmath::CreateOrtho(
-        cube.center.x - cube.half_len.x, cube.center.x + cube.half_len.x,
-        cube.center.y - cube.half_len.y, cube.center.y + cube.half_len.y,
-        cube.center.z - cube.half_len.z, cube.center.z + cube.half_len.z);
+Camera2D::Camera2D(float left, float right, float top, float bottom, float near, float far) {
+    project_ = cgmath::CreateOrtho(left, right, top, bottom, near, far);
+    cube_.center.Set((left + right) / 2.0, (top + bottom) / 2.0, (near + far) / 2.0);
+    cube_.half_len.Set(std::abs((right - left) / 2.0),
+                       std::abs((top - bottom) / 2.0),
+                       std::abs((near - far) / 2.0));
 }
 
 }

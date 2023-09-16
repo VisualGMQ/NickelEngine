@@ -32,6 +32,10 @@ public:
 
     bool ShouldClose() const;
     void SwapBuffer() const;
+    void Resize(int w, int h);
+    void SetTitle(const std::string& title);
+
+    cgmath::Vec2 Size() const;
 
     void* Raw() { return window_; }
 

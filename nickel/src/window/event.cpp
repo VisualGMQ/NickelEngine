@@ -6,7 +6,7 @@ namespace nickel {
 
 typename gecs::world::registry_type* EventPoller::reg_ = nullptr;
 
-std::unordered_map<std::string_view, Key> gKeynameMap = {
+const std::unordered_map<std::string_view, Key> gKeynameMap = {
     {        "space",         Key::SPACE},
     {   "apostrophe",    Key::APOSTROPHE},
     {        "comma",         Key::COMMA},

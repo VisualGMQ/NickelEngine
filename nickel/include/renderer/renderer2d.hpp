@@ -4,6 +4,7 @@
 #include "core/gogl.hpp"
 #include "core/log_tag.hpp"
 #include "renderer/texture.hpp"
+#include "renderer/camera.hpp"
 #include <iterator>
 #include <optional>
 
@@ -41,11 +42,14 @@ public:
 
     Renderer2D();
 
+    void BeginRender(const Camera& camera);
+    void EndRender();
+
     void SetViewport(const cgmath::Vec2& offset, const cgmath::Vec2& size);
 
     void SetLineWidth(float width) { GL_CALL(glLineWidth(width)); }
 
-    void SetClearColor(const cgmath::Vec4& color) {
+    void SetClearColor(const cgmath::Color& color) {
         GL_CALL(glClearColor(color.x, color.y, color.z, color.w));
     }
 
@@ -140,8 +144,6 @@ void Renderer2D::draw(gogl::PrimitiveType primitive, Vertices vertices,
         whiteTexture_->Bind();
     } else {
         texture->Bind();
-        int w = texture->Width();
-        int h = texture->Height();
     }
     vertexBuffer_->Bind();
     vertexBuffer_->SetData((void*)vertices.data(),
