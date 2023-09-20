@@ -3,11 +3,7 @@
 
 #pragma once
 
-#include <functional>
-#include <cmath>
-#include <algorithm>
-#include <vector>
-#include <utility>
+#include "pch.hpp"
 
 namespace nickel {
 
@@ -26,9 +22,14 @@ struct Easing {
     };
 };
 
-template <typename T>
+template <typename T, typename TimeType>
 class BasicTween final {
 public:
+    struct KeyPoint {
+        T value;
+        TimeType time;
+    };
+
     static BasicTween From(T from) {
         BasicTween tweeny;
         tweeny.keyPoints_.push_back({from, 0});
@@ -50,14 +51,14 @@ public:
         return *this;
     }
 
-    BasicTween& Timing(float time) {
+    BasicTween& Timing(TimeType time) {
         if (!keyPoints_.empty()) {
             keyPoints_.back().time = time;
         }
         return *this;
     }
 
-    BasicTween& During(float during) {
+    BasicTween& During(TimeType during) {
         if (keyPoints_.size() >= 2) {
             keyPoints_.back().time =
                 keyPoints_[keyPoints_.size() - 2].time + during;
@@ -72,36 +73,72 @@ public:
         return *this;
     }
 
+    int StartTick() const {
+        return keyPoints_.empty() ? 0 : keyPoints_[0].time;
+    }
+
+    int EndTick() const {
+        return keyPoints_.empty() ? 0 : keyPoints_.back().time;
+    }
+
+    void SetTick(TimeType t) {
+        curDur_ = std::clamp<int>(t, StartTick(), EndTick());
+        if (t <= StartTick()) {
+            curPoint_ = 0;
+            return ;
+        }
+        if (t >= EndTick()) {
+            curPoint_ = keyPoints_.size() - 1;
+            return ;
+        }
+
+        for (int i = 0; i < keyPoints_.size() - 1; i++) {
+            auto start = keyPoints_[i].time;
+            auto end = keyPoints_[i + 1].time;
+            if (t >= start && t < end) {
+                curPoint_ = i;
+                return ;
+            }
+        }
+    }
+
     BasicTween& Backward() {
         direction_ = TweenyDirection::Backward;
         return *this;
     }
 
-    void Step(T step) {
+    void Step(TimeType step) {
         if (keyPoints_.size() < 2) {
             return;
         }
 
         curDur_ += static_cast<int>(direction_) * step;
-        const auto& from = keyPoints_[curPoint_];
-        const auto& to = keyPoints_[curPoint_ + 1];
-        if (curDur_ < from.time) {
+
+        const KeyPoint *from = nullptr, *to = nullptr;
+
+        if (curPoint_ + 1 >= keyPoints_.size()) {
+            from = &keyPoints_[curPoint_];
+            to = &keyPoints_[curPoint_];
+        } else {
+            from = &keyPoints_[curPoint_];
+            to = &keyPoints_[curPoint_ + 1];
+        }
+
+        if (curDur_ < from->time) {
             curPoint_--;
-        } else if (curDur_ > to.time) {
+        } else if (curDur_ > to->time) {
             curPoint_++;
         }
 
         if (curPoint_ < 0) {
             curPoint_ = 0;
-            curDur_ = keyPoints_[curPoint_].time;
             if (loop_ != 0) {
                 curPoint_ = keyPoints_.size() - 2;
                 curDur_ = keyPoints_.back().time;
                 loop_ -= loop_ < 0 ? 0 : 1;
             }
-        } else if (curPoint_ + 2 >= keyPoints_.size() && curDur_ >= to.time) {
+        } else if (curPoint_ + 2 >= keyPoints_.size() && curDur_ >= keyPoints_.back().time) {
             curPoint_ = keyPoints_.size() - 2;
-            curDur_ = keyPoints_.back().time;
             if (loop_ != 0) {
                 curPoint_ = 0;
                 curDur_ = 0;
@@ -123,14 +160,19 @@ public:
             return keyPoints_.back().value;
         }
 
+        if (curPoint_ < 0) {
+            return keyPoints_[0].value;
+        }
+
         const auto& from = keyPoints_[curPoint_];
         const auto& to = keyPoints_[curPoint_ + 1];
+        auto t = std::clamp<TimeType>(curDur_, from.time, to.time);
         return func_(
-            static_cast<float>(curDur_ - from.time) / (to.time - from.time),
+            static_cast<float>(t - from.time) / (to.time - from.time),
             from.value, to.value);
     }
 
-    T CurTick() const { return curDur_; }
+    TimeType CurTick() const { return curDur_; }
 
     bool IsStart() const {
         if (direction_ == TweenyDirection::Forward) {
@@ -151,21 +193,28 @@ public:
         }
     }
 
-private:
-    struct KeyPoint {
-        T value;
-        float time;
-    };
+    auto& KeyPoints() const {
+        return keyPoints_;
+    }
 
+    auto& CurKeyPoint() const {
+        return keyPoints_[curPoint_];
+    }
+
+    bool Empty() const {
+        return keyPoints_.empty();
+    }
+
+private:
     TweenFunc<T> func_ = Easing<T>::Linear;
     std::vector<KeyPoint> keyPoints_;
     int loop_ = 0;
     TweenyDirection direction_ = TweenyDirection::Forward;
-    T curDur_ = 0;
-    size_t curPoint_ = 0;
+    TimeType curDur_ = 0;
+    int curPoint_ = 0;
 };
 
-using Tween = BasicTween<float>;
+using Tween = BasicTween<float, int>;
 
 template <typename... Ts>
 class Tweeny {
@@ -225,7 +274,7 @@ public:
     }
 
 private:
-    using Container = std::tuple<BasicTween<Ts>...>;
+    using Container = std::tuple<BasicTween<Ts, float>...>;
     Container tweens_;
     std::function<void(void)> onFinish_;
     std::function<void(void)> onStart_;

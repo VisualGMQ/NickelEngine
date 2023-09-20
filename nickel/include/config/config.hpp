@@ -14,6 +14,8 @@ constexpr char* const DefaultWindowTitle = "NickelEngine";
 constexpr int DefaultWindowWidth = 720;
 constexpr int DefaultWindowHeight = 680;
 
-}
+constexpr char* const ProjectConfigFilename = "project.toml";
 
-}
+}  // namespace config
+
+}  // namespace nickel

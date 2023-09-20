@@ -1,6 +1,6 @@
 #include "window/window.hpp"
-#include "refl/window.hpp"
 #include "config/config.hpp"
+#include "refl/window.hpp"
 
 namespace nickel {
 
@@ -55,15 +55,25 @@ Window::~Window() {
     glfwDestroyWindow(window_);
 }
 
-WindowBuilder WindowBuilder::FromConfig(std::string_view filename) {
+WindowBuilder WindowBuilder::FromConfigFile(std::string_view filename) {
     WindowBuilder::Data data = WindowBuilder::Data::Default();
     auto parseResult = toml::parse_file(filename);
-    if (parseResult.failed() || parseResult.table().find("window") == parseResult.table().end()) {
-        LOGW(log_tag::Config, "Read window config from ", filename, " failed. Use default config. Error: ", parseResult.error());
+    if (parseResult.failed() ||
+        parseResult.table().find("window") == parseResult.table().end()) {
+        LOGW(log_tag::Config, "Read window config from ", filename,
+             " failed. Use default config. Error: ", parseResult.error());
     } else {
-        data = mirrow::serd::srefl::deserialize<WindowBuilder::Data>(*parseResult.table()["window"].as_table());
+        mirrow::serd::srefl::deserialize<WindowBuilder::Data>(
+            *parseResult.table()["window"].as_table(), data);
     }
 
+    return WindowBuilder(data);
+}
+
+WindowBuilder WindowBuilder::FromConfig(const toml::table& tbl) {
+    Assert(tbl.is_table(), "window config must be a table");
+    WindowBuilder::Data data = WindowBuilder::Data::Default();
+    mirrow::serd::srefl::deserialize<WindowBuilder::Data>(tbl, data);
     return WindowBuilder(data);
 }
 

@@ -22,21 +22,41 @@ void ErrorCallback(int error, const char* description) {
 }
 
 void VideoSystemInit(gecs::commands cmds) {
-    auto& window = cmds.emplace_resource<Window>(
-        WindowBuilder::FromConfig("./nickel-config.toml").Build());
+    auto projectConfigResult = toml::parse_file(config::ProjectConfigFilename);
+    Window* window = nullptr;
+    if (projectConfigResult.failed()) {
+        LOGE(log_tag::Config, "project config file ", config::ProjectConfigFilename, " read failed: ", projectConfigResult.error());
+        window = &cmds.emplace_resource<Window>(WindowBuilder::Default().Build());
+        cmds.emplace_resource<Camera>(Camera2D::Default(*window));
+    } else {
+        const auto& configTbl = projectConfigResult.table();
+        if (auto node = configTbl["window"]; node.is_table()) {
+            window = &cmds.emplace_resource<Window>(
+                WindowBuilder::FromConfig(*node.as_table()).Build());
+        } else {
+            window = &cmds.emplace_resource<Window>(WindowBuilder::Default().Build());
+        }
+
+        if (auto node = configTbl["camera"]; node.is_table()) {
+            const auto& cameraConfig = *node.as_table();
+            cmds.emplace_resource<Camera>(Camera2D::FromConfig(*node.as_table()));
+        } else {
+            cmds.emplace_resource<Camera>(Camera2D::Default(*window));
+        }
+    }
+
     cmds.emplace_resource<EventPoller>(EventPoller{});
     EventPoller::AssociatePollerAndECS(*world->cur_registry());
-    EventPoller::ConnectPoller2Events(window);
+    EventPoller::ConnectPoller2Events(*window);
 
     cmds.emplace_resource<Time>();
     cmds.emplace_resource<TextureManager>();
     cmds.emplace_resource<TimerManager>();
 
-    auto windowSize = window.Size();
+    auto windowSize = window->Size();
 
     auto& renderer2d = cmds.emplace_resource<Renderer2D>();
     renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
-    cmds.emplace_resource<Camera>(Camera2D{0, windowSize.w, 0.0, windowSize.h, -1.0, 1.0});
 }
 
 void BootstrapCallSystem() {

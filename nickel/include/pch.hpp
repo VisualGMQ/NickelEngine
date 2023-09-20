@@ -39,6 +39,8 @@
 #include <filesystem>
 #include <chrono>
 #include <thread>
+#include <cmath>
+#include <algorithm>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)

@@ -59,8 +59,9 @@ Tilesheet& TilesheetManager::LoadFromConfig(TextureHandle handle,
              " failed!\nError: ", parseResult.error());
         return Tilesheet::Null;
     } else {
-        auto config = mirrow::serd::srefl::deserialize<TilesheetConfig>(
-            parseResult.table());
+        TilesheetConfig config;
+        mirrow::serd::srefl::deserialize<TilesheetConfig>(parseResult.table(),
+                                                          config);
         return CreateFromTexture(handle, config.name, config.col, config.row,
                                  config.margin, config.spacing);
     }

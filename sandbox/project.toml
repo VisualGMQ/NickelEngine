@@ -2,3 +2,8 @@
 
 title = "NickelEngine"
 size = {x = 1024, y = 720}
+
+[camera]
+
+type = "2D"
+size = {x = 1024, y = 720}

@@ -54,7 +54,8 @@ public:
 
     WindowBuilder(const Data& data) : buildData_(data) {}
 
-    static WindowBuilder FromConfig(std::string_view filename);
+    static WindowBuilder FromConfigFile(std::string_view filename);
+    static WindowBuilder FromConfig(const toml::table&);
     static WindowBuilder Default();
 
     Window Build() {

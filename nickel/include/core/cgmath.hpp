@@ -821,10 +821,12 @@ struct Rect {
         };
     };
 
+    Rect(): position{}, size{} {}
+
     Rect(const Vec2& position, const Vec2& size)
         : position(position), size(size) {}
 
-    Rect(float x, float y, float w, float h) : position({x, y}), size({w, h}) {}
+    Rect(float x, float y, float w, float h) : position{x, y}, size{w, h} {}
 
     Rect(const Rect&) = default;
     Rect& operator=(const Rect&) = default;

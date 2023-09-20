@@ -1,7 +1,9 @@
 #pragma once
 
+#include "pch.hpp"
 #include "core/cgmath.hpp"
 #include "core/geom.hpp"
+#include "window/window.hpp"
 
 namespace nickel {
 
@@ -24,7 +26,22 @@ protected:
 
 class Camera2D : public BaseCamera {
 public:
-    Camera2D(float left, float right, float top, float bottom, float near, float far);
+    struct ConfigData final {
+        float left, right, top, bottom, near, far;
+    };
+
+    static Camera2D Create(float left, float right, float top, float bottom,
+                           float near, float far) {
+        return Camera2D(left, right, top, bottom, near, far);
+    }
+
+    static Camera2D Default(const Window& window) {
+        auto size = window.Size();
+        return Camera2D(0.0, size.w, 0.0, size.h, 1.0, -1.0);
+    }
+
+    static std::optional<Camera2D> FromConfigFile(std::string_view filename);
+    static Camera2D FromConfig(const toml::table&);
 
     void MoveTo(const cgmath::Vec2& position) {
         position_ = position;
@@ -48,6 +65,9 @@ private:
     cgmath::Vec2 position_;
     cgmath::Vec2 scale_;
     geom::Cube cube_;
+
+    Camera2D(float left, float right, float top, float bottom, float near,
+             float far);
 };
 
 class Camera final {
@@ -57,12 +77,16 @@ public:
         Dimension3,
     };
 
-    Camera(Camera2D&& camera): camera_(std::make_unique<Camera2D>(camera)), type_(Type::Dimension2) {}
+    Camera(Camera2D&& camera)
+        : camera_(std::make_unique<Camera2D>(camera)),
+          type_(Type::Dimension2) {}
 
     const cgmath::Mat44& View() const { return camera_->View(); }
+
     const cgmath::Mat44& Project() const { return camera_->Project(); }
 
     Type GetType() const { return type_; }
+
     Camera2D* as_2d() {
         if (type_ == Type::Dimension2) {
             return static_cast<Camera2D*>(camera_.get());
