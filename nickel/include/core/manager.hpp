@@ -7,6 +7,10 @@ namespace nickel {
 template <typename T>
 class Manager {
 public:
+    Manager() = default;
+    Manager(const Manager&) = delete;
+    Manager operator=(const Manager&) = delete;
+
     void Destroy(Handle<T> handle) { datas_.erase(handle); }
 
     const T& Get(Handle<T> handle) const {

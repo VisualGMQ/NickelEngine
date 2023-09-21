@@ -25,9 +25,16 @@ struct Easing {
 template <typename T, typename TimeType>
 class BasicTween final {
 public:
+    using time_type = TimeType;
+    using value_type = T;
+
     struct KeyPoint {
         T value;
-        TimeType time;
+        time_type time;
+
+        static KeyPoint Create(T value, time_type time) {
+            return {value, time};
+        }
     };
 
     static BasicTween From(T from) {
@@ -51,14 +58,14 @@ public:
         return *this;
     }
 
-    BasicTween& Timing(TimeType time) {
+    BasicTween& Timing(time_type time) {
         if (!keyPoints_.empty()) {
             keyPoints_.back().time = time;
         }
         return *this;
     }
 
-    BasicTween& During(TimeType during) {
+    BasicTween& During(time_type during) {
         if (keyPoints_.size() >= 2) {
             keyPoints_.back().time =
                 keyPoints_[keyPoints_.size() - 2].time + during;
@@ -81,7 +88,7 @@ public:
         return keyPoints_.empty() ? 0 : keyPoints_.back().time;
     }
 
-    void SetTick(TimeType t) {
+    void SetTick(time_type t) {
         curDur_ = std::clamp<int>(t, StartTick(), EndTick());
         if (t <= StartTick()) {
             curPoint_ = 0;
@@ -107,7 +114,7 @@ public:
         return *this;
     }
 
-    void Step(TimeType step) {
+    void Step(time_type step) {
         if (keyPoints_.size() < 2) {
             return;
         }
@@ -210,7 +217,7 @@ private:
     std::vector<KeyPoint> keyPoints_;
     int loop_ = 0;
     TweenyDirection direction_ = TweenyDirection::Forward;
-    TimeType curDur_ = 0;
+    time_type curDur_ = 0;
     int curPoint_ = 0;
 };
 

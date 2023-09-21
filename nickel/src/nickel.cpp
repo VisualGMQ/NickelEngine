@@ -10,6 +10,8 @@
 #include "window/window.hpp"
 #include "renderer/camera.hpp"
 #include "misc/dllopen.hpp"
+#include "refl/drefl.hpp"
+#include "anim/anim.hpp"
 
 using namespace nickel;
 
@@ -22,6 +24,8 @@ void ErrorCallback(int error, const char* description) {
 }
 
 void VideoSystemInit(gecs::commands cmds) {
+    InitDynamicReflect();
+
     auto projectConfigResult = toml::parse_file(config::ProjectConfigFilename);
     Window* window = nullptr;
     if (projectConfigResult.failed()) {
@@ -52,6 +56,7 @@ void VideoSystemInit(gecs::commands cmds) {
     cmds.emplace_resource<Time>();
     cmds.emplace_resource<TextureManager>();
     cmds.emplace_resource<TimerManager>();
+    cmds.emplace_resource<AnimationManager>();
 
     auto windowSize = window->Size();
 

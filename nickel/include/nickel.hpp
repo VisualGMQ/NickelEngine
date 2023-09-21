@@ -12,3 +12,4 @@
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
 #include "misc/transform.hpp"
+#include "anim/anim.hpp"
