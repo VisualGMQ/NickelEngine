@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pch.hpp"
+#include "core/cgmath.hpp"
 
 // clang-format off
 #include "mirrow/srefl/srefl_begin.hpp"

@@ -1,4 +1,5 @@
 #include "anim/anim.hpp"
+#include "refl/anim.hpp"
 
 namespace nickel {
 
@@ -14,4 +15,24 @@ std::shared_ptr<Animation> AnimationManager::CreateSolitaryFromTracks(typename A
     return std::make_shared<Animation>(std::move(tracks));
 }
 
+AnimTrackSerialMethods::serialize_fn_type AnimTrackSerialMethods::GetSerializeMethod(AnimTrackSerialMethods::type_info_type type) {
+    if (auto it = methods_.find(type); it != methods_.end()) {
+        return it->second.first;
+    }
+    return nullptr;
 }
+
+AnimTrackSerialMethods::deserialize_fn_type
+AnimTrackSerialMethods::GetDeserializeMethod(
+    AnimTrackSerialMethods::type_info_type type) {
+    if (auto it = methods_.find(type); it != methods_.end()) {
+        return it->second.second;
+    }
+    return nullptr;
+}
+
+bool AnimTrackSerialMethods::Contain(type_info_type type) {
+    return methods_.count(type) != 0;
+}
+
+}  // namespace nickel

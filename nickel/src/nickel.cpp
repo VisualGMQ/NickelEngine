@@ -62,6 +62,15 @@ void VideoSystemInit(gecs::commands cmds) {
 
     auto& renderer2d = cmds.emplace_resource<Renderer2D>();
     renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
+
+    // init animation serialize method
+    AnimTrackSerialMethods::Instance()
+        .RegistMethod<cgmath::Vec2>()
+        .RegistMethod<cgmath::Vec3>()
+        .RegistMethod<float>()
+        .RegistMethod<double>()
+        .RegistMethod<int>()
+        .RegistMethod<long>();
 }
 
 void BootstrapCallSystem() {

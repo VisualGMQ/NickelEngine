@@ -1,36 +1,13 @@
 #pragma once
 
+#include "anim/keyframe.hpp"
 #include "core/handle.hpp"
 #include "core/manager.hpp"
+#include "core/singlton.hpp"
 #include "misc/timer.hpp"
-#include "misc/transform.hpp"
+#include "refl/keyframe.hpp"
 
 namespace nickel {
-
-template <typename T>
-struct Interpolation final {
-    static T Linear(float t, T a, T b) { return a + (b - a) * t; };
-};
-
-template <typename T, typename TimeType>
-struct BasicKeyFrame {
-    using interpolate_func = std::function<T(float, T, T)>;
-    using value_type = T;
-    using time_type = TimeType;
-
-    T value;
-    TimeType timePoint;
-    interpolate_func interpolate;
-
-    static BasicKeyFrame Create(
-        T value, TimeType t,
-        interpolate_func interp = Interpolation<T>::Linear) {
-        return {value, t, interp};
-    }
-};
-
-template <typename T>
-using KeyFrame = BasicKeyFrame<T, TimeType>;
 
 class AnimationTrack {
 public:
@@ -80,6 +57,8 @@ public:
         return keyPoints_.empty() ? 0 : keyPoints_.back().timePoint;
     }
 
+    auto& KeyPoints() const { return keyPoints_; }
+
     mirrow::drefl::any GetValueAt(TimeType t) const override {
         if (Empty()) {
             return T{};
@@ -99,8 +78,9 @@ public:
             auto& end = keyPoints_[i + 1];
 
             if (begin.timePoint <= t && t < end.timePoint) {
-                return begin.interpolate(static_cast<float>(t) / (end.timePoint - begin.timePoint),
-                                         begin.value, end.value);
+                return begin.interpolate(
+                    static_cast<float>(t) / (end.timePoint - begin.timePoint),
+                    begin.value, end.value);
             }
         }
 
@@ -111,15 +91,75 @@ private:
     container_type keyPoints_;
 };
 
+class AnimTrackSerialMethods : public Singleton<AnimTrackSerialMethods, false> {
+public:
+    using serialize_fn_type = toml::table (*)(const AnimationTrack&);
+    using deserialize_fn_type =
+        std::unique_ptr<AnimationTrack> (*)(const toml::table&);
+    using type_info_type = mirrow::drefl::type_info;
+
+    bool Contain(type_info_type type);
+    serialize_fn_type GetSerializeMethod(type_info_type type);
+    deserialize_fn_type GetDeserializeMethod(type_info_type);
+
+    template <typename T>
+    auto& RegistMethod() {
+        auto type_info = mirrow::drefl::reflected_type<T>();
+        methods_.emplace(type_info,
+                         std::make_pair(serialize<T>, deserialize<T>));
+        return *this;
+    }
+
+private:
+    std::unordered_map<type_info_type,
+                       std::pair<serialize_fn_type, deserialize_fn_type>>
+        methods_;
+
+    template <typename T>
+    static toml::table serialize(const AnimationTrack& animTrack) {
+        auto& track = static_cast<const BasicAnimationTrack<T>&>(animTrack);
+        toml::table tbl;
+        tbl.emplace("keyframe",
+                    mirrow::serd::srefl::serialize(track.KeyPoints()));
+        auto type_info = mirrow::drefl::reflected_type<T>();
+
+        std::string type;
+
+        tbl.emplace("type", type_info.name());
+        tbl.emplace("type", type);
+
+        return tbl;
+    }
+
+    template <typename T>
+    static std::unique_ptr<AnimationTrack> deserialize(const toml::table& tbl) {
+        auto type_info = mirrow::drefl::reflected_type<T>();
+        auto typeNode = tbl["type"];
+
+        Assert(typeNode.is_string(), "type is not string");
+        auto typeStr = typeNode.as_string()->get();
+        Assert(typeStr == type_info.name(), "deserialize table type not fit");
+
+        auto keyframes = tbl["keyframe"];
+        Assert(keyframes.is_array(),
+               "deserialize KeyPoint must has toml::array node");
+
+        typename BasicAnimationTrack<T>::container_type track;
+        mirrow::serd::srefl::deserialize(*keyframes.as_array(), track);
+        return std::make_unique<BasicAnimationTrack<T>>(std::move(track));
+    }
+};
+
 class Animation final {
 public:
     using track_base_type = AnimationTrack;
     using track_pointer_type = std::unique_ptr<track_base_type>;
-    using container_type = std::map<std::string, track_pointer_type>;
+    using container_type = std::unordered_map<std::string, track_pointer_type>;
 
     static Animation Null;
 
     Animation() = default;
+
     Animation(container_type&& tracks) : tracks_(std::move(tracks)) {
         lastTime_ = 0;
         for (auto& [name, track] : tracks_) {
@@ -156,7 +196,8 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer(AnimationHandle anim, AnimationManager& mgr) : handle_(anim), mgr_(mgr) {}
+    AnimationPlayer(AnimationHandle anim, AnimationManager& mgr)
+        : handle_(anim), mgr_(mgr) {}
 
     AnimationHandle Animation() const { return handle_; }
 
@@ -172,7 +213,7 @@ public:
 
     void AsyncTo(mirrow::drefl::reference_any instance) {
         if (!mgr_.Has(handle_)) {
-            return ;
+            return;
         }
 
         auto type_info = instance.type();
@@ -186,7 +227,8 @@ public:
             for (auto&& var : class_info.vars()) {
                 // IMPROVE: maybe we can use unordered_map to store vars to
                 // improve find effeciency? Or maybe we should cache the result?
-                auto field = mirrow::drefl::invoke_by_any_return_ref(var, &instance);
+                auto field =
+                    mirrow::drefl::invoke_by_any_return_ref(var, &instance);
                 if (var.name() == name && field.type() == track->TypeInfo()) {
                     field.deep_set(track->GetValueAt(curTime_));
                 }
@@ -212,9 +254,7 @@ public:
         }
     }
 
-    bool IsValid() const {
-        return mgr_.Has(handle_);
-    }
+    bool IsValid() const { return mgr_.Has(handle_); }
 
     TimeType Duration() const {
         if (mgr_.Has(handle_)) {
@@ -231,6 +271,5 @@ private:
     AnimationHandle handle_;
     bool isPlaying_ = false;
 };
-
 
 }  // namespace nickel

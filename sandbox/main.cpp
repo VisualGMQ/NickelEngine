@@ -1,4 +1,5 @@
 #include "nickel.hpp"
+#include "refl/anim.hpp"
 
 using namespace nickel;
 
@@ -35,6 +36,22 @@ void TestInitSystem(gecs::commands cmds, gecs::resource<gecs::mut<TextureManager
     tracks["translation"] = std::move(posTrack);
     tracks["rotation"] = std::move(rotTrack);
     auto anim = animMgr->CreateFromTracks(std::move(tracks));
+
+    toml::table tbl = mirrow::serd::srefl::serialize(animMgr->Get(anim));
+    toml::toml_formatter fmt{tbl};
+
+    std::stringstream ss;
+
+    ss << fmt;
+
+    std::string tomlData = ss.str();
+
+    std::ofstream file("anim.res.toml");
+    file << fmt;
+    file.close();
+
+    Animation serdAnim;
+    mirrow::serd::srefl::deserialize<Animation>(toml::parse(tomlData).table(), serdAnim);
 
     cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(anim, animMgr.get())).Play();
 }

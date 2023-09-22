@@ -32,7 +32,18 @@ void reflectTramsform() {
         .var<&Transform::scale>("scale");
 }
 
+void reflectFundamental() {
+    mirrow::drefl::factory<char>("char");
+    mirrow::drefl::factory<int>("int");
+    mirrow::drefl::factory<float>("float");
+    mirrow::drefl::factory<double>("double");
+    mirrow::drefl::factory<long>("long");
+    mirrow::drefl::factory<unsigned int>("unsigned int");
+    mirrow::drefl::factory<unsigned long>("unsigned long");
+}
+
 void InitDynamicReflect() {
+    reflectFundamental();
     reflectVec2();
     reflectVec3();
     reflectVec4();

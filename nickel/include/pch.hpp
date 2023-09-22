@@ -41,6 +41,7 @@
 #include <thread>
 #include <cmath>
 #include <algorithm>
+#include <sstream>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
