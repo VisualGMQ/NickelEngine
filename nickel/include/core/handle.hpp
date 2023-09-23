@@ -77,6 +77,12 @@ public:
         return HandleIDManager<Tag>::Instance().Has(handle_);
     }
 
+    static Handle ForceCastFromInteger(HandleInnerIDType id) {
+        return Handle(id);
+    }
+
+    HandleInnerIDType Cast2Integer() const { return handle_; }
+
     operator bool() const { return IsValid(); }
 
     bool operator==(const Handle& o) const { return handle_ == o.handle_; }

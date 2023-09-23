@@ -565,7 +565,11 @@ enum class TextureWrapperType {
     ClampToBorder = GL_CLAMP_TO_BORDER,
 };
 
-enum class TextureFilerType {
+std::string_view GetTextureWrapperTypeName(TextureWrapperType);
+std::optional<TextureWrapperType> GetTextureWrapperTypeFromName(std::string_view);
+
+
+enum class TextureFilterType {
     Nearest = GL_NEAREST,
     Linear = GL_LINEAR,
 
@@ -575,9 +579,12 @@ enum class TextureFilerType {
     NearestMipmapNearest = GL_NEAREST_MIPMAP_NEAREST,
 };
 
+std::string_view GetTextureFilterTypeName(TextureFilterType);
+std::optional<TextureFilterType> GetTextureFilterTypeByName(std::string_view);
+
 struct Sampler final {
     struct {
-        std::optional<TextureWrapperType> s, r, t;
+        TextureWrapperType s, r, t;
         float borderColor[4] = {1, 1, 1, 1};
 
         bool NeedBorderColor() const {
@@ -588,7 +595,7 @@ struct Sampler final {
     } wrapper;
 
     struct {
-        std::optional<TextureFilerType> min, mag;
+        TextureFilterType min, mag;
     } filter;
 
     bool mipmap;
@@ -596,8 +603,8 @@ struct Sampler final {
     static Sampler CreateLinearRepeat() {
         Sampler sampler;
         sampler.mipmap = false;
-        sampler.filter.mag = TextureFilerType::Linear;
-        sampler.filter.min = TextureFilerType::Linear;
+        sampler.filter.mag = TextureFilterType::Linear;
+        sampler.filter.min = TextureFilterType::Linear;
         sampler.wrapper.s = TextureWrapperType::Repeat;
         sampler.wrapper.r = TextureWrapperType::Repeat;
         sampler.wrapper.t = TextureWrapperType::Repeat;
@@ -607,8 +614,8 @@ struct Sampler final {
     static Sampler CreateNearestRepeat() {
         Sampler sampler;
         sampler.mipmap = false;
-        sampler.filter.mag = TextureFilerType::Nearest;
-        sampler.filter.min = TextureFilerType::Nearest;
+        sampler.filter.mag = TextureFilterType::Nearest;
+        sampler.filter.min = TextureFilterType::Nearest;
         sampler.wrapper.s = TextureWrapperType::Repeat;
         sampler.wrapper.r = TextureWrapperType::Repeat;
         sampler.wrapper.t = TextureWrapperType::Repeat;
@@ -641,59 +648,57 @@ public:
     enum class Type {
         Null = -1,  // null texture
         Dimension2 = GL_TEXTURE_2D,
+        Dimension3 = GL_TEXTURE_3D,
         // TODO: do other type support later
-        // Dimension3 = GL_TEXTURE_3D,
     };
 
     Texture(Type type, void* pixels, int w, int h, const Sampler& sampler,
             Format out, Format inner)
         : type_(type), w_(w), h_(h) {
+
+        GLenum glType = static_cast<GLenum>(type);
+
         GL_CALL(glGenTextures(1, &id_));
         Bind();
-        if (sampler.wrapper.s) {
+        GL_CALL(
+            glTexParameteri(glType, GL_TEXTURE_WRAP_S,
+                            static_cast<GLint>(sampler.wrapper.s)));
+        GL_CALL(
+            glTexParameteri(glType, GL_TEXTURE_WRAP_R,
+                            static_cast<GLint>(sampler.wrapper.r)));
+        if (type == Type::Dimension3) {
             GL_CALL(
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                                static_cast<GLint>(sampler.wrapper.s.value())));
-        }
-        if (sampler.wrapper.r) {
-            GL_CALL(
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R,
-                                static_cast<GLint>(sampler.wrapper.r.value())));
-        }
-        if (sampler.wrapper.t) {
-            GL_CALL(
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                                static_cast<GLint>(sampler.wrapper.t.value())));
+                glTexParameteri(glType, GL_TEXTURE_WRAP_T,
+                                static_cast<GLint>(sampler.wrapper.t)));
         }
         if (sampler.wrapper.NeedBorderColor()) {
-            GL_CALL(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR,
+            GL_CALL(glTexParameterfv(glType, GL_TEXTURE_BORDER_COLOR,
                                      sampler.wrapper.borderColor));
         }
-        if (sampler.filter.min) {
-            GL_CALL(glTexParameteri(
-                GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                static_cast<GLint>(sampler.filter.min.value())));
-        }
-        if (sampler.filter.mag) {
-            GL_CALL(glTexParameteri(
-                GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                static_cast<GLint>(sampler.filter.mag.value())));
-        }
-        GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(inner), w, h,
+
+        GL_CALL(glTexParameteri(
+            glType, GL_TEXTURE_MIN_FILTER,
+            static_cast<GLint>(sampler.filter.min)));
+
+        GL_CALL(glTexParameteri(
+            glType, GL_TEXTURE_MAG_FILTER,
+            static_cast<GLint>(sampler.filter.mag)));
+
+        GL_CALL(glTexImage2D(glType, 0, static_cast<GLint>(inner), w, h,
                              sampler.wrapper.NeedBorderColor(),
                              static_cast<GLint>(inner), GL_UNSIGNED_BYTE,
                              pixels));
         if (sampler.mipmap) {
-            GL_CALL(glGenerateMipmap(GL_TEXTURE_2D));
+            GL_CALL(glGenerateMipmap(glType));
         }
     }
 
     void Bind(int slot = 0) const {
         GL_CALL(glActiveTexture(GL_TEXTURE0 + slot));
-        GL_CALL(glBindTexture(GL_TEXTURE_2D, id_));
+        GL_CALL(glBindTexture(static_cast<GLenum>(type_), id_));
     }
 
-    void Unbind() const { GL_CALL(glBindTexture(GL_TEXTURE_2D, 0)); }
+    void Unbind() const { GL_CALL(glBindTexture(static_cast<GLenum>(type_), 0)); }
 
     Texture(const Texture&) = delete;
     Texture& operator=(const Texture&) = delete;

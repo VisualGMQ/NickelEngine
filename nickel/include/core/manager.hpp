@@ -30,6 +30,14 @@ public:
     std::string_view GetRootPath() const { return rootPath_; }
     void SetRootPath(const std::string& path) { rootPath_ = path; }
 
+    void Associate2File(Handle<T> handle, const std::string& filename) {
+        if (associateFiles_.count(filename) == 0) {
+            associateFiles_.emplace(filename, handle);
+        } else {
+            // TODO: error handling
+        }
+    }
+
 protected:
     void storeNewItem(Handle<T> handle, std::unique_ptr<T>&& item) {
         if (handle) {
@@ -44,6 +52,7 @@ protected:
     std::unordered_map<Handle<T>, std::unique_ptr<T>, typename Handle<T>::Hash,
                        typename Handle<T>::HashEq>
         datas_;
+    std::unordered_map<std::string, Handle<T>> associateFiles_;
     std::string rootPath_ = "./";
 };
 

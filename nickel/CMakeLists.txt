@@ -5,6 +5,7 @@ aux_source_directory(src/input nickel_src)
 aux_source_directory(src/misc nickel_src)
 aux_source_directory(src/anim nickel_src)
 aux_source_directory(src/refl nickel_src)
+aux_source_directory(src/core nickel_src)
 
 add_library(${engine_name} STATIC ${nickel_src})
 target_compile_features(${engine_name} PUBLIC cxx_std_17)
