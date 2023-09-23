@@ -12,6 +12,7 @@
 #include "misc/dllopen.hpp"
 #include "refl/drefl.hpp"
 #include "anim/anim.hpp"
+#include "nickel.hpp"
 
 using namespace nickel;
 
@@ -21,56 +22,6 @@ void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& re
 
 void ErrorCallback(int error, const char* description) {
     LOGE(log_tag::Glfw, description);
-}
-
-void VideoSystemInit(gecs::commands cmds) {
-    InitDynamicReflect();
-
-    auto projectConfigResult = toml::parse_file(config::ProjectConfigFilename);
-    Window* window = nullptr;
-    if (projectConfigResult.failed()) {
-        LOGE(log_tag::Config, "project config file ", config::ProjectConfigFilename, " read failed: ", projectConfigResult.error());
-        window = &cmds.emplace_resource<Window>(WindowBuilder::Default().Build());
-        cmds.emplace_resource<Camera>(Camera2D::Default(*window));
-    } else {
-        const auto& configTbl = projectConfigResult.table();
-        if (auto node = configTbl["window"]; node.is_table()) {
-            window = &cmds.emplace_resource<Window>(
-                WindowBuilder::FromConfig(*node.as_table()).Build());
-        } else {
-            window = &cmds.emplace_resource<Window>(WindowBuilder::Default().Build());
-        }
-
-        if (auto node = configTbl["camera"]; node.is_table()) {
-            const auto& cameraConfig = *node.as_table();
-            cmds.emplace_resource<Camera>(Camera2D::FromConfig(*node.as_table()));
-        } else {
-            cmds.emplace_resource<Camera>(Camera2D::Default(*window));
-        }
-    }
-
-    cmds.emplace_resource<EventPoller>(EventPoller{});
-    EventPoller::AssociatePollerAndECS(*world->cur_registry());
-    EventPoller::ConnectPoller2Events(*window);
-
-    cmds.emplace_resource<Time>();
-    cmds.emplace_resource<TextureManager>();
-    cmds.emplace_resource<TimerManager>();
-    cmds.emplace_resource<AnimationManager>();
-
-    auto windowSize = window->Size();
-
-    auto& renderer2d = cmds.emplace_resource<Renderer2D>();
-    renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
-
-    // init animation serialize method
-    AnimTrackSerialMethods::Instance()
-        .RegistMethod<cgmath::Vec2>()
-        .RegistMethod<cgmath::Vec3>()
-        .RegistMethod<float>()
-        .RegistMethod<double>()
-        .RegistMethod<int>()
-        .RegistMethod<long>();
 }
 
 void BootstrapCallSystem() {
@@ -85,8 +36,7 @@ void VideoSystemUpdate(gecs::resource<EventPoller> poller,
     renderer2d->Clear();
 }
 
-void VideoSystemShutdown(gecs::commands cmds) {
-}
+void VideoSystemShutdown(gecs::commands cmds) {}
 
 void InputSystemInit(
     gecs::commands cmds,
@@ -152,9 +102,8 @@ int main(int argc, char** argv) {
     auto& main_reg = world->regist_registry("MainReg");
     main_reg
         // startup systems
-        .regist_startup_system<VideoSystemInit>()
-        .regist_startup_system<InputSystemInit>()
         .regist_startup_system<BootstrapCallSystem>()
+        .regist_startup_system<InputSystemInit>()
         // shutdown systems
         .regist_shutdown_system<VideoSystemShutdown>()
         // update systems

@@ -38,6 +38,11 @@ public:
         }
     }
 
+    void ReleaseAll() {
+        datas_.clear();
+        associateFiles_.clear();
+    }
+
 protected:
     void storeNewItem(Handle<T> handle, std::unique_ptr<T>&& item) {
         if (handle) {

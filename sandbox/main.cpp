@@ -1,5 +1,6 @@
 #include "nickel.hpp"
 #include "refl/anim.hpp"
+#include "misc/project.hpp"
 
 using namespace nickel;
 
@@ -57,6 +58,12 @@ void TestInitSystem(gecs::commands cmds, gecs::resource<gecs::mut<TextureManager
 }
 
 void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& reg) {
+    ProjectInitInfo info;
+    info.windowData.title = "sandbox";
+    info.windowData.size.Set(1024, 720);
+
+    InitSystem(world, info, reg.commands());
+
     reg.regist_update_system<TestUpdateSystem>()
     .regist_startup_system<TestInitSystem>();
 }

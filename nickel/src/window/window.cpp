@@ -4,7 +4,7 @@
 
 namespace nickel {
 
-Window::Window(const std::string& title, int width, int height) {
+Window::Window(const std::string& title, int width, int height): title_(title) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, config::GLMajorVersion);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, config::GLMinorVersion);
 
@@ -49,6 +49,7 @@ void Window::Resize(int w, int h) {
 
 void Window::SetTitle(const std::string& title) {
     glfwSetWindowTitle(window_, title.c_str());
+    title_ = title;
 }
 
 Window::~Window() {

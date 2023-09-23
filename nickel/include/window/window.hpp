@@ -34,6 +34,7 @@ public:
     void SwapBuffer() const;
     void Resize(int w, int h);
     void SetTitle(const std::string& title);
+    std::string_view Title() const { return title_; }
 
     cgmath::Vec2 Size() const;
 
@@ -41,6 +42,7 @@ public:
 
 private:
     GLFWwindow* window_;
+    std::string title_;
 };
 
 class WindowBuilder final {
