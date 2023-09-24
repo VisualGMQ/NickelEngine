@@ -60,8 +60,7 @@ void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
     ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize((GLFWwindow*)window->Raw(), &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
-    renderer2d->Clear();
+    renderer2d->SetViewport({0, 0}, cgmath::Vec2(display_w, display_h));
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
@@ -69,7 +68,6 @@ void ProjectManagerUpdate(
     gecs::commands cmds,
     gecs::resource<gecs::mut<ProjectInitInfo>> projInitInfo,
     gecs::resource<gecs::mut<TextureManager>> textureMgr) {
-    // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
@@ -115,7 +113,8 @@ void ProjectManagerUpdate(
 void EditorEnter(gecs::resource<ProjectInitInfo> info,
                  gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::resource<gecs::mut<Window>> window,
-                 gecs::resource<gecs::mut<TextureManager>> textureMgr) {
+                 gecs::resource<gecs::mut<TextureManager>> textureMgr,
+                 gecs::resource<gecs::mut<Renderer2D>> renderer) {
     std::string path = info->projectPath + "/project.toml";
 
     auto newInfo = LoadBasicProjectConfig(initInfo->projectPath);
@@ -124,7 +123,14 @@ void EditorEnter(gecs::resource<ProjectInitInfo> info,
     window->Resize(EditorWindowWidth, EditorWindowHeight);
     // TODO: change renderer default texture to canvas
 
+    renderer->SetViewport({0, 0}, cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
+
     initInfo.get() = std::move(newInfo);
+}
+
+void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer) {
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
 }
 
 void BootstrapSystem(gecs::world& world,
@@ -147,6 +153,9 @@ void BootstrapSystem(gecs::world& world,
         // Editor state
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
+        .regist_update_system_to_state<ImGuiStart>(EditorScene::Editor)
+        .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)
+        .regist_update_system_to_state<ImGuiEnd>(EditorScene::Editor)
         // start with
         .start_with_state(EditorScene::ProjectManager);
 }

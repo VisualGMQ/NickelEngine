@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/assert.hpp"
 #include "core/cgmath.hpp"
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
@@ -193,7 +194,7 @@ inline GLenum Primitive2GL(PrimitiveType type) {
     }
 }
 
-enum BarrierType {
+enum class BarrierType {
     AtomicCounter,
     Framebuffer,
     ShaderImageAccess,
@@ -566,8 +567,8 @@ enum class TextureWrapperType {
 };
 
 std::string_view GetTextureWrapperTypeName(TextureWrapperType);
-std::optional<TextureWrapperType> GetTextureWrapperTypeFromName(std::string_view);
-
+std::optional<TextureWrapperType> GetTextureWrapperTypeFromName(
+    std::string_view);
 
 enum class TextureFilterType {
     Nearest = GL_NEAREST,
@@ -624,25 +625,32 @@ struct Sampler final {
 };
 
 enum class Format {
-    RED = GL_RED,
+    Red = GL_RED,
     RG = GL_RG,
     RGB = GL_RGB,
     BGR = GL_BGR,
     RGBA = GL_RGBA,
     BGRA = GL_BGRA,
-    RED_INTEGER = GL_RED_INTEGER,
-    RG_INTEGER = GL_RG_INTEGER,
-    RGB_INTEGER = GL_RGB_INTEGER,
-    BGR_INTEGER = GL_BGR_INTEGER,
-    RGBA_INTEGER = GL_RGBA_INTEGER,
-    BGRA_INTEGER = GL_BGRA_INTEGER,
-    STENCIL_INDEX = GL_STENCIL_INDEX,
-    DEPTH_COMPONENT = GL_DEPTH_COMPONENT,
-    DEPTH_STENCIL = GL_DEPTH_STENCIL
+    RedInteger = GL_RED_INTEGER,
+    RGInteger = GL_RG_INTEGER,
+    RGBInteger = GL_RGB_INTEGER,
+    BGRInteger = GL_BGR_INTEGER,
+    RGBAInteger = GL_RGBA_INTEGER,
+    BGRAInteger = GL_BGRA_INTEGER,
+    StencilIndex = GL_STENCIL_INDEX,
+    DepthComponent = GL_DEPTH_COMPONENT,
+    DepthStencil = GL_DEPTH_STENCIL
+};
+
+enum class DataType {
+    UByte = GL_UNSIGNED_BYTE,
+    UInt24_8 = GL_UNSIGNED_INT_24_8,
 };
 
 class Texture final {
 public:
+    friend class Framebuffer;
+
     static auto Null() { return Texture{}; }
 
     enum class Type {
@@ -653,41 +661,35 @@ public:
     };
 
     Texture(Type type, void* pixels, int w, int h, const Sampler& sampler,
-            Format out, Format inner)
+            Format format, Format internal, DataType data_type)
         : type_(type), w_(w), h_(h) {
-
         GLenum glType = static_cast<GLenum>(type);
 
         GL_CALL(glGenTextures(1, &id_));
         Bind();
-        GL_CALL(
-            glTexParameteri(glType, GL_TEXTURE_WRAP_S,
-                            static_cast<GLint>(sampler.wrapper.s)));
-        GL_CALL(
-            glTexParameteri(glType, GL_TEXTURE_WRAP_R,
-                            static_cast<GLint>(sampler.wrapper.r)));
+        GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_S,
+                                static_cast<GLint>(sampler.wrapper.s)));
+        GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_R,
+                                static_cast<GLint>(sampler.wrapper.r)));
         if (type == Type::Dimension3) {
-            GL_CALL(
-                glTexParameteri(glType, GL_TEXTURE_WRAP_T,
-                                static_cast<GLint>(sampler.wrapper.t)));
+            GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_T,
+                                    static_cast<GLint>(sampler.wrapper.t)));
         }
         if (sampler.wrapper.NeedBorderColor()) {
             GL_CALL(glTexParameterfv(glType, GL_TEXTURE_BORDER_COLOR,
                                      sampler.wrapper.borderColor));
         }
 
-        GL_CALL(glTexParameteri(
-            glType, GL_TEXTURE_MIN_FILTER,
-            static_cast<GLint>(sampler.filter.min)));
+        GL_CALL(glTexParameteri(glType, GL_TEXTURE_MIN_FILTER,
+                                static_cast<GLint>(sampler.filter.min)));
 
-        GL_CALL(glTexParameteri(
-            glType, GL_TEXTURE_MAG_FILTER,
-            static_cast<GLint>(sampler.filter.mag)));
+        GL_CALL(glTexParameteri(glType, GL_TEXTURE_MAG_FILTER,
+                                static_cast<GLint>(sampler.filter.mag)));
 
-        GL_CALL(glTexImage2D(glType, 0, static_cast<GLint>(inner), w, h,
-                             sampler.wrapper.NeedBorderColor(),
-                             static_cast<GLint>(inner), GL_UNSIGNED_BYTE,
-                             pixels));
+        GL_CALL(glTexImage2D(glType, 0, static_cast<GLint>(internal), w, h,
+                            sampler.wrapper.NeedBorderColor(),
+                            static_cast<GLint>(format), static_cast<GLenum>(data_type),
+                            pixels));
         if (sampler.mipmap) {
             GL_CALL(glGenerateMipmap(glType));
         }
@@ -698,7 +700,9 @@ public:
         GL_CALL(glBindTexture(static_cast<GLenum>(type_), id_));
     }
 
-    void Unbind() const { GL_CALL(glBindTexture(static_cast<GLenum>(type_), 0)); }
+    void Unbind() const {
+        GL_CALL(glBindTexture(static_cast<GLenum>(type_), 0));
+    }
 
     Texture(const Texture&) = delete;
     Texture& operator=(const Texture&) = delete;
@@ -730,13 +734,15 @@ public:
 
     int Height() const { return h_; }
 
+    auto Type() const { return type_; }
+
     ~Texture() { GL_CALL(glDeleteTextures(1, &id_)); }
 
 private:
     Texture() : id_(0), type_(gogl::Texture::Type::Null) {}
 
     GLuint id_;
-    Type type_;
+    enum Type type_;
     int w_;
     int h_;
 };
@@ -881,6 +887,101 @@ private:
             GL_CALL(glEnableVertexAttribArray(attr.location));
         }
     }
+};
+
+class RenderBuffer final {
+public:
+    friend class Framebuffer;
+
+    RenderBuffer(int w, int h): w_(w), h_(h) {
+        GL_CALL(glGenRenderbuffers(1, &id_));
+        Bind();
+        GL_CALL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h));
+    }
+
+    void Bind() {
+        GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, id_));
+    }
+
+    void Unbind() const {
+        GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
+    }
+
+    ~RenderBuffer() {
+        GL_CALL(glDeleteRenderbuffers(1, &id_));
+    }
+
+    RenderBuffer(const RenderBuffer&) = delete;
+    RenderBuffer& operator=(const RenderBuffer&) = delete;
+
+    int Width() const { return w_; }
+    int Height() const { return h_; }
+
+private:
+    GLuint id_;
+    int w_, h_;
+};
+
+enum class FramebufferAccess {
+    Draw = GL_DRAW_FRAMEBUFFER,
+    Read = GL_READ_FRAMEBUFFER,
+    ReadDraw = GL_FRAMEBUFFER,
+};
+
+class Framebuffer final {
+public:
+    Framebuffer(FramebufferAccess access) : access_(access) {
+        GL_CALL(glCreateFramebuffers(1, &id_));
+    }
+
+    Framebuffer(const Framebuffer&) = delete;
+    Framebuffer& operator=(const Framebuffer&) = delete;
+
+    void Bind() const {
+        GL_CALL(glBindFramebuffer(static_cast<GLenum>(access_), id_));
+    }
+
+    void Unbind() const {
+        GL_CALL(glBindFramebuffer(static_cast<GLenum>(access_), 0));
+    }
+
+    void AttachColorTexture2D(Texture& texture, uint32_t idx = 0) {
+        Assert(texture.Type() == Texture::Type::Dimension2,
+               "bind 2D color texture need a Texture2D");
+
+        texture.Bind();
+        glFramebufferTexture2D(static_cast<GLenum>(access_),
+                               GL_COLOR_ATTACHMENT0 + idx, GL_TEXTURE_2D,
+                               texture.id_, 0);
+    }
+
+    void AttachDepthStencilTexture(Texture& texture) {
+        Assert(texture.Type() == Texture::Type::Dimension2,
+               "bind 2D color texture need a Texture2D");
+
+        texture.Bind();
+        glFramebufferTexture2D(static_cast<GLenum>(access_),
+                               GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
+                               texture.id_, 0);
+    }
+
+    void AttacheRenderBuffer(RenderBuffer& buffer) {
+        buffer.Bind();
+        GL_CALL(glFramebufferRenderbuffer(
+            static_cast<GLenum>(access_), GL_DEPTH_STENCIL_ATTACHMENT,
+            GL_RENDERBUFFER, buffer.id_));
+    }
+
+    bool CheckValid() const {
+        return glCheckFramebufferStatus(static_cast<GLenum>(access_)) ==
+               GL_FRAMEBUFFER_COMPLETE;
+    }
+
+    ~Framebuffer() { GL_CALL(glDeleteFramebuffers(1, &id_)); }
+
+private:
+    GLuint id_;
+    FramebufferAccess access_;
 };
 
 /************ physic device *****************/

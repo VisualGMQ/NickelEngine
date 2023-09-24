@@ -20,10 +20,6 @@ std::unique_ptr<gecs::world> world;
 
 void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& reg);
 
-void ErrorCallback(int error, const char* description) {
-    LOGE(log_tag::Glfw, description);
-}
-
 void BootstrapCallSystem() {
     BootstrapSystem(*world, *world->cur_registry());
 }
@@ -90,7 +86,6 @@ void InputSystemInit(
 int main(int argc, char** argv) {
     LOGI(log_tag::Nickel, "Running dir: ", std::filesystem::current_path(),
          ". Full path: ", argv[0]);
-    glfwSetErrorCallback(ErrorCallback);
 
     if (!glfwInit()) {
         LOGE(log_tag::Glfw, "init glfw failed");

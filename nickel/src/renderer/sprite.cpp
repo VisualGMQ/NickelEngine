@@ -20,8 +20,8 @@ void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
             cgmath::Rect region =
                 sprite.sprite.region
                     ? sprite.sprite.region.value()
-                    : cgmath::Rect{0, 0, static_cast<float>(texture.W()),
-                                   static_cast<float>(texture.H())};
+                    : cgmath::Rect{0, 0, static_cast<float>(texture.Width()),
+                                   static_cast<float>(texture.Height())};
             cgmath::Vec2 customSize = sprite.sprite.customSize
                                           ? sprite.sprite.customSize.value()
                                           : texture.Size();

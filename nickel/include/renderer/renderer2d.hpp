@@ -107,8 +107,12 @@ public:
                      const cgmath::Vec2& size, const cgmath::Vec4& color,
                      const cgmath::Mat44& model = cgmath::Mat44::Identity());
 
+    void SetRenderTarget(Texture* texture);
+
 private:
     std::unique_ptr<gogl::Shader> shader_;
+    std::unique_ptr<gogl::Framebuffer> framebuffer_;
+    std::unique_ptr<gogl::RenderBuffer> renderBuffer_;
     std::unique_ptr<gogl::Texture> whiteTexture_;
     std::unique_ptr<gogl::Buffer> vertexBuffer_;
     std::unique_ptr<gogl::Buffer> indicesBuffer_;

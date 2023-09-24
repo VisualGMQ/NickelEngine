@@ -14,7 +14,8 @@ void SaveAssets(const std::string& rootPath, const TextureManager& textureMgr) {
     file << toml::toml_formatter{tbl} << std::flush;
 }
 
-void SaveBasicProjectInfo(const std::string& rootPath, const ProjectInitInfo& initInfo) {
+void SaveBasicProjectInfo(const std::string& rootPath,
+                          const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
     tbl.emplace("window", mirrow::serd::srefl::serialize(initInfo.windowData));
@@ -35,12 +36,9 @@ void SaveProject(const std::string& rootPath, const TextureManager& textureMgr,
     SaveAssets(rootPath, textureMgr);
 }
 
-void SaveProjectConfig(const std::string& path, const ProjectInitInfo& info) {
+void SaveProjectConfig(const std::string& path, const ProjectInitInfo& info) {}
 
-}
-
-void LoadAssets(const std::string& rootPath,
-                        TextureManager& textureMgr) {
+void LoadAssets(const std::string& rootPath, TextureManager& textureMgr) {
     auto result = toml::parse_file(rootPath + "/assets.toml");
     if (!result) {
         LOGE(log_tag::Res, "load saved textures failed: ", result.error());
@@ -85,19 +83,48 @@ void LoadProject(const std::string& rootPath, Window& window,
     InitProjectByConfig(initInfo, window, textureMgr);
 }
 
-void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window, TextureManager& textureMgr) {
+void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
+                         TextureManager& textureMgr) {
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
     LoadAssets(initInfo.projectPath, textureMgr);
 }
 
+void ErrorCallback(int error, const char* description) {
+    LOGE(log_tag::Glfw, description);
+}
+
+void FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
+void WindowResizeCallback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
+void changeProjectMat(const WindowResizeEvent& event,
+                      gecs::resource<gecs::mut<Camera>> camera) {
+    if (camera->GetType() == Camera::Type::Dimension2) {
+        auto camera2d = camera->as_2d();
+        camera2d->SetProject(0.0, event.size.w, 0.0, event.size.h, 1.0, -1.0);
+    } else {
+        // TODO: change Camera3D project
+    }
+}
+
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds) {
+    glfwSetErrorCallback(ErrorCallback);
+
     InitDynamicReflect();
 
     Window* window =
         &cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build());
-    cmds.emplace_resource<Camera>(Camera2D::Default(*window));
+
+    // glfwSetWindowSizeCallback((GLFWwindow*)window->Raw(),
+    // WindowResizeCallback);
+    // glfwSetFramebufferSizeCallback((GLFWwindow*)window->Raw(),
+    // FramebufferResizeCallback);
 
     cmds.emplace_resource<EventPoller>(EventPoller{});
     EventPoller::AssociatePollerAndECS(*world.cur_registry());
@@ -111,7 +138,12 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     auto windowSize = window->Size();
 
     auto& renderer2d = cmds.emplace_resource<Renderer2D>();
+    cmds.emplace_resource<Camera>(Camera2D::Default(*window));
     renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
+    world.cur_registry()
+        ->event_dispatcher<WindowResizeEvent>()
+        .sink()
+        .add<changeProjectMat>();
 
     // init animation serialize method
     AnimTrackSerialMethods::Instance()

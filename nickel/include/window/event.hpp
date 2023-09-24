@@ -176,6 +176,10 @@ struct ScrollEvent final {
     cgmath::Vec2 offset;
 };
 
+struct WindowResizeEvent final {
+    cgmath::Vec2 size;
+};
+
 class EventPoller final {
 public:
     void Poll() const;
@@ -192,12 +196,13 @@ private:
 
     static auto& getRegistry() { return *reg_; }
 
-    static void keyCallback(GLFWwindow* window, int key, int scancode,
+    static void keyCallback(GLFWwindow*, int key, int scancode,
                             int action, int mods);
-    static void mouseBtnCallback(GLFWwindow* window, int button, int action,
+    static void mouseBtnCallback(GLFWwindow*, int button, int action,
                                  int mods);
-    static void mouseMotionCallback(GLFWwindow* window, double xpos,
+    static void mouseMotionCallback(GLFWwindow*, double xpos,
                                     double ypos);
+    static void windowResizeCallback(GLFWwindow*, int, int);
 };
 
 }  // namespace nickel

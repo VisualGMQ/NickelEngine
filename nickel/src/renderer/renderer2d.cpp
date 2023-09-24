@@ -212,7 +212,7 @@ std::unique_ptr<gogl::Texture> Renderer2D::initWhiteTexture() {
     return std::make_unique<gogl::Texture>(
         gogl::Texture::Type::Dimension2, pixels, 1, 1,
         gogl::Sampler::CreateLinearRepeat(), gogl::Format::RGBA,
-        gogl::Format::RGBA);
+        gogl::Format::RGBA, gogl::DataType::UByte);
 }
 
 std::unique_ptr<gogl::Buffer> Renderer2D::initVertexBuffer() {
@@ -228,6 +228,31 @@ std::unique_ptr<gogl::AttributePointer> Renderer2D::initAttrPtr() {
         gogl::BufferLayout::CreateFromTypes({gogl::Attribute::Type::Vec2,
                                              gogl::Attribute::Type::Vec2,
                                              gogl::Attribute::Type::Vec4}));
+}
+
+void Renderer2D::SetRenderTarget(Texture* texture) {
+    if (!texture) {
+        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+        return;
+    }
+
+    if (!renderBuffer_ || (renderBuffer_->Width() != texture->Width() ||
+                           renderBuffer_->Height() != texture->Height())) {
+        renderBuffer_ = std::make_unique<gogl::RenderBuffer>(texture->Width(),
+                                                             texture->Height());
+    }
+
+    if (!framebuffer_) {
+        framebuffer_ = std::make_unique<gogl::Framebuffer>(gogl::FramebufferAccess::ReadDraw);
+        framebuffer_->Bind();
+        framebuffer_->AttachColorTexture2D(*texture->texture_);
+        framebuffer_->AttacheRenderBuffer(*renderBuffer_);
+        if (!framebuffer_->CheckValid()) {
+            LOGE(log_tag::Renderer,
+                 "set render target failed: framebuffer incomplete");
+            framebuffer_->Unbind();
+        }
+    }
 }
 
 }  // namespace nickel

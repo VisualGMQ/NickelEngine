@@ -61,6 +61,9 @@ public:
 
     auto& Position() const { return position_; }
 
+    void SetProject(float left, float right, float top, float bottom, float near,
+             float far);
+
 private:
     cgmath::Vec2 position_;
     cgmath::Vec2 scale_;

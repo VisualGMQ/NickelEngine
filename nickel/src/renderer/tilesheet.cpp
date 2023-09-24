@@ -16,10 +16,10 @@ Tilesheet::Tilesheet(TextureManager& manager, TextureHandle handle,
     if (handle) {
         auto& image = manager.Get(handle);
         tileWidth_ =
-            (image.W() - margin.left - margin.right - (col - 1) * spacing.x) /
+            (image.Width() - margin.left - margin.right - (col - 1) * spacing.x) /
             col;
         tileHeight_ =
-            (image.H() - margin.top - margin.bottom - (row - 1) * spacing.y) /
+            (image.Height() - margin.top - margin.bottom - (row - 1) * spacing.y) /
             row;
     }
 }

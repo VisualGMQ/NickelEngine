@@ -22,10 +22,6 @@ Window::Window(const std::string& title, int width, int height): title_(title) {
         int w, h;
         glfwGetFramebufferSize(window_, &w, &h);
         GL_CALL(glViewport(0, 0, w, h));
-        glfwSetFramebufferSizeCallback(
-            window_, +[](GLFWwindow* window, int width, int height) {
-                GL_CALL(glViewport(0, 0, width, height));
-            });
     }
 }
 

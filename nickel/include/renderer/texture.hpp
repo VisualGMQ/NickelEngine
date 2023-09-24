@@ -31,9 +31,9 @@ public:
     Texture& operator=(const Texture&) = delete;
     Texture& operator=(Texture&&);
 
-    int W() const { return w_; }
+    int Width() const { return w_; }
 
-    int H() const { return h_; }
+    int Height() const { return h_; }
 
     cgmath::Vec2 Size() const {
         return cgmath::Vec2{static_cast<float>(w_), static_cast<float>(h_)};

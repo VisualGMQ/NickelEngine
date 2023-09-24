@@ -146,6 +146,8 @@ void EventPoller::ConnectPoller2Events(Window& window) {
                              EventPoller::mouseMotionCallback);
     glfwSetMouseButtonCallback((GLFWwindow*)window.Raw(),
                                EventPoller::mouseBtnCallback);
+    glfwSetFramebufferSizeCallback((GLFWwindow*)window.Raw(),
+                                   EventPoller::windowResizeCallback);
 }
 
 void EventPoller::keyCallback(GLFWwindow* window, int key, int scancode,
@@ -178,6 +180,15 @@ void EventPoller::mouseMotionCallback(GLFWwindow* window, double xpos,
     event.position.y = static_cast<float>(ypos);
 
     EventPoller::getRegistry().event_dispatcher<MouseMotionEvent>().enqueue(
+        event);
+}
+
+void EventPoller::windowResizeCallback(GLFWwindow*, int w, int h) {
+    WindowResizeEvent event;
+    event.size.x = static_cast<float>(w);
+    event.size.y = static_cast<float>(h);
+
+    EventPoller::getRegistry().event_dispatcher<WindowResizeEvent>().enqueue(
         event);
 }
 

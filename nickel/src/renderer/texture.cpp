@@ -13,7 +13,7 @@ Texture::Texture(TextureHandle handle, const std::string& filename,
     if (pixels) {
         texture_ = std::make_unique<gogl::Texture>(
             gogl::Texture::Type::Dimension2, pixels, w_, h_, sampler,
-            gogl::Format::RGBA, gogl::Format::RGBA);
+            gogl::Format::RGBA, gogl::Format::RGBA, gogl::DataType::UByte);
     } else {
         LOGE(log_tag::Res, "create texture from ", filename, " failed");
     }
@@ -24,7 +24,7 @@ Texture::Texture(TextureHandle handle, void* pixels, int w, int h,
     : handle_(handle), sampler_(sampler) {
     texture_ = std::make_unique<gogl::Texture>(
         gogl::Texture::Type::Dimension2, pixels, w_, h_, sampler,
-        gogl::Format::RGBA, gogl::Format::RGBA);
+        gogl::Format::RGBA, gogl::Format::RGBA, gogl::DataType::UByte);
 }
 
 Texture& Texture::operator=(Texture&& img) {
