@@ -13,9 +13,6 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 
-#define GECS_ASSERT(expr, msg) Assert(expr, msg)
-#include "gecs/gecs.hpp"
-
 #define MIRROW_ASSERT(expr, msg) Assert(expr, msg)
 #include "mirrow/drefl/drefl.hpp"
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
@@ -26,6 +23,11 @@
 #include "mirrow/util/misc.hpp"
 #include "mirrow/util/type_list.hpp"
 #include "mirrow/util/variable_traits.hpp"
+
+#define GECS_ASSERT(expr, msg) Assert(expr, msg)
+#define GECS_GET_TYPE_INFO(type) ::mirrow::drefl::reflected_type<type>().type_node()
+#define GECS_REFERENCE_ANY ::mirrow::drefl::reference_any
+#include "gecs/gecs.hpp"
 
 #include <iostream>
 #include <memory>

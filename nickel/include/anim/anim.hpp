@@ -13,8 +13,8 @@ class AnimationTrack {
 public:
     AnimationTrack() = default;
 
-    AnimationTrack(mirrow::drefl::type_info type_info)
-        : type_info_(type_info) {}
+    AnimationTrack(mirrow::drefl::type_info typeInfo)
+        : typeInfo_(typeInfo) {}
 
     virtual ~AnimationTrack() = default;
 
@@ -23,10 +23,15 @@ public:
     virtual size_t Size() const = 0;
     virtual TimeType Duration() const = 0;
 
-    auto TypeInfo() const { return type_info_; }
+    auto TypeInfo() const { return typeInfo_; }
+
+    void ChangeApplyTarget(mirrow::drefl::type_info typeInfo) { applyTypeInfo_ = typeInfo; }
+    auto GetApplyTarget() const { return applyTypeInfo_; }
 
 private:
-    mirrow::drefl::type_info type_info_;
+    mirrow::drefl::type_info
+        applyTypeInfo_;  // which type should this track apply to
+    mirrow::drefl::type_info typeInfo_;  // animate data type
 };
 
 template <typename T>
@@ -197,7 +202,7 @@ public:
     using animation_type = Animation;
 
     AnimationPlayer(AnimationHandle anim, AnimationManager& mgr)
-        : handle_(anim), mgr_(mgr) {}
+        : handle_(anim), mgr_(&mgr) {}
 
     AnimationHandle Animation() const { return handle_; }
 
@@ -208,31 +213,6 @@ public:
     void Step(TimeType step) {
         if (isPlaying_) {
             curTime_ += static_cast<int>(dir_) * step;
-        }
-    }
-
-    void AsyncTo(mirrow::drefl::reference_any instance) {
-        if (!mgr_.Has(handle_)) {
-            return;
-        }
-
-        auto type_info = instance.type();
-        Assert(type_info.is_class(),
-               "currently we only support do animation on class");
-        auto class_info = type_info.as_class();
-
-        auto& anim = mgr_.Get(handle_);
-
-        for (auto& [name, track] : anim.Tracks()) {
-            for (auto&& var : class_info.vars()) {
-                // IMPROVE: maybe we can use unordered_map to store vars to
-                // improve find effeciency? Or maybe we should cache the result?
-                auto field =
-                    mirrow::drefl::invoke_by_any_return_ref(var, &instance);
-                if (var.name() == name && field.type() == track->TypeInfo()) {
-                    field.deep_set(track->GetValueAt(curTime_));
-                }
-            }
         }
     }
 
@@ -254,18 +234,20 @@ public:
         }
     }
 
-    bool IsValid() const { return mgr_.Has(handle_); }
+    bool IsValid() const { return mgr_->Has(handle_); }
 
     TimeType Duration() const {
-        if (mgr_.Has(handle_)) {
-            auto& anim = mgr_.Get(handle_);
+        if (mgr_->Has(handle_)) {
+            auto& anim = mgr_->Get(handle_);
             return anim.Duration();
         }
         return 0;
     }
 
+    void Sync(gecs::entity, gecs::registry);
+
 private:
-    AnimationManager& mgr_;
+    AnimationManager* mgr_;
     Direction dir_ = Direction::Forward;
     int curTime_ = 0;
     AnimationHandle handle_;

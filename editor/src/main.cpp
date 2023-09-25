@@ -110,12 +110,11 @@ void ProjectManagerUpdate(
     ImGui::End();
 }
 
-void EditorEnter(gecs::resource<ProjectInitInfo> info,
-                 gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
+void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::resource<gecs::mut<Window>> window,
                  gecs::resource<gecs::mut<TextureManager>> textureMgr,
                  gecs::resource<gecs::mut<Renderer2D>> renderer) {
-    std::string path = info->projectPath + "/project.toml";
+    std::string path = initInfo->projectPath + "/project.toml";
 
     auto newInfo = LoadBasicProjectConfig(initInfo->projectPath);
     InitProjectByConfig(newInfo, window.get(), textureMgr.get());
