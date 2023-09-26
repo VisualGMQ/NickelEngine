@@ -96,7 +96,7 @@ private:
     container_type keyPoints_;
 };
 
-class AnimTrackSerialMethods : public Singleton<AnimTrackSerialMethods, false> {
+class AnimTrackSerialMethods : public Singlton<AnimTrackSerialMethods, false> {
 public:
     using serialize_fn_type = toml::table (*)(const AnimationTrack&);
     using deserialize_fn_type =
@@ -124,14 +124,16 @@ private:
     static toml::table serialize(const AnimationTrack& animTrack) {
         auto& track = static_cast<const BasicAnimationTrack<T>&>(animTrack);
         toml::table tbl;
-        tbl.emplace("keyframe",
-                    mirrow::serd::srefl::serialize(track.KeyPoints()));
+
+        toml::array keyframeTbl;
+        mirrow::serd::srefl::serialize(track.KeyPoints(), keyframeTbl);
+        tbl.emplace("keyframe", keyframeTbl);
         auto type_info = mirrow::drefl::reflected_type<T>();
 
-        std::string type;
-
+        if (animTrack.GetApplyTarget()) {
+            tbl.emplace("apply_target", animTrack.GetApplyTarget().name());
+        }
         tbl.emplace("type", type_info.name());
-        tbl.emplace("type", type);
 
         return tbl;
     }
@@ -151,7 +153,14 @@ private:
 
         typename BasicAnimationTrack<T>::container_type track;
         mirrow::serd::srefl::deserialize(*keyframes.as_array(), track);
-        return std::make_unique<BasicAnimationTrack<T>>(std::move(track));
+
+        auto animTrack = std::make_unique<BasicAnimationTrack<T>>(std::move(track));
+
+        if (auto node = tbl["apply_target"]; node.is_string()) {
+            animTrack->ChangeApplyTarget(::mirrow::drefl::reflected_type(node.as_string()->get()));
+        }
+
+        return animTrack;
     }
 };
 

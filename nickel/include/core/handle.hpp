@@ -23,7 +23,7 @@ private:
 
 template <typename HandleIDGeneratorType>
 class HandleIDManagerBase final
-    : public Singleton<HandleIDManagerBase<HandleIDGeneratorType>, false> {
+    : public Singlton<HandleIDManagerBase<HandleIDGeneratorType>, false> {
 public:
     auto Generate() {
         auto id = generator_.Generate();
@@ -33,7 +33,7 @@ public:
 
     bool Has(HandleInnerIDType id) const { return sparseSet_.contain(id); }
 
-    void Remove(HandleInnerIDType id) { sparseSet_.Remove(id); }
+    void Remove(HandleInnerIDType id) { sparseSet_.remove(id); }
 
 private:
     gecs::basic_sparse_set<HandleInnerIDType, gecs::config::PageSize> sparseSet_;

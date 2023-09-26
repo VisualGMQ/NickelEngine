@@ -51,14 +51,14 @@ protected:
     }
 
     std::string addRootPath(const std::string& path) const {
-        return rootPath_ + path;
+        return rootPath_ + "/" + path;
     }
 
     std::unordered_map<Handle<T>, std::unique_ptr<T>, typename Handle<T>::Hash,
                        typename Handle<T>::HashEq>
         datas_;
     std::unordered_map<std::string, Handle<T>> associateFiles_;
-    std::string rootPath_ = "./";
+    std::string rootPath_ = "";
 };
 
 template <typename T>

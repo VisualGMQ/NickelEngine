@@ -223,13 +223,13 @@ private:
 
 using Tween = BasicTween<float, int>;
 
-template <typename... Ts>
+template <typename TimeType, typename... Ts>
 class Tweeny {
 public:
     static auto From(Ts... args) {
         Tweeny<Ts...> tw;
         tw.tweens_ =
-            std::make_tuple(BasicTween<Ts>::From(std::forward<Ts>(args))...);
+            std::make_tuple(BasicTween<Ts, TimeType>::From(std::forward<Ts>(args))...);
         return tw;
     }
 

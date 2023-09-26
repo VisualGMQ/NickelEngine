@@ -6,7 +6,7 @@ using namespace nickel;
 
 void TestUpdateSystem(
     gecs::querier<gecs::mut<Transform>, gecs::mut<AnimationPlayer>> querier, gecs::registry reg) {
-    for (auto& [entity, trans, animPlayer] : querier) {
+    for (auto&& [entity, trans, animPlayer] : querier) {
         animPlayer.Step(1);
         animPlayer.Sync(entity, reg);
     }
@@ -44,7 +44,8 @@ void TestInitSystem(gecs::commands cmds,
     tracks["rotation"] = std::move(rotTrack);
     auto anim = animMgr->CreateFromTracks(std::move(tracks));
 
-    toml::table tbl = mirrow::serd::srefl::serialize(animMgr->Get(anim));
+    toml::table tbl;
+    mirrow::serd::srefl::serialize<Animation>(animMgr->Get(anim), tbl);
     toml::toml_formatter fmt{tbl};
 
     std::stringstream ss;

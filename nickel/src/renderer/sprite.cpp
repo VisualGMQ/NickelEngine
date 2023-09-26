@@ -7,7 +7,7 @@ void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
                                 gecs::resource<TextureManager> textureMgr,
                                 gecs::resource<Camera> camera) {
     renderer->BeginRender(camera.get());
-    for (auto& [_, sprite, transform] : sprites) {
+    for (auto&& [_, sprite, transform] : sprites) {
         if (sprite.image && sprite.visiable) {
             Transform trans = transform;
             if (sprite.flip & Flip::Vertical) {

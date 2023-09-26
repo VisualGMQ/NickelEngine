@@ -546,7 +546,7 @@ public:
         unsigned int y = 0;
         while (it != initVecs.end()) {
             for (unsigned int x = 0; x < Col; x++) {
-                Set(x, y, it->data[x]);
+                mat.Set(x, y, it->data[x]);
             }
             it++;
             y++;

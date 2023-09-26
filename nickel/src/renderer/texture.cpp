@@ -70,8 +70,9 @@ toml::table TextureManager::Save2Toml() const {
         if (!texture.Filename().empty()) {
             textureTbl.emplace("filename", texture.Filename());
         }
-        textureTbl.emplace("sampler",
-                           mirrow::serd::srefl::serialize(texture.Sampler()));
+        toml::table samplerTbl;
+        ::mirrow::serd::srefl::serialize<gogl::Sampler>(texture.Sampler(), samplerTbl);
+        textureTbl.emplace("sampler", samplerTbl);
         arr.push_back(textureTbl);
     }
     tbl.emplace("datas", arr);

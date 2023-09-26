@@ -3,18 +3,22 @@
 #include "core/gogl.hpp"
 #include "pch.hpp"
 
-namespace mirrow::serd::srefl::impl {
+namespace mirrow::serd::srefl {
 
 using ::nickel::gogl::Sampler;
 
+namespace impl {
+
 template <typename T>
 struct has_serialize_method<
-    T, std::void_t<std::enable_if_t<std::is_same_v<T, Sampler>, T>>> {
+    T, std::enable_if_t<std::is_same_v<T, Sampler>>> {
     static constexpr bool value = true;
 };
 
+}
+
 template <typename T>
-std::enable_if_t<std::is_same_v<T, Sampler>> serialize_impl(
+std::enable_if_t<std::is_same_v<T, Sampler>> serialize(
     const T& sampler, serialize_destination_type_t<T>& tbl) {
     tbl.emplace("mipmap", sampler.mipmap);
 
@@ -48,7 +52,7 @@ std::enable_if_t<std::is_same_v<T, Sampler>> serialize_impl(
 }
 
 template <typename T>
-std::enable_if_t<std::is_same_v<T, Sampler>> deserialize_impl(
+std::enable_if_t<std::is_same_v<T, Sampler>> deserialize(
     const toml::node& node, T& sampler) {
     Assert(node.is_table(), "node must be table when deserialize KeyFrame");
 

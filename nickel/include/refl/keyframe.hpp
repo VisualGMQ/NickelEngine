@@ -4,26 +4,32 @@
 #include "pch.hpp"
 #include "refl/cgmath.hpp"
 
-namespace mirrow::serd::srefl::impl {
+namespace mirrow::serd::srefl {
 
 using ::nickel::KeyFrame;
 
+namespace impl {
+
 template <typename T>
-struct has_serialize_method<T, std::void_t<std::enable_if_t<std::is_same_v<
-                                   T, KeyFrame<typename T::value_type>>, T>>> {
+struct has_serialize_method<T, std::enable_if_t<std::is_same_v<
+                                   T, KeyFrame<typename T::value_type>>>> {
     static constexpr bool value = true;
 };
 
+}
+
 template <typename T>
 std::enable_if_t<std::is_same_v<T, KeyFrame<typename T::value_type>>>
-serialize_impl(const T& frame, serialize_destination_type_t<T>& tbl) {
-    tbl.emplace("value", serialize<util::remove_cvref_t<decltype(frame.value)>>(frame.value));
+serialize(const T& frame, serialize_destination_type_t<T>& tbl) {
+    mirrow::serd::srefl::serialize_destination_type_t<typename T::value_type> frameTbl;
+    serialize(frame.value, frameTbl);
+    tbl.emplace("value", frameTbl);
     tbl.emplace("time", static_cast<toml::int64_t>(frame.timePoint));
 }
 
 template <typename T>
 std::enable_if_t<std::is_same_v<T, KeyFrame<typename T::value_type>>>
-deserialize_impl(const toml::node& node, T& frame) {
+deserialize(const toml::node& node, T& frame) {
     Assert(node.is_table(), "node must be table when deserialize KeyFrame");
 
     auto& tbl = *node.as_table();

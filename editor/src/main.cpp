@@ -6,6 +6,7 @@
 #include "nickel.hpp"
 
 #include "file_dialog.hpp"
+#include "show_component.hpp"
 
 #include "refl/cgmath.hpp"
 #include "refl/sprite.hpp"
@@ -68,7 +69,6 @@ void ProjectManagerUpdate(
     gecs::commands cmds,
     gecs::resource<gecs::mut<ProjectInitInfo>> projInitInfo,
     gecs::resource<gecs::mut<TextureManager>> textureMgr) {
-
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
                                     ImGuiWindowFlags_NoSavedSettings;
@@ -110,6 +110,44 @@ void ProjectManagerUpdate(
     ImGui::End();
 }
 
+void ShowVec2(mirrow::drefl::type_info type, std::string_view name,
+              mirrow::drefl::basic_any& value) {
+    Assert(type.is_class() &&
+               type == ::mirrow::drefl::reflected_type<cgmath::Vec2>(),
+           "type incorrect");
+
+    auto& vec = value.cast<cgmath::Vec2>();
+    ImGui::InputFloat2(name.data(), vec.data);
+}
+
+void ShowVec3(mirrow::drefl::type_info type, std::string_view name,
+              mirrow::drefl::basic_any& value) {
+    Assert(type.is_class() &&
+               type == ::mirrow::drefl::reflected_type<cgmath::Vec3>(),
+           "type incorrect");
+
+    auto& vec = value.cast<cgmath::Vec3>();
+    ImGui::InputFloat3(name.data(), vec.data);
+}
+
+void ShowVec4(mirrow::drefl::type_info type, std::string_view name,
+              mirrow::drefl::basic_any& value) {
+    Assert(type.is_class() &&
+               type == ::mirrow::drefl::reflected_type<cgmath::Vec4>(),
+           "type incorrect");
+
+    auto& vec = value.cast<cgmath::Vec4>();
+    ImGui::InputFloat4(name.data(), vec.data);
+}
+
+void RegistComponentShowMethods() {
+    auto& instance = ComponentShowMethods::Instance();
+
+    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec2>(), ShowVec2);
+    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec3>(), ShowVec3);
+    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec3>(), ShowVec4);
+}
+
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::resource<gecs::mut<Window>> window,
                  gecs::resource<gecs::mut<TextureManager>> textureMgr,
@@ -120,16 +158,86 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
     InitProjectByConfig(newInfo, window.get(), textureMgr.get());
     window->SetTitle("NickelEngine Editor - " + newInfo.windowData.title);
     window->Resize(EditorWindowWidth, EditorWindowHeight);
+    textureMgr->SetRootPath(initInfo->projectPath);
     // TODO: change renderer default texture to canvas
 
-    renderer->SetViewport({0, 0}, cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
+    renderer->SetViewport({0, 0},
+                          cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
 
     initInfo.get() = std::move(newInfo);
+
+    RegistComponentShowMethods();
 }
 
-void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer) {
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+void TestEnter(gecs::commands cmds,
+               gecs::resource<gecs::mut<TextureManager>> textureMgr) {
+    auto entity = cmds.create();
+    cmds.emplace<Transform>(entity, Transform::FromTranslation({100, 200}));
+    auto texture = textureMgr->Load("resources/role.png",
+                                    gogl::Sampler::CreateNearestRepeat());
 
+    SpriteBundle bundle;
+    bundle.image = texture;
+    bundle.sprite = Sprite::Default();
+    cmds.emplace<SpriteBundle>(entity, std::move(bundle));
+}
+
+void EditorEntityListWindow(int& selected, gecs::registry reg) {
+    static bool entityListOpen = true;
+    if (ImGui::Begin("Entity List", &entityListOpen)) {
+        auto& entities = reg.entities().packed();
+        for (int i = 0; i < entities.size(); i++) {
+            static char buf[64] = {0};
+            std::snprintf(buf, sizeof(buf), "entity(ID %d)", entities[i]);
+            if (ImGui::Selectable(buf, selected == i)) {
+                selected = i;
+            }
+        }
+    }
+    ImGui::End();
+}
+
+void EditorInspectorWindow(gecs::entity entity, gecs::registry reg) {
+    static bool inspectorOpen = true;
+    if (ImGui::Begin("Inspector", &inspectorOpen)) {
+        for (auto& node : mirrow::drefl::all_reflected_type()) {
+            mirrow::drefl::type_info typeInfo{node};
+            auto ent =
+                static_cast<typename gecs::world::registry_type::entity_type>(
+                    entity);
+            if (reg.has(ent, typeInfo.type_node())) {
+                auto data = reg.get_mut(ent, typeInfo.type_node());
+
+                auto& methods = ComponentShowMethods::Instance();
+                auto func = methods.Find(typeInfo);
+
+                if (func) {
+                    func(typeInfo, typeInfo.name(), data);
+                }
+            }
+        }
+    }
+    ImGui::End();
+}
+
+void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
+                       gecs::registry reg) {
+    // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
+    static int selected = -1;
+    EditorEntityListWindow(selected, reg);
+    if (selected >= 0) {
+        EditorInspectorWindow(
+            static_cast<typename gecs::world::registry_type::entity_type>(
+                reg.entities().packed()[selected]),
+            reg);
+    } else {
+        EditorInspectorWindow({}, reg);
+    }
+
+    static bool demoWindowOpen = true;
+
+    ImGui::ShowDemoWindow(&demoWindowOpen);
 }
 
 void BootstrapSystem(gecs::world& world,
@@ -152,6 +260,8 @@ void BootstrapSystem(gecs::world& world,
         // Editor state
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
+        .regist_enter_system_to_state<TestEnter>(
+            EditorScene::Editor)  // for test
         .regist_update_system_to_state<ImGuiStart>(EditorScene::Editor)
         .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)
         .regist_update_system_to_state<ImGuiEnd>(EditorScene::Editor)

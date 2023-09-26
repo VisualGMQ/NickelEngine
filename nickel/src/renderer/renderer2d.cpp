@@ -194,7 +194,7 @@ std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
 
     std::string_view fragShaderFilename = "nickel/shader/frag.shader";
     file.close();
-    file.open(fragShaderFilename);
+    file.open(fragShaderFilename.data());
     if (file.fail()) {
         LOGE(log_tag::Renderer, "read fragment shader ", fragShaderFilename, " failed");
         return nullptr;

@@ -141,6 +141,8 @@ private:
                 return "Vertex";
             case ShaderModule::Type::Fragment:
                 return "Fragment";
+            case ShaderModule::Type::Compute:
+                return "Compute";
         }
         return "Unkown";
     }

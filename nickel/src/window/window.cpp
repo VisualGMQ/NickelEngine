@@ -76,7 +76,7 @@ WindowBuilder WindowBuilder::FromConfig(const toml::table& tbl) {
 
 WindowBuilder::Data WindowBuilder::Data::Default() {
     return {
-        config::DefaultWindowTitle,
+        std::string{config::DefaultWindowTitle},
         {config::DefaultWindowWidth, config::DefaultWindowHeight}
     };
 }

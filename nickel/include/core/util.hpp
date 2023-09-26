@@ -33,7 +33,7 @@ inline std::optional<std::string> ReadWholeFile(const std::string& filename) {
 /**
  * @brief eazy use random utility
  */
-class Random final : public Singleton<Random, true> {
+class Random final : public Singlton<Random, true> {
 public:
     Random() : seed_(time(nullptr)) { num_ = seed_; }
 

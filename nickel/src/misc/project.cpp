@@ -18,7 +18,9 @@ void SaveBasicProjectInfo(const std::string& rootPath,
                           const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
-    tbl.emplace("window", mirrow::serd::srefl::serialize(initInfo.windowData));
+    toml::table windowDataTbl;
+    mirrow::serd::srefl::serialize(initInfo.windowData, windowDataTbl);
+    tbl.emplace("window", windowDataTbl);
 
     // TODO: serialize camera information
 

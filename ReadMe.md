@@ -21,3 +21,24 @@ cmake --build cmake-build
 * [glad](https://glad.dav1d.de/): use to load opengl
 * [dear-imgui](https://github.com/ocornut/imgui): use to support GUI in editor
 * [tomlplusplus](https://github.com/marzer/tomlplusplus): use to support toml file parse
+
+## Features
+
+* Finished:
+    * 2D rendering based on OpenGL4
+    * Data Oriented based on ECS
+    * Animation applyed on arbitary properties
+* WIP:
+    * RHI covered OpenGL/ES and Vulkan
+    * 3D rendering
+    * Game sound play
+    * Game physics
+    * More features of the editor
+
+## Editor
+
+features:
+
+* has a inspector to see which component your entity has
+
+![editor](./snapshot/editor.png)

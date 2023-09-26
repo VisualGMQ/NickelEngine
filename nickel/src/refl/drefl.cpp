@@ -1,6 +1,7 @@
 #include "refl/drefl.hpp"
 #include "core/cgmath.hpp"
 #include "misc/transform.hpp"
+#include "renderer/sprite.hpp"
 
 namespace nickel {
 
@@ -42,12 +43,28 @@ void reflectFundamental() {
     mirrow::drefl::factory<unsigned long>("unsigned long");
 }
 
+void reflectSprite() {
+    mirrow::drefl::factory<Sprite>("Sprite")
+        .var<&Sprite::anchor>("anchor")
+        .var<&Sprite::color>("color")
+        .var<&Sprite::region>("region")
+        .var<&Sprite::customSize>("customSize");
+
+    mirrow::drefl::factory<SpriteBundle>("SpriteBundle")
+        .var<&SpriteBundle::flip>("flip")
+        .var<&SpriteBundle::image>("image")
+        .var<&SpriteBundle::sprite>("sprite");
+
+    mirrow::drefl::factory<TextureHandle>("TextureHandle");
+}
+
 void InitDynamicReflect() {
     reflectFundamental();
     reflectVec2();
     reflectVec3();
     reflectVec4();
     reflectTramsform();
+    reflectSprite();
 }
 
 }

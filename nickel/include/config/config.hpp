@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 namespace nickel {
 
 namespace config {
@@ -10,11 +12,11 @@ constexpr int GLMinorVersion = 5;
 constexpr int MaxDrawCallNum = 512;
 constexpr int MaxVertexPerBatch = 1024;
 
-constexpr char* const DefaultWindowTitle = "NickelEngine";
+constexpr std::string_view DefaultWindowTitle = "NickelEngine";
 constexpr int DefaultWindowWidth = 720;
 constexpr int DefaultWindowHeight = 680;
 
-constexpr char* const ProjectConfigFilename = "project.toml";
+constexpr std::string_view ProjectConfigFilename = "project.toml";
 
 }  // namespace config
 

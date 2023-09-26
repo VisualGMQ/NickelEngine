@@ -1,4 +1,4 @@
-#pragma once
+// #pragma once
 
 #include "anim/anim.hpp"
 #include "pch.hpp"
@@ -7,27 +7,31 @@
 #include "refl/transform.hpp"
 
 // Animation static serialization
-namespace mirrow::serd::srefl::impl {
+namespace mirrow::serd::srefl {
 
 using ::nickel::Animation;
 using ::nickel::AnimationTrack;
 
+namespace impl {
+
 template <typename T>
 struct has_serialize_method<
-    T, std::void_t<std::enable_if_t<std::is_same_v<T, Animation>, T>>> {
+    T, std::enable_if_t<std::is_same_v<T, Animation>>> {
     static constexpr bool value = true;
 };
 
 template <typename T>
 struct has_serialize_method<
-    T, std::void_t<std::enable_if_t<std::is_same_v<T, AnimationTrack>, T>>> {
+    T, std::enable_if_t<std::is_same_v<T, AnimationTrack>>> {
     static constexpr bool value = true;
 };
+
+}
 
 // AnimationTrack
 
 template <typename T>
-std::enable_if_t<std::is_same_v<T, AnimationTrack>> serialize_impl(
+std::enable_if_t<std::is_same_v<T, AnimationTrack>> serialize(
     const T& track, serialize_destination_type_t<T>& tbl) {
     if (AnimTrackSerialMethods::Instance().Contain(track.TypeInfo())) {
         tbl = AnimTrackSerialMethods::Instance().GetSerializeMethod(
@@ -36,7 +40,7 @@ std::enable_if_t<std::is_same_v<T, AnimationTrack>> serialize_impl(
 }
 
 template <typename T>
-std::enable_if_t<std::is_same_v<T, AnimationTrack>> deserialize_impl(
+std::enable_if_t<std::is_same_v<T, AnimationTrack>> deserialize(
     const toml::node& node, T& track) {
     Assert(node.is_table(), "deserialize AnimationTrack need toml::table node");
 
@@ -50,21 +54,19 @@ std::enable_if_t<std::is_same_v<T, AnimationTrack>> deserialize_impl(
 // Animation
 
 template <typename T>
-std::enable_if_t<std::is_same_v<T, Animation>> serialize_impl(
+std::enable_if_t<std::is_same_v<T, Animation>> serialize(
     const T& anim, serialize_destination_type_t<T>& tbl) {
     auto& tracks = anim.Tracks();
 
     for (auto& [name, track] : tracks) {
-        toml::table trackTbl = serialize<AnimationTrack>(*track);
+        toml::table trackTbl;
+        serialize<AnimationTrack>(*track, trackTbl);
         tbl.emplace(name, trackTbl);
     }
 }
 
-template <typename>
-struct show_tmpl;
-
 template <typename T>
-std::enable_if_t<std::is_same_v<T, Animation>> deserialize_impl(
+std::enable_if_t<std::is_same_v<T, Animation>> deserialize(
     const toml::node& node, T& elem) {
     Assert(node.is_table(), "deserialize Animation need toml::table node");
 

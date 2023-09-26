@@ -69,12 +69,12 @@ private:
 class TextureManager final : public ResourceManager<Texture> {
 public:
     template <typename T>
-    friend std::enable_if_t<std::is_same_v<T, TextureManager>> serialize_impl(
+    friend std::enable_if_t<std::is_same_v<T, TextureManager>> serialize(
         const T&,
-        ::mirrow::serd::srefl::impl::serialize_destination_type_t<T>&);
+        ::mirrow::serd::srefl::serialize_destination_type_t<T>&);
 
     template <typename T>
-    friend std::enable_if_t<std::is_same_v<T, TextureManager>> deserialize_impl(
+    friend std::enable_if_t<std::is_same_v<T, TextureManager>> deserialize(
         const toml::node&, T&);
 
     TextureHandle Load(const std::string& filename, const gogl::Sampler&);

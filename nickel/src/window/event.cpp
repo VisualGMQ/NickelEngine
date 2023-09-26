@@ -1,5 +1,3 @@
-#pragma once
-
 #include "window/event.hpp"
 
 namespace nickel {

@@ -15,14 +15,14 @@ namespace nickel {
  * @tparam ExplicitInit does you need explicit init/destroy the instance
  */
 template <typename T, bool ExplicitInit>
-class Singleton;
+class Singlton;
 
 /**
  * @brief 
  * @tparam T the class you want to be singleton
  */
 template <typename T>
-class Singleton<T, false> {
+class Singlton<T, false> {
 public:
     //! @brief Get the singleton of class T
     //! @return The singleton instance
@@ -39,7 +39,7 @@ public:
  * @tparam T the class you want to be singleton
  */
 template <typename T>
-class Singleton<T, true> {
+class Singlton<T, true> {
 public:
     /**
      * @brief get signelton instance
