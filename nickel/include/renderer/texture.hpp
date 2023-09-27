@@ -31,6 +31,10 @@ public:
     Texture& operator=(const Texture&) = delete;
     Texture& operator=(Texture&&);
 
+    explicit operator bool() const {
+        return handle_ == TextureHandle::Null();
+    }
+
     int Width() const { return w_; }
 
     int Height() const { return h_; }
@@ -38,6 +42,8 @@ public:
     cgmath::Vec2 Size() const {
         return cgmath::Vec2{static_cast<float>(w_), static_cast<float>(h_)};
     }
+
+    void* Raw() const { return (void*)texture_->Id(); }
 
     auto& Filename() const { return filename_; }
     auto& Sampler() const { return sampler_; }

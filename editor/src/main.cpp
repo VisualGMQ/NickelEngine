@@ -7,6 +7,7 @@
 
 #include "file_dialog.hpp"
 #include "show_component.hpp"
+#include "spawn_component.hpp"
 
 #include "refl/cgmath.hpp"
 #include "refl/sprite.hpp"
@@ -111,7 +112,8 @@ void ProjectManagerUpdate(
 }
 
 void ShowVec2(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value) {
+              mirrow::drefl::basic_any& value,
+              gecs::registry) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<cgmath::Vec2>(),
            "type incorrect");
@@ -121,7 +123,8 @@ void ShowVec2(mirrow::drefl::type_info type, std::string_view name,
 }
 
 void ShowVec3(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value) {
+              mirrow::drefl::basic_any& value,
+              gecs::registry) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<cgmath::Vec3>(),
            "type incorrect");
@@ -131,7 +134,8 @@ void ShowVec3(mirrow::drefl::type_info type, std::string_view name,
 }
 
 void ShowVec4(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value) {
+              mirrow::drefl::basic_any& value,
+              gecs::registry) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<cgmath::Vec4>(),
            "type incorrect");
@@ -140,12 +144,54 @@ void ShowVec4(mirrow::drefl::type_info type, std::string_view name,
     ImGui::InputFloat4(name.data(), vec.data);
 }
 
+void ShowTextureHandle(mirrow::drefl::type_info type, std::string_view name,
+              mirrow::drefl::basic_any& value,
+              gecs::registry reg) {
+    Assert(type.is_class() &&
+               type == ::mirrow::drefl::reflected_type<TextureHandle>(),
+           "type incorrect");
+
+    auto& handle = value.cast<TextureHandle>();
+    auto mgr = reg.res<TextureManager>();
+    char buf[1024] = {0};
+    if (handle) {
+        auto& texture = mgr->Get(handle);
+        std::filesystem::path texturePath = texture.Filename(),
+                            rootPath = mgr->GetRootPath();
+        snprintf(buf, sizeof(buf), "res::%ls", std::filesystem::relative(texturePath, rootPath).c_str());
+    }
+    ImGui::InputText("texture", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
+
+    if (handle && ImGui::TreeNode("thumbnail")) {
+        auto& texture = mgr->Get(handle);
+        ImGui::Image(texture.Raw(), ImVec2(texture.Width(), texture.Height()));
+        ImGui::TreePop();
+    }
+}
+
 void RegistComponentShowMethods() {
     auto& instance = ComponentShowMethods::Instance();
 
     instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec2>(), ShowVec2);
     instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec3>(), ShowVec3);
-    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec3>(), ShowVec4);
+    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec4>(), ShowVec4);
+    instance.Regist(::mirrow::drefl::reflected_type<TextureHandle>(), ShowTextureHandle);
+}
+
+template <typename T>
+void GeneralSpawnMethod(gecs::commands cmds, gecs::entity ent, gecs::registry reg) {
+    if (reg.template has<T>(ent)) {
+        cmds.template replace<T>(ent);
+    } else {
+        cmds.template emplace<T>(ent);
+    }
+}
+
+void RegistSpawnMethods() {
+    auto& instance = SpawnComponentMethods::Instance();
+
+    instance.Regist<Transform>(GeneralSpawnMethod<Transform>);
+    instance.Regist<SpriteBundle>(GeneralSpawnMethod<SpriteBundle>);
 }
 
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
@@ -167,6 +213,7 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
     initInfo.get() = std::move(newInfo);
 
     RegistComponentShowMethods();
+    RegistSpawnMethods();
 }
 
 void TestEnter(gecs::commands cmds,
@@ -182,11 +229,19 @@ void TestEnter(gecs::commands cmds,
     cmds.emplace<SpriteBundle>(entity, std::move(bundle));
 }
 
-void EditorEntityListWindow(int& selected, gecs::registry reg) {
+void EditorEntityListWindow(int& selected, gecs::registry reg, gecs::commands cmds) {
     static bool entityListOpen = true;
     if (ImGui::Begin("Entity List", &entityListOpen)) {
+        if (ImGui::Button("add")) {
+            cmds.create();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("delete") && selected >= 0) {
+            cmds.destroy(static_cast<typename gecs::registry::entity_type>(reg.entities().packed()[selected]));
+        }
+
         auto& entities = reg.entities().packed();
-        for (int i = 0; i < entities.size(); i++) {
+        for (int i = 0; i < reg.entities().size(); i++) {
             static char buf[64] = {0};
             std::snprintf(buf, sizeof(buf), "entity(ID %d)", entities[i]);
             if (ImGui::Selectable(buf, selected == i)) {
@@ -197,42 +252,111 @@ void EditorEntityListWindow(int& selected, gecs::registry reg) {
     ImGui::End();
 }
 
-void EditorInspectorWindow(gecs::entity entity, gecs::registry reg) {
+void EditorInspectorWindow(gecs::entity entity, gecs::registry reg, gecs::commands cmds) {
     static bool inspectorOpen = true;
     if (ImGui::Begin("Inspector", &inspectorOpen)) {
-        for (auto& node : mirrow::drefl::all_reflected_type()) {
-            mirrow::drefl::type_info typeInfo{node};
-            auto ent =
-                static_cast<typename gecs::world::registry_type::entity_type>(
-                    entity);
-            if (reg.has(ent, typeInfo.type_node())) {
-                auto data = reg.get_mut(ent, typeInfo.type_node());
+        auto& types = mirrow::drefl::all_reflected_type();
+        for (int i = 0; i < types.size(); i++) {
+            mirrow::drefl::type_info typeInfo{types[i]};
+            if (reg.has(entity, typeInfo.type_node())) {
+                auto data = reg.get_mut(entity, typeInfo.type_node());
 
                 auto& methods = ComponentShowMethods::Instance();
                 auto func = methods.Find(typeInfo);
 
-                if (func) {
-                    func(typeInfo, typeInfo.name(), data);
+                ImGui::PushID(i);
+                if (ImGui::Button("delete")) {
+                    cmds.remove(entity, typeInfo);
+                    ImGui::PopID();
+                    continue;
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+                if (ImGui::CollapsingHeader(typeInfo.name().c_str())) {
+                    if (func) {
+                        func(typeInfo, typeInfo.name(), data, reg);
+                    }
                 }
             }
+        }
+
+        // show add componet button
+        static std::vector<const char*> items;
+        items.clear();
+
+        auto& spawnMethods = SpawnComponentMethods::Instance();
+
+        for (auto& [type, spawnFn] : spawnMethods.Methods()) {
+            items.push_back(type.name().data());
+        }
+
+        ImGui::Separator();
+
+        static int selectedItem = -1;
+
+        typename SpawnComponentMethods::spawn_fn spawn = nullptr;
+
+        ImGui::Combo("components", &selectedItem, items.data(), items.size());
+
+        auto it = spawnMethods.Methods().begin();
+        int i = 0;
+
+        while (it != spawnMethods.Methods().end() && i != selectedItem) {
+            it ++;
+            i++;
+        }
+
+        static bool replaceHintOpen = false;
+        static bool shouldSpawn = false;
+
+        if (ImGui::Button("add component") && it != spawnMethods.Methods().end()) {
+            if (reg.has(entity, it->first.type_node())) {
+                replaceHintOpen = true;
+            } else {
+                shouldSpawn = true;
+            }
+        }
+
+        if (replaceHintOpen) {
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowFocus();
+            if (ImGui::Begin("spawn hint", 0)) {
+                ImGui::Text("component already exists, do you want replace it?");
+                if (ImGui::Button("yes")) {
+                    shouldSpawn = true;
+                    replaceHintOpen = false;
+                }
+
+                ImGui::SameLine();
+                if (ImGui::Button("cancel")) {
+                    replaceHintOpen = false;
+                }
+            }
+            ImGui::End();
+        }
+
+        if (shouldSpawn) {
+            it->second(cmds, entity, reg);
+            shouldSpawn = false;
         }
     }
     ImGui::End();
 }
 
 void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
-                       gecs::registry reg) {
+                       gecs::registry reg,
+                       gecs::commands cmds) {
     // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
     static int selected = -1;
-    EditorEntityListWindow(selected, reg);
+    EditorEntityListWindow(selected, reg, cmds);
     if (selected >= 0) {
         EditorInspectorWindow(
-            static_cast<typename gecs::world::registry_type::entity_type>(
+            static_cast<typename gecs::entity>(
                 reg.entities().packed()[selected]),
-            reg);
+            reg, cmds);
     } else {
-        EditorInspectorWindow({}, reg);
+        EditorInspectorWindow({}, reg, cmds);
     }
 
     static bool demoWindowOpen = true;

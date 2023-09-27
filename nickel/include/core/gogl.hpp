@@ -738,6 +738,10 @@ public:
 
     auto Type() const { return type_; }
 
+    GLuint Id() const { return id_; }
+
+    explicit operator bool() const { return id_ == 0; }
+
     ~Texture() { GL_CALL(glDeleteTextures(1, &id_)); }
 
 private:

@@ -18,8 +18,8 @@ std::string_view GetTextureWrapperTypeName(TextureWrapperType type) {
 }
 
 std::optional<TextureWrapperType> GetTextureWrapperTypeFromName(std::string_view name) {
-    for (auto& [wrapper, name] : gTextureWrapperNameMap) {
-        if (name == name) {
+    for (auto& [wrapper, wrapperName] : gTextureWrapperNameMap) {
+        if (name == wrapperName) {
             return wrapper;
         }
     }

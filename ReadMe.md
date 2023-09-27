@@ -21,6 +21,7 @@ cmake --build cmake-build
 * [glad](https://glad.dav1d.de/): use to load opengl
 * [dear-imgui](https://github.com/ocornut/imgui): use to support GUI in editor
 * [tomlplusplus](https://github.com/marzer/tomlplusplus): use to support toml file parse
+* [miniaudio](https://miniaud.io/): use to play audio cross platform
 
 ## Features
 

@@ -27,29 +27,28 @@ ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
 
 void ComponentShowMethods::DefaultMethods::ShowClass(
     type_info typeInfo, std::string_view name,
-    ::mirrow::drefl::basic_any& value) {
+    ::mirrow::drefl::basic_any& value, gecs::registry reg) {
     Assert(typeInfo.is_class(), "type incorrect");
 
     if (ImGui::TreeNode(name.data())) {
-
-    auto classInfo = typeInfo.as_class();
-    for (auto&& var : classInfo.vars()) {
-        auto varType = type_info{var.raw_type()};
-        auto showMethod = ComponentShowMethods::Instance().Find(varType);
-        if (showMethod) {
-            auto ref = ::mirrow::drefl::invoke_by_any_return_ref(var, &value);
-            showMethod(
-                varType, var.name(),
-                ref);
+        auto classInfo = typeInfo.as_class();
+        for (auto&& var : classInfo.vars()) {
+            auto varType = type_info{var.raw_type()};
+            auto showMethod = ComponentShowMethods::Instance().Find(varType);
+            if (showMethod) {
+                auto ref =
+                    ::mirrow::drefl::invoke_by_any_return_ref(var, &value);
+                showMethod(varType, var.name(), ref, reg);
+            }
         }
-    }
 
         ImGui::TreePop();
     }
 }
 
 void ComponentShowMethods::DefaultMethods::ShowNumeric(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value) {
+    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    gecs::registry) {
     Assert(type.is_fundamental(), "type incorrect");
     auto fund = type.as_fundamental();
     Assert(fund.is_floating_point() || fund.is_integer(), "type incorrect");
@@ -72,7 +71,8 @@ void ComponentShowMethods::DefaultMethods::ShowNumeric(
 }
 
 void ComponentShowMethods::DefaultMethods::ShowBoolean(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value) {
+    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    gecs::registry) {
     Assert(type.is_fundamental() && type.as_fundamental().is_boolean(),
            "type incorrect");
     auto fund = type.as_fundamental();
@@ -86,7 +86,8 @@ void ComponentShowMethods::DefaultMethods::ShowBoolean(
 }
 
 void ComponentShowMethods::DefaultMethods::ShowString(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value) {
+    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    gecs::registry) {
     Assert(type.is_class() && type.as_class().is_string(), "type incorrect");
 
     std::string& data = value.cast<std::string>();
@@ -97,7 +98,8 @@ void ComponentShowMethods::DefaultMethods::ShowString(
 }
 
 void ComponentShowMethods::DefaultMethods::ShowEnum(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value) {
+    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    gecs::registry) {
     Assert(type.is_enum(), "type incorrect");
     // TODO: support enum
 
