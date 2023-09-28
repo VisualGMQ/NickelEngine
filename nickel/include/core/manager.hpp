@@ -58,7 +58,7 @@ protected:
                        typename Handle<T>::HashEq>
         datas_;
     std::unordered_map<std::string, Handle<T>> associateFiles_;
-    std::string rootPath_ = "";
+    std::string rootPath_ = "./";
 };
 
 template <typename T>

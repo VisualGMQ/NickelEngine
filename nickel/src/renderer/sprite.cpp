@@ -4,9 +4,7 @@ namespace nickel {
 
 void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
                                 gecs::resource<gecs::mut<Renderer2D>> renderer,
-                                gecs::resource<TextureManager> textureMgr,
-                                gecs::resource<Camera> camera) {
-    renderer->BeginRender(camera.get());
+                                gecs::resource<TextureManager> textureMgr) {
     for (auto&& [_, sprite, transform] : sprites) {
         if (sprite.image && sprite.visiable) {
             Transform trans = transform;
@@ -33,7 +31,6 @@ void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
                                       trans.ToMat());
         }
     }
-    renderer->EndRender();
 }
 
 }  // namespace nickel

@@ -11,9 +11,6 @@ Renderer2D::Renderer2D() {
     indicesBuffer_->Bind();
     attrPtr_ = initAttrPtr();
     shader_->SetInt("image", 0);
-
-    GL_CALL(glEnable(GL_BLEND));
-    GL_CALL(glEnable(GL_MULTISAMPLE));
 }
 
 void Renderer2D::SetViewport(const cgmath::Vec2& offset,
@@ -24,6 +21,11 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
 }
 
 void Renderer2D::BeginRender(const Camera& camera) {
+    Clear();
+    ClearDepth();
+    GL_CALL(glEnable(GL_DEPTH_TEST));
+    GL_CALL(glEnable(GL_MULTISAMPLE));
+    GL_CALL(glEnable(GL_BLEND));
     shader_->Use();
     shader_->SetMat4("Project", camera.Project());
     shader_->SetMat4("View", camera.View());

@@ -29,10 +29,17 @@ void VideoSystemUpdate(gecs::resource<EventPoller> poller,
                        gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
     poller->Poll();
     window->SwapBuffer();
-    renderer2d->Clear();
 }
 
 void VideoSystemShutdown(gecs::commands cmds) {}
+
+void BeginRender(gecs::resource<gecs::mut<Renderer2D>> renderer, gecs::resource<Camera> camera) {
+    renderer->BeginRender(camera.get());
+}
+
+void EndRender(gecs::resource<gecs::mut<Renderer2D>> renderer) {
+    renderer->EndRender();
+}
 
 void InputSystemInit(
     gecs::commands cmds,
@@ -106,7 +113,9 @@ int main(int argc, char** argv) {
         // other input handle event must put here(after mouse/keyboard update)
         .regist_update_system<Mouse::Update>()
         .regist_update_system<Keyboard::Update>()
+        .regist_update_system<BeginRender>()
         .regist_update_system<SpriteBundle::RenderSprite>()
+        .regist_update_system<EndRender>()
         .regist_update_system<Time::Update>();
     world->start_with("MainReg");
 

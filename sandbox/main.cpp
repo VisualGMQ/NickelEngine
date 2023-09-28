@@ -72,6 +72,7 @@ void BootstrapSystem(gecs::world& world,
     ProjectInitInfo info;
     info.windowData.title = "sandbox";
     info.windowData.size.Set(1024, 720);
+    info.projectPath = "./sandbox";
 
     InitSystem(world, info, reg.commands());
 

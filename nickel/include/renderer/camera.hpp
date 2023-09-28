@@ -2,7 +2,7 @@
 
 #include "pch.hpp"
 #include "core/cgmath.hpp"
-#include "core/geom.hpp"
+#include "geom/geom3d.hpp"
 #include "window/window.hpp"
 
 namespace nickel {
@@ -67,7 +67,7 @@ public:
 private:
     cgmath::Vec2 position_;
     cgmath::Vec2 scale_;
-    geom::Cube cube_;
+    geom3d::Cube<float> cube_;
 
     Camera2D(float left, float right, float top, float bottom, float near,
              float far);

@@ -79,7 +79,7 @@ bool operator!=(const Vec<T, N>& v1, const Vec<T, N>& v2);
 template <typename T, unsigned int N>
 bool operator==(const Vec<T, N>& v1, const Vec<T, N>& v2);
 template <typename T, unsigned int N>
-T LengthSquare(const Vec<T, N>& v);
+T LengthSqrd(const Vec<T, N>& v);
 template <typename T, unsigned int N>
 T Length(const Vec<T, N>& v);
 template <typename T, unsigned int N>
@@ -208,13 +208,13 @@ Vec<T, 3> Cross(const Vec<T, 3>& v1, const Vec<T, 3>& v2) {
 }
 
 template <typename T, unsigned int N>
-T LengthSquare(const Vec<T, N>& v) {
+T LengthSqrd(const Vec<T, N>& v) {
     return Dot(v, v);
 }
 
 template <typename T, unsigned int N>
 T Length(const Vec<T, N>& v) {
-    return std::sqrt(LengthSquare(v));
+    return std::sqrt(LengthSqrd(v));
 }
 
 template <typename T, unsigned int N>
@@ -251,6 +251,10 @@ public:
 
     auto Dot(const Vec<T, N>& o) const { return Dot(*this, o); }
 
+    T operator[](unsigned int idx) const {
+        return data[idx];
+    }
+
     auto operator+=(const Vec<T, N>& o) {
         *this = *this + o;
         return *this;
@@ -281,7 +285,7 @@ public:
         return *this;
     }
 
-    auto LengthSquare() const { return LengthSquare(*this); }
+    auto LengthSqrd() const { return LengthSqrd(*this); }
 
     auto Length() const { return Length(*this); }
 
@@ -356,7 +360,7 @@ public:
         return *this;
     }
 
-    auto LengthSquare() const { return cgmath::LengthSquare(*this); }
+    auto LengthSqrd() const { return cgmath::LengthSqrd(*this); }
 
     auto Length() const { return cgmath::Length(*this); }
 
@@ -429,7 +433,7 @@ public:
         return *this;
     }
 
-    auto LengthSquare() const { return cgmath::LengthSquare(*this); }
+    auto LengthSqrd() const { return cgmath::LengthSqrd(*this); }
 
     auto Length() const { return cgmath::Length(*this); }
 
@@ -505,7 +509,7 @@ public:
         return *this;
     }
 
-    auto LengthSquare() const { return LengthSquare(*this); }
+    auto LengthSqrd() const { return LengthSqrd(*this); }
 
     auto Length() const { return Length(*this); }
 

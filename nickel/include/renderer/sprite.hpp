@@ -49,8 +49,7 @@ struct SpriteBundle final {
 
     static void RenderSprite(gecs::querier<SpriteBundle, Transform>,
                              gecs::resource<gecs::mut<Renderer2D>>,
-                             gecs::resource<TextureManager> textureMgr,
-                             gecs::resource<Camera> camera);
+                             gecs::resource<TextureManager> textureMgr);
 };
 
 struct SpriteBundleSolitary final {
