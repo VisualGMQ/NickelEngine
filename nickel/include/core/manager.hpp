@@ -25,14 +25,14 @@ public:
         return const_cast<T&>(std::as_const(*this).Get(handle));
     }
 
-    bool Has(Handle<T> handle) { return datas_.find(handle) != datas_.end(); }
+    bool Has(Handle<T> handle) const { return datas_.find(handle) != datas_.end(); }
 
     std::string_view GetRootPath() const { return rootPath_; }
     void SetRootPath(const std::string& path) { rootPath_ = path; }
 
     void Associate2File(Handle<T> handle, const std::string& filename) {
-        if (associateFiles_.count(filename) == 0) {
-            associateFiles_.emplace(filename, handle);
+        if (associateFiles_.count(handle) == 0) {
+            associateFiles_.emplace(handle, handle);
         } else {
             // TODO: error handling
         }
@@ -41,6 +41,14 @@ public:
     void ReleaseAll() {
         datas_.clear();
         associateFiles_.clear();
+    }
+
+    std::string_view GetFilename(Handle<T> handle) const {
+        if (auto it = associateFiles_.find(handle); it != associateFiles_.end()) {
+            return it->second;
+        } else {
+            return {};
+        }
     }
 
 protected:
@@ -57,7 +65,9 @@ protected:
     std::unordered_map<Handle<T>, std::unique_ptr<T>, typename Handle<T>::Hash,
                        typename Handle<T>::HashEq>
         datas_;
-    std::unordered_map<std::string, Handle<T>> associateFiles_;
+    std::unordered_map<Handle<T>, std::string, typename Handle<T>::Hash,
+                       typename Handle<T>::HashEq>
+        associateFiles_;
     std::string rootPath_ = "./";
 };
 

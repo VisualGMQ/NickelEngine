@@ -112,8 +112,7 @@ void ProjectManagerUpdate(
 }
 
 void ShowVec2(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value,
-              gecs::registry) {
+              mirrow::drefl::basic_any& value, gecs::registry) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<cgmath::Vec2>(),
            "type incorrect");
@@ -123,8 +122,7 @@ void ShowVec2(mirrow::drefl::type_info type, std::string_view name,
 }
 
 void ShowVec3(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value,
-              gecs::registry) {
+              mirrow::drefl::basic_any& value, gecs::registry) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<cgmath::Vec3>(),
            "type incorrect");
@@ -134,8 +132,7 @@ void ShowVec3(mirrow::drefl::type_info type, std::string_view name,
 }
 
 void ShowVec4(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value,
-              gecs::registry) {
+              mirrow::drefl::basic_any& value, gecs::registry) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<cgmath::Vec4>(),
            "type incorrect");
@@ -145,8 +142,7 @@ void ShowVec4(mirrow::drefl::type_info type, std::string_view name,
 }
 
 void ShowTextureHandle(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value,
-              gecs::registry reg) {
+                       mirrow::drefl::basic_any& value, gecs::registry reg) {
     Assert(type.is_class() &&
                type == ::mirrow::drefl::reflected_type<TextureHandle>(),
            "type incorrect");
@@ -157,8 +153,9 @@ void ShowTextureHandle(mirrow::drefl::type_info type, std::string_view name,
     if (handle) {
         auto& texture = mgr->Get(handle);
         std::filesystem::path texturePath = texture.Filename(),
-                            rootPath = mgr->GetRootPath();
-        snprintf(buf, sizeof(buf), "res::%ls", std::filesystem::relative(texturePath, rootPath).c_str());
+                              rootPath = mgr->GetRootPath();
+        snprintf(buf, sizeof(buf), "res::%ls",
+                 std::filesystem::relative(texturePath, rootPath).c_str());
     }
     ImGui::InputText("texture", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
 
@@ -169,21 +166,63 @@ void ShowTextureHandle(mirrow::drefl::type_info type, std::string_view name,
     }
 }
 
+void ShowAnimationPlayer(mirrow::drefl::type_info type, std::string_view name,
+                         mirrow::drefl::basic_any& value, gecs::registry reg) {
+    Assert(type.is_class() &&
+               type == ::mirrow::drefl::reflected_type<AnimationPlayer>(),
+           "type incorrect");
+
+    AnimationPlayer& player = value.cast<AnimationPlayer>();
+    auto handle = player.GetAnim();
+    auto& mgr = reg.res<AnimationManager>().get();
+    static char buf[1024] = {0};
+    if (handle && mgr.Has(handle)) {
+        snprintf(buf, sizeof(buf), "%s", mgr.GetFilename(handle).data());
+    } else {
+        snprintf(buf, sizeof(buf), "%s", "no animation");
+    }
+
+    int selectedItem = -1;
+    std::array<const char*, 2> items = {"create new", "load"};
+    ImGui::Combo(buf, &selectedItem, items.data(), items.size(),
+                 ImGuiComboFlags_NoPreview);
+    if (selectedItem == 0) {
+        // TODO: create new animation and switch to animation panel
+    } else if (selectedItem == 1) {
+        // TODO: load from disk
+    }
+}
+
 void RegistComponentShowMethods() {
     auto& instance = ComponentShowMethods::Instance();
 
     instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec2>(), ShowVec2);
     instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec3>(), ShowVec3);
     instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec4>(), ShowVec4);
-    instance.Regist(::mirrow::drefl::reflected_type<TextureHandle>(), ShowTextureHandle);
+    instance.Regist(::mirrow::drefl::reflected_type<TextureHandle>(),
+                    ShowTextureHandle);
+    instance.Regist(::mirrow::drefl::reflected_type<AnimationPlayer>(),
+                    ShowAnimationPlayer);
 }
 
 template <typename T>
-void GeneralSpawnMethod(gecs::commands cmds, gecs::entity ent, gecs::registry reg) {
+void GeneralSpawnMethod(gecs::commands cmds, gecs::entity ent,
+                        gecs::registry reg) {
     if (reg.template has<T>(ent)) {
         cmds.template replace<T>(ent);
     } else {
         cmds.template emplace<T>(ent);
+    }
+}
+
+void SpawnAnimationPlayer(gecs::commands cmds, gecs::entity ent,
+                          gecs::registry reg) {
+    if (reg.template has<AnimationPlayer>(ent)) {
+        cmds.template replace<AnimationPlayer>(
+            ent, reg.res<gecs::mut<AnimationManager>>().get());
+    } else {
+        cmds.template emplace<AnimationPlayer>(
+            ent, reg.res<gecs::mut<AnimationManager>>().get());
     }
 }
 
@@ -192,6 +231,7 @@ void RegistSpawnMethods() {
 
     instance.Regist<Transform>(GeneralSpawnMethod<Transform>);
     instance.Regist<SpriteBundle>(GeneralSpawnMethod<SpriteBundle>);
+    instance.Regist<AnimationPlayer>(SpawnAnimationPlayer);
 }
 
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
@@ -229,7 +269,8 @@ void TestEnter(gecs::commands cmds,
     cmds.emplace<SpriteBundle>(entity, std::move(bundle));
 }
 
-void EditorEntityListWindow(int& selected, gecs::registry reg, gecs::commands cmds) {
+void EditorEntityListWindow(int& selected, gecs::registry reg,
+                            gecs::commands cmds) {
     static bool entityListOpen = true;
     if (ImGui::Begin("Entity List", &entityListOpen)) {
         if (ImGui::Button("add")) {
@@ -237,7 +278,8 @@ void EditorEntityListWindow(int& selected, gecs::registry reg, gecs::commands cm
         }
         ImGui::SameLine();
         if (ImGui::Button("delete") && selected >= 0) {
-            cmds.destroy(static_cast<typename gecs::registry::entity_type>(reg.entities().packed()[selected]));
+            cmds.destroy(static_cast<typename gecs::registry::entity_type>(
+                reg.entities().packed()[selected]));
         }
 
         auto& entities = reg.entities().packed();
@@ -252,7 +294,8 @@ void EditorEntityListWindow(int& selected, gecs::registry reg, gecs::commands cm
     ImGui::End();
 }
 
-void EditorInspectorWindow(gecs::entity entity, gecs::registry reg, gecs::commands cmds) {
+void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
+                           gecs::commands cmds) {
     static bool inspectorOpen = true;
     if (ImGui::Begin("Inspector", &inspectorOpen)) {
         auto& types = mirrow::drefl::all_reflected_type();
@@ -302,14 +345,15 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg, gecs::comman
         int i = 0;
 
         while (it != spawnMethods.Methods().end() && i != selectedItem) {
-            it ++;
+            it++;
             i++;
         }
 
         static bool replaceHintOpen = false;
         static bool shouldSpawn = false;
 
-        if (ImGui::Button("add component") && it != spawnMethods.Methods().end()) {
+        if (ImGui::Button("add component") &&
+            it != spawnMethods.Methods().end()) {
             if (reg.has(entity, it->first.type_node())) {
                 replaceHintOpen = true;
             } else {
@@ -321,7 +365,8 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg, gecs::comman
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowFocus();
             if (ImGui::Begin("spawn hint", 0)) {
-                ImGui::Text("component already exists, do you want replace it?");
+                ImGui::Text(
+                    "component already exists, do you want replace it?");
                 if (ImGui::Button("yes")) {
                     shouldSpawn = true;
                     replaceHintOpen = false;
@@ -344,17 +389,15 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg, gecs::comman
 }
 
 void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
-                       gecs::registry reg,
-                       gecs::commands cmds) {
+                       gecs::registry reg, gecs::commands cmds) {
     // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
     static int selected = -1;
     EditorEntityListWindow(selected, reg, cmds);
     if (selected >= 0) {
-        EditorInspectorWindow(
-            static_cast<typename gecs::entity>(
-                reg.entities().packed()[selected]),
-            reg, cmds);
+        EditorInspectorWindow(static_cast<typename gecs::entity>(
+                                  reg.entities().packed()[selected]),
+                              reg, cmds);
     } else {
         EditorInspectorWindow({}, reg, cmds);
     }

@@ -1,7 +1,5 @@
 #include "refl/drefl.hpp"
-#include "core/cgmath.hpp"
-#include "misc/transform.hpp"
-#include "renderer/sprite.hpp"
+#include "nickel.hpp"
 
 namespace nickel {
 
@@ -58,6 +56,10 @@ void reflectSprite() {
     mirrow::drefl::factory<TextureHandle>("TextureHandle");
 }
 
+void reflectAnimation() {
+    mirrow::drefl::factory<AnimationPlayer>("AnimationPlayer");
+}
+
 void InitDynamicReflect() {
     reflectFundamental();
     reflectVec2();
@@ -65,6 +67,7 @@ void InitDynamicReflect() {
     reflectVec4();
     reflectTramsform();
     reflectSprite();
+    reflectAnimation();
 }
 
 }

@@ -63,10 +63,10 @@ toml::table TextureManager::Save2Toml() const {
     tbl.emplace("type", std::string_view("texture"));
     tbl.emplace("root_path", GetRootPath());
     toml::array arr;
-    for (auto& [filename, handle] : associateFiles_) {
+    for (auto& [handle, filename] : associateFiles_) {
         const Texture& texture = Get(handle);
         toml::table textureTbl;
-        textureTbl.emplace("id", handle.Cast2Integer());
+        textureTbl.emplace("id", (HandleInnerIDType)handle);
         if (!texture.Filename().empty()) {
             textureTbl.emplace("filename", texture.Filename());
         }
@@ -97,7 +97,7 @@ void TextureManager::LoadFromToml(toml::table& tbl) {
             auto& textureTbl = *node.as_table();
 
             auto handleId = textureTbl["id"].as_integer()->get();
-            TextureHandle handle = TextureHandle::ForceCastFromInteger(
+            TextureHandle handle = TextureHandle::ForceCastFromIntegral(
                 static_cast<HandleInnerIDType>(handleId));
             std::string filename = textureTbl["filename"].as_string()->get();
             gogl::Sampler sampler = gogl::Sampler::CreateLinearRepeat();

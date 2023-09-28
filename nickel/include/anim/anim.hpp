@@ -210,14 +210,19 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer(AnimationHandle anim, AnimationManager& mgr)
-        : handle_(anim), mgr_(&mgr) {}
+    AnimationPlayer(AnimationManager& mgr)
+        : mgr_(&mgr) {}
 
     AnimationHandle Animation() const { return handle_; }
 
     void SetDir(Direction dir) { dir_ = dir; }
 
     Direction GetDir() const { return dir_; }
+
+    void ChangeAnim(AnimationHandle anim) {
+        handle_ = anim;
+        Reset();
+    }
 
     void Step(TimeType step) {
         if (isPlaying_) {
@@ -233,6 +238,14 @@ public:
 
     void SetTick(TimeType t) {
         curTime_ = std::clamp<int>(curTime_, 0, static_cast<int>(Duration()));
+    }
+    
+    bool Empty() const {
+        return !handle_;
+    }
+
+    AnimationHandle GetAnim() const {
+        return handle_;
     }
 
     void Reset() {

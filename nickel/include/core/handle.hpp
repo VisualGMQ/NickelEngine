@@ -52,8 +52,8 @@ public:
     Handle() = default;
 
     struct Hash final {
-        size_t operator()(const HandleInnerIDType& k) const {
-            return std::hash<HandleInnerIDType>{}(k);
+        size_t operator()(const Handle& k) const {
+            return std::hash<HandleInnerIDType>{}(k.handle_);
         }
     };
 
@@ -77,13 +77,11 @@ public:
         return HandleIDManager<Tag>::Instance().Has(handle_);
     }
 
-    static Handle ForceCastFromInteger(HandleInnerIDType id) {
-        return Handle(id);
+    explicit operator HandleInnerIDType() const {
+        return handle_;
     }
 
-    HandleInnerIDType Cast2Integer() const { return handle_; }
-
-    operator bool() const { return IsValid(); }
+    explicit operator bool() const { return IsValid(); }
 
     bool operator==(const Handle& o) const { return handle_ == o.handle_; }
 
@@ -91,8 +89,12 @@ public:
 
     Handle& operator=(const Handle& o) = default;
 
+    static Handle ForceCastFromIntegral(HandleInnerIDType id) {
+        return Handle{id};
+    }
+
 private:
-    HandleInnerIDType handle_ = Null();
+    HandleInnerIDType handle_ = 0;
 
     explicit Handle(HandleInnerIDType handle) : handle_(handle) {}
 };

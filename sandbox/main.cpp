@@ -62,7 +62,8 @@ void TestInitSystem(gecs::commands cmds,
     mirrow::serd::srefl::deserialize<Animation>(toml::parse(tomlData).table(),
                                                 serdAnim);
 
-    auto& animPlayer = cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(anim, animMgr.get()));
+    auto& animPlayer = cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(animMgr.get()));
+    animPlayer.ChangeAnim(anim);
     animPlayer.Play();
     // animPlayer.Bind(transform);
 }
