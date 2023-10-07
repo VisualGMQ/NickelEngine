@@ -7,8 +7,10 @@ aux_source_directory(src/anim nickel_src)
 aux_source_directory(src/refl nickel_src)
 aux_source_directory(src/core nickel_src)
 
-add_library(${engine_name} STATIC ${nickel_src})
+file(GLOB_RECURSE nickel_header_files ./include/*.hpp)
+
+add_library(${engine_name} STATIC ${nickel_src} ${nickel_header_files})
 target_compile_features(${engine_name} PUBLIC cxx_std_17)
 target_link_libraries(${engine_name} PUBLIC glfw glad gecs stb_image toml++ debugbreak mirrow miniaudio)
 target_include_directories(${engine_name} PUBLIC ./include)
-target_precompile_headers(${engine_name} PRIVATE include/pch.hpp)
+target_precompile_headers(${engine_name} PUBLIC include/pch.hpp)

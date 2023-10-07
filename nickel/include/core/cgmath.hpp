@@ -11,6 +11,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <limits>
 
 #include "core/assert.hpp"
 
@@ -26,6 +27,14 @@ namespace cgmath {
 
 constexpr CGMATH_NUMERIC_TYPE PI =
     static_cast<CGMATH_NUMERIC_TYPE>(3.14159265358979);
+
+/**
+ * @brief check whether two values are the same
+ */
+template <typename T>
+inline bool IsSameValue(T value1, T value2, T tol) {
+    return std::abs(value1 - value2) <= std::numeric_limits<T>::epsilon() + tol;
+}
 
 template <typename T>
 inline T Rad2Deg(T radians) {
@@ -205,6 +214,22 @@ Vec<T, 3> Cross(const Vec<T, 3>& v1, const Vec<T, 3>& v2) {
     result.y = v1.z * v2.x - v1.x * v2.z;
     result.z = v1.x * v2.y - v1.y * v2.x;
     return result;
+}
+
+/**
+ * @brief triple cross product: v1 x v2 x v3
+ */
+template <typename T>
+Vec<T, 3> TripleCross(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>& v3) {
+    return Cross(Cross(v1, v2), v3);
+}
+
+/**
+ * @brief mixed product: (v1 x v2) * v3
+ */
+template <typename T>
+Vec<T, 3> MixedProduct(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>& v3) {
+    return Dot(Cross(v1, v2), v3);
 }
 
 template <typename T, unsigned int N>

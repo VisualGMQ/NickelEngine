@@ -4,6 +4,8 @@ macro(AddTest name)
     target_link_libraries(${name} PRIVATE ${engine_name})
     add_test(NAME ${name}
              COMMAND $<TARGET_FILE:${name}>)
+    target_precompile_headers(${name} REUSE_FROM ${engine_name})
 endmacro()
 
 AddTest(tweeny)
+AddTest(geom)
