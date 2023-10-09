@@ -27,6 +27,7 @@
 #include "mirrow/util/variable_traits.hpp"
 
 #define GECS_ASSERT(expr, msg) Assert(expr, msg)
+#define GECS_TYPE_INFO_TYPE ::mirrow::drefl::type_info
 #define GECS_GET_TYPE_INFO(type) ::mirrow::drefl::reflected_type<type>().type_node()
 #define GECS_REFERENCE_ANY ::mirrow::drefl::reference_any
 #include "gecs/gecs.hpp"

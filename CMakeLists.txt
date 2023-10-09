@@ -4,8 +4,6 @@ project(NickelEngine
     LANGUAGES C CXX
 )
 
-# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 set(engine_name nickel)
 
 add_subdirectory(3rdlibs)

@@ -302,7 +302,7 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
         for (int i = 0; i < types.size(); i++) {
             mirrow::drefl::type_info typeInfo{types[i]};
             if (reg.has(entity, typeInfo.type_node())) {
-                auto data = reg.get_mut(entity, typeInfo.type_node());
+                auto data = reg.get_mut(entity, typeInfo);
 
                 auto& methods = ComponentShowMethods::Instance();
                 auto func = methods.Find(typeInfo);
