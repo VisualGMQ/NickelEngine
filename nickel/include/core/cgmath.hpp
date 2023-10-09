@@ -25,6 +25,10 @@ namespace cgmath {
 #define CGMATH_NUMERIC_TYPE float
 #endif
 
+#ifndef CGMATH_LEN_TYPE
+#define CGMATH_LEN_TYPE uint32_t
+#endif
+
 constexpr CGMATH_NUMERIC_TYPE PI =
     static_cast<CGMATH_NUMERIC_TYPE>(3.14159265358979);
 
@@ -49,9 +53,9 @@ inline T Deg2Rad(T degrees) {
 template <typename T>
 using MustArithmetic = std::enable_if_t<std::is_arithmetic_v<T>>;
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 class Vec;
-template <typename T, unsigned int Col, unsigned int Row, typename>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row, typename>
 class Mat;
 
 using Vec2 = Vec<CGMATH_NUMERIC_TYPE, 2>;
@@ -59,7 +63,7 @@ using Vec3 = Vec<CGMATH_NUMERIC_TYPE, 3>;
 using Vec4 = Vec<CGMATH_NUMERIC_TYPE, 4>;
 using Color = Vec4;
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 std::ostream& operator<<(std::ostream& o, const Vec<T, N>& v) {
     o << "Vec" << N << "(";
     for (int i = 0; i < N; i++) {
@@ -69,44 +73,44 @@ std::ostream& operator<<(std::ostream& o, const Vec<T, N>& v) {
     return o;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator+(const Vec<T, N>&, const Vec<T, N>&);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator-(const Vec<T, N>&, const Vec<T, N>&);
-template <typename T, typename U, unsigned int N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
 Vec<T, N> operator*(T, const Vec<T, N>&);
-template <typename T, typename U, unsigned int N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
 Vec<T, N> operator*(const Vec<T, N>&, T);
-template <typename T, typename U, unsigned int N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
 Vec<T, N> operator/(const Vec<T, N>&, T);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator*(const Vec<T, N>&, const Vec<T, N>&);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator/(const Vec<T, N>&, const Vec<T, N>&);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 bool operator!=(const Vec<T, N>& v1, const Vec<T, N>& v2);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 bool operator==(const Vec<T, N>& v1, const Vec<T, N>& v2);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T LengthSqrd(const Vec<T, N>& v);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T Length(const Vec<T, N>& v);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T Project(const Vec<T, N>& src, const Vec<T, N>& des);
 template <typename T>
 T Cross(const Vec<T, 2>& v1, const Vec<T, 2>& v2);
 template <typename T>
 Vec<T, 3> Cross(const Vec<T, 3>& v1, const Vec<T, 3>& v2);
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> Normalize(const Vec<T, N>& v);
 
 // Vec function implementations
 
-template <typename T, unsigned int N, unsigned int NewN>
+template <typename T, CGMATH_LEN_TYPE N, CGMATH_LEN_TYPE NewN>
 auto VecCvt(const Vec<T, N>& v) {
     Vec<T, NewN> result;
-    unsigned int idx = 0;
-    unsigned int min = std::min(N, NewN);
+    CGMATH_LEN_TYPE idx = 0;
+    CGMATH_LEN_TYPE min = std::min(N, NewN);
 
     while (idx < min) {
         result.data[idx] = v.data[idx];
@@ -119,77 +123,77 @@ auto VecCvt(const Vec<T, N>& v) {
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator+(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     Vec<T, N> result;
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         result.data[i] = v1.data[i] + v2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator-(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     Vec<T, N> result;
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         result.data[i] = v1.data[i] - v2.data[i];
     }
     return result;
 }
 
-template <typename T, typename U, unsigned int N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
 Vec<T, N> operator*(U value, const Vec<T, N>& v) {
     Vec<T, N> result;
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         result.data[i] = v.data[i] * value;
     }
     return result;
 }
 
-template <typename T, typename U, unsigned int N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
 Vec<T, N> operator*(const Vec<T, N>& v, U value) {
     return value * v;
 }
 
-template <typename T, typename U, unsigned int N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
 Vec<T, N> operator/(const Vec<T, N>& v, U value) {
     Vec<T, N> result;
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         result.data[i] = v.data[i] / value;
     }
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator*(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     Vec<T, N> result;
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         result.data[i] = v1.data[i] * v2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator/(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     Vec<T, N> result;
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         result.data[i] = v1.data[i] / v2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T Dot(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     T sum{};
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         sum += v1.data[i] * v2.data[i];
     }
     return sum;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 bool operator==(const Vec<T, N>& v1, const Vec<T, N>& v2) {
-    for (unsigned int i = 0; i < N; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
         if (v1.data[i] != v2.data[i]) {
             return false;
         }
@@ -197,7 +201,7 @@ bool operator==(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     return true;
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 bool operator!=(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     return !(v1 == v2);
 }
@@ -232,29 +236,29 @@ Vec<T, 3> MixedProduct(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>
     return Dot(Cross(v1, v2), v3);
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T LengthSqrd(const Vec<T, N>& v) {
     return Dot(v, v);
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T Length(const Vec<T, N>& v) {
     return std::sqrt(LengthSqrd(v));
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 T Project(const Vec<T, N>& src, const Vec<T, N>& des) {
     return Dot(src, des) / Length(des);
 }
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> Normalize(const Vec<T, N>& v) {
     return v / Length(v);
 }
 
 // basic vector class
 
-template <typename T, unsigned int N>
+template <typename T, CGMATH_LEN_TYPE N>
 class Vec {
 public:
     T data[N];
@@ -263,7 +267,7 @@ public:
 
     Vec(const std::initializer_list<T>& initList) {
         auto it = initList.begin();
-        unsigned int idx = 0;
+        CGMATH_LEN_TYPE idx = 0;
         while (it != initList.end() && idx < N) {
             data[idx] = *it;
             it++;
@@ -276,8 +280,16 @@ public:
 
     auto Dot(const Vec<T, N>& o) const { return Dot(*this, o); }
 
-    T operator[](unsigned int idx) const {
+    T operator[](CGMATH_LEN_TYPE idx) const {
         return data[idx];
+    }
+
+    auto operator-() const {
+        Vec result;
+        for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
+            result.data[i] = -data[i];
+        }
+        return result;
     }
 
     auto operator+=(const Vec<T, N>& o) {
@@ -317,7 +329,7 @@ public:
     void Normalize() const { *this = Normalize(*this); }
 
     Vec& operator=(const Vec& o) {
-        for (unsigned int i = 0; i < N; i++) {
+        for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
             this->data[i] = o.data[i];
         }
         return *this;
@@ -383,6 +395,14 @@ public:
     auto operator/=(T value) {
         *this = *this / value;
         return *this;
+    }
+
+    auto operator-() const {
+        Vec result;
+        for (CGMATH_LEN_TYPE i = 0; i < 2; i++) {
+            result.data[i] = -data[i];
+        }
+        return result;
     }
 
     auto LengthSqrd() const { return cgmath::LengthSqrd(*this); }
@@ -456,6 +476,14 @@ public:
     auto operator/=(T value) {
         *this = *this / value;
         return *this;
+    }
+
+    auto operator-() const {
+        Vec result;
+        for (CGMATH_LEN_TYPE i = 0; i < 3; i++) {
+            result.data[i] = -data[i];
+        }
+        return result;
     }
 
     auto LengthSqrd() const { return cgmath::LengthSqrd(*this); }
@@ -534,6 +562,14 @@ public:
         return *this;
     }
 
+    auto operator-() const {
+        Vec result;
+        for (CGMATH_LEN_TYPE i = 0; i < 4; i++) {
+            result.data[i] = -data[i];
+        }
+        return result;
+    }
+
     auto LengthSqrd() const { return LengthSqrd(*this); }
 
     auto Length() const { return Length(*this); }
@@ -543,7 +579,7 @@ public:
 
 // basic Mat class
 
-template <typename T, unsigned int Col, unsigned int Row,
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row,
           typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 class Mat {
 public:
@@ -558,9 +594,9 @@ public:
     static Mat FromCol(const std::initializer_list<Vec<T, Row>>& initVecs) {
         Mat mat;
         auto it = initVecs.begin();
-        unsigned int x = 0;
+        CGMATH_LEN_TYPE x = 0;
         while (it != initVecs.end()) {
-            for (unsigned int y = 0; y < Row; y++) {
+            for (CGMATH_LEN_TYPE y = 0; y < Row; y++) {
                 mat.Set(x, y, it->data[y]);
             }
             it++;
@@ -572,9 +608,9 @@ public:
     static Mat FromRow(const std::initializer_list<Vec<T, Row>>& initVecs) {
         Mat mat;
         auto it = initVecs.begin();
-        unsigned int y = 0;
+        CGMATH_LEN_TYPE y = 0;
         while (it != initVecs.end()) {
-            for (unsigned int x = 0; x < Col; x++) {
+            for (CGMATH_LEN_TYPE x = 0; x < Col; x++) {
                 mat.Set(x, y, it->data[x]);
             }
             it++;
@@ -585,7 +621,7 @@ public:
 
     static Mat FromCol(const std::initializer_list<T>& initList) {
         auto it = initList.begin();
-        unsigned int idx = 0;
+        CGMATH_LEN_TYPE idx = 0;
         Mat m;
 
         while (it != initList.end() && idx < Col * Row) {
@@ -599,7 +635,7 @@ public:
 
     static Mat FromRow(const std::initializer_list<T>& initList) {
         auto it = initList.begin();
-        unsigned int idx = 0;
+        CGMATH_LEN_TYPE idx = 0;
         Mat m;
 
         while (it != initList.end() && idx < Col * Row) {
@@ -658,15 +694,15 @@ private:
     Mat() = default;
 };
 
-template <typename T, unsigned int Common, unsigned int Mat1Row,
-          unsigned int Mat2Col>
+template <typename T, CGMATH_LEN_TYPE Common, CGMATH_LEN_TYPE Mat1Row,
+          CGMATH_LEN_TYPE Mat2Col>
 auto operator*(const Mat<T, Common, Mat1Row>& m1,
                const Mat<T, Mat2Col, Common>& m2) {
     auto result = Mat<T, Mat2Col, Mat1Row>::Zeros();
-    for (unsigned int i = 0; i < Mat1Row; i++) {
-        for (unsigned int j = 0; j < Mat2Col; j++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Mat1Row; i++) {
+        for (CGMATH_LEN_TYPE j = 0; j < Mat2Col; j++) {
             T sum{};
-            for (unsigned int k = 0; k < Common; k++) {
+            for (CGMATH_LEN_TYPE k = 0; k < Common; k++) {
                 sum += m1.Get(k, i) * m2.Get(j, k);
             }
             result.Set(j, i, sum);
@@ -675,53 +711,53 @@ auto operator*(const Mat<T, Common, Mat1Row>& m1,
     return result;
 }
 
-template <typename T, typename U, unsigned int Col, unsigned int Row>
+template <typename T, typename U, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto operator*(const Mat<T, Col, Row>& m, U value) {
     auto result = Mat<T, Col, Row>::Zeros();
-    for (unsigned int i = 0; i < Col * Row; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Col * Row; i++) {
         result.data[i] = m.data[i] * value;
     }
     return result;
 }
 
-template <typename T, typename U, unsigned int Col, unsigned int Row>
+template <typename T, typename U, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto operator*(U value, const Mat<T, Col, Row>& m) {
     return m * value;
 }
 
-template <typename T, typename U, unsigned int Col, unsigned int Row>
+template <typename T, typename U, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto operator/(const Mat<T, Col, Row>& m, T value) {
     Mat<T, Col, Row> result;
-    for (unsigned int i = 0; i < Col * Row; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Col * Row; i++) {
         result.data[i] = m.data[i] / value;
     }
     return result;
 }
 
-template <typename T, unsigned int Col, unsigned int Row>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto operator+(const Mat<T, Col, Row>& m1, const Mat<T, Col, Row>& m2) {
     auto result = Mat<T, Col, Row>::Zeros();
-    for (unsigned int i = 0; i < Col * Row; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Col * Row; i++) {
         result.data[i] = m1.data[i] + m2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int Col, unsigned int Row>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto operator-(const Mat<T, Col, Row>& m1, const Mat<T, Col, Row>& m2) {
     auto result = Mat<T, Col, Row>::Zeros();
-    for (unsigned int i = 0; i < Col * Row; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Col * Row; i++) {
         result.data[i] = m1.data[i] - m2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int Col, unsigned int Row>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto operator*(const Mat<T, Col, Row>& m, const Vec<T, Col>& v) {
     Vec<T, Row> result;
-    for (unsigned int y = 0; y < Row; y++) {
+    for (CGMATH_LEN_TYPE y = 0; y < Row; y++) {
         T sum{};
-        for (unsigned int x = 0; x < Col; x++) {
+        for (CGMATH_LEN_TYPE x = 0; x < Col; x++) {
             sum += m.Get(x, y) * v.data[x];
         }
         result.data[y] = sum;
@@ -729,29 +765,29 @@ auto operator*(const Mat<T, Col, Row>& m, const Vec<T, Col>& v) {
     return result;
 }
 
-template <typename T, unsigned int Col, unsigned int Row>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto MulEach(const Mat<T, Col, Row>& m1, const Mat<T, Col, Row>& m2) {
     auto result = Mat<T, Col, Row>::Zeros();
-    for (unsigned int i = 0; i < Col * Row; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Col * Row; i++) {
         result.data[i] = m1.data[i] * m2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int Col, unsigned int Row>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto DivEach(const Mat<T, Col, Row>& m1, const Mat<T, Col, Row>& m2) {
     auto result = Mat<T, Col, Row>::Zeros();
-    for (unsigned int i = 0; i < Col * Row; i++) {
+    for (CGMATH_LEN_TYPE i = 0; i < Col * Row; i++) {
         result.data[i] = m1.data[i] / m2.data[i];
     }
     return result;
 }
 
-template <typename T, unsigned int Col, unsigned int Row>
+template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row>
 auto Transpose(const Mat<T, Col, Row>& m) {
     auto result = Mat<T, Col, Row>::Zeros();
-    for (unsigned int x = 0; x < Col; x++) {
-        for (unsigned int y = 0; y < Row; y++) {
+    for (CGMATH_LEN_TYPE x = 0; x < Col; x++) {
+        for (CGMATH_LEN_TYPE y = 0; y < Row; y++) {
             result.Set(x, y, m.Get(y, x));
         }
     }

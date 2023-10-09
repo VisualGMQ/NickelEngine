@@ -8,8 +8,15 @@ aux_source_directory(src/refl nickel_src)
 aux_source_directory(src/core nickel_src)
 
 file(GLOB_RECURSE nickel_header_files ./include/*.hpp)
+file(GLOB shader_files ./shader/*.shader)
 
-add_library(${engine_name} STATIC ${nickel_src} ${nickel_header_files})
+# make IDE more clearer
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/include PREFIX "include" FILES ${nickel_header_files})
+source_group(shader FILES ${shader_files})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "src" FILES ${nickel_src})
+
+add_library(${engine_name} STATIC)
+target_sources(${engine_name} PRIVATE ${nickel_src} ${nickel_header_files} ${shader_files})
 target_compile_features(${engine_name} PUBLIC cxx_std_17)
 target_link_libraries(${engine_name} PUBLIC glfw glad gecs stb_image toml++ debugbreak mirrow miniaudio)
 target_include_directories(${engine_name} PUBLIC ./include)

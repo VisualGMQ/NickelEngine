@@ -9,3 +9,4 @@ endmacro()
 
 AddTest(tweeny)
 AddTest(geom)
+AddTest(cgmath)

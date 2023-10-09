@@ -7,7 +7,7 @@ namespace nickel {
 
 namespace geom {
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct AABB final {
     cgmath::Vec<T, N> center;
     cgmath::Vec<T, N> halfLen;
@@ -30,7 +30,7 @@ struct AABB final {
     static AABB Identity() { return AABB{{}, {0.5}}; }
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct Circular final {
     cgmath::Vec<T, N> center;
     T radius;
@@ -42,13 +42,13 @@ struct Circular final {
     }
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct Plane final {
     cgmath::Vec<T, N> pt;
     cgmath::Vec<T, N> normal;
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct OBB final {
     cgmath::Vec<T, N> axis;
 
@@ -62,7 +62,7 @@ struct OBB final {
     };
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct Line {
     cgmath::Vec<T, N> p;
     cgmath::Vec<T, N> dir;  // must normaized
@@ -71,9 +71,14 @@ struct Line {
                         const cgmath::Vec<T, N>& dir) {
         return {p, dir};
     }
+
+    static Line FromPts(const cgmath::Vec<T, N>& start,
+                        const cgmath::Vec<T, N>& end) {
+        return {start, cgmath::Normalize(end - start)};
+    }
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct Segment final : public Line<T, N> {
     T len;
 
@@ -89,15 +94,20 @@ struct Segment final : public Line<T, N> {
     }
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct Ray final : public Line<T, N> {
     static Ray FromDir(const cgmath::Vec<T, N>& p,
                        const cgmath::Vec<T, N>& dir) {
         return {p, dir};
     }
+
+    static Ray FromPts(const cgmath::Vec<T, N>& start,
+                       const cgmath::Vec<T, N>& end) {
+        return {start, cgmath::Normalize(end - start)};
+    }
 };
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 struct Capsule final {
     Segment<T, N> seg;
     T radius;
@@ -106,18 +116,19 @@ struct Capsule final {
         return {s, radius};
     }
 
-    static Capsule Create(const cgmath::Vec<T, N>& p1, const cgmath::Vec<T, N>& p2, T radius) {
+    static Capsule Create(const cgmath::Vec<T, N>& p1,
+                          const cgmath::Vec<T, N>& p2, T radius) {
         return {Segment<T, N>::FromPts(p1, p2), radius};
     }
 };
 
-template <typename T, size_t N>
-size_t GetSupportPt(const std::vector<cgmath::Vec<T, N>>& vertices,
-                    cgmath::Vec<T, N>& dir) {
-    size_t idx = 0;
+template <typename T, uint32_t N>
+uint32_t GetSupportPt(const std::vector<cgmath::Vec<T, N>>& vertices,
+                      cgmath::Vec<T, N>& dir) {
+    uint32_t idx = 0;
     T dot = std::numeric_limits<T>::min();
 
-    for (size_t i = 0; i < vertices.size(); i++) {
+    for (uint32_t i = 0; i < vertices.size(); i++) {
         T newDot = cgmath::Dot(vertices[i], dir);
         if (newDot > dot) {
             dot = newDot;
@@ -129,7 +140,7 @@ size_t GetSupportPt(const std::vector<cgmath::Vec<T, N>>& vertices,
 }
 
 // nearest
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 cgmath::Vec<T, N> AABBNearestPt(const AABB<T, N>& a,
                                 const cgmath::Vec<T, N>& pt) {
     cgmath::Vec<T, N> result;
@@ -144,23 +155,21 @@ cgmath::Vec<T, N> AABBNearestPt(const AABB<T, N>& a,
  * @brief the nearest point to circular(if pt in circular, return pt itself)
  * @return cgmath::Vec<T, N>
  */
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 cgmath::Vec<T, N> CircularNearestPt(const Circular<T, N>& c,
                                     const cgmath::Vec<T, N>& pt) {
     auto dir = pt - c.center;
     auto len = dir.Length();
-    return len <= c.radius
-               ? pt
-               : dir / len * c.radius + c.center;
+    return len <= c.radius ? pt : dir / len * c.radius + c.center;
 }
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 cgmath::Vec<T, N> LineNearestPt(const Line<T, N>& line,
                                 const cgmath::Vec<T, N>& pt) {
     return (pt - line.p).Dot(line.dir) * line.dir + line.p;
 }
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 cgmath::Vec<T, N> SegNearestPt(const Segment<T, N>& s,
                                const cgmath::Vec<T, N>& pt) {
     auto proj = (pt - s.p).Dot(s.dir);
@@ -173,7 +182,7 @@ cgmath::Vec<T, N> SegNearestPt(const Segment<T, N>& s,
     }
 }
 
-template <typename T, size_t N>
+template <typename T, unsigned int N>
 cgmath::Vec<T, N> RayNearestPt(const Ray<T, N>& s,
                                const cgmath::Vec<T, N>& pt) {
     auto proj = (pt - s.p).Dot(s.dir);
@@ -184,7 +193,7 @@ cgmath::Vec<T, N> RayNearestPt(const Ray<T, N>& s,
     }
 }
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 cgmath::Vec<T, N> CapsuleNearestPt(const Capsule<T, N>& c,
                                    const cgmath::Vec<T, N>& pt) {
     auto proj = (pt - c.seg.p).Dot(c.seg.dir);
@@ -196,15 +205,31 @@ cgmath::Vec<T, N> CapsuleNearestPt(const Capsule<T, N>& c,
         return CircularNearestPt(Circular<T, N>::Create(c.seg.p, c.radius), pt);
     } else {
         return CircularNearestPt(
-            Circular<T, N>::Create(c.seg.p + c.seg.dir * c.seg.len, c.radius), pt);
+            Circular<T, N>::Create(c.seg.p + c.seg.dir * c.seg.len, c.radius),
+            pt);
     }
 }
 
 // contain
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 bool IsCapsuleContain(const Capsule<T, N>& cap, const cgmath::Vec<T, N>& pt) {
     return SegNearestPt(cap.seg, pt).LengthSqrd() <= cap.radius * cap.radius;
+}
+
+template <typename T, uint32_t N>
+bool IsCircularContain(const Circular<T, N>& c, const cgmath::Vec<T, N>& pt) {
+    return (pt - c.center).LengthSqrd() <= c.radius * c.radius;
+}
+
+template <typename T, uint32_t N>
+bool IsAABBContain(const AABB<T, N>& c, const AABB<T, N>& pt) {
+    for (uint32_t i = 0; i < N; i++) {
+        if (pt[i] < c.center[i] - c.halfLen[i] || pt[i] > c.center[i] + c.halfLen[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // distance
@@ -214,7 +239,7 @@ bool IsCapsuleContain(const Capsule<T, N>& cap, const cgmath::Vec<T, N>& pt) {
  * @note this is a generic implementation. Use `geom2d::LinePtDist()` or
  * `geom3d::LinePtDistSqrd()` for more efficiency
  */
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 T LinePtDistSqrd(const Line<T, N>& l, const cgmath::Vec<T, N>& pt) {
     auto ptDir = pt - l.p;
     auto projDir = dir.Dot(l.dir) * l.dir;
@@ -223,13 +248,13 @@ T LinePtDistSqrd(const Line<T, N>& l, const cgmath::Vec<T, N>& pt) {
 
 // intersect check
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 bool IsCircularIntersect(const Circular<T, N>& c1, const Circular<T, N>& c2) {
     return PtDistSqrd(c1.center, c2.center) <
            (c1.radius + c2.radius) * (c1.radius + c2.radius);
 }
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 bool IsAABBIntersect(const AABB<T, N>& a, const AABB<T, N>& b) {
     for (int i = 0; i < N; i++) {
         if (a.center[i] > b.center[i] + b.halfLen[i] + a.halfLen[i] ||
@@ -240,52 +265,29 @@ bool IsAABBIntersect(const AABB<T, N>& a, const AABB<T, N>& b) {
     return true;
 }
 
-/**
- * @brief quickly check whether lines intersect(without get intersection)
- * @note this is a quick check, if you want to get intersection same time, use
- * `LineIntersect()`
- */
-template <typename T, size_t N>
-bool IsLineIntersect(const Line<T, N>& l1, const Line<T, N>& l2,
-                     T tol = 0.0001) {
-    return cgmath::IsSameValue(
-        cgmath::MixedProduct(l1.p - l2.p, l1.dir, l2.dir), 0.0, tol);
-}
-
 // intersect
 
 // distance
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 T PtDistSqrd(const cgmath::Vec<T, N>& v1, const cgmath::Vec<T, N>& v2) {
     return (v2 - v1).LengthSqrd();
 }
 
-/**
- * @brief get line-line distance
- * @warning line and line mustn't intersect
- * @note this is a generic implementation, use `geom::LineDist()` for more
- * effeciency
- */
-template <typename T, size_t N>
-T LineDistSqrd(const Line<T, N>& l1, const Line<T, N>& l2) {
-    // TODO: not finish
-}
-
 // misc
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 bool IsLineParallel(const Line<T, N>& l1, const Line<T, N>& l2,
                     T cosTol = 0.0) {
     return std::abs(l1.dir.Dot(l2.dir)) - 1.0 <= cosTol;
 }
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 bool IsLineOrtho(const Line<T, N>& l1, const Line<T, N>& l2, T cosTol = 0.0) {
     return std::abs(l1.dir.Dot(l2.dir)) <= cosTol;
 }
 
-template <typename T, size_t N>
+template <typename T, uint32_t N>
 bool IsSamePt(const cgmath::Vec<T, N>& p1, const cgmath::Vec<T, N>& p2,
               T distTolSqrd = 0.0001) {
     return (p1 - p2).LengthSqrd() <= distTolSqrd;
