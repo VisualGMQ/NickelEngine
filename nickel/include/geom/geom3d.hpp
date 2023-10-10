@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/cgmath.hpp"
 #include "geom/basic_geom.hpp"
 

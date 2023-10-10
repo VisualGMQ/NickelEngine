@@ -13,7 +13,7 @@ using namespace nickel;
 
 #define FLT_EQ(a, b) (std::abs(a - b) <= std::numeric_limits<CGMATH_NUMERIC_TYPE>::epsilon())
 
-TEST_CASE("vectors can be add, sub, mul and divide", "[vector]") {
+TEST_CASE("vectors can be add, sub, mul and divide", "[vector2]") {
     cgmath::Vec2 v1{1, 2};
     cgmath::Vec2 v2{2, 3};
 

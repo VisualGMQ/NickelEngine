@@ -12,6 +12,9 @@
 
 #include "miniaudio.h"
 
+#ifdef _WIN32
+#define NOMINMAX    // evil macro to remove Window SDK min&max macro
+#endif
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 

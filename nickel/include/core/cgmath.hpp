@@ -9,9 +9,10 @@
 #include <cstring>
 #include <initializer_list>
 #include <iostream>
+#include <limits>
+#include <numeric>
 #include <utility>
 #include <vector>
-#include <limits>
 
 #include "core/assert.hpp"
 
@@ -77,11 +78,14 @@ template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator+(const Vec<T, N>&, const Vec<T, N>&);
 template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator-(const Vec<T, N>&, const Vec<T, N>&);
-template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N,
+          typename = MustArithmetic<U>>
 Vec<T, N> operator*(T, const Vec<T, N>&);
-template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N,
+          typename = MustArithmetic<U>>
 Vec<T, N> operator*(const Vec<T, N>&, T);
-template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N,
+          typename = MustArithmetic<U>>
 Vec<T, N> operator/(const Vec<T, N>&, T);
 template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator*(const Vec<T, N>&, const Vec<T, N>&);
@@ -106,23 +110,6 @@ Vec<T, N> Normalize(const Vec<T, N>& v);
 
 // Vec function implementations
 
-template <typename T, CGMATH_LEN_TYPE N, CGMATH_LEN_TYPE NewN>
-auto VecCvt(const Vec<T, N>& v) {
-    Vec<T, NewN> result;
-    CGMATH_LEN_TYPE idx = 0;
-    CGMATH_LEN_TYPE min = std::min(N, NewN);
-
-    while (idx < min) {
-        result.data[idx] = v.data[idx];
-        idx++;
-    }
-
-    while (idx < NewN) {
-        result.data[idx] = T{};
-    }
-    return result;
-}
-
 template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator+(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     Vec<T, N> result;
@@ -141,7 +128,8 @@ Vec<T, N> operator-(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     return result;
 }
 
-template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N,
+          typename = MustArithmetic<U>>
 Vec<T, N> operator*(U value, const Vec<T, N>& v) {
     Vec<T, N> result;
     for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
@@ -150,12 +138,14 @@ Vec<T, N> operator*(U value, const Vec<T, N>& v) {
     return result;
 }
 
-template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N,
+          typename = MustArithmetic<U>>
 Vec<T, N> operator*(const Vec<T, N>& v, U value) {
     return value * v;
 }
 
-template <typename T, typename U, CGMATH_LEN_TYPE N, typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N,
+          typename = MustArithmetic<U>>
 Vec<T, N> operator/(const Vec<T, N>& v, U value) {
     Vec<T, N> result;
     for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
@@ -224,7 +214,8 @@ Vec<T, 3> Cross(const Vec<T, 3>& v1, const Vec<T, 3>& v2) {
  * @brief triple cross product: v1 x v2 x v3
  */
 template <typename T>
-Vec<T, 3> TripleCross(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>& v3) {
+Vec<T, 3> TripleCross(const Vec<T, 3>& v1, const Vec<T, 3>& v2,
+                      const Vec<T, 3>& v3) {
     return Cross(Cross(v1, v2), v3);
 }
 
@@ -232,7 +223,8 @@ Vec<T, 3> TripleCross(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>&
  * @brief mixed product: (v1 x v2) * v3
  */
 template <typename T>
-Vec<T, 3> MixedProduct(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>& v3) {
+Vec<T, 3> MixedProduct(const Vec<T, 3>& v1, const Vec<T, 3>& v2,
+                       const Vec<T, 3>& v3) {
     return Dot(Cross(v1, v2), v3);
 }
 
@@ -258,12 +250,109 @@ Vec<T, N> Normalize(const Vec<T, N>& v) {
 
 // basic vector class
 
+namespace internal {
+
 template <typename T, CGMATH_LEN_TYPE N>
-class Vec {
+struct CommonVecOperations {
+    using underlying_type = Vec<T, N>;
+
+    T Dot(const underlying_type& o) const {
+        return cgmath::Dot(static_cast<const underlying_type&>(*this), o);
+    }
+
+    T operator[](CGMATH_LEN_TYPE idx) const {
+        return static_cast<const underlying_type&>(*this).data[idx];
+    }
+
+    underlying_type operator-() const {
+        underlying_type result;
+        for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
+            result.data[i] =
+                -static_cast<const underlying_type&>(*this).data[i];
+        }
+        return result;
+    }
+
+    underlying_type& operator+=(const underlying_type& o) {
+        auto& v = static_cast<underlying_type&>(*this);
+        v = v + o;
+        return v;
+    }
+
+    underlying_type& operator-=(const underlying_type& o) {
+        auto& v = static_cast<underlying_type&>(*this);
+        v = v - o;
+        return v;
+    }
+
+    underlying_type& operator*=(const underlying_type& o) {
+        auto& v = static_cast<underlying_type&>(*this);
+        v = v * o;
+        return v;
+    }
+
+    underlying_type& operator/=(const underlying_type& o) {
+        auto& v = static_cast<underlying_type&>(*this);
+        v = v / o;
+        return v;
+    }
+
+    underlying_type& operator*=(T value) {
+        auto& v = static_cast<underlying_type&>(*this);
+        v = v * value;
+        return v;
+    }
+
+    underlying_type& operator/=(T value) {
+        auto& v = static_cast<underlying_type&>(*this);
+        v = v / value;
+        return v;
+    }
+
+    T LengthSqrd() const {
+        return cgmath::LengthSqrd(static_cast<const underlying_type&>(*this));
+    }
+
+    T Length() const {
+        return cgmath::Length(static_cast<const underlying_type&>(*this));
+    }
+
+    void Normalize() {
+        static_cast<underlying_type&>(*this) =
+            cgmath::Normalize(static_cast<const underlying_type&>(*this));
+    }
+
+    underlying_type& operator=(const underlying_type& o) {
+        auto& v = static_cast<underlying_type&>(*this);
+        for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
+            v.data[i] = o.data[i];
+        }
+        return v;
+    }
+};
+
+}  // namespace internal
+
+template <typename T, CGMATH_LEN_TYPE N>
+class Vec final : public internal::CommonVecOperations<T, N> {
 public:
+    static_assert(N > 1, "vector dimension must > 1");
+
     T data[N];
 
     Vec() { memset(data, 0, sizeof(data)); }
+
+    template <typename U, CGMATH_LEN_TYPE N2>
+    explicit Vec(const Vec<U, N2>& other) {
+        int i = 0;
+        for (; i < std::min(N, N2); i++) {
+            data[i] = static_cast<T>(other.data[i]);
+        }
+
+        while (i < N) {
+            data[i++] = T{};
+        }
+    }
 
     Vec(const std::initializer_list<T>& initList) {
         auto it = initList.begin();
@@ -277,67 +366,10 @@ public:
             data[idx++] = 0;
         }
     }
-
-    auto Dot(const Vec<T, N>& o) const { return Dot(*this, o); }
-
-    T operator[](CGMATH_LEN_TYPE idx) const {
-        return data[idx];
-    }
-
-    auto operator-() const {
-        Vec result;
-        for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
-            result.data[i] = -data[i];
-        }
-        return result;
-    }
-
-    auto operator+=(const Vec<T, N>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator-=(const Vec<T, N>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(const Vec<T, N>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator/=(const Vec<T, N>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(T value) {
-        *this = *this * value;
-        return *this;
-    }
-
-    auto operator/=(T value) {
-        *this = *this / value;
-        return *this;
-    }
-
-    auto LengthSqrd() const { return LengthSqrd(*this); }
-
-    auto Length() const { return Length(*this); }
-
-    void Normalize() const { *this = Normalize(*this); }
-
-    Vec& operator=(const Vec& o) {
-        for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
-            this->data[i] = o.data[i];
-        }
-        return *this;
-    }
 };
 
 template <typename T>
-class Vec<T, 2> final {
+class Vec<T, 2> final : public internal::CommonVecOperations<T, 2> {
 public:
     union {
         struct {
@@ -355,67 +387,27 @@ public:
 
     explicit Vec(T x) : x(x), y{} {}
 
+    template <typename U, CGMATH_LEN_TYPE N2>
+    explicit Vec(const Vec<U, N2>& other) {
+        x = other.data[0];
+        y = other.data[1];
+    }
+
     Vec(T x, T y) : x(x), y(y) {}
 
     Vec(const Vec&) = default;
     Vec& operator=(const Vec&) = default;
-
-    auto Dot(const Vec<T, 2>& o) const { return cgmath::Dot(*this, o); }
 
     void Set(T x, T y) {
         this->x = x;
         this->y = y;
     }
 
-    auto operator+=(const Vec<T, 2>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator-=(const Vec<T, 2>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(const Vec<T, 2>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator/=(const Vec<T, 2>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(T value) {
-        *this = *this * value;
-        return *this;
-    }
-
-    auto operator/=(T value) {
-        *this = *this / value;
-        return *this;
-    }
-
-    auto operator-() const {
-        Vec result;
-        for (CGMATH_LEN_TYPE i = 0; i < 2; i++) {
-            result.data[i] = -data[i];
-        }
-        return result;
-    }
-
-    auto LengthSqrd() const { return cgmath::LengthSqrd(*this); }
-
-    auto Length() const { return cgmath::Length(*this); }
-
-    void Normalize() { *this = cgmath::Normalize(*this); }
-
     auto Cross(const Vec<T, 2>& o) const { return cgmath::Cross(*this, o); }
 };
 
 template <typename T>
-class Vec<T, 3> final {
+class Vec<T, 3> final : public internal::CommonVecOperations<T, 3> {
 public:
     union {
         struct {
@@ -431,6 +423,13 @@ public:
 
     Vec() : x{}, y{}, z{} {}
 
+    template <typename U, CGMATH_LEN_TYPE N2>
+    explicit Vec(const Vec<U, N2>& other) {
+        x = other.data[0];
+        y = other.data[1];
+        z = N2 >= 3 ? other.data[2] : T{};
+    }
+
     explicit Vec(T x) : x(x), y{}, z{} {}
 
     Vec(T x, T y) : x(x), y(y), z{} {}
@@ -440,63 +439,17 @@ public:
     Vec(const Vec&) = default;
     Vec& operator=(const Vec&) = default;
 
-    auto Dot(const Vec<T, 3>& o) const { return cgmath::Dot(*this, o); }
-
     void Set(T x, T y, T z) {
         this->x = x;
         this->y = y;
         this->z = z;
     }
 
-    auto operator+=(const Vec<T, 3>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator-=(const Vec<T, 3>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(const Vec<T, 3>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator/=(const Vec<T, 3>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(T value) {
-        *this = *this * value;
-        return *this;
-    }
-
-    auto operator/=(T value) {
-        *this = *this / value;
-        return *this;
-    }
-
-    auto operator-() const {
-        Vec result;
-        for (CGMATH_LEN_TYPE i = 0; i < 3; i++) {
-            result.data[i] = -data[i];
-        }
-        return result;
-    }
-
-    auto LengthSqrd() const { return cgmath::LengthSqrd(*this); }
-
-    auto Length() const { return cgmath::Length(*this); }
-
-    void Normalize() { *this = cgmath::Normalize(*this); }
-
     auto Cross(const Vec<T, 3>& o) { return cgmath::Cross(*this, o); }
 };
 
 template <typename T>
-class Vec<T, 4> final {
+class Vec<T, 4> final : public internal::CommonVecOperations<T, 4> {
 public:
     union {
         struct {
@@ -514,6 +467,14 @@ public:
 
     explicit Vec(T x) : x(x), y{}, z{}, w{} {}
 
+    template <typename U, CGMATH_LEN_TYPE N2>
+    explicit Vec(const Vec<U, N2>& other) {
+        x = other.data[0];
+        y = other.data[1];
+        z = N2 >= 3 ? other.data[2] : T{};
+        w = N2 >= 4 ? other.data[3] : T{};
+    }
+
     Vec(T x, T y) : x(x), y(y), z{}, w{} {}
 
     Vec(T x, T y, T z) : x(x), y(y), z(z), w{} {}
@@ -523,58 +484,12 @@ public:
     Vec(const Vec&) = default;
     Vec& operator=(const Vec&) = default;
 
-    auto Dot(const Vec<T, 4>& o) const { return cgmath::Dot(*this, o); }
-
     void Set(T x, T y, T z, T w) {
         this->x = x;
         this->y = y;
         this->z = z;
         this->w = w;
     }
-
-    auto operator+=(const Vec<T, 4>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator-=(const Vec<T, 4>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(const Vec<T, 4>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator/=(const Vec<T, 4>& o) {
-        *this = *this + o;
-        return *this;
-    }
-
-    auto operator*=(T value) {
-        *this = *this * value;
-        return *this;
-    }
-
-    auto operator/=(T value) {
-        *this = *this / value;
-        return *this;
-    }
-
-    auto operator-() const {
-        Vec result;
-        for (CGMATH_LEN_TYPE i = 0; i < 4; i++) {
-            result.data[i] = -data[i];
-        }
-        return result;
-    }
-
-    auto LengthSqrd() const { return LengthSqrd(*this); }
-
-    auto Length() const { return Length(*this); }
-
-    void Normalize() const { *this = Normalize(*this); }
 };
 
 // basic Mat class
@@ -886,7 +801,7 @@ struct Rect {
         };
     };
 
-    Rect(): position{}, size{} {}
+    Rect() : position{}, size{} {}
 
     Rect(const Vec2& position, const Vec2& size)
         : position(position), size(size) {}

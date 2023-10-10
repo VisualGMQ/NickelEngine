@@ -26,7 +26,7 @@ void Keyboard::keyboardEventHandle(const KeyboardEvent& event,
 void Mouse::mouseMotionEventHandle(const MouseMotionEvent& event,
                               gecs::resource<gecs::mut<Mouse>> mouse) {
     mouse->offset_ = event.position - mouse->offset_;
-    mouse->offset_ = event.position;
+    mouse->position_ = event.position;
 }
 
 void Mouse::mouseBtnEventHandle(const MouseButtonEvent& event,

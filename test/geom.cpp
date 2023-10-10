@@ -149,3 +149,44 @@ TEST_CASE("misc") {
         REQUIRE(cgmath::IsSameValue((l1.p + l1.dir * param3 - (l2.p + l2.dir * param4)).Length(), 2.32013f, 0.01f));
     }
 }
+
+using geom_type = std::vector<cgmath::Vec2>;
+
+bool DoGjk(const geom_type& g1, const geom_type& g2, const cgmath::Vec2& pos1, const cgmath::Vec2& pos2) {
+    geom_type newg1 = g1, newg2 = g2;
+    for (auto& e : newg1) {
+        e += pos1;
+    }
+
+    for (auto& e : newg2) {
+        e += pos2;
+    }
+
+    return geom2d::Gjk(newg1, newg2);
+}
+
+TEST_CASE("gjk", "[2D]") {
+    SECTION("triangle") {
+        geom_type geom = {
+            {-5,  5},
+            {5,  -5},
+            {0, 5},
+        };
+
+        REQUIRE(DoGjk(geom, geom, cgmath::Vec2{0, 0}, cgmath::Vec2{2, 2}));
+        REQUIRE_FALSE(
+            DoGjk(geom, geom, cgmath::Vec2{0, 0}, cgmath::Vec2{100, 0}));
+    }
+
+    SECTION("quadrilateral") {
+        geom_type geom = {
+            {-2,  7},
+            {-6,  3},
+            {-3, -3},
+            { 4, -4}
+        };
+
+        REQUIRE(DoGjk(geom, geom, cgmath::Vec2{0, 0}, cgmath::Vec2{2, 2}));
+        REQUIRE_FALSE(DoGjk(geom, geom, cgmath::Vec2{0, 0}, cgmath::Vec2{200, 2}));
+    }
+}
