@@ -70,6 +70,22 @@ TEST_CASE("nearest point") {
             geom::IsSamePt(geom::CapsuleNearestPt(c, cgmath::Vec2{-2.65, 8.99}),
                            cgmath::Vec2{-1.21, 6.48}));
     }
+
+    SECTION("triangle") {
+        std::array<cgmath::Vec2, 3> tri = {
+            cgmath::Vec2{-2, 3},
+            cgmath::Vec2{-3, -2},
+            cgmath::Vec2{2, 2},
+        };
+
+        REQUIRE(geom::IsSamePt(geom2d::TriangleNearestPt(tri, cgmath::Vec2{-1, 4}), cgmath::Vec2{-1.29, 2.82}));
+        REQUIRE(geom::IsSamePt(geom2d::TriangleNearestPt(tri, cgmath::Vec2{2, -2}), cgmath::Vec2{0.05, 0.44}));
+        REQUIRE(geom::IsSamePt(geom2d::TriangleNearestPt(tri, cgmath::Vec2{-6, 1}), cgmath::Vec2{-2.54, 0.31}));
+        REQUIRE(geom2d::TriangleNearestPt(tri, cgmath::Vec2{-3, 5}) == tri[0]);
+        REQUIRE(geom2d::TriangleNearestPt(tri, cgmath::Vec2{4, 2}) == tri[2]);
+        REQUIRE(geom2d::TriangleNearestPt(tri, cgmath::Vec2{-4, -5}) == tri[1]);
+        REQUIRE(geom2d::TriangleNearestPt(tri, cgmath::Vec2{-1, 1}) == cgmath::Vec2{-1, 1});
+    }
 }
 
 TEST_CASE("intersection check") {

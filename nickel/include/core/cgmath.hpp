@@ -37,17 +37,17 @@ constexpr CGMATH_NUMERIC_TYPE PI =
  * @brief check whether two values are the same
  */
 template <typename T>
-inline bool IsSameValue(T value1, T value2, T tol) {
+bool IsSameValue(T value1, T value2, T tol) {
     return std::abs(value1 - value2) <= std::numeric_limits<T>::epsilon() + tol;
 }
 
 template <typename T>
-inline T Rad2Deg(T radians) {
+T Rad2Deg(T radians) {
     return radians * 180.0 / PI;
 }
 
 template <typename T>
-inline T Deg2Rad(T degrees) {
+T Deg2Rad(T degrees) {
     return static_cast<T>(degrees * PI / 180.0);
 }
 
@@ -248,6 +248,12 @@ Vec<T, N> Normalize(const Vec<T, N>& v) {
     return v / Length(v);
 }
 
+
+template <typename T>
+cgmath::Vec<T, 2> PerpendicVec(const cgmath::Vec<T, 2>& v) {
+    return {-v.y, v.x};
+}
+
 // basic vector class
 
 namespace internal {
@@ -262,6 +268,10 @@ struct CommonVecOperations {
 
     T operator[](CGMATH_LEN_TYPE idx) const {
         return static_cast<const underlying_type&>(*this).data[idx];
+    }
+
+    T& operator[](CGMATH_LEN_TYPE idx) {
+        return static_cast<underlying_type&>(*this).data[idx];
     }
 
     underlying_type operator-() const {
@@ -810,6 +820,10 @@ struct Rect {
 
     Rect(const Rect&) = default;
     Rect& operator=(const Rect&) = default;
+
+    static Rect FromCenter(const Vec2& center, const Vec2& halfSize) {
+        return Rect{center - halfSize, halfSize * 2.0};
+    }
 };
 
 struct SRT final {
@@ -828,6 +842,14 @@ struct SRT final {
 template <typename T>
 int Sign(T value) {
     return value < 0 ? -1 : (value > 0 ? 1 : 0);
+}
+
+/**
+ * @brief check whether two section is overlapped
+ */
+template <typename T>
+bool IsOverlap(T min1, T max1, T min2, T max2) {
+    return !((min1 >= max2) || (min2 >= max1));
 }
 
 }  // namespace cgmath

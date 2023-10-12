@@ -26,7 +26,7 @@ void InitGeoms(gecs::commands cmds) {
     });
     cmds.emplace<CanMove>(entity2);
     cmds.emplace<Transform>(entity2,
-                            Transform::FromTranslation(cgmath::Vec2{313, 336}));
+                            Transform::FromTranslation(cgmath::Vec2{176, 376}));
 }
 
 void RenderGeoms(gecs::querier<Transform, Geometry> querier,

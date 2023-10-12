@@ -22,6 +22,7 @@ cmake --build cmake-build
 * [dear-imgui](https://github.com/ocornut/imgui): use to support GUI in editor
 * [tomlplusplus](https://github.com/marzer/tomlplusplus): use to support toml file parse
 * [miniaudio](https://miniaud.io/): use to play audio cross platform
+* [nanobench](https://nanobench.ankerl.com/): use to do benchmark
 
 ## Features
 
@@ -30,8 +31,9 @@ cmake --build cmake-build
     * Data Oriented based on ECS
     * Animation applyed on arbitary properties
 * WIP:
-    * RHI covered OpenGL/ES and Vulkan
+    * RHI covered OpenGL3/ES and Vulkan
     * 3D rendering
+    * Customizable render pipeline
     * Game sound play
     * Game physics
     * More features of the editor

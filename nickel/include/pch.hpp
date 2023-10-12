@@ -50,6 +50,7 @@
 #include <cmath>
 #include <algorithm>
 #include <sstream>
+#include <random>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)

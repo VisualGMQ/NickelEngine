@@ -130,7 +130,7 @@ enum class Key {
     RIGHT_SUPER     = GLFW_KEY_RIGHT_SUPER,
     MENU            = GLFW_KEY_MENU,
 
-    KEY_LAST = 348,
+    KEY_LAST = 349,
 };
 
 Key GetKeyFromName(std::string_view name);
