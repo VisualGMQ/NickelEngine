@@ -37,10 +37,10 @@ enum class PolygonIntersectMode {
 
 struct Context final {
     struct IntersectInfo final {
-        cgmath::Vec2 v;
-        float len;
-
         cgmath::Vec2 p1, p2;
+
+        cgmath::Vec2 center;
+        geom2d::MTV<float, 2> mtv;
     };
 
     std::vector<std::variant<geom2d::Line<float>, geom2d::Ray<float>,
@@ -51,6 +51,7 @@ struct Context final {
     bool showNearestPoint = false;
     bool showIntersect = false;
     PolygonIntersectMode intersectMode = PolygonIntersectMode::SAT;
+    bool useEPA = false;
     cgmath::Color intersectColor = cgmath::Color{1, 0, 0, 1};
     cgmath::Color nearestPtColor = cgmath::Color{1, 1, 0, 1};
     std::vector<bool> intersected;
@@ -386,21 +387,46 @@ struct IntersectCalculer final {
     }
 
     bool operator()(const Polygon<float>& g1, const Polygon<float>& g2) const {
+        cgmath::Vec2 center;
+        for (auto& p : g1) {
+            center += p;
+        }
+        center /= g1.size();
+
         switch (mode_) {
             case PolygonIntersectMode::GJK:
                 return geom2d::Gjk(g1, g2);
             case PolygonIntersectMode::GJKNearest: {
-                auto result = geom2d::GjkNearestPt(g1, g2);
+                std::vector<cgmath::Vec2> simplex;
+                auto result = geom2d::GjkNearestPt(g1, g2, &simplex);
                 if (result.has_value()) {
                     Context::IntersectInfo info;
                     info.p1 = result->first.GetPt(g1);
                     info.p2 = result->second.GetPt(g2);
                     ctx_.intersectResult.push_back(info);
+                } else {
+                    if (ctx_.useEPA) {
+                        if (auto result = geom2d::EPA(simplex, g1, g2);
+                            result) {
+                            Context::IntersectInfo info;
+                            info.center = center;
+                            info.mtv = result.value();
+                            ctx_.intersectResult.push_back(info);
+                        }
+                    }
                 }
                 return !result.has_value();
             }
-            case PolygonIntersectMode::SAT:
-                return geom2d::SAT(g1, g2).has_value();
+            case PolygonIntersectMode::SAT: {
+                auto result = geom2d::SAT(g1, g2);
+                Context::IntersectInfo info;
+                if (result) {
+                    info.mtv = result.value();
+                }
+                info.center = center;
+                ctx_.intersectResult.push_back(info);
+                return result.has_value();
+            }
         }
     }
 
@@ -421,17 +447,28 @@ void RenderGeometrics(gecs::resource<Context> ctx,
 
     for (auto& info : ctx->intersectResult) {
         cgmath::Vec2 ptRect = {5, 5};
+
         switch (ctx->intersectMode) {
             case PolygonIntersectMode::GJK:
                 break;
             case PolygonIntersectMode::GJKNearest:
+                // draw nearest pt
                 renderer->FillRect({info.p1 - ptRect, ptRect * 2},
                                    {1, 0, 1, 1});
                 renderer->FillRect({info.p2 - ptRect, ptRect * 2},
                                    {1, 0, 1, 1});
                 renderer->DrawLine(info.p1, info.p2, {1, 0, 1, 1});
+
+                if (ctx->useEPA) {
+                    renderer->DrawLine(info.center,
+                                       info.center + info.mtv.v * info.mtv.len,
+                                       {1, 0, 1, 1});
+                }
                 break;
             case PolygonIntersectMode::SAT:
+                renderer->DrawLine(info.center,
+                                   info.center + info.mtv.v * info.mtv.len,
+                                   {1, 0, 1, 1});
                 break;
         }
     }
@@ -517,6 +554,9 @@ void PlaygroundUpdate(gecs::resource<gecs::mut<Context>> ctx,
         }
 
         ctx->intersectMode = static_cast<PolygonIntersectMode>(selected);
+        if (selected == 1) {
+            ImGui::Checkbox("use EPA", &ctx->useEPA);
+        }
 
         ImGui::Separator();
 

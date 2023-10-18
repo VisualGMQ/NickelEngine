@@ -90,7 +90,27 @@ bool IsRayIntersect(const Ray<T>& l1, const Ray<T>& l2) {
     return false;
 }
 
+template <typename T>
+bool IsRaySegIntersect(const Ray<T>& l1, const Segment<T>& l2) {
+    if (auto result = LineIntersect(l1, l2); result) {
+        auto&& [param1, param2] = result.value();
+        return param1 >= 0 && param2 >= 0 && param2 <= l2.len;
+    }
+    return false;
+}
+
 // intersection
+
+template <typename T>
+std::optional<cgmath::Vec<T, 2>> RaySegIntersect(const Ray<T>& l1, const Segment<T>& l2) {
+    if (auto result = LineIntersect(l1, l2); result) {
+        auto&& [param1, param2] = result.value();
+        if (param1 >= 0 && param2 >= 0 && param2 <= l2.len) {
+            return l1.p + param1 * l1.dir;
+        }
+    }
+    return std::nullopt;
+}
 
 /**
  * @brief get intersection between point and line, get param in l1 & l2
@@ -210,10 +230,12 @@ public:
                 return p - datas_[0].p;
             case 2: {
                 auto v = datas_[1].p - datas_[0].p;
-                if (v.Cross(p - datas_[0].p) >= 0) {
+                if (auto value = v.Cross(p - datas_[0].p); value > 0) {
                     return cgmath::Vec<T, 2>{-v.y, v.x};
-                } else {
+                } else if (value < 0) {
                     return cgmath::Vec<T, 2>{v.y, -v.x};
+                } else {
+                    return cgmath::Vec<T, 2>{0, 0};
                 }
             }
             default:
@@ -247,27 +269,39 @@ private:
  * polygon is intersected
  *
  * @ref https://dyn4j.org/2010/04/gjk-gilbert-johnson-keerthi/
+ * @param outputSimplex return the final simplex when Gjk return true. Please ensure outputSimplex->size() >= 3
+ *
+ * @see GjkNearestPt
+ * @see EPA
  */
-template <typename T>
+template <typename T, typename Container = std::array<cgmath::Vec<T, 2>, 3>>
 bool Gjk(const std::vector<cgmath::Vec<T, 2>>& polygon1,
-         const std::vector<cgmath::Vec<T, 2>>& polygon2) {
+         const std::vector<cgmath::Vec<T, 2>>& polygon2,
+         Container* outputSimplex = nullptr) {
+    static_assert(
+        std::is_same_v<typename Container::value_type, cgmath::Vec<T, 2>>);
+    Assert(!outputSimplex || outputSimplex->size() >= 3,
+           "outputSimplex size must >= 3");
+
     if (polygon1.empty() || polygon2.empty()) {
         return false;
     }
 
     // init simplex
-    Simplex<T, 2> simplex;
+    std::array<cgmath::Vec<T, 2>, 3> simplex;
     auto dir = cgmath::Vec<T, 2>{1, 0};
-    simplex[0].p = polygon1[GetSupportPt(polygon1, dir)] -
-                   polygon2[GetSupportPt(polygon2, -dir)];
-    simplex[1].p = simplex[0].p;
-    simplex[2].p = simplex[0].p;
-    dir = -simplex[0].p;
+    simplex[0] = polygon1[GetSupportPt(polygon1, dir)] -
+                 polygon2[GetSupportPt(polygon2, -dir)];
+    simplex[1] = simplex[0];
+    simplex[2] = simplex[0];
+    dir = -simplex[0];
 
     while (true) {
         auto supportPt = polygon1[GetSupportPt(polygon1, dir)] -
                          polygon2[GetSupportPt(polygon2, -dir)];
-        if (simplex.HasVertex(supportPt)) {
+        if (simplex[0] == cgmath::Vec2{0, 0} &&
+            simplex[1] == cgmath::Vec2{0, 0} &&
+            simplex[2] == cgmath::Vec2{0, 0}) {
             return false;
         }
 
@@ -277,28 +311,38 @@ bool Gjk(const std::vector<cgmath::Vec<T, 2>>& polygon1,
         }
 
         // contain check
-        simplex[2].p = supportPt;
-        if (simplex.Contain(cgmath::Vec2{0, 0})) {
+        simplex[2] = supportPt;
+        if (IsTriangleContainStrict(simplex, cgmath::Vec<T, 2>{0, 0})) {
+            if (outputSimplex) {
+                (*outputSimplex)[0] = simplex[0];
+                (*outputSimplex)[1] = simplex[1];
+                (*outputSimplex)[2] = simplex[2];
+            }
             return true;
         }
 
         // nearest simplex calculate
-        auto v1 = cgmath::Vec<T, 3>{simplex[0].p - supportPt},
-             v2 = cgmath::Vec<T, 3>{simplex[1].p - supportPt};
+        auto v1 = cgmath::Vec<T, 3>{simplex[0] - supportPt},
+             v2 = cgmath::Vec<T, 3>{simplex[1] - supportPt};
         auto n1 = cgmath::Vec<T, 3>{cgmath::Normalize(v1)}.Cross(
                  cgmath::Vec<T, 3>(-supportPt)),
              n2 = cgmath::Vec<T, 3>{cgmath::Normalize(v2)}.Cross(
                  cgmath::Vec<T, 3>(-supportPt));
 
         if (n1.LengthSqrd() == 0 || n2.LengthSqrd() == 0) {
+            if (outputSimplex) {
+                (*outputSimplex)[0] = simplex[0];
+                (*outputSimplex)[1] = simplex[1];
+                (*outputSimplex)[2] = simplex[2];
+            }
             return true;
         }
 
         if (n1.LengthSqrd() <= n2.LengthSqrd()) {
-            simplex[1].p = supportPt;
+            simplex[1] = supportPt;
             dir = cgmath::Vec2{n1.Cross(v1)};
         } else {
-            simplex[0].p = supportPt;
+            simplex[0] = supportPt;
             dir = cgmath::Vec2{n2.Cross(v2)};
         }
     }
@@ -394,7 +438,8 @@ void gjkSolve3(Simplex<T, 2>& simplex, const cgmath::Vec<T, 2>& pt) {
     }
 
     // calculate barycentric params
-    auto area = (simplex[1].p - simplex[0].p).Cross(simplex[2].p - simplex[0].p);
+    auto area =
+        (simplex[1].p - simplex[0].p).Cross(simplex[2].p - simplex[0].p);
     auto uABC = (simplex[1].p - pt).Cross(simplex[2].p - pt);
     auto vABC = (simplex[2].p - pt).Cross(simplex[0].p - pt);
     auto wABC = (simplex[0].p - pt).Cross(simplex[1].p - pt);
@@ -446,15 +491,22 @@ void gjkSolve3(Simplex<T, 2>& simplex, const cgmath::Vec<T, 2>& pt) {
  * @ref theory ref: https://dyn4j.org/2010/04/gjk-distance-closest-points/
  *                  https://box2d.org/files/ErinCatto_GJK_GDC2010.pdf
  * @ref code ref: https://box2d.org/files/ErinCatto_GJK_Source.zip
+ *
+ * @note if outputSimplex != nullptr, it will always contain 3 vertices even the
+ * GJK stopped with less vertices. So you can put it into EPA trustfully(but in
+ * this case, EPA will return incorrect result)
+ * @see EPA
+ * @see Gjk
  */
 template <typename T>
 std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
     const std::vector<cgmath::Vec<T, 2>>& polygon1,
-    const std::vector<cgmath::Vec<T, 2>>& polygon2) {
+    const std::vector<cgmath::Vec<T, 2>>& polygon2,
+    std::vector<cgmath::Vec<T, 2>>* outputSimplex = nullptr) {
     Simplex<T, 2> simplex;
     cgmath::Vec<T, 2> dir{1, 0};
     simplex[0].idx1 = GetSupportPt(polygon1, dir);
-    simplex[0].idx2 = GetSupportPt(polygon1, -dir);
+    simplex[0].idx2 = GetSupportPt(polygon2, -dir);
     simplex[0].p = polygon1[simplex[0].idx1] - polygon2[simplex[0].idx2];
     simplex[0].u = 1;
     simplex.count = 1;
@@ -485,12 +537,39 @@ std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
 
         // triangle contain origin, polygons are intersected
         if (simplex.count == 3) {
+            if (outputSimplex) {
+                outputSimplex->resize(simplex.count);
+                for (int i = 0; i < simplex.count; i++) {
+                    (*outputSimplex)[i] = simplex[i].p;
+                }
+            }
             return std::nullopt;
         }
 
-        dir = simplex.GetSearchDir(cgmath::Vec<T, 2>{});
+        dir = simplex.GetSearchDir(cgmath::Vec<T, 2>{0, 0});
 
         if (dir.LengthSqrd() == 0) {
+            if (outputSimplex) {
+                if (simplex.count == 1) {
+                    auto d = cgmath::Vec<T, 2>{1, 0};
+                    simplex[1].p = polygon1[GetSupportPt(polygon1, d)] -
+                                   polygon2[GetSupportPt(polygon2, -d)];
+                    d = cgmath::Vec<T, 2>{simplex[1].p.y - simplex[0].p.y,
+                                          simplex[0].p.x - simplex[1].p.x};
+                    simplex[2].p = polygon1[GetSupportPt(polygon1, d)] -
+                                   polygon2[GetSupportPt(polygon2, -d)];
+                } else if (simplex.count == 2) {
+                    auto d = cgmath::Vec<T, 2>{simplex[1].p.y - simplex[0].p.y,
+                                          simplex[0].p.x - simplex[1].p.x};
+                    simplex[2].p = polygon1[GetSupportPt(polygon1, d)] -
+                                   polygon2[GetSupportPt(polygon2, -d)];
+                }
+                simplex.count = 3;
+                outputSimplex->resize(simplex.count);
+                for (int i = 0; i < simplex.count; i++) {
+                    (*outputSimplex)[i] = simplex[i].p;
+                }
+            }
             return std::nullopt;
         }
 
@@ -511,7 +590,7 @@ std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
             break;
         }
 
-        simplex.count ++;
+        simplex.count++;
     }
 
     NearestPtInfo<T> info1, info2;
@@ -544,11 +623,11 @@ std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
 }
 
 /**
- * @brief Minimal Translation Vector for SAT
+ * @brief Minimal Translation Vector
  */
 template <typename T, CGMATH_LEN_TYPE N>
 struct MTV final {
-    cgmath::Vec<T, N> v;
+    cgmath::Vec<T, N> v;  // normalized
     T len = 0.0;
 };
 
@@ -586,8 +665,8 @@ template <typename T>
 std::optional<MTV<T, 2>> checkSAT2Polygon(
     const std::vector<cgmath::Vec<T, 2>>& polygon1,
     const std::vector<cgmath::Vec<T, 2>>& polygon2) {
-    cgmath::Vec<T, 2> info;
-    T len = std::numeric_limits<T>::max();
+    MTV<T, 2> mtv;
+    mtv.len = std::numeric_limits<T>::max();
 
     for (int i = 0; i < polygon1.size(); i++) {
         auto axis = cgmath::Normalize(polygon1[(i + 1) % polygon1.size()] -
@@ -605,13 +684,14 @@ std::optional<MTV<T, 2>> checkSAT2Polygon(
         } else {
             auto minLen = std::min(std::abs(range1.second - range2.first),
                                    std::abs(range2.second - range1.first));
-            if (minLen < len) {
-                len = minLen;
+            if (minLen < mtv.len) {
+                mtv.len = minLen;
+                mtv.v = perp;
             }
         }
     }
 
-    return MTV<T, 2>{info, len};
+    return mtv;
 }
 
 }  // namespace internal
@@ -636,6 +716,73 @@ std::optional<MTV<T, 2>> SAT(const std::vector<cgmath::Vec<T, 2>>& polygon1,
     }
 
     return mtv2;
+}
+
+/**
+ * @brief use Extend Polytope Algorithm to detect polygon's depth vector
+ *
+ * @tparam T
+ * @param simplex simplex from `GJK()` or `GJKNearestPt()`
+ *
+ * @ref
+ * https://cs.brown.edu/courses/cs195u/lectures/04_advancedCollisionsAndPhysics.pdf
+ *
+ * @warning sometimes EPA can't get correct MTV(return std::nullopt even
+ * polygons are intersected) due to (0, 0) on simplex's edge, you may try to
+ * use SAT to get MTV.
+ */
+template <typename T>
+std::optional<MTV<T, 2>> EPA(std::vector<cgmath::Vec<T, 2>>& simplex,
+                             const std::vector<cgmath::Vec<T, 2>>& polygon1,
+                             const std::vector<cgmath::Vec<T, 2>>& polygon2) {
+    MTV<T, 2> mtv;
+
+    while (true) {
+        if (simplex.size() < 3) {
+            return std::nullopt;
+        } else {
+            mtv.len = std::numeric_limits<T>::max();
+            for (int i = 0; i < simplex.size(); i++) {
+                auto pt = geom::SegNearestPt(
+                    Segment<T>::FromPts(simplex[i],
+                                        simplex[(i + 1) % simplex.size()]),
+                    cgmath::Vec<T, 2>{0, 0});
+                auto lenSqrd = pt.LengthSqrd();
+                if (lenSqrd < mtv.len) {
+                    mtv.len = lenSqrd;
+                    mtv.v = pt;
+                }
+            }
+        }
+
+        auto support = polygon1[GetSupportPt(polygon1, mtv.v)] -
+                       polygon2[GetSupportPt(polygon2, -mtv.v)];
+
+        // check whether the point already in simplex
+        for (auto& p : simplex) {
+            if (p == support) {
+                mtv.len = std::sqrt(mtv.len);
+                mtv.v.Normalize();
+                return mtv;
+            }
+        }
+
+        // add support to simplex
+        for (int i = 0; i < simplex.size(); i++) {
+            if (mtv.v.LengthSqrd() == 0){
+                mtv.len = 0;
+                mtv.v = cgmath::Vec<T, 2>{};
+                return mtv;
+            }
+            if (IsRaySegIntersect(
+                    Ray<T>::FromPts(cgmath::Vec<T, 2>{0, 0}, mtv.v),
+                    Segment<T>::FromPts(simplex[i],
+                                        simplex[(i + 1) % simplex.size()]))) {
+                simplex.insert(simplex.begin() + i + 1, support);
+                break;
+            }
+        }
+    }
 }
 
 template <typename T>

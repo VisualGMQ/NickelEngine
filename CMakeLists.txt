@@ -32,8 +32,3 @@ if (NICKEL_BUILD_UNITTEST OR PROJECT_IS_TOP_LEVEL)
     enable_testing()
     add_subdirectory(test)
 endif()
-
-option(NICKEL_BUILD_PLAYGROUND "build playground" OFF)
-if (NICKEL_BUILD_PLAYGROUND OR PROJECT_IS_TOP_LEVEL)
-    add_subdirectory(playground)
-endif()

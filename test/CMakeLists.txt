@@ -21,3 +21,5 @@ AddConsoleTest(geom)
 AddConsoleTest(cgmath)
 
 AddVisualableTest(gjk)
+
+add_subdirectory(testbed)
