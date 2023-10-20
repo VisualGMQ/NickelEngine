@@ -3,10 +3,11 @@
 #include "core/cgmath.hpp"
 #include "core/gogl.hpp"
 #include "core/log_tag.hpp"
-#include "renderer/texture.hpp"
 #include "renderer/camera.hpp"
+#include "renderer/texture.hpp"
 #include <iterator>
 #include <optional>
+
 
 namespace nickel {
 
@@ -54,19 +55,39 @@ public:
     }
 
     void Clear() { GL_CALL(glClear(GL_COLOR_BUFFER_BIT)); }
-    void ClearDepth() { GL_CALL(glClear(GL_DEPTH_BUFFER_BIT));  }
 
-    template <typename Vertices>
+    void ClearDepth() { GL_CALL(glClear(GL_DEPTH_BUFFER_BIT)); }
+
+    template <typename Vertices, typename = std::enable_if_t<std::is_same_v<
+                                     typename Vertices::value_type, Vertex>>>
     void DrawLines(const Vertices& vertices) {
         draw(gogl::PrimitiveType::LineStrip, vertices,
              std::array<uint32_t, 0>{});
     }
 
-    template <typename Vertices>
+    template <typename Vertices, typename = std::enable_if_t<std::is_same_v<
+                                     typename Vertices::value_type, Vertex>>>
     void DrawLineLoop(const Vertices& vertices,
                       const cgmath::Mat44& model = cgmath::Mat44::Identity()) {
         draw(gogl::PrimitiveType::LineLoop, vertices,
              std::array<uint32_t, 0>{});
+    }
+
+    template <typename Container, typename = std::enable_if_t<std::is_same_v<
+                                      typename Container::value_type, cgmath::Vec2>>>
+    void DrawLines(const Container& pts, const cgmath::Color& color) {
+        for (int i = 0; i < pts.size() - 1; i++) {
+            DrawLine(pts[i], pts[(i + 1) % pts.size()], color);
+        }
+    }
+
+    template <typename Container,
+              typename = std::enable_if_t<
+                  std::is_same_v<typename Container::value_type, cgmath::Vec2>>>
+    void DrawLineLoop(const Container& pts, const cgmath::Color& color) {
+        for (int i = 0; i < pts.size(); i++) {
+            DrawLine(pts[i], pts[(i + 1) % pts.size()], color);
+        }
     }
 
     void DrawLine(const cgmath::Vec2& p1, const cgmath::Vec2& p2,

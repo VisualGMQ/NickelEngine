@@ -347,8 +347,7 @@ struct NearestPointCalculer final {
 
     cgmath::Vec2 operator()(const Polygon<float>& g,
                             const cgmath::Vec2& pt) const {
-        // TODO: not finish
-        return cgmath::Vec2{};
+        return geom2d::GjkNearestPt(g, pt);
     }
 };
 

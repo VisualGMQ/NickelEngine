@@ -31,6 +31,19 @@ struct AABB final {
 };
 
 template <typename T, uint32_t N>
+struct OBB final {
+    cgmath::Vec<T, N> center;
+    cgmath::Vec<T, N> halfLen;
+    cgmath::Vec<T, N> axis;
+
+    static OBB FromCenter(const cgmath::Vec<T, N>& center,
+                          const cgmath::Vec<T, N>& halfLen,
+                          const cgmath::Vec<T, N>& axis) {
+        return {center, halfLen, axis};
+    }
+};
+
+template <typename T, uint32_t N>
 struct Circular final {
     cgmath::Vec<T, N> center;
     T radius;
@@ -46,20 +59,6 @@ template <typename T, uint32_t N>
 struct Plane final {
     cgmath::Vec<T, N> pt;
     cgmath::Vec<T, N> normal;
-};
-
-template <typename T, uint32_t N>
-struct OBB final {
-    cgmath::Vec<T, N> axis;
-
-    union {
-        AABB<T, N> aabb;
-
-        struct {
-            cgmath::Vec<T, N> center;
-            cgmath::Vec<T, N> halfLen;
-        };
-    };
 };
 
 template <typename T, uint32_t N>

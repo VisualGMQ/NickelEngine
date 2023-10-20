@@ -18,6 +18,8 @@ constexpr int DefaultWindowHeight = 680;
 
 constexpr std::string_view ProjectConfigFilename = "project.toml";
 
+using PhysicsFloatingType = float;
+
 }  // namespace config
 
 }  // namespace nickel

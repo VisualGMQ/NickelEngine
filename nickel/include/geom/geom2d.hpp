@@ -28,6 +28,9 @@ using Ray = geom::Ray<T, 2>;
 template <typename T>
 using Capsule = geom::Capsule<T, 2>;
 
+template <typename T>
+using OBB = geom::OBB<T, 2>;
+
 // function fwd
 
 template <typename T>
@@ -622,6 +625,16 @@ std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
     return std::make_pair(info1, info2);
 }
 
+template <typename T>
+cgmath::Vec<T, 2> GjkNearestPt(const std::vector<cgmath::Vec<T, 2>>& polygon, const cgmath::Vec<T, 2>& p) {
+    // IMPROVE: write GJK handly to prevent create vector
+    if (auto result = GjkNearestPt(polygon, std::vector<cgmath::Vec<T, 2>>{p}); result) {
+        return result->first.GetPt(polygon);
+    } else {
+        return p;
+    }
+}
+
 /**
  * @brief Minimal Translation Vector
  */
@@ -716,6 +729,45 @@ std::optional<MTV<T, 2>> SAT(const std::vector<cgmath::Vec<T, 2>>& polygon1,
     }
 
     return mtv2;
+}
+
+/**
+ * @brief use Separate Axis Theory to detect polygon's depth vector
+ * specialize for AABB(more quickly)
+ */
+template <typename T>
+std::optional<MTV<T, 2>> SAT(const AABB<T>& aabb1,
+                             const AABB<T>& aabb2) {
+    MTV<T, 2> mtv;
+
+    auto min1 = aabb1.center - aabb1.halfLen;
+    auto max1 = aabb1.center + aabb1.halfLen;
+    auto min2 = aabb2.center - aabb2.halfLen;
+    auto max2 = aabb2.center + aabb2.halfLen;
+
+    bool overlaped = false;
+
+    if (cgmath::IsOverlap(min1.x, max1.x, min2.x, max2.x)) {
+        mtv.v = cgmath::Vec<T, 2>{1, 0};
+        mtv.len =
+            std::min(std::abs(max1.x - min2.x), std::abs(max2.x - min2.x));
+        overlaped = true;
+    }
+
+    if (cgmath::IsOverlap(min1.y, max1.y, min2.y, max2.y)) {
+        auto len = std::min(std::abs(max1.y - min2.y), std::abs(max2.y - min2.y));
+        if (len < mtv.len) {
+            mtv.len = len;
+            mtv.v = cgmath::Vec<T, 2>{0, 1};
+        }
+        overlaped = true;
+    }
+
+    if (overlaped) {
+        return mtv;
+    } else {
+        return std::nullopt;
+    }
 }
 
 /**
