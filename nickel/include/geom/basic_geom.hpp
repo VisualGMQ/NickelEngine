@@ -139,6 +139,9 @@ uint32_t GetSupportPt(const std::vector<cgmath::Vec<T, N>>& vertices,
 }
 
 // nearest
+/**
+ * get nearest point on/in AABB(if point in AABB, return point itself)
+ */
 template <typename T, uint32_t N>
 cgmath::Vec<T, N> AABBNearestPt(const AABB<T, N>& a,
                                 const cgmath::Vec<T, N>& pt) {

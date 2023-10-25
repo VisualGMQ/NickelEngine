@@ -4,6 +4,10 @@
 #include "pch.hpp"
 #include "physics/manifold_solver.hpp"
 #include "physics/physic_solver.hpp"
+#include "physics/circle_shape.hpp"
+#include "physics/capsule_shape.hpp"
+#include "physics/polygon_shape.hpp"
+#include "physics/obb_shape.hpp"
 
 
 namespace nickel {
@@ -22,6 +26,9 @@ public:
 
 private:
     PhysicSolver physicSolver_;
+    ManifoldSolver manifoldSolver_;
+
+    void collide(gecs::querier<Body, CollideShape> bodies);
 };
 
 void PhysicsInit(gecs::commands cmds);

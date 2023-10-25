@@ -13,16 +13,16 @@ public:
     static OBBShape FromOBB(const geom2d::OBB<Real>& obb) { return {obb}; }
 
     static OBBShape FromCenter(const Vec2& center, const Vec2& halfLen,
-                               const Vec2& axis) {
+                               Real rotation) {
         return {
-            geom2d::OBB<Real>{center, halfLen, axis}
+            geom2d::OBB<Real>::FromCenter(center, halfLen, rotation)
         };
     }
 
     geom2d::OBB<Real> shape;
 
 private:
-    OBBShape(const geom2d::OBB<Real>& obb) : Shape(Type::OBB) {}
+    OBBShape(const geom2d::OBB<Real>& obb) : Shape(Type::OBB), shape(obb) {}
 };
 
 }  // namespace physics

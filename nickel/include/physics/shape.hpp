@@ -2,7 +2,7 @@
 
 #include "config/config.hpp"
 #include "core/assert.hpp"
-#include <type_traits>
+#include "geom/geom2d.hpp"
 
 namespace nickel {
 
@@ -22,6 +22,11 @@ public:
     Shape(Type type) : type_{type} {}
 
     Type GetType() const { return type_; }
+
+    template <typename T>
+    geom2d::MTV<float, 2> Collide(const T& solver) {
+        return solver(*this);
+    }
 
 private:
     Type type_;

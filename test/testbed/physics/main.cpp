@@ -103,15 +103,14 @@ void RenderShapes(gecs::querier<physics::Body, physics::CollideShape> querier,
                 auto& s =
                     physics::shape_cast<const physics::OBBShape&>(*shape.shape)
                         .shape;
+                auto&& [xAxis, yAxis] = s.GetAxis();
                 renderer->DrawLineLoop(
                     std::vector<cgmath::Vec2>{
-                        s.center - s.axis * s.halfLen,
-                        cgmath::Vec2{s.center.x + s.axis.x * s.halfLen.w,
-                                     s.center.y - s.axis.y * s.halfLen.h},
-                        s.center + s.axis * s.halfLen,
-                        {s.center.x - s.axis.x * s.halfLen.w,
-                                     s.center.y + s.axis.y * s.halfLen.h}
-                },
+                        s.center - (xAxis - yAxis) * s.halfLen,
+                        s.center + (xAxis - yAxis) * s.halfLen,
+                        s.center + (xAxis + yAxis) * s.halfLen,
+                        s.center + (-xAxis + yAxis) * s.halfLen,
+                    },
                     {1, 0, 1, 1});
             } break;
             case physics::Shape::Type::Polygon: {

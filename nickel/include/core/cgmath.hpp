@@ -789,6 +789,15 @@ inline Mat44 CreateXYZRotation(const cgmath::Vec3& r) {
     return CreateXRotation(r.x) * CreateYRotation(r.y) * CreateZRotation(r.z);
 }
 
+inline Mat22 CreateRotation2D(float radians) {
+    auto cos = std::cos(radians);
+    auto sin = std::sin(radians);
+    return Mat22::FromRow({
+        cos, -sin,
+        sin, cos,
+    });
+}
+
 inline Mat44 CreateScale(const Vec3& scale) {
     // clang-format off
     return Mat44::FromRow({

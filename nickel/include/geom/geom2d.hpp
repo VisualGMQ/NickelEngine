@@ -2,6 +2,7 @@
 
 #include "core/cgmath.hpp"
 #include "geom/basic_geom.hpp"
+#include "misc/transform.hpp"
 
 namespace nickel {
 
@@ -29,7 +30,51 @@ template <typename T>
 using Capsule = geom::Capsule<T, 2>;
 
 template <typename T>
-using OBB = geom::OBB<T, 2>;
+struct OBB final {
+    cgmath::Vec<T, 2> center;
+    cgmath::Vec<T, 2> halfLen;
+
+    OBB(const cgmath::Vec<T, 2>& center, const cgmath::Vec<T, 2>& halfLen,
+        T radians)
+        : center{center},
+          halfLen{halfLen},
+          sin_{std::sin(radians)},
+          cos_{std::cos(radians)},
+          rotation_(radians) {}
+
+    static OBB FromCenter(const cgmath::Vec<T, 2>& center,
+                          const cgmath::Vec<T, 2>& halfLen, T radians) {
+        return {center, halfLen, radians};
+    }
+
+    auto GetRotateMat() const {
+        // clang-format off
+        return cgmath::Mat22::FromRow({
+            cos_, -sin_,
+            sin_, cos_,
+        });
+        // clang-format on
+    }
+
+    auto GetAxis() const {
+        return std::make_pair(cgmath::Vec2{cos_, sin_},
+                              cgmath::Vec2{-sin_, cos_});
+    }
+
+    auto GetRotation() const {
+        return rotation_;
+    }
+
+    void SetRotation(T radians) {
+        rotation_ = radians;
+        cos_ = std::cos(radians);
+        sin_ = std::sin(radians);
+    }
+
+private:
+    T rotation_;   // in radians
+    T cos_, sin_;  // cos(theta), sin(theta). Which theta is rotation
+};
 
 // function fwd
 
@@ -105,7 +150,8 @@ bool IsRaySegIntersect(const Ray<T>& l1, const Segment<T>& l2) {
 // intersection
 
 template <typename T>
-std::optional<cgmath::Vec<T, 2>> RaySegIntersect(const Ray<T>& l1, const Segment<T>& l2) {
+std::optional<cgmath::Vec<T, 2>> RaySegIntersect(const Ray<T>& l1,
+                                                 const Segment<T>& l2) {
     if (auto result = LineIntersect(l1, l2); result) {
         auto&& [param1, param2] = result.value();
         if (param1 >= 0 && param2 >= 0 && param2 <= l2.len) {
@@ -180,14 +226,31 @@ bool IsLineParallel(const Line<T>& l1, const Line<T>& l2, T tol) {
 
 template <typename T>
 size_t GetSupportPt(const std::vector<cgmath::Vec<T, 2>>& polygon,
-                    const cgmath::Vec<T, 2>& dir) {
+                    const cgmath::Vec<T, 2>& rawDir,
+                    const Transform* trans = nullptr) {
     Assert(!polygon.empty(), "polygon has no vertex");
 
+    auto dir = rawDir;
+    if (trans) {
+        dir = cgmath::CreateRotation2D(cgmath::Deg2Rad(-trans->rotation)) * dir;
+    }
+
     size_t idx = 0;
-    T max = polygon[0].Dot(dir);
+    T max = T{};
+
+    if (trans) {
+        max = (polygon[0] * trans->scale + trans->translation).Dot(dir);
+    } else {
+        max = polygon[0].Dot(dir);
+    }
 
     for (size_t i = 1; i < polygon.size(); i++) {
-        auto value = polygon[i].Dot(dir);
+        T value = T{};
+        if (trans) {
+            value = (polygon[i] * trans->scale + trans->translation).Dot(dir);
+        } else {
+            value = polygon[i].Dot(dir);
+        }
         if (value > max) {
             max = value;
             idx = i;
@@ -272,7 +335,8 @@ private:
  * polygon is intersected
  *
  * @ref https://dyn4j.org/2010/04/gjk-gilbert-johnson-keerthi/
- * @param outputSimplex return the final simplex when Gjk return true. Please ensure outputSimplex->size() >= 3
+ * @param outputSimplex return the final simplex when Gjk return true. Please
+ * ensure outputSimplex->size() >= 3
  *
  * @see GjkNearestPt
  * @see EPA
@@ -280,6 +344,7 @@ private:
 template <typename T, typename Container = std::array<cgmath::Vec<T, 2>, 3>>
 bool Gjk(const std::vector<cgmath::Vec<T, 2>>& polygon1,
          const std::vector<cgmath::Vec<T, 2>>& polygon2,
+         const Transform* trans1 = nullptr, const Transform* trans2 = nullptr,
          Container* outputSimplex = nullptr) {
     static_assert(
         std::is_same_v<typename Container::value_type, cgmath::Vec<T, 2>>);
@@ -293,15 +358,15 @@ bool Gjk(const std::vector<cgmath::Vec<T, 2>>& polygon1,
     // init simplex
     std::array<cgmath::Vec<T, 2>, 3> simplex;
     auto dir = cgmath::Vec<T, 2>{1, 0};
-    simplex[0] = polygon1[GetSupportPt(polygon1, dir)] -
-                 polygon2[GetSupportPt(polygon2, -dir)];
+    simplex[0] = polygon1[GetSupportPt(polygon1, dir, trans1)] -
+                 polygon2[GetSupportPt(polygon2, -dir, trans2)];
     simplex[1] = simplex[0];
     simplex[2] = simplex[0];
     dir = -simplex[0];
 
     while (true) {
-        auto supportPt = polygon1[GetSupportPt(polygon1, dir)] -
-                         polygon2[GetSupportPt(polygon2, -dir)];
+        auto supportPt = polygon1[GetSupportPt(polygon1, dir, trans1)] -
+                         polygon2[GetSupportPt(polygon2, -dir, trans2)];
         if (simplex[0] == cgmath::Vec2{0, 0} &&
             simplex[1] == cgmath::Vec2{0, 0} &&
             simplex[2] == cgmath::Vec2{0, 0}) {
@@ -563,7 +628,7 @@ std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
                                    polygon2[GetSupportPt(polygon2, -d)];
                 } else if (simplex.count == 2) {
                     auto d = cgmath::Vec<T, 2>{simplex[1].p.y - simplex[0].p.y,
-                                          simplex[0].p.x - simplex[1].p.x};
+                                               simplex[0].p.x - simplex[1].p.x};
                     simplex[2].p = polygon1[GetSupportPt(polygon1, d)] -
                                    polygon2[GetSupportPt(polygon2, -d)];
                 }
@@ -626,9 +691,11 @@ std::optional<std::pair<NearestPtInfo<T>, NearestPtInfo<T>>> GjkNearestPt(
 }
 
 template <typename T>
-cgmath::Vec<T, 2> GjkNearestPt(const std::vector<cgmath::Vec<T, 2>>& polygon, const cgmath::Vec<T, 2>& p) {
+cgmath::Vec<T, 2> GjkNearestPt(const std::vector<cgmath::Vec<T, 2>>& polygon,
+                               const cgmath::Vec<T, 2>& p) {
     // IMPROVE: write GJK handly to prevent create vector
-    if (auto result = GjkNearestPt(polygon, std::vector<cgmath::Vec<T, 2>>{p}); result) {
+    if (auto result = GjkNearestPt(polygon, std::vector<cgmath::Vec<T, 2>>{p});
+        result) {
         return result->first.GetPt(polygon);
     } else {
         return p;
@@ -736,8 +803,7 @@ std::optional<MTV<T, 2>> SAT(const std::vector<cgmath::Vec<T, 2>>& polygon1,
  * specialize for AABB(more quickly)
  */
 template <typename T>
-std::optional<MTV<T, 2>> SAT(const AABB<T>& aabb1,
-                             const AABB<T>& aabb2) {
+std::optional<MTV<T, 2>> SAT(const AABB<T>& aabb1, const AABB<T>& aabb2) {
     MTV<T, 2> mtv;
 
     auto min1 = aabb1.center - aabb1.halfLen;
@@ -755,7 +821,8 @@ std::optional<MTV<T, 2>> SAT(const AABB<T>& aabb1,
     }
 
     if (cgmath::IsOverlap(min1.y, max1.y, min2.y, max2.y)) {
-        auto len = std::min(std::abs(max1.y - min2.y), std::abs(max2.y - min2.y));
+        auto len =
+            std::min(std::abs(max1.y - min2.y), std::abs(max2.y - min2.y));
         if (len < mtv.len) {
             mtv.len = len;
             mtv.v = cgmath::Vec<T, 2>{0, 1};
@@ -821,7 +888,7 @@ std::optional<MTV<T, 2>> EPA(std::vector<cgmath::Vec<T, 2>>& simplex,
 
         // add support to simplex
         for (int i = 0; i < simplex.size(); i++) {
-            if (mtv.v.LengthSqrd() == 0){
+            if (mtv.v.LengthSqrd() == 0) {
                 mtv.len = 0;
                 mtv.v = cgmath::Vec<T, 2>{};
                 return mtv;
@@ -931,6 +998,64 @@ template <typename T>
 Line<T> PerpendicularLine(const Line<T>& l) {
     return Line<T>::FromDir(l.p, cgmath::Vec<T, 2>{l.dir.y, -l.dir.x});
 }
+
+/**
+ * get nearest point on AABB edge(if point in AABB, it will return nearest pt on
+ * edge either)
+ */
+template <typename T>
+cgmath::Vec<T, 2> AABBEdgeNearestPt(const AABB<T>& a,
+                                const cgmath::Vec<T, 2>& p) {
+    auto corner = a.center - a.halfLen;
+    auto param = p - corner;
+    auto len = a.halfLen * 2.0;
+
+    // pt out of AABB
+    if (param.x <= 0) {
+        return corner + cgmath::Vec<T, 2>{0, std::clamp(0, len.y, param.y)};
+    } else if (param.x >= len.x)  {
+        return corner + cgmath::Vec<T, 2>{len.x, std::clamp(0, len.y, param.y)};
+    }
+
+    if (param.y <= 0) {
+        return corner + cgmath::Vec<T, 2>{std::clamp(0, len.x, param.x), 0};
+    } else if (param.y >= len.y)  {
+        return corner + cgmath::Vec<T, 2>{std::clamp(0, len.x, param.x), len.y};
+    }
+
+    // pt in AABB
+    /*
+         1
+        ----
+     0 |    | 2
+        ---- 
+         3
+    */
+    std::array<T, 4> dist = {param.x, param.y, len.x - param.x, len.y - param.y};
+
+    size_t idx = 0;
+    T min = dist[0];
+
+    for (int i = 0; i < 4; i++) {
+        if (dist[i] < min) {
+            min = dist[i];
+            idx = i;
+        }
+    }
+
+    switch (idx) {
+        case 0:
+            return cgmath::Vec<T, 2>{corner.x, corner.y + param.y};
+        case 1:
+            return cgmath::Vec<T, 2>{corner.x + param.x, corner.y};
+        case 2:
+            return cgmath::Vec<T, 2>{corner.x + len.x, corner.y + param.y};
+        case 3:
+            return cgmath::Vec<T, 2>{corner.x + param.x, corner.y + len.y};
+    }
+}
+
+
 
 }  // namespace geom2d
 
