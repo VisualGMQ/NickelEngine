@@ -11,20 +11,18 @@ namespace physics {
 
 void CirclesContact::Evaluate(const CollideShape& shape1,
                               const CollideShape& shape2,
-                              const Transform& trans1,
-                              const Transform& trans2) {
+                              Body* b1, Body* b2) {
     Assert(shape1.shape->GetType() == Shape::Type::Circle &&
                shape2.shape->GetType() == Shape::Type::Circle,
            "evaluate circles contact need shapes are both circles");
 
-    shape1_ = &shape1;
-    shape2_ = &shape2;
+    init(shape1, shape2, b1, b2);
 
     auto& c1 = shape_cast<const CircleShape&>(*shape1.shape).shape;
     auto& c2 = shape_cast<const CircleShape&>(*shape2.shape).shape;
 
-    auto center1 = c1.center + trans1.translation;
-    auto center2 = c2.center + trans2.translation;
+    auto center1 = b1 ? c1.center + b1->pos : c1.center;
+    auto center2 = b2 ? c2.center + b2->pos : c2.center;
     auto v = center1 - center2;
     auto lenSqrd = v.LengthSqrd();
 
@@ -49,28 +47,33 @@ void CirclesContact::Evaluate(const CollideShape& shape1,
 
 void CircleAABBContact::Evaluate(const CollideShape& shape1,
                                  const CollideShape& shape2,
-                                 const Transform& trans1,
-                                 const Transform& trans2) {
-    Assert(shape1.shape->GetType() == Shape::Type::Circle &&
-               shape2.shape->GetType() == Shape::Type::OBB,
+                                 Body* b1, Body* b2) {
+    Assert((shape1.shape->GetType() == Shape::Type::Circle &&
+            shape2.shape->GetType() == Shape::Type::OBB) ||
+           (shape1.shape->GetType() == Shape::Type::OBB &&
+            shape2.shape->GetType() == Shape::Type::Circle),
            "evaluate circles contact need shapes are both circles");
 
-    shape1_ = &shape1;
-    shape2_ = &shape2;
+    if (shape1.shape->GetType() == Shape::Type::OBB && shape2.shape->GetType() == Shape::Type::Circle) {
+        Evaluate(shape2, shape1, b2, b1);
+        return;
+    }
+
+    init(shape1, shape2, b1, b2);
 
     auto& c = shape_cast<const CircleShape&>(*shape1.shape).shape;
-    auto& aabb = shape_cast<const OBBShape&>(*shape1.shape).shape;
-    auto cirCenter = c.center + trans1.translation;
+    auto& aabb = shape_cast<const OBBShape&>(*shape2.shape).shape;
+    auto cirCenter = b1 ? c.center + b1->pos: c.center;
 
     Assert(aabb.GetRotation() == 0, "currently we only support AABB");
 
     auto p = geom2d::AABBEdgeNearestPt(
-        geom2d::AABB<Real>::FromCenter(aabb.center + trans2.translation, aabb.halfLen), cirCenter);
+        geom2d::AABB<Real>::FromCenter(b2 ? aabb.center + b2->pos : aabb.center, aabb.halfLen), cirCenter);
 
     auto v = cirCenter - p;
     auto len = v.Length();
 
-    if (len > c.radius) {
+    if (len < c.radius) {
         manifold_.type = Manifold::Type::FaceA;
         manifold_.pointCount = 1;
         manifold_.points[0] = p;

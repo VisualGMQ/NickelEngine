@@ -7,7 +7,7 @@ namespace nickel {
 namespace physics {
 
 
-std::unique_ptr<Contact> ManifoldSolver::GetContact(const CollideShape& shape1, const CollideShape& shape2) {
+std::unique_ptr<Contact> ManifoldSolver::GetContact(const CollideShape& shape1, const CollideShape& shape2, bool shouldRecurse) {
     auto& s1 = *shape1.shape;
     auto& s2 = *shape2.shape;
     auto type1 = s1.GetType();
@@ -19,11 +19,14 @@ std::unique_ptr<Contact> ManifoldSolver::GetContact(const CollideShape& shape1, 
         } else if (type2 == Shape::Type::OBB) {
             return std::make_unique<CircleAABBContact>();
         }
-
-        TODO("add other shapes");
+        // TODO: not finish
     }
 
-    TODO("add other shapes");
+    if (shouldRecurse) {
+        return GetContact(shape2, shape1, false);
+    }
+
+    return nullptr;
 }
 
 }

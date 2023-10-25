@@ -1,5 +1,6 @@
 #pragma once
 
+#include "physics/body.hpp"
 #include "physics/config.hpp"
 #include "physics/shape.hpp"
 
@@ -27,25 +28,37 @@ class Contact {
 public:
     virtual ~Contact() = default;
     
-    virtual void Evaluate(const CollideShape& shape1, const CollideShape& shape2, const Transform&, const Transform&) = 0;
+    virtual void Evaluate(const CollideShape& shape1, const CollideShape& shape2, Body*, Body*) = 0;
 
     auto& GetManifold() const { return manifold_; }
+
+    Body* GetBody1() { return b1_; }
+    Body* GetBody2() { return b2_; }
 
 protected:
     Manifold manifold_;
     const CollideShape* shape1_ = nullptr;
     const CollideShape* shape2_ = nullptr;
+    Body* b1_ = nullptr;
+    Body* b2_ = nullptr;
+
+    void init(const CollideShape& shape1, const CollideShape& shape2, Body* b1, Body* b2) {
+        shape1_ = &shape1;
+        shape2_ = &shape2;
+        b1_ = b1;
+        b2_ = b2;
+    }
 };
 
 class CirclesContact: public Contact {
 public:
-    void Evaluate(const CollideShape& shape1, const CollideShape& shape2, const Transform&, const Transform&) override;
+    void Evaluate(const CollideShape& shape1, const CollideShape& shape2, Body*, Body*) override;
 };
 
 // replace this with CirclePolygonContact
 class CircleAABBContact: public Contact {
 public:
-    void Evaluate(const CollideShape& shape1, const CollideShape& shape2, const Transform&, const Transform&) override;
+    void Evaluate(const CollideShape& shape1, const CollideShape& shape2, Body*, Body*) override;
 };
 
 }  // namespace physics

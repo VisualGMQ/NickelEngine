@@ -113,6 +113,7 @@ int main(int argc, char** argv) {
         // other input handle event must put here(after mouse/keyboard update)
         .regist_update_system<Mouse::Update>()
         .regist_update_system<Keyboard::Update>()
+        .regist_update_system<HandleInputEvents>()
         .regist_update_system<BeginRender>()
         .regist_update_system<SpriteBundle::RenderSprite>()
         .regist_update_system<EndRender>()

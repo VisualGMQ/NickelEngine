@@ -61,9 +61,7 @@ struct OBB final {
                               cgmath::Vec2{-sin_, cos_});
     }
 
-    auto GetRotation() const {
-        return rotation_;
-    }
+    auto GetRotation() const { return rotation_; }
 
     void SetRotation(T radians) {
         rotation_ = radians;
@@ -1005,22 +1003,24 @@ Line<T> PerpendicularLine(const Line<T>& l) {
  */
 template <typename T>
 cgmath::Vec<T, 2> AABBEdgeNearestPt(const AABB<T>& a,
-                                const cgmath::Vec<T, 2>& p) {
+                                    const cgmath::Vec<T, 2>& p) {
     auto corner = a.center - a.halfLen;
     auto param = p - corner;
     auto len = a.halfLen * 2.0;
 
     // pt out of AABB
     if (param.x <= 0) {
-        return corner + cgmath::Vec<T, 2>{0, std::clamp(0, len.y, param.y)};
-    } else if (param.x >= len.x)  {
-        return corner + cgmath::Vec<T, 2>{len.x, std::clamp(0, len.y, param.y)};
+        return corner + cgmath::Vec<T, 2>{0, std::clamp<T>(param.y, 0, len.y)};
+    } else if (param.x >= len.x) {
+        return corner +
+               cgmath::Vec<T, 2>{len.x, std::clamp<T>(param.y, 0, len.y)};
     }
 
     if (param.y <= 0) {
-        return corner + cgmath::Vec<T, 2>{std::clamp(0, len.x, param.x), 0};
-    } else if (param.y >= len.y)  {
-        return corner + cgmath::Vec<T, 2>{std::clamp(0, len.x, param.x), len.y};
+        return corner + cgmath::Vec<T, 2>{std::clamp<T>(param.x, 0, len.x), 0};
+    } else if (param.y >= len.y) {
+        return corner +
+               cgmath::Vec<T, 2>{std::clamp<T>(param.x, 0, len.x), len.y};
     }
 
     // pt in AABB
@@ -1028,10 +1028,11 @@ cgmath::Vec<T, 2> AABBEdgeNearestPt(const AABB<T>& a,
          1
         ----
      0 |    | 2
-        ---- 
+        ----
          3
     */
-    std::array<T, 4> dist = {param.x, param.y, len.x - param.x, len.y - param.y};
+    std::array<T, 4> dist = {param.x, param.y, len.x - param.x,
+                             len.y - param.y};
 
     size_t idx = 0;
     T min = dist[0];
@@ -1054,8 +1055,6 @@ cgmath::Vec<T, 2> AABBEdgeNearestPt(const AABB<T>& a,
             return cgmath::Vec<T, 2>{corner.x + param.x, corner.y + len.y};
     }
 }
-
-
 
 }  // namespace geom2d
 

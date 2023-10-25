@@ -8,7 +8,7 @@ namespace physics {
 
 class ManifoldSolver final {
 public:
-    std::unique_ptr<Contact> GetContact(const CollideShape&, const CollideShape&);
+    std::unique_ptr<Contact> GetContact(const CollideShape&, const CollideShape&, bool = true);
 
 private:
 };

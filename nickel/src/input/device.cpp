@@ -16,13 +16,21 @@ void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent> btn,
     keyboard.sink().add<Keyboard::keyboardEventHandle>();
 }
 
+void HandleInputEvents(gecs::event_dispatcher<MouseButtonEvent> btn,
+                       gecs::event_dispatcher<MouseMotionEvent> motion,
+                       gecs::event_dispatcher<KeyboardEvent> keyboard) {
+    btn.update();
+    motion.update();
+    keyboard.update();
+}
+
 void Keyboard::keyboardEventHandle(const KeyboardEvent& event,
                               gecs::resource<gecs::mut<Keyboard>> keyboard) {
-    uint32_t key = static_cast<uint32_t>(event.key);
-    if (key < static_cast<uint32_t>(Key::KEY_LAST)) {
-        auto& key = keyboard->buttons_[static_cast<uint32_t>(event.key)];
+    auto newKey = static_cast<uint32_t>(event.key);
+    if (newKey < static_cast<uint32_t>(Key::KEY_LAST)) {
+        auto& key = keyboard->buttons_[newKey];
         key.lastState = key.isPress;
-        key.isPress = event.action != Action::Release ? true : false;
+        key.isPress = event.action != Action::Release;
     }
 }
 
@@ -37,18 +45,20 @@ void Mouse::mouseBtnEventHandle(const MouseButtonEvent& event,
     auto& btn = mouse->buttons_[static_cast<uint32_t>(event.btn)];
 
     btn.lastState = btn.isPress;
-    btn.isPress = event.action != Action::Release ? true : false;
+    btn.isPress = event.action != Action::Release;
 }
 
 void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
     for (auto& key : keyboard->buttons_) {
         key.lastState = key.isPress;
+        key.isPress = false;
     }
 }
 
 void Mouse::Update(gecs::resource<gecs::mut<Mouse>> mouse) {
     for (auto& btn : mouse->buttons_) {
         btn.lastState = btn.isPress;
+        btn.isPress = false;
     }
 }
 

@@ -77,9 +77,15 @@ void TestbedStartup(gecs::commands cmds, gecs::resource<gecs::mut<physics::World
     auto& shape = cmds.emplace<physics::CollideShape>(
         ent1, physics::CircleShape::FromCenter(cgmath::Vec2{}, 30));
 
-    world->forceGenerators.push_back([](physics::Body& b) {
-        b.force = cgmath::Vec2{0, 9.8};
+    world->forceGenerators.emplace_back([](physics::Body& b) {
+        b.force += cgmath::Vec2{0, 9.8};
     });
+
+    auto ent2 = cmds.create();
+    cmds.emplace<physics::Body>(
+        ent2, physics::Body::CreateStatic({500, 700}));
+    cmds.emplace<physics::CollideShape>(
+        ent2, physics::OBBShape::FromCenter({}, {400, 25}, 0.0));
 }
 
 void RenderBodies(gecs::querier<physics::Body> bodies,
@@ -100,16 +106,17 @@ void RenderShapes(gecs::querier<physics::Body, physics::CollideShape> querier,
                                      {1, 0, 1, 1});
             } break;
             case physics::Shape::Type::OBB: {
+                // TODO: currently can only render AABB(OBB with 0 rotation)
                 auto& s =
                     physics::shape_cast<const physics::OBBShape&>(*shape.shape)
                         .shape;
                 auto&& [xAxis, yAxis] = s.GetAxis();
                 renderer->DrawLineLoop(
                     std::vector<cgmath::Vec2>{
-                        s.center - (xAxis - yAxis) * s.halfLen,
-                        s.center + (xAxis - yAxis) * s.halfLen,
-                        s.center + (xAxis + yAxis) * s.halfLen,
-                        s.center + (-xAxis + yAxis) * s.halfLen,
+                        body.pos + s.center + (-xAxis - yAxis) * s.halfLen,
+                        body.pos + s.center + (xAxis - yAxis) * s.halfLen,
+                        body.pos + s.center + (xAxis + yAxis) * s.halfLen,
+                        body.pos + s.center + (-xAxis + yAxis) * s.halfLen,
                     },
                     {1, 0, 1, 1});
             } break;
@@ -134,6 +141,17 @@ void RenderShapes(gecs::querier<physics::Body, physics::CollideShape> querier,
     }
 }
 
+void ShootCircle(gecs::commands cmds, gecs::resource<Mouse> mouse) {
+    if (mouse->LeftBtn().IsPressed()) {
+        auto ent = cmds.create();
+        auto& body = cmds.emplace<physics::Body>(
+            ent, physics::Body::CreateDynamic(cgmath::Vec2{400, 100}));
+        body.force = cgmath::Normalize(mouse->Position() - body.pos) * 1000;
+        auto& shape = cmds.emplace<physics::CollideShape>(
+            ent, physics::CircleShape::FromCenter(cgmath::Vec2{}, 30));
+    }
+}
+
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     ProjectInitInfo initInfo;
@@ -146,9 +164,10 @@ void BootstrapSystem(gecs::world& world,
     reg.regist_startup_system<ImGuiInit>()
         .regist_startup_system<physics::PhysicsInit>()
         .regist_startup_system<TestbedStartup>()
+        .regist_update_system<ShootCircle>()
+        .regist_update_system<physics::PhysicsUpdate>()
         .regist_update_system<RenderBodies>()
         .regist_update_system<RenderShapes>()
         .regist_update_system<ImGuiStart>()
-        .regist_update_system<ImGuiEnd>()
-        .regist_update_system<physics::PhysicsUpdate>();
+        .regist_update_system<ImGuiEnd>();
 }

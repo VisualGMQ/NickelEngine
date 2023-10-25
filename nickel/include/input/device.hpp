@@ -10,6 +10,10 @@ void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent>,
                         gecs::event_dispatcher<MouseMotionEvent>,
                         gecs::event_dispatcher<KeyboardEvent>);
 
+void HandleInputEvents(gecs::event_dispatcher<MouseButtonEvent> btn,
+                       gecs::event_dispatcher<MouseMotionEvent> motion,
+                       gecs::event_dispatcher<KeyboardEvent> keyboard);
+
 template <typename T>
 struct Button {
     T btn;

@@ -1,7 +1,6 @@
-.vscode
-cmake-build
 imgui.ini
 new_sandbox
 anim.res.toml
 new-sandbox
-.cache
+.*
+cmake-build-*
