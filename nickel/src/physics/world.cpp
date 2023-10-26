@@ -5,7 +5,8 @@ namespace nickel {
 
 namespace physics {
 
-void World::collide(gecs::querier<gecs::mut<Body>, CollideShape> bodies,
+void World::collide(Real interval,
+                    gecs::querier<gecs::mut<Body>, CollideShape> bodies,
                     Renderer2D& renderer) {
     std::vector<std::vector<std::unique_ptr<Contact>>> contacts;
 
@@ -35,8 +36,7 @@ void World::collide(gecs::querier<gecs::mut<Body>, CollideShape> bodies,
             auto b1 = contact->GetBody1();
             auto b2 = contact->GetBody2();
             Vec2 mtv;
-            mtv = manifold.normal * manifold.depth;
-            dealContact(mtv, manifold.tangent, *b1, *b2);
+            dealContact(manifold, *b1, *b2);
 
             renderer.DrawCircle(manifold.points[0], 5, {1, 0, 1, 1}, 10);
             renderer.DrawLine(
@@ -47,26 +47,40 @@ void World::collide(gecs::querier<gecs::mut<Body>, CollideShape> bodies,
     }
 }
 
-void World::dealContact(const Vec2& mtv, const Vec2& tangent, Body& b1,
-                        Body& b2, bool shouldRecurse) {
+void World::dealContact(const Manifold& manifold, Body& b1, Body& b2,
+                        bool shouldRecurse) {
+    auto mtv = manifold.normal * manifold.depth;
     if (b1.type == Body::Type::Dynamic) {
         switch (b2.type) {
-            case Body::Type::Static:
+            case Body::Type::Static: {
+                auto j = -(1 + std::min(b1.restitution, b2.restitution)) *
+                         b1.vel.Dot(manifold.normal) / (b1.massInv * 2.0);
                 b1.pos += mtv;
-                b1.vel = b1.vel.Dot(tangent) * tangent;
-                break;
-            case Body::Type::Dynamic:
+                b1.vel = b1.vel.Dot(manifold.tangent) * manifold.tangent;
+                b1.vel += j * b1.massInv * manifold.normal;
+            } break;
+            case Body::Type::Dynamic: {
+                auto j = -(1 + std::min(b1.restitution, b2.restitution)) *
+                         (b1.vel - b2.vel).Dot(manifold.normal) /
+                         (b1.massInv + b2.massInv);
+
                 b1.pos += mtv * 0.5;
                 b2.pos -= mtv * 0.5;
-                b1.vel = b1.vel.Dot(tangent) * tangent;
-                b2.vel = b2.vel.Dot(tangent) * tangent;
-                break;
+
+                b1.vel = b1.vel.Dot(manifold.tangent) * manifold.tangent;
+                b2.vel = b2.vel.Dot(manifold.tangent) * manifold.tangent;
+
+                b1.vel += j * b1.massInv * manifold.normal;
+                b2.vel -= j * b2.massInv * manifold.normal;
+            } break;
             case Body::Type::Kinematic:
-                b1.pos += mtv;
+                // b1.pos += mtv;
                 break;
         }
     } else if (shouldRecurse) {
-        dealContact(-mtv, tangent, b2, b1, false);
+        Manifold newManifold = manifold;
+        newManifold.normal = -newManifold.normal;
+        dealContact(newManifold, b2, b1, false);
     }
 }
 
@@ -76,7 +90,10 @@ void World::Step(Real interval,
     for (auto&& [_, body, shape] : querier) {
         physicSolver_.Step(interval, body);
     }
-    collide(querier, renderer.get());
+    collide(interval, querier, renderer.get());
+    for (auto&& [_, body, shape] : querier) {
+        physicSolver_.Step(interval, body);
+    }
 }
 
 void PhysicsInit(gecs::commands cmds) {

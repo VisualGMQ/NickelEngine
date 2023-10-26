@@ -30,6 +30,8 @@ using namespace nickel;
 constexpr float WindowCenterX = WindowWidth / 2.0f;
 constexpr float WindowCenterY = WindowHeight / 2.0f;
 
+struct Control {};
+
 void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
                gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
     IMGUI_CHECKVERSION();
@@ -71,21 +73,22 @@ void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
 }
 
 void TestbedStartup(gecs::commands cmds, gecs::resource<gecs::mut<physics::World>> world) {
-    auto ent1 = cmds.create();
-    cmds.emplace<physics::Body>(
-        ent1, physics::Body::CreateDynamic(cgmath::Vec2{200, 200}));
-    auto& shape = cmds.emplace<physics::CollideShape>(
-        ent1, physics::CircleShape::FromCenter(cgmath::Vec2{}, 30));
-
     world->forceGenerators.emplace_back([](physics::Body& b) {
         b.force += cgmath::Vec2{0, 9.8};
     });
 
     auto ent2 = cmds.create();
     cmds.emplace<physics::Body>(
-        ent2, physics::Body::CreateStatic({500, 700}));
+        ent2, physics::Body::CreateStatic({500, 500}));
     cmds.emplace<physics::CollideShape>(
         ent2, physics::OBBShape::FromCenter({}, {400, 25}, 0.0));
+
+    // auto ent3 = cmds.create();
+    // cmds.emplace<physics::Body>(
+    //     ent3, physics::Body::CreateStatic({500, 500}));
+    // cmds.emplace<physics::CollideShape>(
+    //     ent3, physics::CircleShape::FromCenter(cgmath::Vec2{}, 30));
+    // cmds.emplace<Control>(ent3);
 }
 
 void RenderBodies(gecs::querier<physics::Body> bodies,
@@ -141,14 +144,26 @@ void RenderShapes(gecs::querier<physics::Body, physics::CollideShape> querier,
     }
 }
 
-void ShootCircle(gecs::commands cmds, gecs::resource<Mouse> mouse) {
+void ShootCircle(gecs::commands cmds, gecs::resource<Mouse> mouse, gecs::querier<gecs::mut<physics::Body>, Control> querier) {
     if (mouse->LeftBtn().IsPressed()) {
         auto ent = cmds.create();
         auto& body = cmds.emplace<physics::Body>(
-            ent, physics::Body::CreateDynamic(cgmath::Vec2{400, 100}));
-        body.force = cgmath::Normalize(mouse->Position() - body.pos) * 1000;
+            ent, physics::Body::CreateDynamic(cgmath::Vec2{400, 200}));
+        body.force = cgmath::Normalize(mouse->Position() - body.pos) * 10;
         auto& shape = cmds.emplace<physics::CollideShape>(
             ent, physics::CircleShape::FromCenter(cgmath::Vec2{}, 30));
+    }
+
+    if (mouse->RightBtn().IsPressed()) {
+        auto ent1 = cmds.create();
+        cmds.emplace<physics::Body>(
+            ent1, physics::Body::CreateDynamic(cgmath::Vec2{200, 200}));
+        auto& shape = cmds.emplace<physics::CollideShape>(
+            ent1, physics::CircleShape::FromCenter(cgmath::Vec2{}, 30));
+    }
+
+    for (auto&& [_, body, control] : querier) {
+        body.pos = mouse->Position();
     }
 }
 

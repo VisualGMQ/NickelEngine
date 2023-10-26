@@ -21,6 +21,7 @@ struct Body final {
     Vec2 acc;      // linear acceleration
     Vec2 force;
     Real massInv = 1.0;  // 1.0 / mass
+    Real restitution = 0.02; // restitution factor from collision
 
     static Body CreateStatic(const Vec2& pos) {
         return {Type::Static, pos, {}, {}, {}, 0};

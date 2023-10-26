@@ -3,4 +3,4 @@ new_sandbox
 anim.res.toml
 new-sandbox
 .*
-cmake-build-*
+cmake-build*

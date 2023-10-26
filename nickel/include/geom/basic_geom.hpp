@@ -236,10 +236,10 @@ bool IsCircularContain(const Circular<T, N>& c, const cgmath::Vec<T, N>& pt) {
 }
 
 template <typename T, uint32_t N>
-bool IsAABBContain(const AABB<T, N>& c, const AABB<T, N>& pt) {
+bool IsAABBContain(const AABB<T, N>& a, const cgmath::Vec<T, N>& b) {
     for (uint32_t i = 0; i < N; i++) {
-        if (pt[i] < c.center[i] - c.halfLen[i] ||
-            pt[i] > c.center[i] + c.halfLen[i]) {
+        if (b[i] < a.center[i] - a.halfLen[i] ||
+            b[i] > a.center[i] + a.halfLen[i]) {
             return false;
         }
     }

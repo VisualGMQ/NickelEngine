@@ -29,8 +29,8 @@ private:
     PhysicSolver physicSolver_;
     ManifoldSolver manifoldSolver_;
 
-    void collide(gecs::querier<gecs::mut<Body>, CollideShape> bodies, Renderer2D&);
-    void dealContact(const Vec2& mtv,  const Vec2& tangent, Body& b1, Body& b2, bool = true);
+    void collide(Real interval, gecs::querier<gecs::mut<Body>, CollideShape> bodies, Renderer2D&);
+    void dealContact(const Manifold&, Body& b1, Body& b2, bool = true);
 };
 
 void PhysicsInit(gecs::commands cmds);

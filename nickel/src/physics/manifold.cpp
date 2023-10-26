@@ -62,23 +62,26 @@ void CircleAABBContact::Evaluate(const CollideShape& shape1,
     init(shape1, shape2, b1, b2);
 
     auto& c = shape_cast<const CircleShape&>(*shape1.shape).shape;
-    auto& aabb = shape_cast<const OBBShape&>(*shape2.shape).shape;
+    auto& obb = shape_cast<const OBBShape&>(*shape2.shape).shape;
     auto cirCenter = b1 ? c.center + b1->pos: c.center;
 
-    Assert(aabb.GetRotation() == 0, "currently we only support AABB");
+    Assert(obb.GetRotation() == 0, "currently we only support AABB");
 
-    auto p = geom2d::AABBEdgeNearestPt(
-        geom2d::AABB<Real>::FromCenter(b2 ? aabb.center + b2->pos : aabb.center, aabb.halfLen), cirCenter);
+    auto aabb = geom2d::AABB<Real>::FromCenter(
+        b2 ? obb.center + b2->pos : obb.center, obb.halfLen);
+    auto p = geom2d::AABBEdgeNearestPt(aabb, cirCenter);
 
     auto v = cirCenter - p;
     auto len = v.Length();
+
+    bool inner = geom::IsAABBContain(aabb, cirCenter);
 
     if (len < c.radius) {
         manifold_.type = Manifold::Type::FaceA;
         manifold_.pointCount = 1;
         manifold_.points[0] = p;
-        manifold_.depth = c.radius - len;
-        manifold_.normal = v / len;
+        manifold_.depth = inner ? (p - cirCenter).Length() + c.radius : c.radius - len;
+        manifold_.normal = (inner ? -v : v) / len;
         manifold_.tangent = cgmath::PerpendicVec(manifold_.normal);
     } else {
         manifold_.pointCount = 0;
