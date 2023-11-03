@@ -1,4 +1,5 @@
 #include "misc/project.hpp"
+#include "core/log_tag.hpp"
 #include "refl/drefl.hpp"
 #include "refl/window.hpp"
 #include "renderer/texture.hpp"
@@ -93,22 +94,16 @@ void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
 }
 
 void ErrorCallback(int error, const char* description) {
-    LOGE(log_tag::Glfw, description);
+    LOGE(log_tag::SDL2, description);
 }
 
-void FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-void WindowResizeCallback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-void changeProjectMat(const WindowResizeEvent& event,
-                      gecs::resource<gecs::mut<Camera>> camera) {
+void suitCanvas2Window(const WindowResizeEvent& event,
+                      gecs::resource<gecs::mut<Camera>> camera,
+                      gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
     if (camera->GetType() == Camera::Type::Dimension2) {
         auto camera2d = camera->as_2d();
         camera2d->SetProject(0.0, event.size.w, 0.0, event.size.h, 1.0, -1.0);
+        renderer2d->SetViewport(cgmath::Vec2{0, 0}, cgmath::Vec2(event.size.w, event.size.h));
     } else {
         // TODO: change Camera3D project
     }
@@ -116,21 +111,10 @@ void changeProjectMat(const WindowResizeEvent& event,
 
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds) {
-    glfwSetErrorCallback(ErrorCallback);
-
     InitDynamicReflect();
 
     Window* window =
         &cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build());
-
-    // glfwSetWindowSizeCallback((GLFWwindow*)window->Raw(),
-    // WindowResizeCallback);
-    // glfwSetFramebufferSizeCallback((GLFWwindow*)window->Raw(),
-    // FramebufferResizeCallback);
-
-    cmds.emplace_resource<EventPoller>(EventPoller{});
-    EventPoller::AssociatePollerAndECS(*world.cur_registry());
-    EventPoller::ConnectPoller2Events(*window);
 
     cmds.emplace_resource<Time>();
     cmds.emplace_resource<TextureManager>();
@@ -145,7 +129,7 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     world.cur_registry()
         ->event_dispatcher<WindowResizeEvent>()
         .sink()
-        .add<changeProjectMat>();
+        .add<suitCanvas2Window>();
 
     // init animation serialize method
     AnimTrackSerialMethods::Instance()

@@ -6,155 +6,377 @@
 
 namespace nickel {
 
-// copied from GLFW key code
+// copied from SDL_Scancode, don't change them!
 enum class Key {
-    UNKNOWN         = -1,
-    SPACE           = GLFW_KEY_SPACE,
-    APOSTROPHE      = GLFW_KEY_APOSTROPHE,
-    COMMA           = GLFW_KEY_COMMA,
-    MINUS           = GLFW_KEY_MINUS,
-    PERIOD          = GLFW_KEY_PERIOD,
-    SLASH           = GLFW_KEY_SLASH,
-    NUM0            = GLFW_KEY_0,
-    NUM1            = GLFW_KEY_1,
-    NUM2            = GLFW_KEY_2,
-    NUM3            = GLFW_KEY_3,
-    NUM4            = GLFW_KEY_4,
-    NUM5            = GLFW_KEY_5,
-    NUM6            = GLFW_KEY_6,
-    NUM7            = GLFW_KEY_7,
-    NUM8            = GLFW_KEY_8,
-    NUM9            = GLFW_KEY_9,
-    SEMICOLON       = GLFW_KEY_SEMICOLON,
-    EQUAL           = GLFW_KEY_EQUAL,
-    A               = GLFW_KEY_A,
-    B               = GLFW_KEY_B,
-    C               = GLFW_KEY_C,
-    D               = GLFW_KEY_D,
-    E               = GLFW_KEY_E,
-    F               = GLFW_KEY_F,
-    G               = GLFW_KEY_G,
-    H               = GLFW_KEY_H,
-    I               = GLFW_KEY_I,
-    J               = GLFW_KEY_J,
-    K               = GLFW_KEY_K,
-    L               = GLFW_KEY_L,
-    M               = GLFW_KEY_M,
-    N               = GLFW_KEY_N,
-    O               = GLFW_KEY_O,
-    P               = GLFW_KEY_P,
-    Q               = GLFW_KEY_Q,
-    R               = GLFW_KEY_R,
-    S               = GLFW_KEY_S,
-    T               = GLFW_KEY_T,
-    U               = GLFW_KEY_U,
-    V               = GLFW_KEY_V,
-    W               = GLFW_KEY_W,
-    X               = GLFW_KEY_X,
-    Y               = GLFW_KEY_Y,
-    Z               = GLFW_KEY_Z,
-    LEFT_BRACKET    = GLFW_KEY_LEFT_BRACKET,
-    BACKSLASH       = GLFW_KEY_BACKSLASH,
-    RIGHT_BRACKET   = GLFW_KEY_RIGHT_BRACKET,
-    GRAVE_ACCENT    = GLFW_KEY_GRAVE_ACCENT,
-    WORLD_1         = GLFW_KEY_WORLD_1,
-    WORLD_2         = GLFW_KEY_WORLD_2,
-    ESCAPE          = GLFW_KEY_ESCAPE,
-    ENTER           = GLFW_KEY_ENTER,
-    TAB             = GLFW_KEY_TAB,
-    BACKSPACE       = GLFW_KEY_BACKSPACE,
-    INSERT          = GLFW_KEY_INSERT,
-    DELETE          = GLFW_KEY_DELETE,
-    RIGHT           = GLFW_KEY_RIGHT,
-    LEFT            = GLFW_KEY_LEFT,
-    DOWN            = GLFW_KEY_DOWN,
-    UP              = GLFW_KEY_UP,
-    PAGE_UP         = GLFW_KEY_PAGE_UP,
-    PAGE_DOWN       = GLFW_KEY_PAGE_DOWN,
-    HOME            = GLFW_KEY_HOME,
-    END             = GLFW_KEY_END,
-    CAPS_LOCK       = GLFW_KEY_CAPS_LOCK,
-    SCROLL_LOCK     = GLFW_KEY_SCROLL_LOCK,
-    NUM_LOCK        = GLFW_KEY_NUM_LOCK,
-    PRINT_SCREEN    = GLFW_KEY_PRINT_SCREEN,
-    PAUSE           = GLFW_KEY_PAUSE,
-    F1              = GLFW_KEY_F1,
-    F2              = GLFW_KEY_F2,
-    F3              = GLFW_KEY_F3,
-    F4              = GLFW_KEY_F4,
-    F5              = GLFW_KEY_F5,
-    F6              = GLFW_KEY_F6,
-    F7              = GLFW_KEY_F7,
-    F8              = GLFW_KEY_F8,
-    F9              = GLFW_KEY_F9,
-    F10             = GLFW_KEY_F10,
-    F11             = GLFW_KEY_F11,
-    F12             = GLFW_KEY_F12,
-    F13             = GLFW_KEY_F13,
-    F14             = GLFW_KEY_F14,
-    F15             = GLFW_KEY_F15,
-    F16             = GLFW_KEY_F16,
-    F17             = GLFW_KEY_F17,
-    F18             = GLFW_KEY_F18,
-    F19             = GLFW_KEY_F19,
-    F20             = GLFW_KEY_F20,
-    F21             = GLFW_KEY_F21,
-    F22             = GLFW_KEY_F22,
-    F23             = GLFW_KEY_F23,
-    F24             = GLFW_KEY_F24,
-    F25             = GLFW_KEY_F25,
-    KP_0            = GLFW_KEY_KP_0,
-    KP_1            = GLFW_KEY_KP_1,
-    KP_2            = GLFW_KEY_KP_2,
-    KP_3            = GLFW_KEY_KP_3,
-    KP_4            = GLFW_KEY_KP_4,
-    KP_5            = GLFW_KEY_KP_5,
-    KP_6            = GLFW_KEY_KP_6,
-    KP_7            = GLFW_KEY_KP_7,
-    KP_8            = GLFW_KEY_KP_8,
-    KP_9            = GLFW_KEY_KP_9,
-    KP_DECIMAL      = GLFW_KEY_KP_DECIMAL,
-    KP_DIVIDE       = GLFW_KEY_KP_DIVIDE,
-    KP_MULTIPLY     = GLFW_KEY_KP_MULTIPLY,
-    KP_SUBTRACT     = GLFW_KEY_KP_SUBTRACT,
-    KP_ADD          = GLFW_KEY_KP_ADD,
-    KP_ENTER        = GLFW_KEY_KP_ENTER,
-    KP_EQUAL        = GLFW_KEY_KP_EQUAL,
-    LEFT_SHIFT      = GLFW_KEY_LEFT_SHIFT,
-    LEFT_CONTROL    = GLFW_KEY_LEFT_CONTROL,
-    LEFT_ALT        = GLFW_KEY_LEFT_ALT,
-    LEFT_SUPER      = GLFW_KEY_LEFT_SUPER,
-    RIGHT_SHIFT     = GLFW_KEY_RIGHT_SHIFT,
-    RIGHT_CONTROL   = GLFW_KEY_RIGHT_CONTROL,
-    RIGHT_ALT       = GLFW_KEY_RIGHT_ALT,
-    RIGHT_SUPER     = GLFW_KEY_RIGHT_SUPER,
-    MENU            = GLFW_KEY_MENU,
+    UNKNOWN = SDL_SCANCODE_UNKNOWN,
 
-    KEY_LAST = 348,
+    A = SDL_SCANCODE_A,
+    B = SDL_SCANCODE_B,
+    C = SDL_SCANCODE_C,
+    D = SDL_SCANCODE_D,
+    E = SDL_SCANCODE_E,
+    F = SDL_SCANCODE_F,
+    G = SDL_SCANCODE_G,
+    H = SDL_SCANCODE_H,
+    I = SDL_SCANCODE_I,
+    J = SDL_SCANCODE_J,
+    K = SDL_SCANCODE_K,
+    L = SDL_SCANCODE_L,
+    M = SDL_SCANCODE_M,
+    N = SDL_SCANCODE_N,
+    O = SDL_SCANCODE_O,
+    P = SDL_SCANCODE_P,
+    Q = SDL_SCANCODE_Q,
+    R = SDL_SCANCODE_R,
+    S = SDL_SCANCODE_S,
+    T = SDL_SCANCODE_T,
+    U = SDL_SCANCODE_U,
+    V = SDL_SCANCODE_V,
+    W = SDL_SCANCODE_W,
+    X = SDL_SCANCODE_X,
+    Y = SDL_SCANCODE_Y,
+    Z = SDL_SCANCODE_Z,
+
+    Num1 = SDL_SCANCODE_1,
+    Num2 = SDL_SCANCODE_2,
+    Num3 = SDL_SCANCODE_3,
+    Num4 = SDL_SCANCODE_4,
+    Num5 = SDL_SCANCODE_5,
+    Num6 = SDL_SCANCODE_6,
+    Num7 = SDL_SCANCODE_7,
+    Num8 = SDL_SCANCODE_8,
+    Num9 = SDL_SCANCODE_9,
+    Num0 = SDL_SCANCODE_0,
+
+    Return = SDL_SCANCODE_RETURN,
+    Escape = SDL_SCANCODE_ESCAPE,
+    Backspace = SDL_SCANCODE_BACKSPACE,
+    Tab = SDL_SCANCODE_TAB,
+    Space = SDL_SCANCODE_SPACE,
+
+    Minus = SDL_SCANCODE_MINUS,
+    Equals = SDL_SCANCODE_EQUALS,
+    Leftbracket = SDL_SCANCODE_LEFTBRACKET,
+    Rightbracket = SDL_SCANCODE_RIGHTBRACKET,
+    Backslash = SDL_SCANCODE_BACKSLASH, /**< Located at the lower left of the return
+                                  *   key on ISO keyboards and at the right end
+                                  *   of the QWERTY row on ANSI keyboards.
+                                  *   Produces REVERSE SOLIDUS (backslash) and
+                                  *   VERTICAL LINE in a US layout, REVERSE
+                                  *   SOLIDUS and VERTICAL LINE in a UK Mac
+                                  *   layout, NUMBER SIGN and TILDE in a UK
+                                  *   Windows layout, DOLLAR SIGN and POUND SIGN
+                                  *   in a Swiss German layout, NUMBER SIGN and
+                                  *   APOSTROPHE in a German layout, GRAVE
+                                  *   ACCENT and POUND SIGN in a French Mac
+                                  *   layout, and ASTERISK and MICRO SIGN in a
+                                  *   French Windows layout.
+                                  */
+    Nonushash = SDL_SCANCODE_NONUSHASH, /**< ISO USB keyboards actually use this code
+                                  *   instead of 49 for the same key, but all
+                                  *   OSes I've seen treat the two codes
+                                  *   identically. So, as an implementor, unless
+                                  *   your keyboard generates both of those
+                                  *   codes and your OS treats them differently,
+                                  *   you should generate SDL_SCANCODE_BACKSLASH
+                                  *   instead of this code. As a user, you
+                                  *   should not rely on this code because SDL
+                                  *   will never generate it with most (all?)
+                                  *   keyboards.
+                                  */
+    Semicolon = SDL_SCANCODE_SEMICOLON,
+    Apostrophe = SDL_SCANCODE_APOSTROPHE,
+    Grave = SDL_SCANCODE_GRAVE, /**< Located in the top left corner (on both ANSI
+                              *   and ISO keyboards). Produces GRAVE ACCENT and
+                              *   TILDE in a US Windows layout and in US and UK
+                              *   Mac layouts on ANSI keyboards, GRAVE ACCENT
+                              *   and NOT SIGN in a UK Windows layout, SECTION
+                              *   SIGN and PLUS-MINUS SIGN in US and UK Mac
+                              *   layouts on ISO keyboards, SECTION SIGN and
+                              *   DEGREE SIGN in a Swiss German layout (Mac:
+                              *   only on ISO keyboards), CIRCUMFLEX ACCENT and
+                              *   DEGREE SIGN in a German layout (Mac: only on
+                              *   ISO keyboards), SUPERSCRIPT TWO and TILDE in a
+                              *   French Windows layout, COMMERCIAL AT and
+                              *   NUMBER SIGN in a French Mac layout on ISO
+                              *   keyboards, and LESS-THAN SIGN and GREATER-THAN
+                              *   SIGN in a Swiss German, German, or French Mac
+                              *   layout on ANSI keyboards.
+                              */
+    Comma = SDL_SCANCODE_COMMA,
+    Period = SDL_SCANCODE_PERIOD,
+    Slash = SDL_SCANCODE_SLASH,
+
+    Capslock = SDL_SCANCODE_CAPSLOCK,
+
+    F1 = SDL_SCANCODE_F1,
+    F2 = SDL_SCANCODE_F2,
+    F3 = SDL_SCANCODE_F3,
+    F4 = SDL_SCANCODE_F4,
+    F5 = SDL_SCANCODE_F5,
+    F6 = SDL_SCANCODE_F6,
+    F7 = SDL_SCANCODE_F7,
+    F8 = SDL_SCANCODE_F8,
+    F9 = SDL_SCANCODE_F9,
+    F10 = SDL_SCANCODE_F10,
+    F11 = SDL_SCANCODE_F11,
+    F12 = SDL_SCANCODE_F12,
+
+    Printscreen = SDL_SCANCODE_PRINTSCREEN,
+    Scrolllock = SDL_SCANCODE_SCROLLLOCK,
+    Pause = SDL_SCANCODE_PAUSE,
+    Insert = SDL_SCANCODE_INSERT, /**< insert on PC, help on some Mac keyboards (but
+                                   does send code 73, not 117) */
+    Home = SDL_SCANCODE_HOME,
+    Pageup = SDL_SCANCODE_PAGEUP,
+    Delete = SDL_SCANCODE_DELETE,
+    End = SDL_SCANCODE_END,
+    Pagedown = SDL_SCANCODE_PAGEDOWN,
+    Right = SDL_SCANCODE_RIGHT,
+    Left = SDL_SCANCODE_LEFT,
+    Down = SDL_SCANCODE_DOWN,
+    Up = SDL_SCANCODE_UP,
+
+    Numlockclear = SDL_SCANCODE_NUMLOCKCLEAR, /**< num lock on PC, clear on Mac keyboards
+                                     */
+    Kp_divide = SDL_SCANCODE_KP_DIVIDE,
+    Kp_multiply = SDL_SCANCODE_KP_MULTIPLY,
+    Kp_minus = SDL_SCANCODE_KP_MINUS,
+    Kp_plus = SDL_SCANCODE_KP_PLUS,
+    Kp_enter = SDL_SCANCODE_KP_ENTER,
+    Kp_1 = SDL_SCANCODE_KP_1,
+    Kp_2 = SDL_SCANCODE_KP_2,
+    Kp_3 = SDL_SCANCODE_KP_3,
+    Kp_4 = SDL_SCANCODE_KP_4,
+    Kp_5 = SDL_SCANCODE_KP_5,
+    Kp_6 = SDL_SCANCODE_KP_6,
+    Kp_7 = SDL_SCANCODE_KP_7,
+    Kp_8 = SDL_SCANCODE_KP_8,
+    Kp_9 = SDL_SCANCODE_KP_9,
+    Kp_0 = SDL_SCANCODE_KP_0,
+    Kp_period = SDL_SCANCODE_KP_PERIOD,
+
+    Nonusbackslash = SDL_SCANCODE_NONUSBACKSLASH, /**< This is the additional key that ISO
+                                        *   keyboards have over ANSI ones,
+                                        *   located between left shift and Y.
+                                        *   Produces GRAVE ACCENT and TILDE in a
+                                        *   US or UK Mac layout, REVERSE SOLIDUS
+                                        *   (backslash) and VERTICAL LINE in a
+                                        *   US or UK Windows layout, and
+                                        *   LESS-THAN SIGN and GREATER-THAN SIGN
+                                        *   in a Swiss German, German, or French
+                                        *   layout. */
+    Application = SDL_SCANCODE_APPLICATION, /**< windows contextual menu, compose */
+    Power = SDL_SCANCODE_POWER, /**< The USB document says this is a status flag,
+                               *   not a physical key - but some Mac keyboards
+                               *   do have a power key. */
+    Kp_equals = SDL_SCANCODE_KP_EQUALS,
+    F13 = SDL_SCANCODE_F13,
+    F14 = SDL_SCANCODE_F14,
+    F15 = SDL_SCANCODE_F15,
+    F16 = SDL_SCANCODE_F16,
+    F17 = SDL_SCANCODE_F17,
+    F18 = SDL_SCANCODE_F18,
+    F19 = SDL_SCANCODE_F19,
+    F20 = SDL_SCANCODE_F20,
+    F21 = SDL_SCANCODE_F21,
+    F22 = SDL_SCANCODE_F22,
+    F23 = SDL_SCANCODE_F23,
+    F24 = SDL_SCANCODE_F24,
+    Execute = SDL_SCANCODE_EXECUTE,
+    Help = SDL_SCANCODE_HELP,
+    Menu = SDL_SCANCODE_MENU,
+    Select = SDL_SCANCODE_SELECT,
+    Stop = SDL_SCANCODE_STOP,
+    Again = SDL_SCANCODE_AGAIN,   /**< redo */
+    Undo = SDL_SCANCODE_UNDO,
+    Cut = SDL_SCANCODE_CUT,
+    Copy = SDL_SCANCODE_COPY,
+    Paste = SDL_SCANCODE_PASTE,
+    Find = SDL_SCANCODE_FIND,
+    Mute = SDL_SCANCODE_MUTE,
+    Volumeup = SDL_SCANCODE_VOLUMEUP,
+    Volumedown = SDL_SCANCODE_VOLUMEDOWN,
+    Kp_comma = SDL_SCANCODE_KP_COMMA,
+    Kp_equalsas400 = SDL_SCANCODE_KP_EQUALSAS400,
+
+    International1 = SDL_SCANCODE_INTERNATIONAL1, /**< used on Asian keyboards, see
+                                            footnotes in USB doc */
+    International2 = SDL_SCANCODE_INTERNATIONAL2,
+    International3 = SDL_SCANCODE_INTERNATIONAL3, /**< Yen */
+    International4 = SDL_SCANCODE_INTERNATIONAL4,
+    International5 = SDL_SCANCODE_INTERNATIONAL5,
+    International6 = SDL_SCANCODE_INTERNATIONAL6,
+    International7 = SDL_SCANCODE_INTERNATIONAL7,
+    International8 = SDL_SCANCODE_INTERNATIONAL8,
+    International9 = SDL_SCANCODE_INTERNATIONAL9,
+    Lang1 = SDL_SCANCODE_LANG1, /**< Hangul/English toggle */
+    Lang2 = SDL_SCANCODE_LANG2, /**< Hanja conversion */
+    Lang3 = SDL_SCANCODE_LANG3, /**< Katakana */
+    Lang4 = SDL_SCANCODE_LANG4, /**< Hiragana */
+    Lang5 = SDL_SCANCODE_LANG5, /**< Zenkaku/Hankaku */
+    Lang6 = SDL_SCANCODE_LANG6, /**< reserved */
+    Lang7 = SDL_SCANCODE_LANG7, /**< reserved */
+    Lang8 = SDL_SCANCODE_LANG8, /**< reserved */
+    Lang9 = SDL_SCANCODE_LANG9, /**< reserved */
+
+    Alterase = SDL_SCANCODE_ALTERASE, /**< Erase-Eaze */
+    Sysreq = SDL_SCANCODE_SYSREQ,
+    Cancel = SDL_SCANCODE_CANCEL,
+    Clear = SDL_SCANCODE_CLEAR,
+    Prior = SDL_SCANCODE_PRIOR,
+    Return2 = SDL_SCANCODE_RETURN2,
+    Separator = SDL_SCANCODE_SEPARATOR,
+    Out = SDL_SCANCODE_OUT,
+    Oper = SDL_SCANCODE_OPER,
+    Clearagain = SDL_SCANCODE_CLEARAGAIN,
+    Crsel = SDL_SCANCODE_CRSEL,
+    Exsel = SDL_SCANCODE_EXSEL,
+
+    Kp_00 = SDL_SCANCODE_KP_00,
+    Kp_000 = SDL_SCANCODE_KP_000,
+    Thousandsseparator = SDL_SCANCODE_THOUSANDSSEPARATOR,
+    Decimalseparator = SDL_SCANCODE_DECIMALSEPARATOR,
+    Currencyunit = SDL_SCANCODE_CURRENCYUNIT,
+    Currencysubunit = SDL_SCANCODE_CURRENCYSUBUNIT,
+    Kp_leftparen = SDL_SCANCODE_KP_LEFTPAREN,
+    Kp_rightparen = SDL_SCANCODE_KP_RIGHTPAREN,
+    Kp_leftbrace = SDL_SCANCODE_KP_LEFTBRACE,
+    Kp_rightbrace = SDL_SCANCODE_KP_RIGHTBRACE,
+    Kp_tab = SDL_SCANCODE_KP_TAB,
+    Kp_backspace = SDL_SCANCODE_KP_BACKSPACE,
+    Kp_a = SDL_SCANCODE_KP_A,
+    Kp_b = SDL_SCANCODE_KP_B,
+    Kp_c = SDL_SCANCODE_KP_C,
+    Kp_d = SDL_SCANCODE_KP_D,
+    Kp_e = SDL_SCANCODE_KP_E,
+    Kp_f = SDL_SCANCODE_KP_F,
+    Kp_xor = SDL_SCANCODE_KP_XOR,
+    Kp_power = SDL_SCANCODE_KP_POWER,
+    Kp_percent = SDL_SCANCODE_KP_PERCENT,
+    Kp_less = SDL_SCANCODE_KP_LESS,
+    Kp_greater = SDL_SCANCODE_KP_GREATER,
+    Kp_ampersand = SDL_SCANCODE_KP_AMPERSAND,
+    Kp_dblampersand = SDL_SCANCODE_KP_DBLAMPERSAND,
+    Kp_verticalbar = SDL_SCANCODE_KP_VERTICALBAR,
+    Kp_dblverticalbar = SDL_SCANCODE_KP_DBLVERTICALBAR,
+    Kp_colon = SDL_SCANCODE_KP_COLON,
+    Kp_hash = SDL_SCANCODE_KP_HASH,
+    Kp_space = SDL_SCANCODE_KP_SPACE,
+    Kp_at = SDL_SCANCODE_KP_AT,
+    Kp_exclam = SDL_SCANCODE_KP_EXCLAM,
+    Kp_memstore = SDL_SCANCODE_KP_MEMSTORE,
+    Kp_memrecall = SDL_SCANCODE_KP_MEMRECALL,
+    Kp_memclear = SDL_SCANCODE_KP_MEMCLEAR,
+    Kp_memadd = SDL_SCANCODE_KP_MEMADD,
+    Kp_memsubtract = SDL_SCANCODE_KP_MEMSUBTRACT,
+    Kp_memmultiply = SDL_SCANCODE_KP_MEMMULTIPLY,
+    Kp_memdivide = SDL_SCANCODE_KP_MEMDIVIDE,
+    Kp_plusminus = SDL_SCANCODE_KP_PLUSMINUS,
+    Kp_clear = SDL_SCANCODE_KP_CLEAR,
+    Kp_clearentry = SDL_SCANCODE_KP_CLEARENTRY,
+    Kp_binary = SDL_SCANCODE_KP_BINARY,
+    Kp_octal = SDL_SCANCODE_KP_OCTAL,
+    Kp_decimal = SDL_SCANCODE_KP_DECIMAL,
+    Kp_hexadecimal = SDL_SCANCODE_KP_HEXADECIMAL,
+
+    Lctrl = SDL_SCANCODE_LCTRL,
+    Lshift = SDL_SCANCODE_LSHIFT,
+    Lalt = SDL_SCANCODE_LALT, /**< alt, option */
+    Lgui = SDL_SCANCODE_LGUI, /**< windows, command (apple), meta */
+    Rctrl = SDL_SCANCODE_RCTRL,
+    Rshift = SDL_SCANCODE_RSHIFT,
+    Ralt = SDL_SCANCODE_RALT, /**< alt gr, option */
+    Rgui = SDL_SCANCODE_RGUI, /**< windows, command (apple), meta */
+
+    Mode = SDL_SCANCODE_MODE,    /**< I'm not sure if this is really not covered
+                                 *   by any of the above, but since there's a
+                                 *   special KMOD_MODE for it I'm adding it here
+                                 */
+
+    Audionext = SDL_SCANCODE_AUDIONEXT,
+    Audioprev = SDL_SCANCODE_AUDIOPREV,
+    Audiostop = SDL_SCANCODE_AUDIOSTOP,
+    Audioplay = SDL_SCANCODE_AUDIOPLAY,
+    Audiomute = SDL_SCANCODE_AUDIOMUTE,
+    Mediaselect = SDL_SCANCODE_MEDIASELECT,
+    Www = SDL_SCANCODE_WWW,
+    Mail = SDL_SCANCODE_MAIL,
+    Calculator = SDL_SCANCODE_CALCULATOR,
+    Computer = SDL_SCANCODE_COMPUTER,
+    Ac_search = SDL_SCANCODE_AC_SEARCH,
+    Ac_home = SDL_SCANCODE_AC_HOME,
+    Ac_back = SDL_SCANCODE_AC_BACK,
+    Ac_forward = SDL_SCANCODE_AC_FORWARD,
+    Ac_stop = SDL_SCANCODE_AC_STOP,
+    Ac_refresh = SDL_SCANCODE_AC_REFRESH,
+    Ac_bookmarks = SDL_SCANCODE_AC_BOOKMARKS,
+
+    Brightnessdown = SDL_SCANCODE_BRIGHTNESSDOWN,
+    Brightnessup = SDL_SCANCODE_BRIGHTNESSUP,
+    Displayswitch = SDL_SCANCODE_DISPLAYSWITCH, /**< display mirroring/dual display
+                                           switch, video mode switch */
+    Kbdillumtoggle = SDL_SCANCODE_KBDILLUMTOGGLE,
+    Kbdillumdown = SDL_SCANCODE_KBDILLUMDOWN,
+    Kbdillumup = SDL_SCANCODE_KBDILLUMUP,
+    Eject = SDL_SCANCODE_EJECT,
+    Sleep = SDL_SCANCODE_SLEEP,
+
+    App1 = SDL_SCANCODE_APP1,
+    App2 = SDL_SCANCODE_APP2,
+
+    Audiorewind = SDL_SCANCODE_AUDIOREWIND,
+    Audiofastforward = SDL_SCANCODE_AUDIOFASTFORWARD,
+
+    Softleft = SDL_SCANCODE_SOFTLEFT, /**< Usually situated below the display on phones and
+                                      used as a multi-function feature key for selecting
+                                      a software defined function shown on the bottom left
+                                      of the display. */
+    Softright = SDL_SCANCODE_SOFTRIGHT, /**< Usually situated below the display on phones and
+                                       used as a multi-function feature key for selecting
+                                       a software defined function shown on the bottom right
+                                       of the display. */
+    Call = SDL_SCANCODE_CALL, /**< Used for accepting phone calls. */
+    Endcall = SDL_SCANCODE_ENDCALL, /**< Used for rejecting phone calls. */
+
+
+    KEY_LAST = SDL_NUM_SCANCODES,
 };
 
 Key GetKeyFromName(std::string_view name);
 
 enum class MouseButtonType {
-    Left = GLFW_MOUSE_BUTTON_1,
-    Right = GLFW_MOUSE_BUTTON_2,
-    Middle = GLFW_MOUSE_BUTTON_3,
+    Left = SDL_BUTTON_LEFT,
+    Right = SDL_BUTTON_RIGHT,
+    Middle = SDL_BUTTON_MIDDLE,
 };
 
 enum class Action {
-    Press = GLFW_PRESS,
-    Repeat = GLFW_REPEAT,
-    Release = GLFW_RELEASE,
+    Press = 1,
+    Repeat,
+    Release,
 };
 
 enum class Modifier {
-    Shift = GLFW_MOD_SHIFT,
-    Control = GLFW_MOD_CONTROL,
-    Alt = GLFW_MOD_ALT,
-    Super = GLFW_MOD_SUPER,
-    Capslock = GLFW_MOD_CAPS_LOCK,
-    Numlock = GLFW_MOD_NUM_LOCK,
+    LShift = KMOD_LSHIFT,
+    RShift = KMOD_RSHIFT,
+    LCtrl = KMOD_LCTRL,
+    RCtrl = KMOD_RCTRL,
+    LAlt = KMOD_LALT,
+    RAlt = KMOD_RALT,
+    LGui = KMOD_LGUI,
+    RGui = KMOD_RGUI,
+    Num = KMOD_NUM,
+    Caps = KMOD_CAPS,
+    Mode = KMOD_MODE,
+    Scroll = KMOD_SCROLL,
+    CtrlBoth = KMOD_CTRL,
+    GuiBoth = KMOD_GUI,
+    ShiftBoth = KMOD_SHIFT,
+    AltBoth = KMOD_ALT,
 };
+
+struct QuitEvent final {};
 
 struct KeyboardEvent final {
     Key key;
@@ -169,7 +391,7 @@ struct MouseMotionEvent final {
 struct MouseButtonEvent final {
     MouseButtonType btn;
     Action action;
-    Modifier mod;
+    uint8_t clicks; // 1 for singl-click, 2 for double-click
 };
 
 struct ScrollEvent final {
@@ -182,27 +404,24 @@ struct WindowResizeEvent final {
 
 class EventPoller final {
 public:
+    using event_handler = void(*)(const SDL_Event& event);
+
     void Poll() const;
+
+    template <event_handler h>
+    void InjectHandler() {
+        handlers_.emplace_back(h);
+    }
 
     static void AssociatePollerAndECS(
         typename gecs::world::registry_type& reg) {
         reg_ = &reg;
     }
 
-    static void ConnectPoller2Events(Window&);
-
-private:
     static typename gecs::world::registry_type* reg_;
 
-    static auto& getRegistry() { return *reg_; }
-
-    static void keyCallback(GLFWwindow*, int key, int scancode,
-                            int action, int mods);
-    static void mouseBtnCallback(GLFWwindow*, int button, int action,
-                                 int mods);
-    static void mouseMotionCallback(GLFWwindow*, double xpos,
-                                    double ypos);
-    static void windowResizeCallback(GLFWwindow*, int, int);
+private:
+    std::vector<event_handler> handlers_;
 };
 
 }  // namespace nickel

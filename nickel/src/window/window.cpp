@@ -1,55 +1,54 @@
 #include "window/window.hpp"
 #include "config/config.hpp"
+#include "core/log_tag.hpp"
 #include "refl/window.hpp"
+#include <SDL_video.h>
 
 namespace nickel {
 
 Window::Window(const std::string& title, int width, int height): title_(title) {
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, config::GLMajorVersion);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, config::GLMinorVersion);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config::GLMajorVersion);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config::GLMinorVersion);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);  //核心库
 
-    window_ = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
+    window_ = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED,
+                               SDL_WINDOWPOS_CENTERED, width, height,
+                               SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+
     if (!window_) {
-        LOGE("GLFW", "create window failed");
-        glfwTerminate();
+        LOGE(log_tag::SDL2, "create window failed");
     } else {
-        glfwMakeContextCurrent(window_);
+        SDL_GL_CreateContext(window_);
+
         if (gladLoadGL() == 0) {
             LOGE("GLAD", "load opengl ", config::GLMajorVersion, ".",
                  config::GLMinorVersion, " failed");
-            glfwTerminate();
         }
-        int w, h;
-        glfwGetFramebufferSize(window_, &w, &h);
-        GL_CALL(glViewport(0, 0, w, h));
+        GL_CALL(glViewport(0, 0, width, height));
     }
 }
 
-bool Window::ShouldClose() const {
-    return glfwWindowShouldClose(window_);
-}
-
 void Window::SwapBuffer() const {
-    glfwSwapBuffers(window_);
+    SDL_GL_SwapWindow(window_);
 }
 
 cgmath::Vec2 Window::Size() const {
     int w, h;
-    glfwGetWindowSize(window_, &w, &h);
+    SDL_GetWindowSize(window_, &w, &h);
     return {static_cast<float>(w), static_cast<float>(h)};
 }
 
 void Window::Resize(int w, int h) {
-    glfwSetWindowSize(window_, w, h);
+    SDL_SetWindowSize(window_, w, h);
 }
 
 void Window::SetTitle(const std::string& title) {
-    glfwSetWindowTitle(window_, title.c_str());
+    SDL_SetWindowTitle(window_, title.c_str());
     title_ = title;
 }
 
 Window::~Window() {
-    glfwDestroyWindow(window_);
+    SDL_DestroyWindow(window_);
 }
 
 WindowBuilder WindowBuilder::FromConfigFile(std::string_view filename) {

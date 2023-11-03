@@ -18,6 +18,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "src" FILES ${nickel_sr
 add_library(${engine_name} STATIC)
 target_sources(${engine_name} PRIVATE ${nickel_src} ${nickel_header_files} ${shader_files})
 target_compile_features(${engine_name} PUBLIC cxx_std_17)
-target_link_libraries(${engine_name} PUBLIC glfw glad gecs stb_image toml++ debugbreak mirrow miniaudio)
+target_link_libraries(${engine_name} PUBLIC SDL2 glad gecs stb_image toml++ debugbreak mirrow miniaudio nameof)
 target_include_directories(${engine_name} PUBLIC ./include)
 target_precompile_headers(${engine_name} PRIVATE include/pch.hpp)

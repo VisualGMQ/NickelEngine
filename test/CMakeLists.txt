@@ -5,6 +5,7 @@ macro(AddConsoleTest name)
     add_test(NAME ${name}
              COMMAND $<TARGET_FILE:${name}>)
     set_tests_properties(${name} PROPERTIES LABELS "console")
+    CopyDLL(${name})
 endmacro()
 
 macro(AddVisualableTest name)
@@ -14,6 +15,7 @@ macro(AddVisualableTest name)
     add_test(NAME ${name}
              COMMAND $<TARGET_FILE:${name}>)
     set_tests_properties(${name} PROPERTIES LABELS "visualable")
+    CopyDLL(${name})
 endmacro()
 
 AddConsoleTest(tweeny)

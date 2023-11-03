@@ -1,6 +1,7 @@
 #include "config/config.hpp"
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
+#include "gecs/entity/fwd.hpp"
 #include "input/device.hpp"
 #include "input/input.hpp"
 #include "misc/timer.hpp"
@@ -17,11 +18,20 @@
 using namespace nickel;
 
 std::unique_ptr<gecs::world> world;
+bool shouldExit = false;    // should app exit
+
+void DetectAppShouldExit(const QuitEvent& event) {
+    shouldExit = true;
+}
 
 void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& reg);
 
 void BootstrapCallSystem() {
     BootstrapSystem(*world, *world->cur_registry());
+}
+
+void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit) {
+    quit.sink().add<DetectAppShouldExit>();
 }
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
@@ -39,6 +49,11 @@ void BeginRender(gecs::resource<gecs::mut<Renderer2D>> renderer, gecs::resource<
 
 void EndRender(gecs::resource<gecs::mut<Renderer2D>> renderer) {
     renderer->EndRender();
+}
+
+void EventPollerInit(gecs::commands cmds) {
+    cmds.emplace_resource<EventPoller>(EventPoller{});
+    EventPoller::AssociatePollerAndECS(*world->cur_registry());
 }
 
 void InputSystemInit(
@@ -94,10 +109,11 @@ int main(int argc, char** argv) {
     LOGI(log_tag::Nickel, "Running dir: ", std::filesystem::current_path(),
          ". Full path: ", argv[0]);
 
-    if (!glfwInit()) {
-        LOGE(log_tag::Glfw, "init glfw failed");
-        return -1;
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        LOGF(log_tag::SDL2, "SDL init failed!");
+        return 1;
     }
+    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 
     world = std::make_unique<gecs::world>();
 
@@ -105,6 +121,8 @@ int main(int argc, char** argv) {
     main_reg
         // startup systems
         .regist_startup_system<BootstrapCallSystem>()
+        .regist_startup_system<VideoSystemInit>()
+        .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
         // shutdown systems
         .regist_shutdown_system<VideoSystemShutdown>()
@@ -122,12 +140,13 @@ int main(int argc, char** argv) {
     world->startup();
     auto window = main_reg.res<Window>();
 
-    while (!window->ShouldClose()) {
+    while (!shouldExit) {
         world->update();
     }
 
     world->shutdown();
     world.reset();
-    glfwTerminate();
+
+    SDL_Quit();
     return 0;
 }

@@ -6,6 +6,11 @@ project(NickelEngine
 
 set(engine_name nickel)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# some cmake utilities
+include(cmake/copy_dll.cmake)
+
 add_subdirectory(3rdlibs)
 add_subdirectory(nickel)
 
