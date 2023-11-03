@@ -30,7 +30,6 @@ public:
     Window(const std::string& title, int width, int height);
     ~Window();
 
-    bool ShouldClose() const;
     void SwapBuffer() const;
     void Resize(int w, int h);
     void SetTitle(const std::string& title);
@@ -41,7 +40,7 @@ public:
     void* Raw() { return window_; }
 
 private:
-    GLFWwindow* window_;
+    SDL_Window* window_;
     std::string title_;
 };
 

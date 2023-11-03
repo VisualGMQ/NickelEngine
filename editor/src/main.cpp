@@ -1,5 +1,6 @@
+#include "imgui_plugin.hpp"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
 
 #include "misc/project.hpp"
@@ -27,7 +28,8 @@ constexpr int ProjectMgrWindowWidth = 450;
 constexpr int ProjectMgrWindowHeight = 300;
 
 void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
-               gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
+               gecs::resource<gecs::mut<Renderer2D>> renderer2d,
+               gecs::resource<gecs::mut<EventPoller>> poller) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -39,30 +41,28 @@ void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
 
     ImGui::StyleColorsDark();
 
-    ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)window->Raw(), true);
+    ImGui_ImplSDL2_InitForOpenGL((SDL_Window*)window->Raw(), nullptr);
     ImGui_ImplOpenGL3_Init("#version 430");
 
     renderer2d->SetClearColor({0.1f, 0.1f, 0.1f, 1.0});
+
+    constexpr auto f = +[](const SDL_Event& event) {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+    };
+    poller->InjectHandler<f>();
 }
 
 void ImGuiStart() {
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
-}
-
-void EditorShutdown() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
 }
 
 void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
               gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
     ImGui::Render();
-    int display_w, display_h;
-    glfwGetFramebufferSize((GLFWwindow*)window->Raw(), &display_w, &display_h);
-    renderer2d->SetViewport({0, 0}, cgmath::Vec2(display_w, display_h));
+    auto display_size = window->Size();
+    renderer2d->SetViewport({0, 0}, cgmath::Vec2(display_size.w, display_size.h));
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
@@ -417,21 +417,21 @@ void BootstrapSystem(gecs::world& world,
     reg.commands().emplace_resource<ProjectInitInfo>(std::move(initInfo));
 
     reg.add_state(EditorScene::ProjectManager)
-        .regist_startup_system<ImGuiInit>()
-        .regist_shutdown_system<EditorShutdown>()
+        .regist_startup_system<plugin::ImGuiInit>()
+        .regist_shutdown_system<plugin::ImGuiShutdown>()
         // ProjectManager state
-        .regist_update_system_to_state<ImGuiStart>(EditorScene::ProjectManager)
+        .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::ProjectManager)
         .regist_update_system_to_state<ProjectManagerUpdate>(
             EditorScene::ProjectManager)
-        .regist_update_system_to_state<ImGuiEnd>(EditorScene::ProjectManager)
+        .regist_update_system_to_state<plugin::ImGuiEnd>(EditorScene::ProjectManager)
         // Editor state
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
         .regist_enter_system_to_state<TestEnter>(
             EditorScene::Editor)  // for test
-        .regist_update_system_to_state<ImGuiStart>(EditorScene::Editor)
+        .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::Editor)
         .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)
-        .regist_update_system_to_state<ImGuiEnd>(EditorScene::Editor)
+        .regist_update_system_to_state<plugin::ImGuiEnd>(EditorScene::Editor)
         // start with
         .start_with_state(EditorScene::ProjectManager);
 }

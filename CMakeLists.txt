@@ -4,12 +4,14 @@ project(NickelEngine
     LANGUAGES C CXX
 )
 
-set(engine_name nickel)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# some cmake utilities
+include(cmake/copy_dll.cmake)
 
 add_subdirectory(3rdlibs)
 add_subdirectory(nickel)
+add_subdirectory(plugins)
 
 option(NICKEL_BUILD_SANDBOX "build sandbox" ON)
 if (NICKEL_BUILD_SANDBOX)

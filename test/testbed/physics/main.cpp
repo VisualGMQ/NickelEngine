@@ -3,9 +3,9 @@
 #include "gecs/entity/querier.hpp"
 #include "gecs/entity/resource.hpp"
 #include "geom/geom2d.hpp"
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+
+#include "imgui_plugin.hpp"
+
 #include "physics/body.hpp"
 #include "physics/circle_shape.hpp"
 #include "physics/obb_shape.hpp"
@@ -32,54 +32,14 @@ constexpr float WindowCenterY = WindowHeight / 2.0f;
 
 struct Control {};
 
-void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
-               gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |=
-        ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    io.ConfigFlags |=
-        ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // enable Docking
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)window->Raw(), true);
-    ImGui_ImplOpenGL3_Init("#version 430");
-
-    renderer2d->SetClearColor({0.1f, 0.1f, 0.1f, 1.0});
-}
-
-void ImGuiStart() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-}
-
-void EditorShutdown() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-}
-
-void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
-              gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    ImGui::Render();
-    int display_w, display_h;
-    glfwGetFramebufferSize((GLFWwindow*)window->Raw(), &display_w, &display_h);
-    renderer2d->SetViewport({0, 0}, cgmath::Vec2(display_w, display_h));
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void TestbedStartup(gecs::commands cmds, gecs::resource<gecs::mut<physics::World>> world) {
+void TestbedStartup(gecs::commands cmds,
+                    gecs::resource<gecs::mut<physics::World>> world) {
     world->forceGenerators.emplace_back([](physics::Body& b) {
         b.force += cgmath::Vec2{0, 9.8};
     });
 
     auto ent2 = cmds.create();
-    cmds.emplace<physics::Body>(
-        ent2, physics::Body::CreateStatic({500, 500}));
+    cmds.emplace<physics::Body>(ent2, physics::Body::CreateStatic({500, 500}));
     cmds.emplace<physics::CollideShape>(
         ent2, physics::OBBShape::FromCenter({}, {400, 25}, 0.0));
 
@@ -144,7 +104,8 @@ void RenderShapes(gecs::querier<physics::Body, physics::CollideShape> querier,
     }
 }
 
-void ShootCircle(gecs::commands cmds, gecs::resource<Mouse> mouse, gecs::querier<gecs::mut<physics::Body>, Control> querier) {
+void ShootCircle(gecs::commands cmds, gecs::resource<Mouse> mouse,
+                 gecs::querier<gecs::mut<physics::Body>, Control> querier) {
     if (mouse->LeftBtn().IsPressed()) {
         auto ent = cmds.create();
         auto& body = cmds.emplace<physics::Body>(
@@ -176,13 +137,14 @@ void BootstrapSystem(gecs::world& world,
 
     reg.commands().emplace_resource<ProjectInitInfo>(std::move(initInfo));
 
-    reg.regist_startup_system<ImGuiInit>()
+    reg.regist_startup_system<plugin::ImGuiInit>()
         .regist_startup_system<physics::PhysicsInit>()
         .regist_startup_system<TestbedStartup>()
         .regist_update_system<ShootCircle>()
         .regist_update_system<physics::PhysicsUpdate>()
         .regist_update_system<RenderBodies>()
         .regist_update_system<RenderShapes>()
-        .regist_update_system<ImGuiStart>()
-        .regist_update_system<ImGuiEnd>();
+        .regist_update_system<plugin::ImGuiStart>()
+        .regist_update_system<plugin::ImGuiEnd>()
+        .regist_shutdown_system<plugin::ImGuiShutdown>();
 }

@@ -3,9 +3,8 @@
 #include "gecs/entity/resource.hpp"
 #include "geom/basic_geom.hpp"
 #include "geom/geom2d.hpp"
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+
+#include "imgui_plugin.hpp"
 
 #include "input/device.hpp"
 #include "misc/project.hpp"
@@ -60,46 +59,6 @@ struct Context final {
 
 void PlaygroundStartup(gecs::commands cmds) {
     cmds.emplace_resource<Context>();
-}
-
-void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
-               gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |=
-        ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    io.ConfigFlags |=
-        ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // enable Docking
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)window->Raw(), true);
-    ImGui_ImplOpenGL3_Init("#version 430");
-
-    renderer2d->SetClearColor({0.1f, 0.1f, 0.1f, 1.0});
-}
-
-void ImGuiStart() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-}
-
-void EditorShutdown() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-}
-
-void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
-              gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    ImGui::Render();
-    int display_w, display_h;
-    glfwGetFramebufferSize((GLFWwindow*)window->Raw(), &display_w, &display_h);
-    renderer2d->SetViewport({0, 0}, cgmath::Vec2(display_w, display_h));
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 using GeometricAddFunc = void (*)(Context&);
@@ -596,10 +555,11 @@ void BootstrapSystem(gecs::world& world,
     reg.commands().emplace_resource<ProjectInitInfo>(std::move(initInfo));
 
     reg.regist_startup_system<PlaygroundStartup>()
-        .regist_startup_system<ImGuiInit>()
-        .regist_update_system<ImGuiStart>()
+        .regist_startup_system<plugin::ImGuiInit>()
+        .regist_update_system<plugin::ImGuiStart>()
         .regist_update_system<PlaygroundUpdate>()
         .regist_update_system<RenderGeometrics>()
-        .regist_update_system<ImGuiEnd>()
-        .regist_update_system<ResetContextState>();
+        .regist_update_system<plugin::ImGuiEnd>()
+        .regist_update_system<ResetContextState>()
+        .regist_shutdown_system<plugin::ImGuiShutdown>();
 }

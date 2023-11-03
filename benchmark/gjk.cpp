@@ -8,7 +8,7 @@ using namespace nickel;
 
 using geom_type = std::vector<cgmath::Vec2>;
 
-int main() {
+int main(int, char**) {
     geom_type geomProto{
         {-2,  7},
         {-6,  3},

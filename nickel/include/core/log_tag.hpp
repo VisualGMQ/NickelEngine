@@ -6,7 +6,7 @@ namespace nickel {
 
 namespace log_tag {
 
-constexpr std::string_view Glfw = "GLFW";
+constexpr std::string_view SDL2 = "SDL2";
 constexpr std::string_view Glad = "Glad";
 constexpr std::string_view GL = "GL";
 constexpr std::string_view Config = "Config";
