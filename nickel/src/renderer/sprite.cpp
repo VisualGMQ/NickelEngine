@@ -26,8 +26,8 @@ void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
             renderer->DrawTexture(textureMgr->Get(sprite.image), region,
                                   customSize, sprite.sprite.color,
                                   cgmath::CreateTranslation(cgmath::Vec3{
-                                      sprite.sprite.anchor.x / region.w,
-                                      sprite.sprite.anchor.y / region.h, 0.0}) *
+                                      sprite.sprite.anchor.x / region.size.w,
+                                      sprite.sprite.anchor.y / region.size.h, 0.0}) *
                                       trans.ToMat());
         }
     }

@@ -30,7 +30,7 @@ struct Sprite final {
     static Sprite FromRegion(const cgmath::Rect& region) {
         auto sprite = Sprite::Default();
         sprite.region = region;
-        sprite.customSize = cgmath::Vec2{region.w, region.h};
+        sprite.customSize = region.size;
         return sprite;
     }
 

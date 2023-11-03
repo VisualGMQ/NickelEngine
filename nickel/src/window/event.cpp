@@ -243,10 +243,6 @@ const std::unordered_map<std::string_view, Key> gKeynameMap = {
     {              nameof::nameof_enum(Key::App2),               Key::App2},
     {       nameof::nameof_enum(Key::Audiorewind),        Key::Audiorewind},
     {  nameof::nameof_enum(Key::Audiofastforward),   Key::Audiofastforward},
-    {          nameof::nameof_enum(Key::Softleft),           Key::Softleft},
-    {         nameof::nameof_enum(Key::Softright),          Key::Softright},
-    {              nameof::nameof_enum(Key::Call),               Key::Call},
-    {           nameof::nameof_enum(Key::Endcall),            Key::Endcall},
 };
 
 Key GetKeyFromName(std::string_view name) {

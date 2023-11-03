@@ -21,6 +21,7 @@ endmacro()
 # AddConsoleTest(tweeny)
 AddConsoleTest(geom)
 AddConsoleTest(cgmath)
+AddConsoleTest(tweeny)
 
 AddVisualableTest(gjk)
 

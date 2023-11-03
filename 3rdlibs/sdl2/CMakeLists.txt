@@ -1,4 +1,4 @@
-# use system tools to find SDL2
+# download SDL for github action
 message("find package: SDL2 ...")
 find_package(SDL2 QUIET)
 
@@ -116,6 +116,10 @@ if (WIN32 AND NOT SDL2_FOUND)
     message("\tSDL main library dir: ${sdlmain_lib}")
     message("\tSDL lib library dir: ${sdl_lib}")
     message("\tdynamic lib: ${sdl_dll}")
-elseif (NOT WIN32)
+
+    set(SDL2_FOUND ON)
+endif()
+
+if (NOT WIN32 AND NOT SDL2_FOUND)
     message(FATAL_ERROR "can't find SDL2!")
 endif()

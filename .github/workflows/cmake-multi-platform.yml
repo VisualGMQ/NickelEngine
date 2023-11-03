@@ -59,11 +59,25 @@ jobs:
     - name: pull submodules
       run: git submodule update --init --recursive
 
-    - name: Install SDL2
-      if: matrix.os == 'ubuntu-latest'
-      run: sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev
-      # elif: matrix.os == "windows-latest"
-      # run:
+    - name: Install SDL2(Ubuntu Only)
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt update
+        sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev
+
+    - name: Download SDL2(Windows MSVC Only)
+      if: ${{ (matrix.os == 'windows-latest') && ((matrix.cpp_compiler == 'cl') || ( matrix.cpp_compiler == 'clang' )) }}
+      run: curl https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip -o ${{ github.workspace }}/SDL2-devel.zip
+
+    - name: Download SDL2(Windows MinGW Only)
+      if: ${{ (matrix.os == 'windows-latest') && ( matrix.cpp_compiler == 'gcc' ) }}
+      run: curl https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip -o ${{ github.workspace }}/SDL2-devel.zip
+
+    - name: unzip SDL2(Window Only)
+      if: ${{ matrix.os == 'windows-latest' }}
+      run: |
+        cd ${{github.workspace}}
+        cmake -E tar xvf ${{github.workspace}}/SDL2-devel.zip
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -73,6 +87,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DSDL2_ROOT="${{github.workspace}}/SDL2-2.28.5"
         -S ${{ github.workspace }}
 
     - name: Build

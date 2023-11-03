@@ -328,18 +328,6 @@ enum class Key {
     Audiorewind = SDL_SCANCODE_AUDIOREWIND,
     Audiofastforward = SDL_SCANCODE_AUDIOFASTFORWARD,
 
-    Softleft = SDL_SCANCODE_SOFTLEFT, /**< Usually situated below the display on phones and
-                                      used as a multi-function feature key for selecting
-                                      a software defined function shown on the bottom left
-                                      of the display. */
-    Softright = SDL_SCANCODE_SOFTRIGHT, /**< Usually situated below the display on phones and
-                                       used as a multi-function feature key for selecting
-                                       a software defined function shown on the bottom right
-                                       of the display. */
-    Call = SDL_SCANCODE_CALL, /**< Used for accepting phone calls. */
-    Endcall = SDL_SCANCODE_ENDCALL, /**< Used for rejecting phone calls. */
-
-
     KEY_LAST = SDL_NUM_SCANCODES,
 };
 

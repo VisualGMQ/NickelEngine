@@ -35,10 +35,8 @@ srefl_class(::nickel::cgmath::Vec4,
 srefl_class(::nickel::cgmath::Rect,
     ctors()
     fields(
-        field(&::nickel::cgmath::Rect::x),
-        field(&::nickel::cgmath::Rect::y),
-        field(&::nickel::cgmath::Rect::w),
-        field(&::nickel::cgmath::Rect::h)
+        field(&::nickel::cgmath::Rect::position),
+        field(&::nickel::cgmath::Rect::size)
     )
 )
 

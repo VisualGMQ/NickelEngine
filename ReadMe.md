@@ -14,7 +14,7 @@ cmake --build cmake-build
 
 ## 3rd Libraries
 
-* [glfw](https://github.com/glfw/glfw.git): use to support create window and render context
+* [SDL2](https://github.com/libsdl-org/SDL): use to support create window, render context and basic input
 * [gecs](https://github.com/VisualGMQ/gecs.git): basic ECS framework
 * [mirrow](https://github.com/VisualGMQ/mirrow.git): TMP framework, use to do dynamic/static reflection and serialization
 * [stb_image](http://nothings.org/stb): use to loading images
@@ -23,11 +23,12 @@ cmake --build cmake-build
 * [tomlplusplus](https://github.com/marzer/tomlplusplus): use to support toml file parse
 * [miniaudio](https://miniaud.io/): use to play audio cross platform
 * [nanobench](https://nanobench.ankerl.com/): use to do benchmark
+* [nameof](https://github.com/Neargye/nameof): use to get enum name convniently
 
 ## Features
 
 * Finished:
-    * 2D rendering based on OpenGL4
+    * 2D renderer based on OpenGL4
     * Data Oriented based on ECS
     * Animation applyed on arbitary properties
 * WIP:
@@ -36,6 +37,7 @@ cmake --build cmake-build
     * Customizable render pipeline
     * Game sound play
     * Game physics
+    * Text render
     * More features of the editor
 
 ## Editor

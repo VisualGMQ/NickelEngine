@@ -46,10 +46,14 @@ void Renderer2D::DrawTriangles(Vertices vertices, const Indices& indices,
 void Renderer2D::DrawRect(const cgmath::Rect& rect, const cgmath::Vec4& color,
                           const cgmath::Mat44& model) {
     const std::array<Vertex, 4> vertices = {
-        Vertex::FromPosColor({rect.x, rect.y}, color),
-        Vertex::FromPosColor({rect.x + rect.w, rect.y}, color),
-        Vertex::FromPosColor({rect.x + rect.w, rect.y + rect.h}, color),
-        Vertex::FromPosColor({rect.x, rect.y + rect.h}, color),
+        Vertex::FromPosColor({rect.position.x, rect.position.y}, color),
+        Vertex::FromPosColor({rect.position.x + rect.size.w, rect.position.y},
+                             color),
+        Vertex::FromPosColor(
+            {rect.position.x + rect.size.w, rect.position.y + rect.size.h},
+            color),
+        Vertex::FromPosColor({rect.position.x, rect.position.y + rect.size.h},
+                             color),
     };
 
     DrawLineLoop(vertices, model);
@@ -59,18 +63,23 @@ void Renderer2D::FillRect(const cgmath::Rect& rect, const cgmath::Vec4& color,
                           const cgmath::Mat44& model,
                           const std::optional<RectSampler>& image) {
     std::array<Vertex, 4> vertices = {
-        Vertex::FromPosColor({rect.x, rect.y}, color),
-        Vertex::FromPosColor({rect.x + rect.w, rect.y}, color),
-        Vertex::FromPosColor({rect.x + rect.w, rect.y + rect.h}, color),
-        Vertex::FromPosColor({rect.x, rect.y + rect.h}, color),
+        Vertex::FromPosColor({rect.position.x, rect.position.y}, color),
+        Vertex::FromPosColor({rect.position.x + rect.size.w, rect.position.y},
+                             color),
+        Vertex::FromPosColor(
+            {rect.position.x + rect.size.w, rect.position.y + rect.size.h},
+            color),
+        Vertex::FromPosColor({rect.position.x, rect.position.y + rect.size.h},
+                             color),
     };
     if (image) {
         const auto& region = image->region;
-        vertices[0].texcoord = cgmath::Vec2{region.x, region.y};
-        vertices[1].texcoord = cgmath::Vec2{region.x + region.w, region.y};
-        vertices[2].texcoord =
-            cgmath::Vec2{region.x + region.w, region.y + region.h};
-        vertices[3].texcoord = cgmath::Vec2{region.x, region.y + region.h};
+        vertices[0].texcoord = region.position;
+        vertices[1].texcoord =
+            cgmath::Vec2{region.position.x + region.size.w, region.position.y};
+        vertices[2].texcoord = region.position + region.size;
+        vertices[3].texcoord =
+            cgmath::Vec2{region.position.x, region.position.y + region.size.h};
     }
 
     DrawTriangles(vertices, std::array<uint32_t, 6>{0, 1, 2, 0, 2, 3}, model,
@@ -171,10 +180,10 @@ void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
                              const cgmath::Mat44& model) {
     // clang-format off
     std::array<Vertex, 4> vertices = {
-        Vertex{     {0, 0},                     {src.x / size.w, src.y / size.h}, color},
-        Vertex{{size.w, 0},           {(src.x + src.w) / size.w, src.y / size.h}, color},
-        Vertex{{0, size.h},           {src.x / size.w, (src.y + src.h) / size.h}, color},
-        Vertex{       size, {(src.x + src.w) / size.w, (src.y + src.h) / size.h}, color},
+        Vertex{     {0, 0},                     {src.position.x / size.w, src.position.y / size.h}, color},
+        Vertex{{size.w, 0},           {(src.position.x + src.size.w) / size.w, src.position.y / size.h}, color},
+        Vertex{{0, size.h},           {src.position.x / size.w, (src.position.y + src.size.h) / size.h}, color},
+        Vertex{       size, {(src.position.x + src.size.w) / size.w, (src.position.y + src.size.h) / size.h}, color},
     };
     // clang-format on
     std::array<uint32_t, 6> indices = {0, 1, 2, 1, 2, 3};
@@ -186,7 +195,8 @@ std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
     std::string_view vertexShaderFilename = "nickel/shader/vertex.shader";
     std::ifstream file(vertexShaderFilename.data());
     if (file.fail()) {
-        LOGE(log_tag::Renderer, "read vertex shader ", vertexShaderFilename, " failed");
+        LOGE(log_tag::Renderer, "read vertex shader ", vertexShaderFilename,
+             " failed");
         return nullptr;
     }
     std::string vertex_source((std::istreambuf_iterator<char>(file)),
@@ -198,7 +208,8 @@ std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
     file.close();
     file.open(fragShaderFilename.data());
     if (file.fail()) {
-        LOGE(log_tag::Renderer, "read fragment shader ", fragShaderFilename, " failed");
+        LOGE(log_tag::Renderer, "read fragment shader ", fragShaderFilename,
+             " failed");
         return nullptr;
     }
     std::string frag_source((std::istreambuf_iterator<char>(file)),
@@ -245,7 +256,8 @@ void Renderer2D::SetRenderTarget(Texture* texture) {
     }
 
     if (!framebuffer_) {
-        framebuffer_ = std::make_unique<gogl::Framebuffer>(gogl::FramebufferAccess::ReadDraw);
+        framebuffer_ = std::make_unique<gogl::Framebuffer>(
+            gogl::FramebufferAccess::ReadDraw);
         framebuffer_->Bind();
         framebuffer_->AttachColorTexture2D(*texture->texture_);
         framebuffer_->AttacheRenderBuffer(*renderBuffer_);

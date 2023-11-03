@@ -213,7 +213,7 @@ public:
     AnimationPlayer(AnimationManager& mgr)
         : mgr_(&mgr) {}
 
-    AnimationHandle Animation() const { return handle_; }
+    AnimationHandle Anim() const { return handle_; }
 
     void SetDir(Direction dir) { dir_ = dir; }
 

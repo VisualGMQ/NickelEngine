@@ -810,20 +810,12 @@ inline Mat44 CreateScale(const Vec3& scale) {
 }
 
 struct Rect {
-    union {
-        struct {
-            Vec2 position, size;
-        };
+    Vec2 position, size;
 
-        struct {
-            float x, y, w, h;
-        };
-    };
-
-    Rect() : position{}, size{} {}
+    Rect() = default;
 
     Rect(const Vec2& position, const Vec2& size)
-        : position(position), size(size) {}
+        :Rect(position.x, position.y, size.w, size.h) {}
 
     Rect(float x, float y, float w, float h) : position{x, y}, size{w, h} {}
 
