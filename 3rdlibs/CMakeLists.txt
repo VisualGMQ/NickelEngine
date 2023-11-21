@@ -5,7 +5,10 @@ add_subdirectory(imgui)
 add_subdirectory(stb_image)
 add_subdirectory(tomlplusplus)
 add_subdirectory(debugbreak)
+
+set(MIRROW_ENABLE_TOML++ ON)
 add_subdirectory(mirrow)
+
 add_subdirectory(miniaudio)
 add_subdirectory(nameof)
 add_subdirectory(nanobench)

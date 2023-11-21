@@ -43,7 +43,7 @@ public:
         return cgmath::Vec2{static_cast<float>(w_), static_cast<float>(h_)};
     }
 
-    void* Raw() const { return (void*)texture_->Id(); }
+    void* Raw() const { return reinterpret_cast<void*>(texture_->Id()); }
 
     auto& Filename() const { return filename_; }
     auto& Sampler() const { return sampler_; }

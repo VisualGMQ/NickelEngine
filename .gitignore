@@ -1,6 +1,7 @@
 imgui.ini
 new_sandbox
-anim.res.toml
+*.toml
 new-sandbox
 .*
 cmake-build*
+compile_commands.json

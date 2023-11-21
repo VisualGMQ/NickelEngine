@@ -1,3 +1,4 @@
+#include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
 #include "misc/project.hpp"
 #include "nickel.hpp"
 #include "refl/anim.hpp"
@@ -14,7 +15,8 @@ void TestUpdateSystem(
 
 void TestInitSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<TextureManager>> textureMgr,
-                    gecs::resource<gecs::mut<AnimationManager>> animMgr) {
+                    gecs::resource<gecs::mut<AnimationManager>> animMgr,
+                    gecs::registry reg) {
     auto entity = cmds.create();
     auto handle = textureMgr->Load("./sandbox/resources/role.png",
                                    gogl::Sampler::CreateNearestRepeat());
@@ -31,13 +33,13 @@ void TestInitSystem(gecs::commands cmds,
         std::make_unique<BasicAnimationTrack<cgmath::Vec2>>(std::vector{
             KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{100.0f, 200.0f}, 0),
             KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{300.0f, 500.0f}, 100)});
-    posTrack->ChangeApplyTarget(mirrow::drefl::reflected_type<Transform>());
+    posTrack->ChangeApplyTarget(mirrow::drefl::typeinfo<Transform>());
 
     std::unique_ptr<AnimationTrack> rotTrack =
         std::make_unique<BasicAnimationTrack<float>>(
             std::vector{KeyFrame<float>::Create(0.0, 0),
                         KeyFrame<float>::Create(360, 200)});
-    rotTrack->ChangeApplyTarget(mirrow::drefl::reflected_type<Transform>());
+    rotTrack->ChangeApplyTarget(mirrow::drefl::typeinfo<Transform>());
 
     Animation::container_type tracks;
     tracks["translation"] = std::move(posTrack);
@@ -65,7 +67,11 @@ void TestInitSystem(gecs::commands cmds,
     auto& animPlayer = cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(animMgr.get()));
     animPlayer.ChangeAnim(anim);
     animPlayer.Play();
-    // animPlayer.Bind(transform);
+
+    tbl = SaveAsPrefab(entity, reg);
+    std::ofstream file2("ent1.prefab.toml");
+    file2 << tbl;
+    file2.close();
 }
 
 void BootstrapSystem(gecs::world& world,

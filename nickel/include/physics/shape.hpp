@@ -36,7 +36,7 @@ class CollideShape final {
 public:
     template <typename T,
               typename = std::enable_if<std::is_base_of_v<Shape, T>>>
-    CollideShape(T&& s) : shape{new T{std::forward<T>(s)}} {}
+    CollideShape(T&& s) : shape{new T{std::move(s)}} {}
 
     std::unique_ptr<Shape> shape;
 };

@@ -4,70 +4,79 @@
 namespace nickel {
 
 void reflectVec2() {
-    mirrow::drefl::factory<cgmath::Vec2>("Vec2")
-        .var<&cgmath::Vec2::x>("x")
-        .var<&cgmath::Vec2::y>("y");
+    mirrow::drefl::registrar<cgmath::Vec2>::instance()
+        .regist("Vec2")
+        .property("x", &cgmath::Vec2::x)
+        .property("y", &cgmath::Vec2::y);
 }
 
 void reflectVec3() {
-    mirrow::drefl::factory<cgmath::Vec3>("Vec3")
-        .var<&cgmath::Vec3::x>("x")
-        .var<&cgmath::Vec3::y>("y")
-        .var<&cgmath::Vec3::z>("z");
+    mirrow::drefl::registrar<cgmath::Vec3>::instance()
+        .regist("Vec3")
+        .property("x", &cgmath::Vec3::x)
+        .property("y", &cgmath::Vec3::y)
+        .property("z", &cgmath::Vec3::z);
 }
 
 void reflectVec4() {
-    mirrow::drefl::factory<cgmath::Vec4>("Vec4")
-        .var<&cgmath::Vec4::x>("x")
-        .var<&cgmath::Vec4::y>("y")
-        .var<&cgmath::Vec4::w>("w")
-        .var<&cgmath::Vec4::z>("z");
+    mirrow::drefl::registrar<cgmath::Vec4>::instance()
+        .regist("Vec4")
+        .property("x", &cgmath::Vec4::x)
+        .property("y", &cgmath::Vec4::y)
+        .property("w", &cgmath::Vec4::w)
+        .property("z", &cgmath::Vec4::z);
 }
 
 void reflectTramsform() {
-    mirrow::drefl::factory<Transform>("Transform")
-        .var<&Transform::translation>("translation")
-        .var<&Transform::rotation>("rotation")
-        .var<&Transform::scale>("scale");
+    mirrow::drefl::registrar<Transform>::instance()
+        .regist("Transform")
+        .property("translation", &Transform::translation)
+        .property("rotation", &Transform::rotation)
+        .property("scale", &Transform::scale);
 }
 
-void reflectFundamental() {
-    mirrow::drefl::factory<char>("char");
-    mirrow::drefl::factory<int>("int");
-    mirrow::drefl::factory<float>("float");
-    mirrow::drefl::factory<double>("double");
-    mirrow::drefl::factory<long>("long");
-    mirrow::drefl::factory<unsigned int>("unsigned int");
-    mirrow::drefl::factory<unsigned long>("unsigned long");
+void reflectGlobalTramsform() {
+    mirrow::drefl::registrar<GlobalTransform>::instance().regist(
+        "GlobalTransform");
 }
 
 void reflectSprite() {
-    mirrow::drefl::factory<Sprite>("Sprite")
-        .var<&Sprite::anchor>("anchor")
-        .var<&Sprite::color>("color")
-        .var<&Sprite::region>("region")
-        .var<&Sprite::customSize>("customSize");
+    mirrow::drefl::registrar<Sprite>::instance()
+        .regist("Sprite")
+        .property("anchor", &Sprite::anchor)
+        .property("color", &Sprite::color)
+        .property("region", &Sprite::region)
+        .property("customSize", &Sprite::customSize);
 
-    mirrow::drefl::factory<SpriteBundle>("SpriteBundle")
-        .var<&SpriteBundle::flip>("flip")
-        .var<&SpriteBundle::image>("image")
-        .var<&SpriteBundle::sprite>("sprite");
+    mirrow::drefl::registrar<SpriteBundle>::instance()
+        .regist("SpriteBundle")
+        .property("flip", &SpriteBundle::flip)
+        .property("image", &SpriteBundle::image)
+        .property("sprite", &SpriteBundle::sprite);
 
-    mirrow::drefl::factory<TextureHandle>("TextureHandle");
+    mirrow::drefl::registrar<Flip>::instance()
+        .regist("Flip")
+        .add("None", Flip::None)
+        .add("Horizontal", Flip::Horizontal)
+        .add("Vertical", Flip::Vertical)
+        .add("Both", Flip::Both);
+
+    mirrow::drefl::registrar<TextureHandle>::instance().regist("TextureHandle");
 }
 
 void reflectAnimation() {
-    mirrow::drefl::factory<AnimationPlayer>("AnimationPlayer");
+    mirrow::drefl::registrar<AnimationPlayer>::instance().regist(
+        "AnimationPlayer");
 }
 
 void InitDynamicReflect() {
-    reflectFundamental();
     reflectVec2();
     reflectVec3();
     reflectVec4();
     reflectTramsform();
-    reflectSprite();
+    reflectGlobalTramsform();
     reflectAnimation();
+    reflectSprite();
 }
 
-}
+}  // namespace nickel

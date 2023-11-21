@@ -1,24 +1,25 @@
 #include "show_component.hpp"
+#include "core/assert.hpp"
+#include "mirrow/drefl/value_kind.hpp"
 
 ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
     if (auto it = methods_.find(type); it != methods_.end()) {
         return it->second;
     }
 
-    if (type.is_fundamental()) {
-        auto fund = type.as_fundamental();
-        if (fund.is_boolean()) {
-            return DefaultMethods::ShowBoolean;
-        } else {
-            return DefaultMethods::ShowNumeric;
-        }
+    if (type->is_numeric()) {
+        return DefaultMethods::ShowNumeric;
     }
 
-    if (type.is_class()) {
+    if (type->is_boolean()) {
+        return DefaultMethods::ShowBoolean;
+    }
+
+    if (type->is_class()) {
         return DefaultMethods::ShowClass;
     }
 
-    if (type.is_enum()) {
+    if (type->is_enum()) {
         return DefaultMethods::ShowEnum;
     }
 
@@ -26,20 +27,23 @@ ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
 }
 
 void ComponentShowMethods::DefaultMethods::ShowClass(
-    type_info typeInfo, std::string_view name,
-    ::mirrow::drefl::basic_any& value, gecs::registry reg) {
-    Assert(typeInfo.is_class(), "type incorrect");
+    const mirrow::drefl::type* typeInfo, std::string_view name,
+    ::mirrow::drefl::any& value, gecs::registry reg) {
+    Assert(typeInfo->is_class(), "type incorrect");
 
     if (ImGui::TreeNode(name.data())) {
-        auto classInfo = typeInfo.as_class();
-        for (auto&& var : classInfo.vars()) {
-            auto varType = type_info{var.raw_type()};
+        auto classInfo = typeInfo->as_class();
+        auto id = 0;
+        for (auto&& var : classInfo->properties()) {
+            auto varType = var->type_info();
             auto showMethod = ComponentShowMethods::Instance().Find(varType);
+            ImGui::PushID(id);
             if (showMethod) {
-                auto ref =
-                    ::mirrow::drefl::invoke_by_any_return_ref(var, &value);
-                showMethod(varType, var.name(), ref, reg);
+                auto ref = var->call(value);
+                showMethod(varType, var->name(), ref, reg);
             }
+            ImGui::PopID();
+            id ++;
         }
 
         ImGui::TreePop();
@@ -47,63 +51,79 @@ void ComponentShowMethods::DefaultMethods::ShowClass(
 }
 
 void ComponentShowMethods::DefaultMethods::ShowNumeric(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    type_info type, std::string_view name, ::mirrow::drefl::any& value,
     gecs::registry) {
-    Assert(type.is_fundamental(), "type incorrect");
-    auto fund = type.as_fundamental();
-    Assert(fund.is_floating_point() || fund.is_integer(), "type incorrect");
+    Assert(type->is_numeric(), "type incorrect");
+    auto numeric = type->as_numeric();
 
-    if (fund.is_integer()) {
-        if (fund.is_signed()) {
-            int data = value.try_cast_integral().value();
-            ImGui::InputInt(name.data(), &data);
-            value.deep_set(::mirrow::drefl::reference_any{data});
-        } else {
-            int data = value.try_cast_uintegral().value();
-            ImGui::InputInt(name.data(), &data);
-            value.deep_set(::mirrow::drefl::reference_any{std::max(data, 0)});
-        }
+    if (numeric->is_integer()) {
+        int i = numeric->get_value(value);
+        ImGui::DragInt(name.data(), &i);
+        numeric->set_value(value, (long)i);
     } else {
-        double data = value.try_cast_floating_point().value();
-        ImGui::InputDouble(name.data(), &data);
-        value.deep_set(::mirrow::drefl::reference_any{data});
+        float f = numeric->get_value(value);
+        ImGui::DragFloat(name.data(), &f);
+        numeric->set_value(value, f);
     }
 }
 
 void ComponentShowMethods::DefaultMethods::ShowBoolean(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    type_info type, std::string_view name, ::mirrow::drefl::any& value,
     gecs::registry) {
-    Assert(type.is_fundamental() && type.as_fundamental().is_boolean(),
-           "type incorrect");
-    auto fund = type.as_fundamental();
+    Assert(type->is_boolean(), "type incorrect");
+    auto boolean = type->as_boolean();
 
-    bool& data = value.cast<bool>();
+    bool b = boolean->get_value(value);
 
     const char* labels[] = {"false", "true"};
-    int curItem = data;
+    int curItem = b;
     ImGui::Combo(name.data(), &curItem, labels, 2);
-    data = static_cast<bool>(curItem);
+
+    boolean->set_value(value, b);
 }
 
 void ComponentShowMethods::DefaultMethods::ShowString(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    type_info type, std::string_view name, ::mirrow::drefl::any& value,
     gecs::registry) {
-    Assert(type.is_class() && type.as_class().is_string(), "type incorrect");
+    Assert(type->is_string(), "type incorrect");
 
-    std::string& data = value.cast<std::string>();
+    auto string_type = type->as_string();
+    auto str = string_type->get_str(value);
 
     char buf[1024] = {0};
+    strcpy_s(buf, 1024, str.c_str());
     ImGui::InputText(name.data(), buf, sizeof(buf));
-    data = buf;
+
+    if (buf != str) {
+        string_type->set_value(value, std::string(buf));
+    }
 }
 
 void ComponentShowMethods::DefaultMethods::ShowEnum(
-    type_info type, std::string_view name, ::mirrow::drefl::basic_any& value,
+    type_info type, std::string_view name, ::mirrow::drefl::any& value,
     gecs::registry) {
-    Assert(type.is_enum(), "type incorrect");
-    // TODO: support enum
+    Assert(type->is_enum(), "type incorrect");
 
-    int curItem = 0;
-    const char* labels[] = {"currently enum not support"};
-    ImGui::Combo(name.data(), &curItem, labels, 1);
+    auto enum_info = type->as_enum();
+
+    static std::vector<const char*> enumNames;
+    enumNames.clear();
+
+    int curItem = enum_info->get_value(value);
+    int idx = 0;
+    auto& enums = enum_info->enums();
+
+    for (int i = 0; i < enums.size(); i++) {
+        auto& e = enums[i];
+
+        enumNames.push_back(e.name().c_str());
+
+        if (e.value() == curItem) {
+            idx = i;
+        }
+    }
+
+    ImGui::Combo(name.data(), &idx, enumNames.data(), enumNames.size());
+
+    enum_info->set_value(value, enums[idx].value());
 }

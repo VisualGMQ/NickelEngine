@@ -1,4 +1,5 @@
 #include "anim/anim.hpp"
+#include "mirrow/drefl/value_kind.hpp"
 #include "refl/anim.hpp"
 
 namespace nickel {
@@ -46,24 +47,22 @@ void AnimationPlayer::Sync(gecs::entity entity, gecs::registry reg) {
 
     auto& anim = mgr_->Get(handle_);
     for (auto& [name, track] : anim.Tracks()) {
-        if (reg.has(entity, track->GetApplyTarget().type_node())) {
-            mirrow::drefl::reference_any data =
-                reg.get_mut(entity, track->GetApplyTarget().type_node());
-            auto typeInfo = data.type();
-            if (!typeInfo.is_class()) {
+        if (reg.has(entity, track->GetApplyTarget())) {
+            auto data = reg.get_mut(entity, track->GetApplyTarget());
+            auto typeInfo = data.type_info();
+            if (typeInfo->kind() != mirrow::drefl::value_kind::Class) {
                 LOGI(log_tag::Misc,
                      "currently we don't support non-class in animation");
                 continue;
             }
 
-            auto classInfo = typeInfo.as_class();
-            for (auto var : classInfo.vars()) {
+            auto classInfo = typeInfo->as_class();
+            for (auto prop : classInfo->properties()) {
                 auto trackTypeInfo = track->TypeInfo();
-                if (var.node()->type->raw_type == trackTypeInfo.type_node() &&
-                    var.name() == name) {
-                        auto field =
-                            mirrow::drefl::invoke_by_any_return_ref(var, &data);
-                        field.deep_set(track->GetValueAt(curTime_));
+                if (prop->type_info() == trackTypeInfo &&
+                    prop->name() == name) {
+                        auto field = prop->call(data);
+                        field.steal_assign(track->GetValueAt(curTime_));
                     }
             }
         }

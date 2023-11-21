@@ -1,7 +1,7 @@
 // #pragma once
 
-#include "anim/anim.hpp"
 #include "pch.hpp"
+#include "anim/anim.hpp"
 #include "refl/cgmath.hpp"
 #include "refl/keyframe.hpp"
 #include "refl/transform.hpp"
@@ -77,7 +77,7 @@ std::enable_if_t<std::is_same_v<T, Animation>> deserialize(
         auto& tbl = *node.as_table();
 
         auto& typeName = tbl["type"].as_string()->get();
-        auto type_info = mirrow::drefl::reflected_type(typeName);
+        auto type_info = mirrow::drefl::typeinfo(typeName);
 
         if (AnimTrackSerialMethods::Instance().Contain(type_info)) {
             auto&& value = AnimTrackSerialMethods::Instance().GetDeserializeMethod(type_info)(*node.as_table());

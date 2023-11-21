@@ -1,8 +1,11 @@
+#include "core/cgmath.hpp"
 #include "imgui_plugin.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
 
+#include "mirrow/drefl/cast_any.hpp"
+#include "mirrow/drefl/factory.hpp"
 #include "misc/project.hpp"
 #include "nickel.hpp"
 
@@ -26,45 +29,6 @@ constexpr int EditorWindowHeight = 720;
 
 constexpr int ProjectMgrWindowWidth = 450;
 constexpr int ProjectMgrWindowHeight = 300;
-
-void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
-               gecs::resource<gecs::mut<Renderer2D>> renderer2d,
-               gecs::resource<gecs::mut<EventPoller>> poller) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |=
-        ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    io.ConfigFlags |=
-        ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // enable Docking
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplSDL2_InitForOpenGL((SDL_Window*)window->Raw(), nullptr);
-    ImGui_ImplOpenGL3_Init("#version 430");
-
-    renderer2d->SetClearColor({0.1f, 0.1f, 0.1f, 1.0});
-
-    constexpr auto f = +[](const SDL_Event& event) {
-        ImGui_ImplSDL2_ProcessEvent(&event);
-    };
-    poller->InjectHandler<f>();
-}
-
-void ImGuiStart() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
-}
-
-void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
-              gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    ImGui::Render();
-    auto display_size = window->Size();
-    renderer2d->SetViewport({0, 0}, cgmath::Vec2(display_size.w, display_size.h));
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
 
 void ProjectManagerUpdate(
     gecs::commands cmds,
@@ -111,43 +75,43 @@ void ProjectManagerUpdate(
     ImGui::End();
 }
 
-void ShowVec2(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value, gecs::registry) {
-    Assert(type.is_class() &&
-               type == ::mirrow::drefl::reflected_type<cgmath::Vec2>(),
-           "type incorrect");
+void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry) {
+    Assert(
+        type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec2>(),
+        "type incorrect");
 
-    auto& vec = value.cast<cgmath::Vec2>();
-    ImGui::InputFloat2(name.data(), vec.data);
+    auto vec = mirrow::drefl::try_cast<cgmath::Vec2>(value);
+    ImGui::DragFloat2(name.data(), vec->data);
 }
 
-void ShowVec3(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value, gecs::registry) {
-    Assert(type.is_class() &&
-               type == ::mirrow::drefl::reflected_type<cgmath::Vec3>(),
+void ShowVec3(const mirrow::drefl::type* type, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry) {
+    Assert(type->is_class() &&
+               type == ::mirrow::drefl::typeinfo<cgmath::Vec3>(),
            "type incorrect");
 
-    auto& vec = value.cast<cgmath::Vec3>();
-    ImGui::InputFloat3(name.data(), vec.data);
+    auto vec = mirrow::drefl::try_cast<cgmath::Vec3>(value);
+    ImGui::DragFloat3(name.data(), vec->data);
 }
 
-void ShowVec4(mirrow::drefl::type_info type, std::string_view name,
-              mirrow::drefl::basic_any& value, gecs::registry) {
-    Assert(type.is_class() &&
-               type == ::mirrow::drefl::reflected_type<cgmath::Vec4>(),
+void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry) {
+    Assert(type->is_class() &&
+               type == ::mirrow::drefl::typeinfo<cgmath::Vec4>(),
            "type incorrect");
 
-    auto& vec = value.cast<cgmath::Vec4>();
-    ImGui::InputFloat4(name.data(), vec.data);
+    auto vec = mirrow::drefl::try_cast<cgmath::Vec4>(value);
+    ImGui::DragFloat4(name.data(), vec->data);
 }
 
-void ShowTextureHandle(mirrow::drefl::type_info type, std::string_view name,
-                       mirrow::drefl::basic_any& value, gecs::registry reg) {
-    Assert(type.is_class() &&
-               type == ::mirrow::drefl::reflected_type<TextureHandle>(),
-           "type incorrect");
+void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
+                       mirrow::drefl::any& value, gecs::registry reg) {
+    Assert(
+        type->is_class() && type == ::mirrow::drefl::typeinfo<TextureHandle>(),
+        "type incorrect");
 
-    auto& handle = value.cast<TextureHandle>();
+    auto& handle = *mirrow::drefl::try_cast<TextureHandle>(value);
     auto mgr = reg.res<TextureManager>();
     char buf[1024] = {0};
     if (handle) {
@@ -166,13 +130,13 @@ void ShowTextureHandle(mirrow::drefl::type_info type, std::string_view name,
     }
 }
 
-void ShowAnimationPlayer(mirrow::drefl::type_info type, std::string_view name,
-                         mirrow::drefl::basic_any& value, gecs::registry reg) {
-    Assert(type.is_class() &&
-               type == ::mirrow::drefl::reflected_type<AnimationPlayer>(),
+void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
+                         mirrow::drefl::any& value, gecs::registry reg) {
+    Assert(type->is_class() &&
+               type == ::mirrow::drefl::typeinfo<AnimationPlayer>(),
            "type incorrect");
 
-    AnimationPlayer& player = value.cast<AnimationPlayer>();
+    AnimationPlayer& player = *mirrow::drefl::try_cast<AnimationPlayer>(value);
     auto handle = player.GetAnim();
     auto& mgr = reg.res<AnimationManager>().get();
     static char buf[1024] = {0};
@@ -196,12 +160,12 @@ void ShowAnimationPlayer(mirrow::drefl::type_info type, std::string_view name,
 void RegistComponentShowMethods() {
     auto& instance = ComponentShowMethods::Instance();
 
-    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec2>(), ShowVec2);
-    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec3>(), ShowVec3);
-    instance.Regist(::mirrow::drefl::reflected_type<cgmath::Vec4>(), ShowVec4);
-    instance.Regist(::mirrow::drefl::reflected_type<TextureHandle>(),
+    instance.Regist(::mirrow::drefl::typeinfo<cgmath::Vec2>(), ShowVec2);
+    instance.Regist(::mirrow::drefl::typeinfo<cgmath::Vec3>(), ShowVec3);
+    instance.Regist(::mirrow::drefl::typeinfo<cgmath::Vec4>(), ShowVec4);
+    instance.Regist(::mirrow::drefl::typeinfo<TextureHandle>(),
                     ShowTextureHandle);
-    instance.Regist(::mirrow::drefl::reflected_type<AnimationPlayer>(),
+    instance.Regist(::mirrow::drefl::typeinfo<AnimationPlayer>(),
                     ShowAnimationPlayer);
 }
 
@@ -298,16 +262,17 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
                            gecs::commands cmds) {
     static bool inspectorOpen = true;
     if (ImGui::Begin("Inspector", &inspectorOpen)) {
-        auto& types = mirrow::drefl::all_reflected_type();
-        for (int i = 0; i < types.size(); i++) {
-            mirrow::drefl::type_info typeInfo{types[i]};
-            if (reg.has(entity, typeInfo.type_node())) {
+        auto& types = mirrow::drefl::all_typeinfo();
+
+        int id = 0;
+        for (auto [name, typeInfo] : types) {
+            if (reg.has(entity, typeInfo)) {
                 auto data = reg.get_mut(entity, typeInfo);
 
                 auto& methods = ComponentShowMethods::Instance();
                 auto func = methods.Find(typeInfo);
 
-                ImGui::PushID(i);
+                ImGui::PushID(id);
                 if (ImGui::Button("delete")) {
                     cmds.remove(entity, typeInfo);
                     ImGui::PopID();
@@ -315,12 +280,13 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
                 }
                 ImGui::PopID();
                 ImGui::SameLine();
-                if (ImGui::CollapsingHeader(typeInfo.name().c_str())) {
+                if (ImGui::CollapsingHeader(typeInfo->name().c_str())) {
                     if (func) {
-                        func(typeInfo, typeInfo.name(), data, reg);
+                        func(typeInfo, typeInfo->name(), data, reg);
                     }
                 }
             }
+            id++;
         }
 
         // show add componet button
@@ -330,7 +296,7 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
         auto& spawnMethods = SpawnComponentMethods::Instance();
 
         for (auto& [type, spawnFn] : spawnMethods.Methods()) {
-            items.push_back(type.name().data());
+            items.push_back(type->name().data());
         }
 
         ImGui::Separator();
@@ -354,7 +320,7 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
 
         if (ImGui::Button("add component") &&
             it != spawnMethods.Methods().end()) {
-            if (reg.has(entity, it->first.type_node())) {
+            if (reg.has(entity, it->first)) {
                 replaceHintOpen = true;
             } else {
                 shouldSpawn = true;
@@ -420,10 +386,12 @@ void BootstrapSystem(gecs::world& world,
         .regist_startup_system<plugin::ImGuiInit>()
         .regist_shutdown_system<plugin::ImGuiShutdown>()
         // ProjectManager state
-        .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::ProjectManager)
+        .regist_update_system_to_state<plugin::ImGuiStart>(
+            EditorScene::ProjectManager)
         .regist_update_system_to_state<ProjectManagerUpdate>(
             EditorScene::ProjectManager)
-        .regist_update_system_to_state<plugin::ImGuiEnd>(EditorScene::ProjectManager)
+        .regist_update_system_to_state<plugin::ImGuiEnd>(
+            EditorScene::ProjectManager)
         // Editor state
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)

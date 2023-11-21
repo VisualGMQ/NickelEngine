@@ -6,8 +6,8 @@
 
 class ComponentShowMethods final: public ::nickel::Singlton<ComponentShowMethods, false> {
 public:
-    using type_info = ::mirrow::drefl::type_info;
-    using show_fn = void(*)(type_info, std::string_view name, ::mirrow::drefl::basic_any&, gecs::registry);
+    using type_info = const ::mirrow::drefl::type*;
+    using show_fn = void(*)(type_info, std::string_view name, ::mirrow::drefl::any&, gecs::registry);
 
     ComponentShowMethods() {
         registDefaultMethods();
@@ -20,17 +20,17 @@ public:
     show_fn Find(type_info type);
 
 private:
-    std::unordered_map<::mirrow::drefl::type_info, show_fn> methods_;
+    std::unordered_map<type_info, show_fn> methods_;
 
     struct DefaultMethods {
-        static void ShowClass(type_info, std::string_view, ::mirrow::drefl::basic_any&, gecs::registry);
-        static void ShowNumeric(type_info, std::string_view, ::mirrow::drefl::basic_any&, gecs::registry);
-        static void ShowBoolean(type_info, std::string_view, ::mirrow::drefl::basic_any&, gecs::registry);
-        static void ShowString(type_info, std::string_view, ::mirrow::drefl::basic_any&, gecs::registry);
-        static void ShowEnum(type_info, std::string_view, ::mirrow::drefl::basic_any&, gecs::registry);
+        static void ShowClass(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
+        static void ShowNumeric(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
+        static void ShowBoolean(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
+        static void ShowString(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
+        static void ShowEnum(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
     };
 
     void registDefaultMethods() {
-        methods_[::mirrow::drefl::reflected_type<std::string>()] = DefaultMethods::ShowString;
+        methods_[::mirrow::drefl::typeinfo<std::string>()] = DefaultMethods::ShowString;
     }
 };

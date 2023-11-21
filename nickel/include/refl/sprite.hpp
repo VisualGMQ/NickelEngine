@@ -25,5 +25,9 @@ srefl_class(::nickel::SpriteBundle,
     )
 )
 
+srefl_class(::nickel::TextureHandle,
+    ctors()
+)
+
 #include "mirrow/srefl/srefl_end.hpp"
 // clang-format on

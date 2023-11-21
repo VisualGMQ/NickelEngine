@@ -1054,6 +1054,8 @@ cgmath::Vec<T, 2> AABBEdgeNearestPt(const AABB<T>& a,
         case 3:
             return cgmath::Vec<T, 2>{corner.x + param.x, corner.y + len.y};
     }
+
+    return {};  // tirvial return value to forbid warning
 }
 
 }  // namespace geom2d

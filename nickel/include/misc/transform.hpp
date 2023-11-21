@@ -11,6 +11,9 @@ enum Flip {
     Both = 0x03,
 };
 
+
+// NOTE: due to `Transform` and `GlobalTransform` are same, we use template to
+// avoid duplication
 struct Transform final {
     cgmath::Vec2 translation = cgmath::Vec2{};
     float rotation = 0;  // in degress
@@ -39,7 +42,7 @@ struct Transform final {
     }
 
     static Transform Create(const cgmath::Vec2& translation, float rotation,
-                            const cgmath::Vec2& scale) {
+                                const cgmath::Vec2& scale) {
         return {translation, rotation, scale};
     }
 
@@ -52,6 +55,10 @@ struct Transform final {
     static Transform FromScale(const cgmath::Vec2& scale) {
         return {{}, 0, scale};
     }
+};
+
+struct GlobalTransform final {
+    cgmath::Mat44 mat;
 };
 
 }  // namespace nickel

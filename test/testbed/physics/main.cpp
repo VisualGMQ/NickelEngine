@@ -1,8 +1,4 @@
-#include "core/cgmath.hpp"
-#include "gecs/entity/fwd.hpp"
-#include "gecs/entity/querier.hpp"
-#include "gecs/entity/resource.hpp"
-#include "geom/geom2d.hpp"
+#include "nickel.hpp"
 
 #include "imgui_plugin.hpp"
 
@@ -15,7 +11,6 @@
 
 #include "input/device.hpp"
 #include "misc/project.hpp"
-#include "nickel.hpp"
 #include "renderer/renderer2d.hpp"
 
 #include <type_traits>

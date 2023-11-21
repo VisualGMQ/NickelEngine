@@ -1,11 +1,12 @@
+#include "pch.hpp"
 #include "config/config.hpp"
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
 #include "gecs/entity/fwd.hpp"
 #include "input/device.hpp"
 #include "input/input.hpp"
+#include "misc/hierarchy.hpp"
 #include "misc/timer.hpp"
-#include "pch.hpp"
 #include "renderer/sprite.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
@@ -132,6 +133,7 @@ int main(int argc, char** argv) {
         .regist_update_system<Mouse::Update>()
         .regist_update_system<Keyboard::Update>()
         .regist_update_system<HandleInputEvents>()
+        .regist_update_system<UpdateGlobalTransform>()
         .regist_update_system<BeginRender>()
         .regist_update_system<SpriteBundle::RenderSprite>()
         .regist_update_system<EndRender>()

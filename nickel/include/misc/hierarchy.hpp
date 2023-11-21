@@ -1,21 +1,28 @@
 #pragma once
 
-#include "core/ecs.hpp"
+#include "pch.hpp"
+#include "gecs/entity/entity.hpp"
 #include "misc/transform.hpp"
 
 namespace nickel {
 
 /**
- * @brief use for transform in hierarchy
+ * @brief a componet tag to save parent entity
  */
-struct NodeTransform {
-    Transform localTransform;
-    Transform globalTransform;
+struct Parent {
+    gecs::entity entity;
 };
 
 /**
- * @brief a componet tag to point out root node in hierarchy
+ * @brief a componet tag to save child entities
  */
-struct RootNode { };
+struct Child {
+    std::vector<gecs::entity> entities;
+};
+
+void UpdateGlobalTransform(
+    gecs::querier<gecs::mut<GlobalTransform>, gecs::mut<Transform>, Parent>
+        querier,
+    gecs::registry reg);
 
 }  // namespace nickel

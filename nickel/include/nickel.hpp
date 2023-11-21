@@ -1,5 +1,4 @@
-#pragma once
-
+#include "pch.hpp"
 #include "anim/anim.hpp"
 #include "core/cgmath.hpp"
 #include "core/log.hpp"
@@ -10,9 +9,10 @@
 #include "input/device.hpp"
 #include "input/input.hpp"
 #include "misc/transform.hpp"
-#include "pch.hpp"
 #include "renderer/renderer2d.hpp"
 #include "renderer/sprite.hpp"
 #include "renderer/texture.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
+#include "misc/project.hpp"
+#include "misc/prefab.hpp"

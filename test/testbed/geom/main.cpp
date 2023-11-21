@@ -1,15 +1,5 @@
-#include "core/cgmath.hpp"
-#include "gecs/entity/querier.hpp"
-#include "gecs/entity/resource.hpp"
-#include "geom/basic_geom.hpp"
-#include "geom/geom2d.hpp"
-
-#include "imgui_plugin.hpp"
-
-#include "input/device.hpp"
-#include "misc/project.hpp"
 #include "nickel.hpp"
-#include "renderer/renderer2d.hpp"
+#include "imgui_plugin.hpp"
 
 #include <type_traits>
 #include <unordered_map>

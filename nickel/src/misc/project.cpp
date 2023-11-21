@@ -3,6 +3,7 @@
 #include "refl/drefl.hpp"
 #include "refl/window.hpp"
 #include "renderer/texture.hpp"
+#include "misc/hierarchy.hpp"
 
 namespace nickel {
 
