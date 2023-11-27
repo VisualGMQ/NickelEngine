@@ -11,17 +11,10 @@ srefl_class(::nickel::Sprite,
         field(&::nickel::Sprite::color),
         field(&::nickel::Sprite::region),
         field(&::nickel::Sprite::customSize),
-        field(&::nickel::Sprite::anchor)
-    )
-)
-
-srefl_class(::nickel::SpriteBundle,
-    ctors()
-    fields(
-        field(&::nickel::SpriteBundle::sprite),
-        field(&::nickel::SpriteBundle::image),
-        field(&::nickel::SpriteBundle::flip),
-        field(&::nickel::SpriteBundle::visiable)
+        field(&::nickel::Sprite::anchor),
+        field(&::nickel::Sprite::flip),
+        field(&::nickel::Sprite::visiable),
+        field(&::nickel::Sprite::texture)
     )
 )
 

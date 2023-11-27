@@ -21,13 +21,10 @@ void TestInitSystem(gecs::commands cmds,
     auto handle = textureMgr->Load("./sandbox/resources/role.png",
                                    gogl::Sampler::CreateNearestRepeat());
 
-    cmds.emplace<SpriteBundle>(entity, SpriteBundle{
-                                           Sprite::Default(),
-                                           handle,
-                                           Flip::Vertical,
-                                       });
-
-    auto& transform = cmds.emplace<Transform>(entity, Transform::FromTranslation({100, 200}));
+    SpriteBundle bundle;
+    bundle.sprite = Sprite::FromTexture(handle);
+    bundle.transform = Transform::FromTranslation({100, 200});
+    cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
 
     std::unique_ptr<AnimationTrack> posTrack =
         std::make_unique<BasicAnimationTrack<cgmath::Vec2>>(std::vector{

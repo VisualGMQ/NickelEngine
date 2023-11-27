@@ -79,11 +79,7 @@ void ComponentShowMethods::DefaultMethods::ShowBoolean(
     auto boolean = type->as_boolean();
 
     bool b = boolean->get_value(value);
-
-    const char* labels[] = {"false", "true"};
-    int curItem = b;
-    ImGui::Combo(name.data(), &curItem, labels, 2);
-
+    ImGui::Checkbox(name.data(), &b);
     boolean->set_value(value, b);
 }
 

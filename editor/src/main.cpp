@@ -223,14 +223,12 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
 void TestEnter(gecs::commands cmds,
                gecs::resource<gecs::mut<TextureManager>> textureMgr) {
     auto entity = cmds.create();
-    cmds.emplace<Transform>(entity, Transform::FromTranslation({100, 200}));
     auto texture = textureMgr->Load("resources/role.png",
                                     gogl::Sampler::CreateNearestRepeat());
 
     SpriteBundle bundle;
-    bundle.image = texture;
-    bundle.sprite = Sprite::Default();
-    auto& b = cmds.emplace<SpriteBundle>(entity, std::move(bundle));
+    bundle.sprite = Sprite::FromTexture(texture);
+    cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
 }
 
 void EditorEntityListWindow(int& selected, gecs::registry reg,

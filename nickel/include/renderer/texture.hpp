@@ -22,6 +22,7 @@ class Texture final {
 public:
     friend class Renderer2D;
     friend class TextureManager;
+    friend class Material2D;
 
     static Texture Null;
 

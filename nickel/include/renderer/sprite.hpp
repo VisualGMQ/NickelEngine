@@ -17,46 +17,39 @@ struct Sprite final {
     std::optional<cgmath::Rect> region;
     std::optional<cgmath::Vec2> customSize;
     cgmath::Vec2 anchor;
+    TextureHandle texture;
+    Flip flip = Flip::None;
+    bool visiable = true;
 
-    static Sprite Default() {
-        return Sprite{
-            cgmath::Color{1.0, 1.0, 1.0, 1.0},
-            std::nullopt,
-            std::nullopt,
-            cgmath::Vec2{},
-        };
-    }
-
-    static Sprite FromRegion(const cgmath::Rect& region) {
-        auto sprite = Sprite::Default();
-        sprite.region = region;
-        sprite.customSize = region.size;
+    static Sprite FromTexture(TextureHandle texture) {
+        Sprite sprite;
+        sprite.texture = texture;
         return sprite;
     }
 
-    static Sprite FromCustomSize(const cgmath::Vec2& size) {
-        auto sprite = Sprite::Default();
+    static Sprite FromRegion(TextureHandle texture, const cgmath::Rect& region) {
+        Sprite sprite;
+        sprite.region = region;
+        sprite.customSize = region.size;
+        sprite.texture = texture;
+        return sprite;
+    }
+
+    static Sprite FromCustomSize(TextureHandle texture, const cgmath::Vec2& size) {
+        Sprite sprite;
         sprite.customSize = size;
+        sprite.texture = texture;
         return sprite;
     }
 };
 
 struct SpriteBundle final {
     Sprite sprite;
-    TextureHandle image;
-    Flip flip = Flip::None;
-    bool visiable = true;
-
-    static void RenderSprite(gecs::querier<SpriteBundle, Transform>,
-                             gecs::resource<gecs::mut<Renderer2D>>,
-                             gecs::resource<TextureManager> textureMgr);
+    Transform transform;
 };
 
-struct SpriteBundleSolitary final {
-    Sprite sprite;
-    Texture& image;
-    Flip flip = Flip::None;
-    bool visiable = true;
-};
+void RenderSprite(gecs::querier<Sprite, Transform>,
+                  gecs::resource<gecs::mut<Renderer2D>>,
+                  gecs::resource<TextureManager> textureMgr);
 
 }  // namespace nickel

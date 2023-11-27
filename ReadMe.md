@@ -44,6 +44,6 @@ cmake --build cmake-build
 
 features:
 
-* has a inspector to see which component your entity has
+* has a inspector to see/change component properties
 
 ![editor](./snapshot/editor.png)

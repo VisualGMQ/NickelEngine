@@ -5,26 +5,11 @@
 #include "core/log_tag.hpp"
 #include "renderer/camera.hpp"
 #include "renderer/texture.hpp"
+#include "renderer/vertex.hpp"
 #include <iterator>
 #include <optional>
 
-
 namespace nickel {
-
-struct Vertex final {
-    cgmath::Vec2 position;
-    cgmath::Vec2 texcoord;
-    cgmath::Vec4 color;
-
-    static Vertex FromPosition(const cgmath::Vec2& position) {
-        return {position};
-    }
-
-    static Vertex FromPosColor(const cgmath::Vec2& position,
-                               const cgmath::Vec4& color) {
-        return {position, {}, color};
-    }
-};
 
 struct RectSampler final {
     gogl::Texture* texture = nullptr;
@@ -125,8 +110,9 @@ public:
                     const std::optional<CircleSampler>& sampler = std::nullopt,
                     uint32_t slice = 20);
 
-    void DrawTexture(const Texture& texture, const cgmath::Rect& src,
+    void DrawTexture(const Texture& texture, const cgmath::Rect& region,
                      const cgmath::Vec2& size, const cgmath::Vec4& color,
+                     const cgmath::Vec2& anchor = {},
                      const cgmath::Mat44& model = cgmath::Mat44::Identity());
 
     void SetRenderTarget(Texture* texture);

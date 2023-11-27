@@ -2,11 +2,11 @@
 
 namespace nickel {
 
-void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
+void RenderSprite(gecs::querier<Sprite, Transform> sprites,
                                 gecs::resource<gecs::mut<Renderer2D>> renderer,
                                 gecs::resource<TextureManager> textureMgr) {
     for (auto&& [_, sprite, transform] : sprites) {
-        if (sprite.image && sprite.visiable) {
+        if (sprite.texture && sprite.visiable) {
             Transform trans = transform;
             if (sprite.flip & Flip::Vertical) {
                 trans.scale.y *= -1;
@@ -14,21 +14,19 @@ void SpriteBundle::RenderSprite(gecs::querier<SpriteBundle, Transform> sprites,
             if (sprite.flip & Flip::Horizontal) {
                 trans.scale.x *= -1;
             }
-            auto& texture = textureMgr->Get(sprite.image);
+            auto& texture = textureMgr->Get(sprite.texture);
             cgmath::Rect region =
-                sprite.sprite.region
-                    ? sprite.sprite.region.value()
+                sprite.region
+                    ? sprite.region.value()
                     : cgmath::Rect{0, 0, static_cast<float>(texture.Width()),
                                    static_cast<float>(texture.Height())};
-            cgmath::Vec2 customSize = sprite.sprite.customSize
-                                          ? sprite.sprite.customSize.value()
+            cgmath::Vec2 customSize = sprite.customSize
+                                          ? sprite.customSize.value()
                                           : texture.Size();
-            renderer->DrawTexture(textureMgr->Get(sprite.image), region,
-                                  customSize, sprite.sprite.color,
-                                  cgmath::CreateTranslation(cgmath::Vec3{
-                                      sprite.sprite.anchor.x / region.size.w,
-                                      sprite.sprite.anchor.y / region.size.h, 0.0}) *
-                                      trans.ToMat());
+            renderer->DrawTexture(textureMgr->Get(sprite.texture), region,
+                                  customSize, sprite.color,
+                                  sprite.anchor,
+                                  trans.ToMat());
         }
     }
 }

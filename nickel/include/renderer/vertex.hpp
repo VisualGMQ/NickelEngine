@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/gogl.hpp"
+#include "core/cgmath.hpp"
 
 namespace nickel {
 

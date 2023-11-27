@@ -54,13 +54,10 @@ void reflectSprite() {
         .property("anchor", &Sprite::anchor)
         .property("color", &Sprite::color)
         .property("region", &Sprite::region)
-        .property("customSize", &Sprite::customSize);
-
-    mirrow::drefl::registrar<SpriteBundle>::instance()
-        .regist("SpriteBundle")
-        .property("flip", &SpriteBundle::flip)
-        .property("image", &SpriteBundle::image)
-        .property("sprite", &SpriteBundle::sprite);
+        .property("customSize", &Sprite::customSize)
+        .property("flip", &Sprite::flip)
+        .property("visiable", &Sprite::visiable)
+        .property("texture", &Sprite::texture);
 
     mirrow::drefl::registrar<Flip>::instance()
         .regist("Flip")

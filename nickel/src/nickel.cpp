@@ -18,7 +18,7 @@
 
 using namespace nickel;
 
-std::unique_ptr<gecs::world> world;
+std::unique_ptr<gecs::world> gWorld;
 bool shouldExit = false;    // should app exit
 
 void DetectAppShouldExit(const QuitEvent& event) {
@@ -28,7 +28,7 @@ void DetectAppShouldExit(const QuitEvent& event) {
 void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& reg);
 
 void BootstrapCallSystem() {
-    BootstrapSystem(*world, *world->cur_registry());
+    BootstrapSystem(*gWorld, *gWorld->cur_registry());
 }
 
 void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit) {
@@ -54,7 +54,7 @@ void EndRender(gecs::resource<gecs::mut<Renderer2D>> renderer) {
 
 void EventPollerInit(gecs::commands cmds) {
     cmds.emplace_resource<EventPoller>(EventPoller{});
-    EventPoller::AssociatePollerAndECS(*world->cur_registry());
+    EventPoller::AssociatePollerAndECS(*gWorld->cur_registry());
 }
 
 void InputSystemInit(
@@ -120,9 +120,9 @@ int main(int argc, char** argv) {
     }
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 
-    world = std::make_unique<gecs::world>();
+    gWorld = std::make_unique<gecs::world>();
 
-    auto& main_reg = world->regist_registry("MainReg");
+    auto& main_reg = gWorld->regist_registry("MainReg");
     main_reg
         // startup systems
         .regist_startup_system<BootstrapCallSystem>()
@@ -139,20 +139,20 @@ int main(int argc, char** argv) {
         .regist_update_system<HandleInputEvents>()
         .regist_update_system<UpdateGlobalTransform>()
         .regist_update_system<BeginRender>()
-        .regist_update_system<SpriteBundle::RenderSprite>()
+        .regist_update_system<RenderSprite>()
         .regist_update_system<EndRender>()
         .regist_update_system<Time::Update>();
-    world->start_with("MainReg");
+    gWorld->start_with("MainReg");
 
-    world->startup();
+    gWorld->startup();
     auto window = main_reg.res<Window>();
 
     while (!shouldExit) {
-        world->update();
+        gWorld->update();
     }
 
-    world->shutdown();
-    world.reset();
+    gWorld->shutdown();
+    gWorld.reset();
 
     SDL_Quit();
     return 0;

@@ -177,17 +177,20 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
 void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
                              const cgmath::Vec2& size,
                              const cgmath::Vec4& color,
+                             const cgmath::Vec2& anchor,
                              const cgmath::Mat44& model) {
     // clang-format off
     std::array<Vertex, 4> vertices = {
-        Vertex{     {0, 0},                     {src.position.x / size.w, src.position.y / size.h}, color},
-        Vertex{{size.w, 0},           {(src.position.x + src.size.w) / size.w, src.position.y / size.h}, color},
-        Vertex{{0, size.h},           {src.position.x / size.w, (src.position.y + src.size.h) / size.h}, color},
-        Vertex{       size, {(src.position.x + src.size.w) / size.w, (src.position.y + src.size.h) / size.h}, color},
+        Vertex{{0, 0}, {src.position.x / size.w, src.position.y / size.h},               color},
+        Vertex{{1, 0}, {(src.position.x + src.size.w) / size.w, src.position.y / size.h}, color},
+        Vertex{{0, 1}, {src.position.x / size.w, (src.position.y + src.size.h) / size.h}, color},
+        Vertex{{1, 1}, {(src.position.x + src.size.w) / size.w, (src.position.y + src.size.h) / size.h}, color},
     };
     // clang-format on
     std::array<uint32_t, 6> indices = {0, 1, 2, 1, 2, 3};
-    draw(gogl::PrimitiveType::Triangles, vertices, indices, model,
+    draw(gogl::PrimitiveType::Triangles, vertices, indices,
+         model * cgmath::CreateScale({size.x, size.y, 1.0}) *
+             cgmath::CreateTranslation({-anchor.x, -anchor.y, 0.0}),
          texture.texture_.get());
 }
 
