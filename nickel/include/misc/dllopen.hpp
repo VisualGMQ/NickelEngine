@@ -29,7 +29,7 @@ public:
     FuncType* GetProcAddress(const std::string& name) {
         static_assert(std::is_function_v<FuncType>);
 #ifdef _WIN32
-        return (FuncType*)(GetProcAddress(dll_, name.c_str()));
+        return (FuncType*)(::GetProcAddress(dll_, name.c_str()));
 #else
         return (FuncType*)(dlsym(dll_, name.c_str()));
 #endif

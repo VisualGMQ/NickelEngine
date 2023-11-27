@@ -7,3 +7,6 @@
 [submodule "3rdlibs/mirrow"]
 	path = 3rdlibs/mirrow
 	url = https://github.com/VisualGMQ/mirrow.git
+[submodule "3rdlibs/efsw"]
+	path = 3rdlibs/efsw
+	url = https://github.com/SpartanJ/efsw.git

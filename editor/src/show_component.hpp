@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mirrow/drefl/value_kind.hpp"
 #include "pch.hpp"
 #include "imgui.h"
 #include "core/singlton.hpp"
@@ -28,6 +29,7 @@ private:
         static void ShowBoolean(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
         static void ShowString(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
         static void ShowEnum(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
+        static void ShowOptional(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
     };
 
     void registDefaultMethods() {

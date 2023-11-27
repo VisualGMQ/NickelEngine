@@ -4,7 +4,7 @@ find_package(SDL2 QUIET)
 
 # check SDL
 if (SDL2_FOUND)
-    if (NOT EXISTS ${SDL2_INCLUDE_DIRS}/SDL.h)
+    if (NOT EXISTS "${SDL2_INCLUDE_DIRS}/SDL.h")
         set(SDL2_FOUND OFF)
     else()
         add_library(SDL2 INTERFACE IMPORTED GLOBAL)

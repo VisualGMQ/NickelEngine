@@ -107,6 +107,10 @@ void InputSystemInit(
 }
 
 int main(int argc, char** argv) {
+    // _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    // _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    // _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+
     LOGI(log_tag::Nickel, "Running dir: ", std::filesystem::current_path(),
          ". Full path: ", argv[0]);
 

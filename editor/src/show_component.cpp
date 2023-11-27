@@ -1,5 +1,6 @@
 #include "show_component.hpp"
 #include "core/assert.hpp"
+#include "imgui.h"
 #include "mirrow/drefl/value_kind.hpp"
 
 ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
@@ -21,6 +22,10 @@ ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
 
     if (type->is_enum()) {
         return DefaultMethods::ShowEnum;
+    }
+
+    if (type->is_optional()) {
+        return DefaultMethods::ShowOptional;
     }
 
     return nullptr;
@@ -126,4 +131,24 @@ void ComponentShowMethods::DefaultMethods::ShowEnum(
     ImGui::Combo(name.data(), &idx, enumNames.data(), enumNames.size());
 
     enum_info->set_value(value, enums[idx].value());
+}
+
+void ComponentShowMethods::DefaultMethods::ShowOptional(
+    type_info type, std::string_view name, ::mirrow::drefl::any& value,
+    gecs::registry reg) {
+    Assert(type->is_optional(), "type incorrect");
+
+    auto& optional_type = *type->as_optional();
+    if (optional_type.has_value(value)) {
+        auto elem = optional_type.get_value(value);
+        auto show = ComponentShowMethods::Instance().Find(elem.type_info());
+        if (show) {
+            show(elem.type_info(), name, elem, reg);
+        }
+    } else {
+        if (ImGui::TreeNode(name.data())) {
+            ImGui::Text("none");
+            ImGui::TreePop();
+        }
+    }
 }

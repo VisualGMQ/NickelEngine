@@ -230,7 +230,7 @@ void TestEnter(gecs::commands cmds,
     SpriteBundle bundle;
     bundle.image = texture;
     bundle.sprite = Sprite::Default();
-    cmds.emplace<SpriteBundle>(entity, std::move(bundle));
+    auto& b = cmds.emplace<SpriteBundle>(entity, std::move(bundle));
 }
 
 void EditorEntityListWindow(int& selected, gecs::registry reg,

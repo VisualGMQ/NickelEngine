@@ -11,6 +11,7 @@ namespace mirrow::serd::srefl {
 
 using ::nickel::Animation;
 using ::nickel::AnimationTrack;
+using ::nickel::AnimTrackSerialMethods;
 
 namespace impl {
 
@@ -44,9 +45,9 @@ std::enable_if_t<std::is_same_v<T, AnimationTrack>> deserialize(
     const toml::node& node, T& track) {
     Assert(node.is_table(), "deserialize AnimationTrack need toml::table node");
 
-    if (AnimTrackSerialMethods::Instance().Contain()) {
+    if (AnimTrackSerialMethods::Instance().Contain(track.TypeInfo())) {
         track = std::move(
-            *AnimTrackSerialMethods::Instance().GetDeserializeMethod()(
+            *AnimTrackSerialMethods::Instance().GetDeserializeMethod(track.TypeInfo())(
                 *node.as_table()));
     }
 }

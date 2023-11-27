@@ -19,7 +19,7 @@ toml::table SaveAsPrefab(gecs::entity entity, gecs::registry reg) {
 
         if (reg.has(entity, typeinfo.type_info)) {
             auto component = reg.get_mut(entity, typeinfo.type_info);
-            mirrow::serd::drefl::serialize(component, typeinfo.type_info->name());
+            mirrow::serd::drefl::serialize(tbl, component, typeinfo.type_info->name());
         }
 
         tbl.emplace(typeinfo.type_info->name(), std::move(componentTbl));

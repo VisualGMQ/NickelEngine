@@ -1,4 +1,5 @@
 #include "refl/drefl.hpp"
+#include "mirrow/drefl/factory.hpp"
 #include "nickel.hpp"
 
 namespace nickel {
@@ -25,6 +26,13 @@ void reflectVec4() {
         .property("y", &cgmath::Vec4::y)
         .property("w", &cgmath::Vec4::w)
         .property("z", &cgmath::Vec4::z);
+}
+
+void reflectRect() {
+    mirrow::drefl::registrar<cgmath::Rect>::instance()
+        .regist("Rect")
+        .property("position", &cgmath::Rect::position)
+        .property("size", &cgmath::Rect::size);
 }
 
 void reflectTramsform() {
@@ -73,6 +81,7 @@ void InitDynamicReflect() {
     reflectVec2();
     reflectVec3();
     reflectVec4();
+    reflectRect();
     reflectTramsform();
     reflectGlobalTramsform();
     reflectAnimation();
