@@ -21,8 +21,10 @@ struct Child {
 };
 
 void UpdateGlobalTransform(
-    gecs::querier<gecs::mut<GlobalTransform>, gecs::mut<Transform>, Parent>
-        querier,
-    gecs::registry reg);
+    gecs::querier<gecs::mut<GlobalTransform>, gecs::mut<Transform>, Child,
+                  gecs::without<Parent>>,
+    gecs::querier<gecs::mut<GlobalTransform>, gecs::mut<Transform>,
+                  gecs::without<Parent>>,
+    gecs::registry);
 
 }  // namespace nickel

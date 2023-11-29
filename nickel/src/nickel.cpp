@@ -1,20 +1,5 @@
-#include "pch.hpp"
-#include "config/config.hpp"
-#include "core/log.hpp"
-#include "core/log_tag.hpp"
-#include "gecs/entity/fwd.hpp"
-#include "input/device.hpp"
-#include "input/input.hpp"
-#include "misc/hierarchy.hpp"
-#include "misc/timer.hpp"
-#include "renderer/sprite.hpp"
-#include "window/event.hpp"
-#include "window/window.hpp"
-#include "renderer/camera.hpp"
-#include "misc/dllopen.hpp"
-#include "refl/drefl.hpp"
-#include "anim/anim.hpp"
 #include "nickel.hpp"
+#include "renderer/context.hpp"
 
 using namespace nickel;
 
@@ -31,8 +16,9 @@ void BootstrapCallSystem() {
     BootstrapSystem(*gWorld, *gWorld->cur_registry());
 }
 
-void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit) {
+void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit, gecs::commands cmds) {
     quit.sink().add<DetectAppShouldExit>();
+    cmds.emplace_resource<RenderContext>();
 }
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
@@ -43,14 +29,6 @@ void VideoSystemUpdate(gecs::resource<EventPoller> poller,
 }
 
 void VideoSystemShutdown(gecs::commands cmds) {}
-
-void BeginRender(gecs::resource<gecs::mut<Renderer2D>> renderer, gecs::resource<Camera> camera) {
-    renderer->BeginRender(camera.get());
-}
-
-void EndRender(gecs::resource<gecs::mut<Renderer2D>> renderer) {
-    renderer->EndRender();
-}
 
 void EventPollerInit(gecs::commands cmds) {
     cmds.emplace_resource<EventPoller>(EventPoller{});
@@ -106,6 +84,15 @@ void InputSystemInit(
         std::make_unique<KeyboardInput>(keyboard, actions));
 }
 
+void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer, gecs::resource<gecs::mut<RenderContext>> ctx) {
+    renderer->Clear();
+    renderer->ClearDepth();
+    ctx->Reset();
+}
+
+void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {
+}
+
 int main(int argc, char** argv) {
     // _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     // _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -129,6 +116,7 @@ int main(int argc, char** argv) {
         .regist_startup_system<VideoSystemInit>()
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
+        .regist_startup_system<ui::InitSystem>()
         // shutdown systems
         .regist_shutdown_system<VideoSystemShutdown>()
         // update systems
@@ -138,9 +126,16 @@ int main(int argc, char** argv) {
         .regist_update_system<Keyboard::Update>()
         .regist_update_system<HandleInputEvents>()
         .regist_update_system<UpdateGlobalTransform>()
-        .regist_update_system<BeginRender>()
+        .regist_update_system<ui::UpdateGlobalPosition>()
+        .regist_update_system<ui::HandleEventSystem>()
+        // start render pipeline
+        .regist_update_system<BeginRenderPipeline>()
+        // 2D sprite render
         .regist_update_system<RenderSprite>()
-        .regist_update_system<EndRender>()
+        // 2D UI render
+        .regist_update_system<ui::RenderUI>()
+        .regist_update_system<EndRenderPipeline>()
+        // time update
         .regist_update_system<Time::Update>();
     gWorld->start_with("MainReg");
 

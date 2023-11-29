@@ -4,6 +4,11 @@
 
 namespace nickel {
 
+enum Attribute {
+    AttrColor,
+    AttrRange01,
+};
+
 void InitDynamicReflect();
 
 }

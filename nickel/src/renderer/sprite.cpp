@@ -4,9 +4,15 @@ namespace nickel {
 
 void RenderSprite(gecs::querier<Sprite, Transform> sprites,
                                 gecs::resource<gecs::mut<Renderer2D>> renderer,
-                                gecs::resource<TextureManager> textureMgr) {
+                                gecs::resource<TextureManager> textureMgr,
+                                gecs::resource<Camera> camera,
+                                gecs::resource<gecs::mut<RenderContext>> renderCtx) {
+    renderer->BeginRender(camera.get());
     for (auto&& [_, sprite, transform] : sprites) {
         if (sprite.texture && sprite.visiable) {
+            renderCtx->depthBias += renderCtx->depthBiasStep;
+            float depth = sprite.zIndex + renderCtx->depthBias;
+
             Transform trans = transform;
             if (sprite.flip & Flip::Vertical) {
                 trans.scale.y *= -1;
@@ -26,9 +32,11 @@ void RenderSprite(gecs::querier<Sprite, Transform> sprites,
             renderer->DrawTexture(textureMgr->Get(sprite.texture), region,
                                   customSize, sprite.color,
                                   sprite.anchor,
+                                  depth,
                                   trans.ToMat());
         }
     }
+    renderer->EndRender();
 }
 
 }  // namespace nickel

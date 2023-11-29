@@ -6,17 +6,17 @@
 namespace nickel {
 
 struct Vertex final {
-    cgmath::Vec2 position;
+    cgmath::Vec3 position;
     cgmath::Vec2 texcoord;
     cgmath::Vec4 color;
 
     static Vertex FromPosition(const cgmath::Vec2& position) {
-        return {position};
+        return {cgmath::Vec3{position.x, position.y, 0}, };
     }
 
     static Vertex FromPosColor(const cgmath::Vec2& position,
                                const cgmath::Vec4& color) {
-        return {position, {}, color};
+        return {cgmath::Vec3{position.x, position.y, 0}, {}, color};
     }
 
     static const gogl::BufferLayout& Layout() {

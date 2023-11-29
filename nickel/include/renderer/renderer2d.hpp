@@ -6,8 +6,6 @@
 #include "renderer/camera.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/vertex.hpp"
-#include <iterator>
-#include <optional>
 
 namespace nickel {
 
@@ -30,6 +28,9 @@ public:
 
     void BeginRender(const Camera& camera);
     void EndRender();
+
+    void EnableDepthTest() { GL_CALL(glEnable(GL_DEPTH_TEST)); }
+    void DisableDepthTest() { GL_CALL(glDisable(GL_DEPTH_TEST)); }
 
     void SetViewport(const cgmath::Vec2& offset, const cgmath::Vec2& size);
 
@@ -113,6 +114,7 @@ public:
     void DrawTexture(const Texture& texture, const cgmath::Rect& region,
                      const cgmath::Vec2& size, const cgmath::Vec4& color,
                      const cgmath::Vec2& anchor = {},
+                     float z = 0,
                      const cgmath::Mat44& model = cgmath::Mat44::Identity());
 
     void SetRenderTarget(Texture* texture);

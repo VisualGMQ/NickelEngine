@@ -32,6 +32,7 @@ cmake --build cmake-build
     * Data Oriented based on ECS
     * Animation applyed on arbitary properties
 * WIP:
+    * UI
     * RHI covered OpenGL3/ES and Vulkan
     * 3D rendering
     * Customizable render pipeline

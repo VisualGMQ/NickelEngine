@@ -825,6 +825,11 @@ struct Rect {
     static Rect FromCenter(const Vec2& center, const Vec2& halfSize) {
         return Rect{center - halfSize, halfSize * 2.0};
     }
+
+    bool IsPtIn(const cgmath::Vec2& v) {
+        return v.x > position.x && v.x < position.x + size.w &&
+               v.y > position.y && v.y < position.y + size.h;
+    }
 };
 
 struct SRT final {

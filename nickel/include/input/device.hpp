@@ -27,6 +27,9 @@ struct Button {
     bool IsPressing() const { return lastState && isPress; }
 
     bool IsReleasing() const { return !lastState && !isPress; }
+
+    bool IsPress() const { return IsPressed() || IsPressing(); }
+    bool IsRelease() const { return IsReleased() || IsReleasing(); }
 };
 
 using KeyButton = Button<Key>;

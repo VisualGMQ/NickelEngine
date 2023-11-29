@@ -10,3 +10,6 @@
 [submodule "3rdlibs/efsw"]
 	path = 3rdlibs/efsw
 	url = https://github.com/SpartanJ/efsw.git
+[submodule "3rdlibs/freetype2"]
+	path = 3rdlibs/freetype2
+	url = https://gitlab.freedesktop.org/freetype/freetype.git

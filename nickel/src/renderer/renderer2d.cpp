@@ -1,4 +1,5 @@
 #include "renderer/renderer2d.hpp"
+#include "renderer/context.hpp"
 
 namespace nickel {
 
@@ -21,9 +22,7 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
 }
 
 void Renderer2D::BeginRender(const Camera& camera) {
-    Clear();
-    ClearDepth();
-    GL_CALL(glEnable(GL_DEPTH_TEST));
+    EnableDepthTest();
     GL_CALL(glEnable(GL_MULTISAMPLE));
     GL_CALL(glEnable(GL_BLEND));
     shader_->Use();
@@ -94,8 +93,8 @@ void Renderer2D::DrawArc(const cgmath::Vec2& center, float radius,
     for (uint32_t i = 0; i < slice; i++) {
         float radians = cgmath::Deg2Rad(beginDeg + step * i);
         vertices[i].position =
-            cgmath::Vec2{center.x + radius * std::cos(radians),
-                         center.y + radius * std::sin(radians)};
+            cgmath::Vec3{center.x + radius * std::cos(radians),
+                         center.y + radius * std::sin(radians), 0};
         vertices[i].color = color;
     }
     DrawLines(vertices);
@@ -108,8 +107,8 @@ void Renderer2D::DrawCircle(const cgmath::Vec2& center, float radius,
     for (uint32_t i = 0; i < slice; i++) {
         float radians = step * i;
         vertices[i].position =
-            cgmath::Vec2{center.x + radius * std::cos(radians),
-                         center.y + radius * std::sin(radians)};
+            cgmath::Vec3{center.x + radius * std::cos(radians),
+                         center.y + radius * std::sin(radians), 0};
         vertices[i].color = color;
     }
     DrawLineLoop(vertices);
@@ -122,15 +121,16 @@ void Renderer2D::FillFan(const cgmath::Vec2& center, float radius,
                          uint32_t slice) {
     std::vector<Vertex> vertices(slice);
     vertices.push_back(Vertex{
-        center, sampler ? sampler->center : cgmath::Vec2{0.0, 0.0},
-             color
+        cgmath::Vec3{center.x, center.y, 0},
+        sampler ? sampler->center : cgmath::Vec2{},
+        color
     });
     float step = (endDeg - beginDeg) / slice;
     for (uint32_t i = 0; i < slice; i++) {
         float radians = cgmath::Deg2Rad(beginDeg + step * i);
         vertices[i].position =
-            cgmath::Vec2{center.x + radius * std::cos(radians),
-                         center.y + radius * std::sin(radians)};
+            cgmath::Vec3{center.x + radius * std::cos(radians),
+                         center.y + radius * std::sin(radians), 0};
         vertices[i].color = color;
         if (sampler) {
             cgmath::Vec2 size(static_cast<float>(sampler->texture->Width()),
@@ -151,15 +151,15 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
                             uint32_t slice) {
     std::vector<Vertex> vertices(slice);
     vertices.push_back(Vertex{
-        center, sampler ? sampler->center : cgmath::Vec2{0.0, 0.0},
+        cgmath::Vec3{center.x, center.y, 0}, sampler ? sampler->center : cgmath::Vec2{},
              color
     });
     float step = 2.0f * cgmath::PI / slice;
     for (uint32_t i = 0; i < slice; i++) {
         float radians = step * i;
         vertices[i].position =
-            cgmath::Vec2{center.x + radius * std::cos(radians),
-                         center.y + radius * std::sin(radians)};
+            cgmath::Vec3{center.x + radius * std::cos(radians),
+                         center.y + radius * std::sin(radians), 0};
         vertices[i].color = color;
         if (sampler) {
             cgmath::Vec2 size(static_cast<float>(sampler->texture->Width()),
@@ -178,13 +178,14 @@ void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
                              const cgmath::Vec2& size,
                              const cgmath::Vec4& color,
                              const cgmath::Vec2& anchor,
+                             float z,
                              const cgmath::Mat44& model) {
     // clang-format off
     std::array<Vertex, 4> vertices = {
-        Vertex{{0, 0}, {src.position.x / size.w, src.position.y / size.h},               color},
-        Vertex{{1, 0}, {(src.position.x + src.size.w) / size.w, src.position.y / size.h}, color},
-        Vertex{{0, 1}, {src.position.x / size.w, (src.position.y + src.size.h) / size.h}, color},
-        Vertex{{1, 1}, {(src.position.x + src.size.w) / size.w, (src.position.y + src.size.h) / size.h}, color},
+        Vertex{{0, 0, z}, {src.position.x / size.w, src.position.y / size.h},               color},
+        Vertex{{1, 0, z}, {(src.position.x + src.size.w) / size.w, src.position.y / size.h}, color},
+        Vertex{{0, 1, z}, {src.position.x / size.w, (src.position.y + src.size.h) / size.h}, color},
+        Vertex{{1, 1, z}, {(src.position.x + src.size.w) / size.w, (src.position.y + src.size.h) / size.h}, color},
     };
     // clang-format on
     std::array<uint32_t, 6> indices = {0, 1, 2, 1, 2, 3};
@@ -240,10 +241,7 @@ std::unique_ptr<gogl::Buffer> Renderer2D::initIndicesBuffer() {
 }
 
 std::unique_ptr<gogl::AttributePointer> Renderer2D::initAttrPtr() {
-    return std::make_unique<gogl::AttributePointer>(
-        gogl::BufferLayout::CreateFromTypes({gogl::Attribute::Type::Vec2,
-                                             gogl::Attribute::Type::Vec2,
-                                             gogl::Attribute::Type::Vec4}));
+    return std::make_unique<gogl::AttributePointer>(Vertex::Layout());
 }
 
 void Renderer2D::SetRenderTarget(Texture* texture) {

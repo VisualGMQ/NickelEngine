@@ -51,13 +51,14 @@ void reflectGlobalTramsform() {
 void reflectSprite() {
     mirrow::drefl::registrar<Sprite>::instance()
         .regist("Sprite")
-        .property("anchor", &Sprite::anchor)
-        .property("color", &Sprite::color)
+        .property("anchor", &Sprite::anchor, {AttrRange01})
+        .property("color", &Sprite::color, {AttrColor})
         .property("region", &Sprite::region)
         .property("customSize", &Sprite::customSize)
         .property("flip", &Sprite::flip)
         .property("visiable", &Sprite::visiable)
-        .property("texture", &Sprite::texture);
+        .property("texture", &Sprite::texture)
+        .property("z-index", &Sprite::zIndex);
 
     mirrow::drefl::registrar<Flip>::instance()
         .regist("Flip")
@@ -74,6 +75,25 @@ void reflectAnimation() {
         "AnimationPlayer");
 }
 
+void reflectUI() {
+    mirrow::drefl::registrar<ui::Style>::instance()
+        .regist("UIStyle")
+        .property("center", &ui::Style::center)
+        .property("size", &ui::Style::size)
+        .property("padding", &ui::Style::padding)
+        .property("margin", &ui::Style::margin)
+        .property("background-color", &ui::Style::backgroundColor, {AttrColor})
+        .property("border-color", &ui::Style::borderColor, {AttrColor})
+        .property("border-size", &ui::Style::borderSize);
+
+    mirrow::drefl::registrar<ui::Button>::instance()
+        .regist("Button")
+        .property("color", &ui::Button::color, {AttrColor})
+        .property("hover-color", &ui::Button::hoverColor, {AttrColor})
+        .property("press-color", &ui::Button::pressColor, {AttrColor})
+        .property("text", &ui::Button::text);
+}
+
 void InitDynamicReflect() {
     reflectVec2();
     reflectVec3();
@@ -83,6 +103,7 @@ void InitDynamicReflect() {
     reflectGlobalTramsform();
     reflectAnimation();
     reflectSprite();
+    reflectUI();
 }
 
 }  // namespace nickel

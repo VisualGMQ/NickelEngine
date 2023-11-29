@@ -8,7 +8,7 @@
 class ComponentShowMethods final: public ::nickel::Singlton<ComponentShowMethods, false> {
 public:
     using type_info = const ::mirrow::drefl::type*;
-    using show_fn = void(*)(type_info, std::string_view name, ::mirrow::drefl::any&, gecs::registry);
+    using show_fn = void(*)(type_info, std::string_view name, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
 
     ComponentShowMethods() {
         registDefaultMethods();
@@ -24,12 +24,12 @@ private:
     std::unordered_map<type_info, show_fn> methods_;
 
     struct DefaultMethods {
-        static void ShowClass(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
-        static void ShowNumeric(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
-        static void ShowBoolean(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
-        static void ShowString(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
-        static void ShowEnum(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
-        static void ShowOptional(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry);
+        static void ShowClass(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
+        static void ShowNumeric(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
+        static void ShowBoolean(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
+        static void ShowString(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
+        static void ShowEnum(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
+        static void ShowOptional(type_info, std::string_view, ::mirrow::drefl::any&, gecs::registry, const std::vector<int>&);
     };
 
     void registDefaultMethods() {

@@ -33,7 +33,7 @@ ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
 
 void ComponentShowMethods::DefaultMethods::ShowClass(
     const mirrow::drefl::type* typeInfo, std::string_view name,
-    ::mirrow::drefl::any& value, gecs::registry reg) {
+    ::mirrow::drefl::any& value, gecs::registry reg, const std::vector<int>&) {
     Assert(typeInfo->is_class(), "type incorrect");
 
     if (ImGui::TreeNode(name.data())) {
@@ -45,7 +45,7 @@ void ComponentShowMethods::DefaultMethods::ShowClass(
             ImGui::PushID(id);
             if (showMethod) {
                 auto ref = var->call(value);
-                showMethod(varType, var->name(), ref, reg);
+                showMethod(varType, var->name(), ref, reg, var->attributes());
             }
             ImGui::PopID();
             id ++;
@@ -57,7 +57,7 @@ void ComponentShowMethods::DefaultMethods::ShowClass(
 
 void ComponentShowMethods::DefaultMethods::ShowNumeric(
     type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry) {
+    gecs::registry, const std::vector<int>&) {
     Assert(type->is_numeric(), "type incorrect");
     auto numeric = type->as_numeric();
 
@@ -74,7 +74,7 @@ void ComponentShowMethods::DefaultMethods::ShowNumeric(
 
 void ComponentShowMethods::DefaultMethods::ShowBoolean(
     type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry) {
+    gecs::registry, const std::vector<int>&) {
     Assert(type->is_boolean(), "type incorrect");
     auto boolean = type->as_boolean();
 
@@ -85,7 +85,7 @@ void ComponentShowMethods::DefaultMethods::ShowBoolean(
 
 void ComponentShowMethods::DefaultMethods::ShowString(
     type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry) {
+    gecs::registry, const std::vector<int>&) {
     Assert(type->is_string(), "type incorrect");
 
     auto string_type = type->as_string();
@@ -102,7 +102,7 @@ void ComponentShowMethods::DefaultMethods::ShowString(
 
 void ComponentShowMethods::DefaultMethods::ShowEnum(
     type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry) {
+    gecs::registry, const std::vector<int>&) {
     Assert(type->is_enum(), "type incorrect");
 
     auto enum_info = type->as_enum();
@@ -131,7 +131,7 @@ void ComponentShowMethods::DefaultMethods::ShowEnum(
 
 void ComponentShowMethods::DefaultMethods::ShowOptional(
     type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry reg) {
+    gecs::registry reg, const std::vector<int>&) {
     Assert(type->is_optional(), "type incorrect");
 
     auto& optional_type = *type->as_optional();
@@ -139,7 +139,7 @@ void ComponentShowMethods::DefaultMethods::ShowOptional(
         auto elem = optional_type.get_value(value);
         auto show = ComponentShowMethods::Instance().Find(elem.type_info());
         if (show) {
-            show(elem.type_info(), name, elem, reg);
+            show(elem.type_info(), name, elem, reg, type->attributes());
         }
     } else {
         if (ImGui::TreeNode(name.data())) {

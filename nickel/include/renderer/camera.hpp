@@ -90,7 +90,7 @@ public:
 
     Type GetType() const { return type_; }
 
-    Camera2D* as_2d() {
+    Camera2D* As2D() {
         if (type_ == Type::Dimension2) {
             return static_cast<Camera2D*>(camera_.get());
         } else {

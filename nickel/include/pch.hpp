@@ -21,10 +21,9 @@
 #include "SDL.h"
 
 #define MIRROW_ASSERT(expr, msg) Assert(expr, msg)
-#include "mirrow/assert.hpp"
+#include "mirrow/drefl/drefl.hpp"
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
 #include "mirrow/serd/static/backends/tomlplusplus.hpp"
-#include "mirrow/drefl/drefl.hpp"
 #include "mirrow/srefl/reflect.hpp"
 #include "mirrow/util/const_str.hpp"
 #include "mirrow/util/function_traits.hpp"
@@ -40,6 +39,9 @@
 #include "gecs/gecs.hpp"
 
 #include "nameof.hpp"
+
+#include "ft2build.h"
+#include FT_FREETYPE_H
 
 #include <algorithm>
 #include <array>

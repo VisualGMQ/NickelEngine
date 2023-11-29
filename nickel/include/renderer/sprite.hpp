@@ -1,11 +1,13 @@
 #pragma once
 
-#include "misc/transform.hpp"
-#include "core/cgmath.hpp"
-#include "renderer/texture.hpp"
-#include "renderer/renderer2d.hpp"
-#include "renderer/camera.hpp"
 #include "pch.hpp"
+#include "core/cgmath.hpp"
+#include "misc/transform.hpp"
+#include "renderer/camera.hpp"
+#include "renderer/renderer2d.hpp"
+#include "renderer/texture.hpp"
+#include "renderer/context.hpp"
+
 
 namespace nickel {
 
@@ -20,6 +22,7 @@ struct Sprite final {
     TextureHandle texture;
     Flip flip = Flip::None;
     bool visiable = true;
+    int zIndex = 0;
 
     static Sprite FromTexture(TextureHandle texture) {
         Sprite sprite;
@@ -27,7 +30,8 @@ struct Sprite final {
         return sprite;
     }
 
-    static Sprite FromRegion(TextureHandle texture, const cgmath::Rect& region) {
+    static Sprite FromRegion(TextureHandle texture,
+                             const cgmath::Rect& region) {
         Sprite sprite;
         sprite.region = region;
         sprite.customSize = region.size;
@@ -35,7 +39,8 @@ struct Sprite final {
         return sprite;
     }
 
-    static Sprite FromCustomSize(TextureHandle texture, const cgmath::Vec2& size) {
+    static Sprite FromCustomSize(TextureHandle texture,
+                                 const cgmath::Vec2& size) {
         Sprite sprite;
         sprite.customSize = size;
         sprite.texture = texture;
@@ -50,6 +55,7 @@ struct SpriteBundle final {
 
 void RenderSprite(gecs::querier<Sprite, Transform>,
                   gecs::resource<gecs::mut<Renderer2D>>,
-                  gecs::resource<TextureManager> textureMgr);
+                  gecs::resource<TextureManager>, gecs::resource<Camera>,
+                  gecs::resource<gecs::mut<RenderContext>> renderCtx);
 
 }  // namespace nickel

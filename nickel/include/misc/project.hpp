@@ -1,7 +1,13 @@
 #pragma once
 
-#include "nickel.hpp"
+#include "anim/anim.hpp"
+#include "misc/timer.hpp"
 #include "pch.hpp"
+#include "renderer/camera.hpp"
+#include "renderer/renderer2d.hpp"
+#include "renderer/texture.hpp"
+#include "window/event.hpp"
+#include "window/window.hpp"
 
 namespace nickel {
 
@@ -16,7 +22,8 @@ void SaveProject(const std::string& rootPath, const TextureManager&,
 /**
  * @brief save basic project information to file
  */
-void SaveBasicProjectInfo(const std::string& rootPath, const ProjectInitInfo& initInfo);
+void SaveBasicProjectInfo(const std::string& rootPath,
+                          const ProjectInitInfo& initInfo);
 
 /**
  * @brief save all assets information to file
@@ -25,7 +32,7 @@ void SaveAssets(const std::string& rootPath, const TextureManager& textureMgr);
 
 /**
  * @brief load basic project config
- * 
+ *
  * @param rootPath project root directory path
  * @return ProjectInitInfo project config
  */
@@ -38,7 +45,7 @@ void LoadAssets(const std::string& rootPath, TextureManager& textureMgr);
 
 /**
  * @brief load project config from file and init project
- * 
+ *
  * @param rootPath project root directory path
  */
 void LoadProject(const std::string& rootPath, Window& window, TextureManager&);
@@ -46,7 +53,8 @@ void LoadProject(const std::string& rootPath, Window& window, TextureManager&);
 /**
  * @brief init project from ProjectInitInfo
  */
-void InitProjectByConfig(const ProjectInitInfo&, Window& window, TextureManager& textureMgr);
+void InitProjectByConfig(const ProjectInitInfo&, Window& window,
+                         TextureManager& textureMgr);
 
 /**
  * @brief init all inner ECS systems

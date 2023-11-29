@@ -1,8 +1,8 @@
 #include "core/cgmath.hpp"
-#include "imgui_plugin.hpp"
 #include "imgui.h"
-#include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_plugin.hpp"
 
 #include "mirrow/drefl/cast_any.hpp"
 #include "mirrow/drefl/factory.hpp"
@@ -10,12 +10,14 @@
 #include "nickel.hpp"
 
 #include "file_dialog.hpp"
+#include "refl/drefl.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 
 #include "refl/cgmath.hpp"
 #include "refl/sprite.hpp"
 #include "refl/tilesheet.hpp"
+#include "ui/style.hpp"
 
 enum class EditorScene {
     ProjectManager,
@@ -76,7 +78,8 @@ void ProjectManagerUpdate(
 }
 
 void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry) {
+              mirrow::drefl::any& value, gecs::registry,
+              const std::vector<int>&) {
     Assert(
         type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec2>(),
         "type incorrect");
@@ -86,27 +89,37 @@ void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
 }
 
 void ShowVec3(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry) {
-    Assert(type->is_class() &&
-               type == ::mirrow::drefl::typeinfo<cgmath::Vec3>(),
-           "type incorrect");
+              mirrow::drefl::any& value, gecs::registry,
+              const std::vector<int>&) {
+    Assert(
+        type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec3>(),
+        "type incorrect");
 
     auto vec = mirrow::drefl::try_cast<cgmath::Vec3>(value);
     ImGui::DragFloat3(name.data(), vec->data);
 }
 
 void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry) {
-    Assert(type->is_class() &&
-               type == ::mirrow::drefl::typeinfo<cgmath::Vec4>(),
-           "type incorrect");
+              mirrow::drefl::any& value, gecs::registry,
+              const std::vector<int>& attrs) {
+    Assert(
+        type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec4>(),
+        "type incorrect");
 
     auto vec = mirrow::drefl::try_cast<cgmath::Vec4>(value);
-    ImGui::DragFloat4(name.data(), vec->data);
+    if (std::find(attrs.begin(), attrs.end(), AttrRange01) != attrs.end()) {
+        ImGui::DragFloat4(name.data(), vec->data, 0.01, 0, 1);
+    } else if (std::find(attrs.begin(), attrs.end(), AttrColor) !=
+               attrs.end()) {
+        ImGui::ColorEdit4(name.data(), vec->data);
+    } else {
+        ImGui::DragFloat4(name.data(), vec->data);
+    }
 }
 
 void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
-                       mirrow::drefl::any& value, gecs::registry reg) {
+                       mirrow::drefl::any& value, gecs::registry reg,
+                       const std::vector<int>&) {
     Assert(
         type->is_class() && type == ::mirrow::drefl::typeinfo<TextureHandle>(),
         "type incorrect");
@@ -131,7 +144,8 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
 }
 
 void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
-                         mirrow::drefl::any& value, gecs::registry reg) {
+                         mirrow::drefl::any& value, gecs::registry reg,
+                         const std::vector<int>&) {
     Assert(type->is_class() &&
                type == ::mirrow::drefl::typeinfo<AnimationPlayer>(),
            "type incorrect");
@@ -194,8 +208,10 @@ void RegistSpawnMethods() {
     auto& instance = SpawnComponentMethods::Instance();
 
     instance.Regist<Transform>(GeneralSpawnMethod<Transform>);
-    instance.Regist<SpriteBundle>(GeneralSpawnMethod<SpriteBundle>);
+    instance.Regist<Sprite>(GeneralSpawnMethod<Sprite>);
     instance.Regist<AnimationPlayer>(SpawnAnimationPlayer);
+    instance.Regist<ui::Style>(GeneralSpawnMethod<ui::Style>);
+    instance.Regist<ui::Button>(GeneralSpawnMethod<ui::Button>);
 }
 
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
@@ -280,7 +296,8 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
                 ImGui::SameLine();
                 if (ImGui::CollapsingHeader(typeInfo->name().c_str())) {
                     if (func) {
-                        func(typeInfo, typeInfo->name(), data, reg);
+                        func(typeInfo, typeInfo->name(), data, reg,
+                             typeInfo->attributes());
                     }
                 }
             }
