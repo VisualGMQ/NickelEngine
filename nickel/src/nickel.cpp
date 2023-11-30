@@ -85,9 +85,13 @@ void InputSystemInit(
 }
 
 void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer, gecs::resource<gecs::mut<RenderContext>> ctx) {
+    GL_CALL(glEnable(GL_MULTISAMPLE));
+    GL_CALL(glEnable(GL_BLEND));
+    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     renderer->Clear();
     renderer->ClearDepth();
-    ctx->Reset();
+    ctx->ClearRenderInfo();
+    ctx->ResetBias();
 }
 
 void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {
@@ -131,7 +135,8 @@ int main(int argc, char** argv) {
         // start render pipeline
         .regist_update_system<BeginRenderPipeline>()
         // 2D sprite render
-        .regist_update_system<RenderSprite>()
+        .regist_update_system<CollectSpriteRenderInfo>()
+        .regist_update_system<RenderElements>()
         // 2D UI render
         .regist_update_system<ui::RenderUI>()
         .regist_update_system<EndRenderPipeline>()

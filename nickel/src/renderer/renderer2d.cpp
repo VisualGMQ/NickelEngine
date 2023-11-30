@@ -1,5 +1,4 @@
 #include "renderer/renderer2d.hpp"
-#include "renderer/context.hpp"
 
 namespace nickel {
 
@@ -22,9 +21,6 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
 }
 
 void Renderer2D::BeginRender(const Camera& camera) {
-    EnableDepthTest();
-    GL_CALL(glEnable(GL_MULTISAMPLE));
-    GL_CALL(glEnable(GL_BLEND));
     shader_->Use();
     shader_->SetMat4("Project", camera.Project());
     shader_->SetMat4("View", camera.View());
@@ -38,7 +34,7 @@ template <typename Vertices, typename Indices>
 void Renderer2D::DrawTriangles(Vertices vertices, const Indices& indices,
                                const cgmath::Mat44& model,
                                const std::optional<RectSampler>& sampler) {
-    draw(gogl::PrimitiveType::Triangles, vertices, indices, model,
+    Draw(gogl::PrimitiveType::Triangles, vertices, indices, model,
          sampler ? sampler->texture : nullptr);
 }
 
@@ -141,7 +137,7 @@ void Renderer2D::FillFan(const cgmath::Vec2& center, float radius,
                     cgmath::Vec2{std::cos(radians), std::sin(radians)};
         }
     }
-    draw(gogl::PrimitiveType::TriangleFan, vertices, std::array<uint32_t, 0>{},
+    Draw(gogl::PrimitiveType::TriangleFan, vertices, std::array<uint32_t, 0>{},
          cgmath::Mat44::Identity(), sampler ? sampler->texture : nullptr);
 }
 
@@ -170,7 +166,7 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
                     cgmath::Vec2{std::cos(radians), std::sin(radians)};
         }
     }
-    draw(gogl::PrimitiveType::TriangleFan, vertices, std::array<uint32_t, 0>{},
+    Draw(gogl::PrimitiveType::TriangleFan, vertices, std::array<uint32_t, 0>{},
          cgmath::Mat44::Identity(), sampler ? sampler->texture : nullptr);
 }
 
@@ -189,10 +185,10 @@ void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
     };
     // clang-format on
     std::array<uint32_t, 6> indices = {0, 1, 2, 1, 2, 3};
-    draw(gogl::PrimitiveType::Triangles, vertices, indices,
+    Draw(gogl::PrimitiveType::Triangles, vertices, indices,
          model * cgmath::CreateScale({size.x, size.y, 1.0}) *
              cgmath::CreateTranslation({-anchor.x, -anchor.y, 0.0}),
-         texture.texture_.get());
+         &texture);
 }
 
 std::unique_ptr<gogl::Shader> Renderer2D::initShader() {

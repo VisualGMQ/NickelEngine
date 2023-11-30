@@ -10,12 +10,12 @@
 namespace nickel {
 
 struct RectSampler final {
-    gogl::Texture* texture = nullptr;
+    const Texture* texture = nullptr;
     cgmath::Rect region = {0.0, 0.0, 1.0, 1.0};
 };
 
 struct CircleSampler final {
-    gogl::Texture* texture = nullptr;
+    const Texture* texture = nullptr;
     float radius = 0.5;
     cgmath::Vec2 center = {0.5, 0.5};
 };
@@ -47,7 +47,7 @@ public:
     template <typename Vertices, typename = std::enable_if_t<std::is_same_v<
                                      typename Vertices::value_type, Vertex>>>
     void DrawLines(const Vertices& vertices) {
-        draw(gogl::PrimitiveType::LineStrip, vertices,
+        Draw(gogl::PrimitiveType::LineStrip, vertices,
              std::array<uint32_t, 0>{});
     }
 
@@ -55,7 +55,7 @@ public:
                                      typename Vertices::value_type, Vertex>>>
     void DrawLineLoop(const Vertices& vertices,
                       const cgmath::Mat44& model = cgmath::Mat44::Identity()) {
-        draw(gogl::PrimitiveType::LineLoop, vertices,
+        Draw(gogl::PrimitiveType::LineLoop, vertices,
              std::array<uint32_t, 0>{});
     }
 
@@ -119,6 +119,13 @@ public:
 
     void SetRenderTarget(Texture* texture);
 
+
+    template <typename Vertices, typename Indices>
+    void Draw(gogl::PrimitiveType primitive, Vertices vertices,
+              const Indices& indices,
+              const cgmath::Mat44& model = cgmath::Mat44::Identity(),
+              const Texture* texture = nullptr);
+
 private:
     std::unique_ptr<gogl::Shader> shader_;
     std::unique_ptr<gogl::Framebuffer> framebuffer_;
@@ -128,12 +135,6 @@ private:
     std::unique_ptr<gogl::Buffer> indicesBuffer_;
     std::unique_ptr<gogl::AttributePointer> attrPtr_;
 
-    template <typename Vertices, typename Indices>
-    void draw(gogl::PrimitiveType primitive, Vertices vertices,
-              const Indices& indices,
-              const cgmath::Mat44& model = cgmath::Mat44::Identity(),
-              const gogl::Texture* texture = nullptr);
-
     std::unique_ptr<gogl::Shader> initShader();
     std::unique_ptr<gogl::Texture> initWhiteTexture();
     std::unique_ptr<gogl::Buffer> initVertexBuffer();
@@ -142,9 +143,9 @@ private:
 };
 
 template <typename Vertices, typename Indices>
-void Renderer2D::draw(gogl::PrimitiveType primitive, Vertices vertices,
+void Renderer2D::Draw(gogl::PrimitiveType primitive, Vertices vertices,
                       const Indices& indices, const cgmath::Mat44& model,
-                      const gogl::Texture* texture) {
+                      const Texture* texture) {
     static_assert(std::is_same_v<typename Vertices::value_type, Vertex>);
     static_assert(std::is_same_v<typename Indices::value_type, uint32_t>);
     if (indices.empty()) {
@@ -157,7 +158,7 @@ void Renderer2D::draw(gogl::PrimitiveType primitive, Vertices vertices,
     if (!texture) {
         whiteTexture_->Bind();
     } else {
-        texture->Bind();
+        texture->texture_->Bind();
     }
     vertexBuffer_->Bind();
     vertexBuffer_->SetData((void*)vertices.data(),

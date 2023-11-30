@@ -1,12 +1,12 @@
 #pragma once
 
-#include "pch.hpp"
 #include "core/cgmath.hpp"
+#include "misc/hierarchy.hpp"
 #include "misc/transform.hpp"
 #include "renderer/camera.hpp"
+#include "renderer/context.hpp"
 #include "renderer/renderer2d.hpp"
 #include "renderer/texture.hpp"
-#include "renderer/context.hpp"
 
 
 namespace nickel {
@@ -53,9 +53,15 @@ struct SpriteBundle final {
     Transform transform;
 };
 
-void RenderSprite(gecs::querier<Sprite, Transform>,
-                  gecs::resource<gecs::mut<Renderer2D>>,
-                  gecs::resource<TextureManager>, gecs::resource<Camera>,
-                  gecs::resource<gecs::mut<RenderContext>> renderCtx);
+void CollectSpriteRenderInfo(
+    gecs::querier<Sprite, Transform, gecs::without<Parent>>,
+    gecs::querier<Sprite, Transform, GlobalTransform, Child,
+                  gecs::without<Parent>>,
+    gecs::resource<TextureManager>, gecs::resource<gecs::mut<RenderContext>>,
+    gecs::registry);
+
+void RenderElements(gecs::resource<gecs::mut<Renderer2D>> renderer2d,
+                    gecs::resource<gecs::mut<RenderContext>> ctx,
+                    gecs::resource<Camera> camera);
 
 }  // namespace nickel

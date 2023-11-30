@@ -7,14 +7,14 @@
 namespace nickel {
 
 /**
- * @brief a componet tag to save parent entity
+ * @brief [component] save parent entity
  */
 struct Parent {
     gecs::entity entity;
 };
 
 /**
- * @brief a componet tag to save child entities
+ * @brief [component] save child entities
  */
 struct Child {
     std::vector<gecs::entity> entities;

@@ -1,7 +1,5 @@
 #include "ui/ui.hpp"
 #include "core/cgmath.hpp"
-#include "geom/basic_geom.hpp"
-#include "geom/geom2d.hpp"
 #include "ui/event.hpp"
 
 namespace nickel::ui {
