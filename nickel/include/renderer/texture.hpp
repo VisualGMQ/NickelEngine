@@ -4,7 +4,6 @@
 #include "core/gogl.hpp"
 #include "core/handle.hpp"
 #include "core/manager.hpp"
-#include "pch.hpp"
 
 /**
  * @addtogroup resource-manager
@@ -28,9 +27,9 @@ public:
 
     Texture(const Texture&) = delete;
     Texture(Texture&&);
+    Texture& operator=(Texture&&);
 
     Texture& operator=(const Texture&) = delete;
-    Texture& operator=(Texture&&);
 
     explicit operator bool() const {
         return handle_ == TextureHandle::Null();
@@ -58,9 +57,12 @@ private:
     int h_ = 0;
 
     Texture(TextureHandle handle, const std::string& filename,
-            const gogl::Sampler&);
+            const gogl::Sampler&, gogl::Format fmt = gogl::Format::RGBA,
+            gogl::Format gpuFmt = gogl::Format::RGBA);
     Texture(TextureHandle handle, void*, int w, int h,
-            const gogl::Sampler& sampler);
+            const gogl::Sampler& sampler,
+            gogl::Format fmt = gogl::Format::RGBA,
+            gogl::Format gpuFmt = gogl::Format::RGBA);
     Texture() = default;
 
     friend void swap(Texture& lhs, Texture& rhs) {
@@ -85,8 +87,10 @@ public:
         const toml::node&, T&);
 
     TextureHandle Load(const std::string& filename, const gogl::Sampler&);
-    std::unique_ptr<Texture> CreateSolitary(void* data, int w, int h,
-                                            const gogl::Sampler&);
+    std::unique_ptr<Texture> CreateSolitary(
+        void* data, int w, int h, const gogl::Sampler&,
+        gogl::Format fmt = gogl::Format::RGBA,
+        gogl::Format gpuFmt = gogl::Format::RGBA);
 
     toml::table Save2Toml() const;
     void LoadFromToml(toml::table&);

@@ -4,12 +4,62 @@
 
 namespace nickel {
 
+class utf8char {
+public:
+    utf8char(char a, char b, char c, char d) : data_{a, b, c, d} {}
+
+    utf8char(): data_{0} {}
+
+    uint64_t to_uint64() const {
+        auto l = len();
+        if (l == 1) {
+            return data_[0];
+        } else if (l == 2) {
+            return data_[1] << 8 | data_[0];
+        } else if (l == 3) {
+            return data_[2] << 16 | data_[1] << 8 | data_[0];
+        } else {
+            return data_[3] << 24 | data_[2] << 16 | data_[1] << 8 | data_[0];
+        }
+    }
+
+    int len() const noexcept {
+        if (!(data_[0] & 0x80)) {
+            return 1;
+        }
+        if (data_[1] & 0xC0) {
+            return 2;
+        }
+        if (data_[2] & 0xE0) {
+            return 3;
+        }
+        return 4;
+    }
+
+    void set(char a, char b, char c, char d) {
+        data_[0] = a;
+        data_[1] = b;
+        data_[2] = c;
+        data_[3] = d;
+    }
+
+    auto& operator[](size_t idx) {
+        return data_[idx];
+    }
+
+    auto& operator[](size_t idx) const {
+        return data_[idx];
+    }
+
+private:
+    std::array<char, 4> data_;
+};
+
 class utf8string final {
 public:
-    using OneUTF8 = std::array<char, 4>;
-    using UTF8Container = std::vector<OneUTF8>;
-    using iterator = UTF8Container::iterator;
-    using const_iterator = UTF8Container::const_iterator;
+    using utf8_container = std::vector<utf8char>;
+    using iterator = utf8_container::iterator;
+    using const_iterator = utf8_container::const_iterator;
 
     utf8string() = default;
     utf8string(const utf8string&);
@@ -20,16 +70,16 @@ public:
 
     inline size_t size() const { return data_.size(); }
 
-    inline OneUTF8* data() { return data_.data(); }
+    inline utf8char* data() { return data_.data(); }
 
-    void insert(const const_iterator& it, const OneUTF8& c);
+    void insert(const const_iterator& it, const utf8char& c);
     void insert(const const_iterator& it, const char* s);
     void insert(const const_iterator& it, const std::string& s);
     void insert(const const_iterator& it, const utf8string& s);
 
     void erase(const const_iterator& it);
 
-    void push_back(OneUTF8 c) { data_.push_back(c); }
+    void push_back(utf8char c) { data_.push_back(c); }
 
     /* you must ensure that s contains complete UTF8 codes */
     void push_back(const std::string& s);
@@ -38,15 +88,15 @@ public:
 
     inline void pop_back() { data_.pop_back(); }
 
-    inline OneUTF8& back() { return data_.back(); }
+    inline utf8char& back() { return data_.back(); }
 
-    inline const OneUTF8& at(size_t idx) const { return data_.at(idx); }
+    inline const utf8char& at(size_t idx) const { return data_.at(idx); }
 
     inline auto begin() const { return data_.begin(); }
 
     inline auto end() const { return data_.end(); }
 
-    inline const OneUTF8& operator[](size_t idx) const { return data_[idx]; }
+    inline const utf8char& operator[](size_t idx) const { return data_[idx]; }
 
     inline bool empty() const { return data_.empty(); }
 
@@ -98,9 +148,9 @@ public:
     std::string to_string() const;
 
 private:
-    UTF8Container data_;
+    utf8_container data_;
 };
 
-std::string UTF8ToString(const utf8string::OneUTF8& c);
+std::string utf8char2string(const utf8char& c);
 
 }  // namespace nickel

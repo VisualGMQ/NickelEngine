@@ -1,6 +1,5 @@
 #include "ui/ui.hpp"
 #include "core/cgmath.hpp"
-#include "ui/event.hpp"
 
 namespace nickel::ui {
 
@@ -69,24 +68,48 @@ void renderButton(gecs::entity ent, const Button& btn,
     renderer.FillRect(contentRect, *color);
 }
 
+void renderLabel(gecs::entity ent, const Label& label,
+                 const cgmath::Rect& contentRect, Renderer2D& renderer,
+                 const EventRecorder& recorder) {
+    renderer.DrawRect(contentRect, label.color);
+
+    auto& cache = label.GetTextCache();
+    cgmath::Vec2 pos = contentRect.position;
+    for (auto& c : cache.Texts()) {
+        cgmath::Rect rect;
+        rect.size = c.size;
+        renderer.DrawTexture(
+            *c.texture, rect, c.size, label.color, {}, {},
+            cgmath::CreateTranslation(cgmath::Vec3{pos.x, pos.y, 0}));
+        pos.x += c.size.x + c.breaing.x;
+    }
+}
+
 void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
               gecs::resource<gecs::mut<Renderer2D>> renderer,
               gecs::resource<Context> ctx, gecs::registry reg) {
-    renderer->BeginRender(ctx->camera);
-    renderer->DisableDepthTest();
 
     for (auto&& [entity, style] : querier) {
         renderStyle(style, renderer.get(), ctx.get());
 
+        renderer->BeginRenderTexture(ctx->camera);
+        renderer->DisableDepthTest();
         if (reg.has<Button>(entity)) {
             renderButton(entity, reg.get<Button>(entity),
                          cgmath::Rect::FromCenter(style.GlobalCenter(),
                                                   style.size * 0.5),
                          renderer.get(), ctx->eventRecorder);
         }
-    }
 
-    renderer->EndRender();
+        renderer->BeginRenderFont(ctx->camera);
+        if (reg.has<Label>(entity)) {
+            renderLabel(entity, reg.get<Label>(entity),
+                        cgmath::Rect::FromCenter(style.GlobalCenter(),
+                                                 style.size * 0.5),
+                        renderer.get(), ctx->eventRecorder);
+        }
+        renderer->EndRender();
+    }
 }
 
 inline cgmath::Rect getResponseRect(const Style& s) {
@@ -123,7 +146,6 @@ void HandleEventSystem(gecs::resource<gecs::mut<Context>> ctx,
     for (auto&& [entity, style] : querier) {
         cgmath::Rect rect = getResponseRect(style);
         auto pos = mouse->Position();
-        LOGT("mouse position = ", pos);
         if (rect.IsPtIn(pos)) {
             recorder.entity = entity;
             recorder.region = rect;

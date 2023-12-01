@@ -12,4 +12,6 @@ add_subdirectory(mirrow)
 add_subdirectory(miniaudio)
 add_subdirectory(nameof)
 add_subdirectory(nanobench)
+
+set(FT_ENABLE_ERROR_STRINGS ON)
 add_subdirectory(freetype2)

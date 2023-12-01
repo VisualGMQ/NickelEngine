@@ -663,7 +663,7 @@ public:
     };
 
     Texture(Type type, void* pixels, int w, int h, const Sampler& sampler,
-            Format format, Format internal, DataType data_type)
+            Format fmt, Format gpuFmt, DataType data_type)
         : type_(type), w_(w), h_(h) {
         GLenum glType = static_cast<GLenum>(type);
 
@@ -688,9 +688,9 @@ public:
         GL_CALL(glTexParameteri(glType, GL_TEXTURE_MAG_FILTER,
                                 static_cast<GLint>(sampler.filter.mag)));
 
-        GL_CALL(glTexImage2D(glType, 0, static_cast<GLint>(internal), w, h,
+        GL_CALL(glTexImage2D(glType, 0, static_cast<GLint>(gpuFmt), w, h,
                             sampler.wrapper.NeedBorderColor(),
-                            static_cast<GLint>(format), static_cast<GLenum>(data_type),
+                            static_cast<GLint>(fmt), static_cast<GLenum>(data_type),
                             pixels));
         if (sampler.mipmap) {
             GL_CALL(glGenerateMipmap(glType));

@@ -6,25 +6,27 @@ namespace nickel {
 Texture Texture::Null = Texture{};
 
 Texture::Texture(TextureHandle handle, const std::string& filename,
-                 const gogl::Sampler& sampler)
+                 const gogl::Sampler& sampler, gogl::Format fmt,
+                 gogl::Format gpuFmt)
     : handle_(handle), filename_(filename), sampler_(sampler) {
     stbi_uc* pixels =
         stbi_load(filename.c_str(), &w_, &h_, nullptr, STBI_rgb_alpha);
     if (pixels) {
         texture_ = std::make_unique<gogl::Texture>(
-            gogl::Texture::Type::Dimension2, pixels, w_, h_, sampler,
-            gogl::Format::RGBA, gogl::Format::RGBA, gogl::DataType::UByte);
+            gogl::Texture::Type::Dimension2, pixels, w_, h_, sampler, fmt,
+            gpuFmt, gogl::DataType::UByte);
     } else {
         LOGE(log_tag::Res, "create texture from ", filename, " failed");
     }
 }
 
 Texture::Texture(TextureHandle handle, void* pixels, int w, int h,
-                 const gogl::Sampler& sampler)
-    : handle_(handle), sampler_(sampler) {
+                 const gogl::Sampler& sampler, gogl::Format fmt,
+                 gogl::Format gpuFmt)
+    : handle_(handle), sampler_(sampler), w_(w), h_(h) {
     texture_ = std::make_unique<gogl::Texture>(
-        gogl::Texture::Type::Dimension2, pixels, w_, h_, sampler,
-        gogl::Format::RGBA, gogl::Format::RGBA, gogl::DataType::UByte);
+        gogl::Texture::Type::Dimension2, pixels, w, h, sampler, fmt,
+        gpuFmt, gogl::DataType::UByte);
 }
 
 Texture& Texture::operator=(Texture&& img) {
@@ -52,9 +54,10 @@ TextureHandle TextureManager::Load(const std::string& filename,
 }
 
 std::unique_ptr<Texture> TextureManager::CreateSolitary(
-    void* data, int w, int h, const gogl::Sampler& sampler) {
+    void* data, int w, int h, const gogl::Sampler& sampler, gogl::Format fmt,
+    gogl::Format gpuFmt) {
     return std::unique_ptr<Texture>(
-        new Texture{TextureHandle::Null(), data, w, h, sampler});
+        new Texture{TextureHandle::Null(), data, w, h, sampler, fmt, gpuFmt});
 }
 
 toml::table TextureManager::Save2Toml() const {

@@ -18,6 +18,7 @@
 #include "renderer/sprite.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/tilesheet.hpp"
+#include "renderer/font.hpp"
 #include "ui/ui.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"

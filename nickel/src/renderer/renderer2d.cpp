@@ -3,14 +3,18 @@
 namespace nickel {
 
 Renderer2D::Renderer2D() {
-    shader_ = initShader();
+    textureShader_ =
+        initShader("nickel/shader/vertex.shader", "nickel/shader/frag.shader");
+    fontShader_ = initShader("nickel/shader/font_vertex.shader",
+                             "nickel/shader/font_frag.shader");
     whiteTexture_ = initWhiteTexture();
     vertexBuffer_ = initVertexBuffer();
     vertexBuffer_->Bind();
     indicesBuffer_ = initIndicesBuffer();
     indicesBuffer_->Bind();
     attrPtr_ = initAttrPtr();
-    shader_->SetInt("image", 0);
+    textureShader_->SetInt("image", 0);
+    shader_ = textureShader_.get();
 }
 
 void Renderer2D::SetViewport(const cgmath::Vec2& offset,
@@ -20,14 +24,21 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
         static_cast<GLsizei>(size.w), static_cast<GLsizei>(size.h)));
 }
 
-void Renderer2D::BeginRender(const Camera& camera) {
+void Renderer2D::BeginRenderTexture(const Camera& camera) {
+    shader_ = textureShader_.get();
+    shader_->Use();
+    shader_->SetMat4("Project", camera.Project());
+    shader_->SetMat4("View", camera.View());
+}
+
+void Renderer2D::BeginRenderFont(const Camera& camera) {
+    shader_ = fontShader_.get();
     shader_->Use();
     shader_->SetMat4("Project", camera.Project());
     shader_->SetMat4("View", camera.View());
 }
 
 void Renderer2D::EndRender() {
-    // shader_->Unuse();
 }
 
 template <typename Vertices, typename Indices>
@@ -147,8 +158,9 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
                             uint32_t slice) {
     std::vector<Vertex> vertices(slice);
     vertices.push_back(Vertex{
-        cgmath::Vec3{center.x, center.y, 0}, sampler ? sampler->center : cgmath::Vec2{},
-             color
+        cgmath::Vec3{center.x, center.y, 0},
+        sampler ? sampler->center : cgmath::Vec2{},
+        color
     });
     float step = 2.0f * cgmath::PI / slice;
     for (uint32_t i = 0; i < slice; i++) {
@@ -173,8 +185,7 @@ void Renderer2D::FillCircle(const cgmath::Vec2& center, float radius,
 void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
                              const cgmath::Vec2& size,
                              const cgmath::Vec4& color,
-                             const cgmath::Vec2& anchor,
-                             float z,
+                             const cgmath::Vec2& anchor, float z,
                              const cgmath::Mat44& model) {
     // clang-format off
     std::array<Vertex, 4> vertices = {
@@ -191,12 +202,11 @@ void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
          &texture);
 }
 
-std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
-    std::string_view vertexShaderFilename = "nickel/shader/vertex.shader";
-    std::ifstream file(vertexShaderFilename.data());
+std::unique_ptr<gogl::Shader> Renderer2D::initShader(std::string_view vert,
+                                                     std::string_view frag) {
+    std::ifstream file(vert.data());
     if (file.fail()) {
-        LOGE(log_tag::Renderer, "read vertex shader ", vertexShaderFilename,
-             " failed");
+        LOGE(log_tag::Renderer, "read vertex shader ", vert, " failed");
         return nullptr;
     }
     std::string vertex_source((std::istreambuf_iterator<char>(file)),
@@ -204,12 +214,10 @@ std::unique_ptr<gogl::Shader> Renderer2D::initShader() {
     gogl::ShaderModule vertexModel(gogl::ShaderModule::Type::Vertex,
                                    vertex_source);
 
-    std::string_view fragShaderFilename = "nickel/shader/frag.shader";
     file.close();
-    file.open(fragShaderFilename.data());
+    file.open(frag.data());
     if (file.fail()) {
-        LOGE(log_tag::Renderer, "read fragment shader ", fragShaderFilename,
-             " failed");
+        LOGE(log_tag::Renderer, "read fragment shader ", frag, " failed");
         return nullptr;
     }
     std::string frag_source((std::istreambuf_iterator<char>(file)),

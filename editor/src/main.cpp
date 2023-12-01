@@ -1,4 +1,5 @@
 #include "core/cgmath.hpp"
+#include "core/utf8string.hpp"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
@@ -18,6 +19,8 @@
 #include "refl/sprite.hpp"
 #include "refl/tilesheet.hpp"
 #include "ui/style.hpp"
+#include <cstring>
+#include <type_traits>
 
 enum class EditorScene {
     ProjectManager,
@@ -171,6 +174,36 @@ void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
     }
 }
 
+void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
+                         mirrow::drefl::any& value, gecs::registry reg,
+                         const std::vector<int>&) {
+    Assert(type->is_class() &&
+               type == ::mirrow::drefl::typeinfo<ui::Label>(),
+           "type incorrect");
+
+    ui::Label& label = *mirrow::drefl::try_cast<ui::Label>(value);
+
+    static char buf[1024] = {0};
+    auto text = label.GetText().to_string();
+    std::strcpy(buf, text.c_str());
+
+    ImGui::InputText("text", buf, sizeof(buf));
+
+    if (buf != text) {
+        utf8string str{buf};
+        label.SetText(str);
+    }
+
+    cgmath::Color& color = label.color;
+    ImGui::ColorEdit4("color", color.data);
+
+    int size = label.GetSize();
+    ImGui::DragInt("pt", &size, 1.0, 1);
+    if (size != label.GetSize()) {
+        label.SetSize(size);
+    }
+}
+
 void RegistComponentShowMethods() {
     auto& instance = ComponentShowMethods::Instance();
 
@@ -181,6 +214,7 @@ void RegistComponentShowMethods() {
                     ShowTextureHandle);
     instance.Regist(::mirrow::drefl::typeinfo<AnimationPlayer>(),
                     ShowAnimationPlayer);
+    instance.Regist(::mirrow::drefl::typeinfo<ui::Label>(), ShowLabel);
 }
 
 template <typename T>
@@ -212,6 +246,7 @@ void RegistSpawnMethods() {
     instance.Regist<AnimationPlayer>(SpawnAnimationPlayer);
     instance.Regist<ui::Style>(GeneralSpawnMethod<ui::Style>);
     instance.Regist<ui::Button>(GeneralSpawnMethod<ui::Button>);
+    instance.Regist<ui::Label>(GeneralSpawnMethod<ui::Label>);
 }
 
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
@@ -237,7 +272,8 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
 }
 
 void TestEnter(gecs::commands cmds,
-               gecs::resource<gecs::mut<TextureManager>> textureMgr) {
+               gecs::resource<gecs::mut<TextureManager>> textureMgr,
+               gecs::resource<gecs::mut<FontManager>> fontMgr) {
     auto entity = cmds.create();
     auto texture = textureMgr->Load("resources/role.png",
                                     gogl::Sampler::CreateNearestRepeat());
@@ -245,6 +281,11 @@ void TestEnter(gecs::commands cmds,
     SpriteBundle bundle;
     bundle.sprite = Sprite::FromTexture(texture);
     cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
+
+    auto font = fontMgr->Load("sandbox/resources/arial.ttf");
+    entity = cmds.create();
+    cmds.emplace<ui::Style>(entity);
+    cmds.emplace<ui::Label>(entity, font);
 }
 
 void EditorEntityListWindow(int& selected, gecs::registry reg,

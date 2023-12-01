@@ -1,4 +1,5 @@
 #include "nickel.hpp"
+#include "renderer/font.hpp"
 #include "renderer/context.hpp"
 
 using namespace nickel;
@@ -18,7 +19,6 @@ void BootstrapCallSystem() {
 
 void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit, gecs::commands cmds) {
     quit.sink().add<DetectAppShouldExit>();
-    cmds.emplace_resource<RenderContext>();
 }
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
@@ -118,10 +118,12 @@ int main(int argc, char** argv) {
         // startup systems
         .regist_startup_system<BootstrapCallSystem>()
         .regist_startup_system<VideoSystemInit>()
+        .regist_startup_system<FontSystemInit>()
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
         .regist_startup_system<ui::InitSystem>()
         // shutdown systems
+        .regist_shutdown_system<FontSystemShutdown>()
         .regist_shutdown_system<VideoSystemShutdown>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()

@@ -26,8 +26,10 @@ public:
 
     Renderer2D();
 
-    void BeginRender(const Camera& camera);
+    void BeginRenderTexture(const Camera& camera);
     void EndRender();
+
+    void BeginRenderFont(const Camera& camera);
 
     void EnableDepthTest() { GL_CALL(glEnable(GL_DEPTH_TEST)); }
     void DisableDepthTest() { GL_CALL(glDisable(GL_DEPTH_TEST)); }
@@ -127,7 +129,9 @@ public:
               const Texture* texture = nullptr);
 
 private:
-    std::unique_ptr<gogl::Shader> shader_;
+    gogl::Shader* shader_;
+    std::unique_ptr<gogl::Shader> textureShader_;
+    std::unique_ptr<gogl::Shader> fontShader_;
     std::unique_ptr<gogl::Framebuffer> framebuffer_;
     std::unique_ptr<gogl::RenderBuffer> renderBuffer_;
     std::unique_ptr<gogl::Texture> whiteTexture_;
@@ -135,7 +139,7 @@ private:
     std::unique_ptr<gogl::Buffer> indicesBuffer_;
     std::unique_ptr<gogl::AttributePointer> attrPtr_;
 
-    std::unique_ptr<gogl::Shader> initShader();
+    std::unique_ptr<gogl::Shader> initShader(std::string_view vert, std::string_view frag);
     std::unique_ptr<gogl::Texture> initWhiteTexture();
     std::unique_ptr<gogl::Buffer> initVertexBuffer();
     std::unique_ptr<gogl::Buffer> initIndicesBuffer();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/log_tag.hpp"
+#include "freetype/freetype.h"
 #include "pch.hpp"
 #include "core/cgmath.hpp"
 #include "renderer/texture.hpp"

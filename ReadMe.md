@@ -24,27 +24,27 @@ cmake --build cmake-build
 * [miniaudio](https://miniaud.io/): use to play audio cross platform
 * [nanobench](https://nanobench.ankerl.com/): use to do benchmark
 * [nameof](https://github.com/Neargye/nameof): use to get enum name convniently
+* [freetype2](https://freetype.org/): use to render ttf font
 
 ## Features
 
-* Finished:
-    * 2D renderer based on OpenGL4
-    * Data Oriented based on ECS
-    * Animation applyed on arbitary properties
-* WIP:
-    * UI
-    * RHI covered OpenGL3/ES and Vulkan
-    * 3D rendering
-    * Customizable render pipeline
-    * Game sound play
-    * Game physics
-    * Text render
-    * More features of the editor
+* game engine features:
+    - [x] 2D renderer based on OpenGL4
+    - [x] Data Oriented based on ECS
+    - [x] Animation applyed on arbitary properties
+    - [x] Text render with UTF8 encoding
+    - [ ] UI(WIP)
+    - [ ] Game physics(WIP)
+    - [ ] 3D rendering
+    - [ ] RHI covered OpenGL3/ES and Vulkan
+    - [ ] Game sound playing
+* editor features:
+    - [x] Entity list window to show entities
+    - [x] Inspector window to show components of selected entity
+    - [x] Game scene display
+    - [ ] Assets window
+    - [ ] Animation editor
 
 ## Editor
-
-features:
-
-* has a inspector to see/change component properties
 
 ![editor](./snapshot/editor.png)

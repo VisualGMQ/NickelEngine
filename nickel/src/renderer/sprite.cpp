@@ -106,7 +106,7 @@ void CollectSpriteRenderInfo(
 void RenderElements(gecs::resource<gecs::mut<Renderer2D>> renderer2d,
                     gecs::resource<gecs::mut<RenderContext>> ctx,
                     gecs::resource<Camera> camera) {
-    renderer2d->BeginRender(camera.get());
+    renderer2d->BeginRenderTexture(camera.get());
 
     auto& elems = ctx->renderInfos;
     std::sort(elems.begin(), elems.end(),

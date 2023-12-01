@@ -1,21 +1,44 @@
+#include "core/cgmath.hpp"
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
 #include "misc/project.hpp"
 #include "nickel.hpp"
 #include "refl/anim.hpp"
+#include "renderer/font.hpp"
 
 using namespace nickel;
 
+FontHandle fhandle;
+
 void TestUpdateSystem(
-    gecs::querier<gecs::mut<Transform>, gecs::mut<AnimationPlayer>> querier, gecs::registry reg) {
+    gecs::querier<gecs::mut<Transform>, gecs::mut<AnimationPlayer>> querier,
+    gecs::registry reg) {
     for (auto&& [entity, trans, animPlayer] : querier) {
         animPlayer.Step(1);
         animPlayer.Sync(entity, reg);
     }
 }
 
+void TestRenderFontSystem(gecs::resource<gecs::mut<Renderer2D>> renderer,
+                          gecs::resource<FontManager> fontMgr,
+                          gecs::resource<Camera> camera) {
+    auto& font = fontMgr->Get(fhandle);
+    auto glyph = font.GetGlyph('x', 16);
+
+    if (glyph) {
+        Character c(glyph);
+        renderer->BeginRenderTexture(camera.get());
+        renderer->DrawTexture(*c.texture,
+                              cgmath::Rect{0, 0, c.size.w, c.size.h}, c.size,
+                              cgmath::Color{1, 1, 1, 1}, {}, {},
+                              cgmath::CreateTranslation({100, 100, 0}));
+        renderer->EndRender();
+    }
+}
+
 void TestInitSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<TextureManager>> textureMgr,
                     gecs::resource<gecs::mut<AnimationManager>> animMgr,
+                    gecs::resource<gecs::mut<FontManager>> fontMgr,
                     gecs::registry reg) {
     auto entity = cmds.create();
     auto handle = textureMgr->Load("./sandbox/resources/role.png",
@@ -61,7 +84,8 @@ void TestInitSystem(gecs::commands cmds,
     mirrow::serd::srefl::deserialize<Animation>(toml::parse(tomlData).table(),
                                                 serdAnim);
 
-    auto& animPlayer = cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(animMgr.get()));
+    auto& animPlayer =
+        cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(animMgr.get()));
     animPlayer.ChangeAnim(anim);
     animPlayer.Play();
 
@@ -69,6 +93,8 @@ void TestInitSystem(gecs::commands cmds,
     std::ofstream file2("ent1.prefab.toml");
     file2 << tbl;
     file2.close();
+
+    fhandle = fontMgr->Load("sandbox/resources/svgafix.fon");
 }
 
 void BootstrapSystem(gecs::world& world,
@@ -81,5 +107,6 @@ void BootstrapSystem(gecs::world& world,
     InitSystem(world, info, reg.commands());
 
     reg.regist_update_system<TestUpdateSystem>()
-        .regist_startup_system<TestInitSystem>();
+        .regist_startup_system<TestInitSystem>()
+        .regist_update_system<TestRenderFontSystem>();
 }

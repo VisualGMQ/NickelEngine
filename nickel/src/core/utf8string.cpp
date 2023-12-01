@@ -14,7 +14,7 @@ utf8string::utf8string(const std::string& s) {
     push_back(s);
 }
 
-void utf8string::insert(const const_iterator& it, const OneUTF8& c) {
+void utf8string::insert(const const_iterator& it, const utf8char& c) {
     data_.insert(it, c);
 }
 
@@ -50,8 +50,7 @@ void utf8string::push_back(const char* s) {
     int idx = 0;
     int len = strlen(s);
     while (idx < len) {
-        OneUTF8 c;
-        c.fill(0);
+        utf8char c;
         if ((s[idx] & 0xF0) == 0xF0) {
             c[0] = s[idx++];
             c[1] = s[idx++];
@@ -98,7 +97,7 @@ std::string utf8string::to_string() const {
     return result;
 }
 
-std::string UTF8ToString(const utf8string::OneUTF8& c) {
+std::string utf8char2string(const utf8char& c) {
     std::string result;
     if ((c[0] & 0xF0) == 0xF0) {
         result.push_back(c[0]);
@@ -118,7 +117,7 @@ std::string UTF8ToString(const utf8string::OneUTF8& c) {
     return result;
 }
 
-std::ostream& operator<<(std::ostream& o, const utf8string::OneUTF8& c) {
+std::ostream& operator<<(std::ostream& o, const utf8char& c) {
     if ((c[0] & 0xF0) == 0xF0) {
         o << c[0] << c[1] << c[2] << c[3];
     } else if ((c[0] & 0xE0) == 0xE0) {
