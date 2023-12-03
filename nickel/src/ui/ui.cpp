@@ -1,5 +1,4 @@
 #include "ui/ui.hpp"
-#include "core/cgmath.hpp"
 
 namespace nickel::ui {
 
@@ -71,41 +70,55 @@ void renderButton(gecs::entity ent, const Button& btn,
 void renderLabel(gecs::entity ent, const Label& label,
                  const cgmath::Rect& contentRect, Renderer2D& renderer,
                  const EventRecorder& recorder) {
-    renderer.DrawRect(contentRect, label.color);
+    const cgmath::Color* color = &label.color;
+    if (recorder.HasEvent(Event::Hover)) {
+        color = &label.hoverColor;
+    }
+    if (recorder.HasEvent(Event::Press)) {
+        color = &label.pressColor;
+    }
 
-    auto& cache = label.GetTextCache();
-    cgmath::Vec2 pos = contentRect.position;
-    for (auto& c : cache.Texts()) {
-        cgmath::Rect rect;
-        rect.size = c.size;
+    auto& textTextures = label.GetTextCache().Texts();
+    auto& text = label.GetText();
+    auto& boundingSize = label.GetBoundingBoxSize();
+    auto& rects = label.GetRenderRects();
+    for (int i = 0; i < text.size(); i++) {
+        if (text[i].is_white_space()) {
+            continue;
+        }
+
+        auto& c = textTextures[i];
+        auto& t = text[i];
+        cgmath::Rect region = {{}, c.size};
+
+        auto pos = rects[i].position + contentRect.position +
+                   contentRect.size * 0.5 - boundingSize * 0.5;
+
         renderer.DrawTexture(
-            *c.texture, rect, c.size, label.color, {}, {},
+            *c.texture, region, c.size, *color, {}, {},
             cgmath::CreateTranslation(cgmath::Vec3{pos.x, pos.y, 0}));
-        pos.x += c.size.x + c.breaing.x;
     }
 }
 
 void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
               gecs::resource<gecs::mut<Renderer2D>> renderer,
               gecs::resource<Context> ctx, gecs::registry reg) {
-
     for (auto&& [entity, style] : querier) {
-        renderStyle(style, renderer.get(), ctx.get());
-
         renderer->BeginRenderTexture(ctx->camera);
         renderer->DisableDepthTest();
+
+        auto contentRect =
+            cgmath::Rect::FromCenter(style.GlobalCenter(), style.size * 0.5);
+
+        renderStyle(style, renderer.get(), ctx.get());
         if (reg.has<Button>(entity)) {
-            renderButton(entity, reg.get<Button>(entity),
-                         cgmath::Rect::FromCenter(style.GlobalCenter(),
-                                                  style.size * 0.5),
+            renderButton(entity, reg.get<Button>(entity), contentRect,
                          renderer.get(), ctx->eventRecorder);
         }
 
         renderer->BeginRenderFont(ctx->camera);
         if (reg.has<Label>(entity)) {
-            renderLabel(entity, reg.get<Label>(entity),
-                        cgmath::Rect::FromCenter(style.GlobalCenter(),
-                                                 style.size * 0.5),
+            renderLabel(entity, reg.get<Label>(entity), contentRect,
                         renderer.get(), ctx->eventRecorder);
         }
         renderer->EndRender();

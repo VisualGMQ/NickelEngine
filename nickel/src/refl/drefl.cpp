@@ -90,11 +90,13 @@ void reflectUI() {
         .regist("Button")
         .property("color", &ui::Button::color, {AttrColor})
         .property("hover-color", &ui::Button::hoverColor, {AttrColor})
-        .property("press-color", &ui::Button::pressColor, {AttrColor})
-        .property("text", &ui::Button::text);
+        .property("press-color", &ui::Button::pressColor, {AttrColor});
 
     mirrow::drefl::registrar<ui::Label>::instance()
-        .regist("Label");
+        .regist("Label")
+        .property("color", &ui::Label::color, {AttrColor})
+        .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
+        .property("pressColor", &ui::Label::pressColor, {AttrColor});
 }
 
 void InitDynamicReflect() {

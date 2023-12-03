@@ -1,4 +1,5 @@
 #include "renderer/font.hpp"
+#include "core/gogl.hpp"
 
 namespace nickel {
 
@@ -23,12 +24,15 @@ Font Font::Null;
 
 Character::Character(const FT_GlyphSlot& g)
     : size{cgmath::Vec2(g->bitmap.width, g->bitmap.rows)},
-      breaing{cgmath::Vec2(g->bitmap_left, g->bitmap_top)} {
+      bearing{cgmath::Vec2(g->bitmap_left, g->bitmap_top)},
+      advance{cgmath::Vec2(g->advance.x, g->advance.y)} {
     auto bitmap = g->bitmap;
 
     auto& textureMgr =
         gWorld->cur_registry()->res<gecs::mut<TextureManager>>().get();
     gogl::Sampler sampler = gogl::Sampler::CreateLinearRepeat();
+    sampler.wrapper.s = gogl::TextureWrapperType::ClampToEdge;
+    sampler.wrapper.t = gogl::TextureWrapperType::ClampToEdge;
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
     texture = textureMgr.CreateSolitary(bitmap.buffer, bitmap.width,
                                         bitmap.rows, sampler, gogl::Format::Red,
@@ -51,7 +55,7 @@ Font::Font(const std::string& filename) {
 }
 
 FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
-    if (auto err = FT_Set_Pixel_Sizes(face_, size, 0); err) {
+    if (auto err = FT_Set_Pixel_Sizes(face_, 0, size); err) {
         LOGE(log_tag::Res, "change font pixel size failed! ",
              FT_Error_String(err));
         return nullptr;
@@ -60,12 +64,6 @@ FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
     auto glyphIdx = FT_Get_Char_Index(face_, c);
     if (auto err = FT_Load_Glyph(face_, glyphIdx, FT_LOAD_RENDER); err) {
         LOGE(log_tag::Res, "load glyph ", c, " failed! ", FT_Error_String(err));
-        return nullptr;
-    }
-
-    if (auto err = FT_Render_Glyph(face_->glyph, FT_RENDER_MODE_NORMAL); err) {
-        LOGE(log_tag::Res, "render glyph ", c, " failed! ",
-             FT_Error_String(err));
         return nullptr;
     }
 

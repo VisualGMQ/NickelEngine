@@ -633,6 +633,7 @@ enum class Format {
     BGR = GL_BGR,
     RGBA = GL_RGBA,
     BGRA = GL_BGRA,
+    Alpha = GL_ALPHA,
     RedInteger = GL_RED_INTEGER,
     RGInteger = GL_RG_INTEGER,
     RGBInteger = GL_RGB_INTEGER,
@@ -671,11 +672,11 @@ public:
         Bind();
         GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_S,
                                 static_cast<GLint>(sampler.wrapper.s)));
-        GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_R,
-                                static_cast<GLint>(sampler.wrapper.r)));
+        GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_T,
+                                static_cast<GLint>(sampler.wrapper.t)));
         if (type == Type::Dimension3) {
-            GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_T,
-                                    static_cast<GLint>(sampler.wrapper.t)));
+            GL_CALL(glTexParameteri(glType, GL_TEXTURE_WRAP_R,
+                                    static_cast<GLint>(sampler.wrapper.r)));
         }
         if (sampler.wrapper.NeedBorderColor()) {
             GL_CALL(glTexParameterfv(glType, GL_TEXTURE_BORDER_COLOR,
@@ -695,6 +696,7 @@ public:
         if (sampler.mipmap) {
             GL_CALL(glGenerateMipmap(glType));
         }
+        Unbind();
     }
 
     void Bind(int slot = 0) const {

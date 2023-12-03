@@ -43,6 +43,11 @@ public:
         data_[3] = d;
     }
 
+    bool is_white_space() const {
+        return len() == 1 &&
+               (data_[0] == ' ' || data_[0] == '\t' || data_[0] == '\n');
+    }
+
     auto& operator[](size_t idx) {
         return data_[idx];
     }

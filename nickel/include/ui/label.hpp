@@ -15,10 +15,15 @@ public:
 
     FontHandle GetFont() const { return font_; }
 
-    void SetSize(int size);
-    int GetSize() const { return size_; }
+    void SetPtSize(int size);
+    int GetPtSize() const { return size_; }
+    auto& GetBoundingBoxSize() const { return textSize_; }
+
+    auto& GetRenderRects() const { return rects_; }
 
     cgmath::Color color = {1, 1, 1, 1};
+    cgmath::Color pressColor = {1, 1, 1, 1};
+    cgmath::Color hoverColor = {1, 1, 1, 1};
 
     /*
      NOTE: I known "TextCache" will forbid compiler to create these functions.
@@ -37,6 +42,9 @@ private:
     TextCache cache_;
     FontHandle font_;
     int size_ = 16;
+    cgmath::Vec2 textSize_;
+
+    std::vector<cgmath::Rect> rects_;   // cached char rects for rendering
 
     void regenerateTextCache();
 };

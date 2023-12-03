@@ -25,6 +25,7 @@ public:
     Font& operator=(const Font&) = delete;
 
     FT_GlyphSlot GetGlyph(uint64_t c, int size) const;
+    const FT_Face& GetFace() const { return face_; }
 
 private:
     FT_Face face_ = nullptr;
@@ -40,12 +41,12 @@ public:
 };
 
 struct Character {
-    cgmath::Vec2 size;
-    cgmath::Vec2 breaing;
-    float advance;
+    const cgmath::Vec2 size;
+    const cgmath::Vec2 bearing;
+    const cgmath::Vec2 advance;
     std::unique_ptr<Texture> texture;
 
-    explicit Character(const FT_GlyphSlot&);
+    Character(const FT_GlyphSlot&);
 };
 
 class TextCache final {

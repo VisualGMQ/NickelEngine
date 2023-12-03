@@ -11,11 +11,9 @@ namespace nickel::ui {
 
 class Button final {
 public:
-    utf8string text;
-
-    cgmath::Color color;
-    cgmath::Color hoverColor;
-    cgmath::Color pressColor;
+    cgmath::Color color = {1, 1, 1, 1};
+    cgmath::Color hoverColor = {1, 1, 1, 1};
+    cgmath::Color pressColor = {1, 1, 1, 1};
 };
 
 class TextureButton final {

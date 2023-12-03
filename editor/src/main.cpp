@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
+#include "imgui_internal.h"
 #include "imgui_plugin.hpp"
 
 #include "mirrow/drefl/cast_any.hpp"
@@ -187,20 +188,21 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
     auto text = label.GetText().to_string();
     std::strcpy(buf, text.c_str());
 
-    ImGui::InputText("text", buf, sizeof(buf));
+    ImGui::InputTextMultiline("text", buf, sizeof(buf));
 
     if (buf != text) {
         utf8string str{buf};
         label.SetText(str);
     }
 
-    cgmath::Color& color = label.color;
-    ImGui::ColorEdit4("color", color.data);
+    ImGui::ColorEdit4("color", label.color.data);
+    ImGui::ColorEdit4("pressing color", label.pressColor.data);
+    ImGui::ColorEdit4("hovering color", label.hoverColor.data);
 
-    int size = label.GetSize();
+    int size = label.GetPtSize();
     ImGui::DragInt("pt", &size, 1.0, 1);
-    if (size != label.GetSize()) {
-        label.SetSize(size);
+    if (size != label.GetPtSize()) {
+        label.SetPtSize(size);
     }
 }
 
@@ -281,6 +283,11 @@ void TestEnter(gecs::commands cmds,
     SpriteBundle bundle;
     bundle.sprite = Sprite::FromTexture(texture);
     cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
+
+    entity = cmds.create();
+    bundle.sprite = Sprite::FromTexture(texture);
+    cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
+
 
     auto font = fontMgr->Load("sandbox/resources/arial.ttf");
     entity = cmds.create();

@@ -9,8 +9,5 @@ out vec4 FragColor;
 
 void main() {
     float r = texture(image, TexCoord).r;
-    if (r == 0) {
-        discard;
-    }
-    FragColor = Color;
+    FragColor = Color * vec4(1, 1, 1, r);
 }
