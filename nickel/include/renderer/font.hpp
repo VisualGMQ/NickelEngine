@@ -2,10 +2,9 @@
 
 #include "pch.hpp"
 #include "core/handle.hpp"
-#include "core/log_tag.hpp"
 #include "core/manager.hpp"
-#include "core/singlton.hpp"
 #include "renderer/texture.hpp"
+#include "core/resource.hpp"
 
 namespace nickel {
 
@@ -13,7 +12,7 @@ class Font;
 
 using FontHandle = Handle<Font>;
 
-class Font final {
+class Font final : public Res {
 public:
     friend class FontManager;
 
@@ -29,9 +28,9 @@ public:
 
 private:
     FT_Face face_ = nullptr;
-    std::string filename_;
+    std::filesystem::path filename_;
 
-    Font(const std::string& filename);
+    Font(const std::filesystem::path& filename);
     Font() = default;
 };
 

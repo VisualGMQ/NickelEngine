@@ -1,9 +1,5 @@
 #include "core/cgmath.hpp"
 #include "core/utf8string.hpp"
-#include "imgui.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_internal.h"
 #include "imgui_plugin.hpp"
 
 #include "mirrow/drefl/cast_any.hpp"
@@ -11,17 +7,17 @@
 #include "misc/project.hpp"
 #include "nickel.hpp"
 
+#include "content_browser.hpp"
 #include "file_dialog.hpp"
 #include "refl/drefl.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 
+
 #include "refl/cgmath.hpp"
 #include "refl/sprite.hpp"
 #include "refl/tilesheet.hpp"
 #include "ui/style.hpp"
-#include <cstring>
-#include <type_traits>
 
 enum class EditorScene {
     ProjectManager,
@@ -77,8 +73,8 @@ void ProjectManagerUpdate(
                 cmds.switch_state(EditorScene::Editor);
             }
         }
+        ImGui::End();
     }
-    ImGui::End();
 }
 
 void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
@@ -176,10 +172,9 @@ void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
 }
 
 void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
-                         mirrow::drefl::any& value, gecs::registry reg,
-                         const std::vector<int>&) {
-    Assert(type->is_class() &&
-               type == ::mirrow::drefl::typeinfo<ui::Label>(),
+               mirrow::drefl::any& value, gecs::registry reg,
+               const std::vector<int>&) {
+    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<ui::Label>(),
            "type incorrect");
 
     ui::Label& label = *mirrow::drefl::try_cast<ui::Label>(value);
@@ -254,14 +249,38 @@ void RegistSpawnMethods() {
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::resource<gecs::mut<Window>> window,
                  gecs::resource<gecs::mut<TextureManager>> textureMgr,
-                 gecs::resource<gecs::mut<Renderer2D>> renderer) {
+                 gecs::resource<gecs::mut<FontManager>> fontMgr,
+                 gecs::resource<gecs::mut<Renderer2D>> renderer,
+                 gecs::commands cmds) {
     std::string path = initInfo->projectPath + "/project.toml";
+
+    auto& editorCtx = cmds.emplace_resource<EditorContext>();
 
     auto newInfo = LoadBasicProjectConfig(initInfo->projectPath);
     InitProjectByConfig(newInfo, window.get(), textureMgr.get());
     window->SetTitle("NickelEngine Editor - " + newInfo.windowData.title);
     window->Resize(EditorWindowWidth, EditorWindowHeight);
-    textureMgr->SetRootPath(initInfo->projectPath);
+
+    // init resource manager root path
+    auto resourceDir =
+        GenResourcePath(std::filesystem::path{newInfo.projectPath});
+    textureMgr->SetRootPath(resourceDir);
+    fontMgr->SetRootPath(resourceDir);
+
+    // init content browser info
+    auto& contentBrowserInfo = cmds.emplace_resource<ContentBrowserInfo>();
+    contentBrowserInfo.path = resourceDir;
+    contentBrowserInfo.rootPath = resourceDir;
+    if (!std::filesystem::exists(contentBrowserInfo.rootPath)) {
+        if (!std::filesystem::create_directory(
+                contentBrowserInfo.rootPath)) {
+            LOGF(log_tag::Editor, "create resource dir ",
+                 contentBrowserInfo.rootPath, " failed!");
+        }
+        // TODO: force quit editor
+    }
+    contentBrowserInfo.RescanDir();
+
     // TODO: change renderer default texture to canvas
 
     renderer->SetViewport({0, 0},
@@ -277,8 +296,8 @@ void TestEnter(gecs::commands cmds,
                gecs::resource<gecs::mut<TextureManager>> textureMgr,
                gecs::resource<gecs::mut<FontManager>> fontMgr) {
     auto entity = cmds.create();
-    auto texture = textureMgr->Load("resources/role.png",
-                                    gogl::Sampler::CreateNearestRepeat());
+    auto texture =
+        textureMgr->Load("role.png", gogl::Sampler::CreateNearestRepeat());
 
     SpriteBundle bundle;
     bundle.sprite = Sprite::FromTexture(texture);
@@ -288,17 +307,15 @@ void TestEnter(gecs::commands cmds,
     bundle.sprite = Sprite::FromTexture(texture);
     cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
 
-
-    auto font = fontMgr->Load("sandbox/resources/arial.ttf");
+    auto font = fontMgr->Load("arial.ttf");
     entity = cmds.create();
     cmds.emplace<ui::Style>(entity);
     cmds.emplace<ui::Label>(entity, font);
 }
 
-void EditorEntityListWindow(int& selected, gecs::registry reg,
+void EditorEntityListWindow(bool& show, int& selected, gecs::registry reg,
                             gecs::commands cmds) {
-    static bool entityListOpen = true;
-    if (ImGui::Begin("Entity List", &entityListOpen)) {
+    if (ImGui::Begin("Entity List", &show)) {
         if (ImGui::Button("add")) {
             cmds.create();
         }
@@ -316,14 +333,13 @@ void EditorEntityListWindow(int& selected, gecs::registry reg,
                 selected = i;
             }
         }
+        ImGui::End();
     }
-    ImGui::End();
 }
 
-void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
+void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg,
                            gecs::commands cmds) {
-    static bool inspectorOpen = true;
-    if (ImGui::Begin("Inspector", &inspectorOpen)) {
+    if (ImGui::Begin("Inspector", &show)) {
         auto& types = mirrow::drefl::all_typeinfo();
 
         int id = 0;
@@ -405,31 +421,38 @@ void EditorInspectorWindow(gecs::entity entity, gecs::registry reg,
                 if (ImGui::Button("cancel")) {
                     replaceHintOpen = false;
                 }
+
+                ImGui::End();
             }
-            ImGui::End();
         }
 
         if (shouldSpawn) {
             it->second(cmds, entity, reg);
             shouldSpawn = false;
         }
+
+        ImGui::End();
     }
-    ImGui::End();
 }
 
 void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
+                       gecs::resource<gecs::mut<EditorContext>> ctx,
+                       gecs::resource<gecs::mut<ContentBrowserInfo>> cbInfo,
                        gecs::registry reg, gecs::commands cmds) {
     // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
     static int selected = -1;
-    EditorEntityListWindow(selected, reg, cmds);
+    EditorEntityListWindow(ctx->openEntityList, selected, reg, cmds);
     if (selected >= 0) {
-        EditorInspectorWindow(static_cast<typename gecs::entity>(
+        EditorInspectorWindow(ctx->openInspector,
+                              static_cast<typename gecs::entity>(
                                   reg.entities().packed()[selected]),
                               reg, cmds);
     } else {
-        EditorInspectorWindow({}, reg, cmds);
+        EditorInspectorWindow(ctx->openInspector, {}, reg, cmds);
     }
+
+    EditorContentBrowser(ctx->openContentBrowser, cbInfo.get());
 
     static bool demoWindowOpen = true;
 

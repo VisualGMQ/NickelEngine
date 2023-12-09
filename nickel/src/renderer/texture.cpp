@@ -5,12 +5,13 @@ namespace nickel {
 
 Texture Texture::Null = Texture{};
 
-Texture::Texture(TextureHandle handle, const std::string& filename,
+Texture::Texture(TextureHandle handle, const std::filesystem::path& root,
+                 const std::filesystem::path& filename,
                  const gogl::Sampler& sampler, gogl::Format fmt,
                  gogl::Format gpuFmt)
-    : handle_(handle), filename_(filename), sampler_(sampler) {
-    stbi_uc* pixels =
-        stbi_load(filename.c_str(), &w_, &h_, nullptr, STBI_rgb_alpha);
+    : Res(filename), handle_(handle), sampler_(sampler) {
+    stbi_uc* pixels = stbi_load((root / filename).string().c_str(), &w_, &h_,
+                                nullptr, STBI_rgb_alpha);
     if (pixels) {
         texture_ = std::make_unique<gogl::Texture>(
             gogl::Texture::Type::Dimension2, pixels, w_, h_, sampler, fmt,
@@ -29,22 +30,11 @@ Texture::Texture(TextureHandle handle, void* pixels, int w, int h,
         gpuFmt, gogl::DataType::UByte);
 }
 
-Texture& Texture::operator=(Texture&& img) {
-    if (&img != this) {
-        swap(*this, img);
-    }
-    return *this;
-}
-
-Texture::Texture(Texture&& o) : handle_(TextureHandle::Null()) {
-    swap(*this, o);
-}
-
 TextureHandle TextureManager::Load(const std::string& filename,
                                    const gogl::Sampler& sampler) {
     TextureHandle handle = TextureHandle::Create();
     auto texture = std::unique_ptr<Texture>(
-        new Texture{handle, addRootPath(filename), sampler});
+        new Texture(handle, GetRootPath(), filename, sampler));
     if (texture) {
         storeNewItem(handle, std::move(texture));
         return handle;
@@ -64,14 +54,14 @@ toml::table TextureManager::Save2Toml() const {
     toml::table tbl;
 
     tbl.emplace("type", std::string_view("texture"));
-    tbl.emplace("root_path", GetRootPath());
+    tbl.emplace("root_path", GetRootPath().string());
     toml::array arr;
     for (auto& [handle, filename] : associateFiles_) {
         const Texture& texture = Get(handle);
         toml::table textureTbl;
         textureTbl.emplace("id", (HandleInnerIDType)handle);
         if (!texture.Filename().empty()) {
-            textureTbl.emplace("filename", texture.Filename());
+            textureTbl.emplace("filename", texture.Filename().string());
         }
         toml::table samplerTbl;
         ::mirrow::serd::srefl::serialize<gogl::Sampler>(texture.Sampler(),
@@ -109,7 +99,7 @@ void TextureManager::LoadFromToml(toml::table& tbl) {
             }
             storeNewItem(handle,
                          std::unique_ptr<Texture>(new Texture(
-                             handle, filename,
+                             handle, GetRootPath(), filename,
                              ::nickel::gogl::Sampler::CreateLinearRepeat())));
         }
     }

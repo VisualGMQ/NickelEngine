@@ -59,6 +59,8 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <cstring>
+#include <type_traits>
 
 
 #ifdef _WIN32

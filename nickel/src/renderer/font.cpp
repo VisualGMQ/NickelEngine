@@ -40,8 +40,9 @@ Character::Character(const FT_GlyphSlot& g)
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
 }
 
-Font::Font(const std::string& filename) {
-    if (auto err = FT_New_Face(gFtLib, filename.c_str(), 0, &face_); err) {
+Font::Font(const std::filesystem::path& filename) : Res(filename) {
+    if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &face_);
+        err) {
         LOGE(log_tag::Res, "load font ", filename,
              " failed! error code: ", FT_Error_String(err));
         err = FT_Select_Charmap(face_, FT_ENCODING_UNICODE);

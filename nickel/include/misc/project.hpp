@@ -63,4 +63,17 @@ void InitProjectByConfig(const ProjectInitInfo&, Window& window,
  */
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds);
+
+constexpr std::string_view ResDir = "resources";
+
+/**
+ * @brief get resource dir path from project root path
+ * 
+ * @param root project root path
+ * @return std::filesystem::path 
+ */
+inline std::filesystem::path GenResourcePath(const std::filesystem::path& root) {
+    return root/std::filesystem::path{ResDir};
+}
+
 }  // namespace nickel

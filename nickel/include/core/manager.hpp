@@ -27,8 +27,8 @@ public:
 
     bool Has(Handle<T> handle) const { return datas_.find(handle) != datas_.end(); }
 
-    std::string_view GetRootPath() const { return rootPath_; }
-    void SetRootPath(const std::string& path) { rootPath_ = path; }
+    std::filesystem::path GetRootPath() const { return rootPath_; }
+    void SetRootPath(const std::filesystem::path& path) { rootPath_ = path; }
 
     void Associate2File(Handle<T> handle, const std::string& filename) {
         if (associateFiles_.count(handle) == 0) {
@@ -58,8 +58,8 @@ protected:
         }
     }
 
-    std::string addRootPath(const std::string& path) const {
-        return rootPath_ + "/" + path;
+    std::filesystem::path addRootPath(const std::filesystem::path& path) const {
+        return rootPath_/path;
     }
 
     std::unordered_map<Handle<T>, std::unique_ptr<T>, typename Handle<T>::Hash,
@@ -68,7 +68,7 @@ protected:
     std::unordered_map<Handle<T>, std::string, typename Handle<T>::Hash,
                        typename Handle<T>::HashEq>
         associateFiles_;
-    std::string rootPath_ = "./";
+    std::filesystem::path rootPath_ = "./";
 };
 
 template <typename T>
