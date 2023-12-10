@@ -30,13 +30,14 @@ private:
     FT_Face face_ = nullptr;
     std::filesystem::path filename_;
 
-    Font(const std::filesystem::path& filename);
+    Font(const std::filesystem::path& rootPath,
+         const std::filesystem::path& filename);
     Font() = default;
 };
 
 class FontManager final : public Manager<Font> {
 public:
-    FontHandle Load(const std::string& filename);
+    FontHandle Load(const std::filesystem::path& filename);
 };
 
 struct Character {

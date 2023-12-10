@@ -40,8 +40,11 @@ Character::Character(const FT_GlyphSlot& g)
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
 }
 
-Font::Font(const std::filesystem::path& filename) : Res(filename) {
-    if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &face_);
+Font::Font(const std::filesystem::path& rootPath,
+           const std::filesystem::path& filename)
+    : Res(filename) {
+    if (auto err = FT_New_Face(
+            gFtLib, (rootPath / filename.string()).string().c_str(), 0, &face_);
         err) {
         LOGE(log_tag::Res, "load font ", filename,
              " failed! error code: ", FT_Error_String(err));
@@ -71,9 +74,9 @@ FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
     return face_->glyph;
 }
 
-FontHandle FontManager::Load(const std::string& filename) {
+FontHandle FontManager::Load(const std::filesystem::path& filename) {
     auto handle = FontHandle::Create();
-    auto font = std::unique_ptr<Font>(new Font{addRootPath(filename)});
+    auto font = std::unique_ptr<Font>(new Font{GetRootPath(), filename});
     if (font) {
         storeNewItem(handle, std::move(font));
         return handle;

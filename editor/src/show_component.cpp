@@ -1,7 +1,6 @@
 #include "show_component.hpp"
 #include "core/assert.hpp"
 #include "imgui.h"
-#include "mirrow/drefl/value_kind.hpp"
 
 ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
     if (auto it = methods_.find(type); it != methods_.end()) {

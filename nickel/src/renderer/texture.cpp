@@ -1,5 +1,4 @@
 #include "renderer/texture.hpp"
-#include "lunasvg.h"
 #include "refl/sampler.hpp"
 
 namespace nickel {
@@ -22,16 +21,16 @@ Texture::Texture(TextureHandle handle, const std::filesystem::path& root,
     }
 }
 
-Texture::Texture(TextureHandle handle, void* pixels, int w, int h,
-                 const gogl::Sampler& sampler, gogl::Format fmt,
-                 gogl::Format gpuFmt)
-    : handle_(handle), sampler_(sampler), w_(w), h_(h) {
-    texture_ = std::make_unique<gogl::Texture>(
-        gogl::Texture::Type::Dimension2, pixels, w, h, sampler, fmt,
-        gpuFmt, gogl::DataType::UByte);
+Texture::Texture(TextureHandle handle, const std::filesystem::path& filename,
+                 void* pixels, int w, int h, const gogl::Sampler& sampler,
+                 gogl::Format fmt, gogl::Format gpuFmt)
+    : Res(filename), handle_(handle), sampler_(sampler), w_(w), h_(h) {
+    texture_ = std::make_unique<gogl::Texture>(gogl::Texture::Type::Dimension2,
+                                               pixels, w, h, sampler, fmt,
+                                               gpuFmt, gogl::DataType::UByte);
 }
 
-TextureHandle TextureManager::Load(const std::string& filename,
+TextureHandle TextureManager::Load(const std::filesystem::path& filename,
                                    const gogl::Sampler& sampler) {
     TextureHandle handle = TextureHandle::Create();
     auto texture = std::unique_ptr<Texture>(
@@ -47,8 +46,8 @@ TextureHandle TextureManager::Load(const std::string& filename,
 std::unique_ptr<Texture> TextureManager::CreateSolitary(
     void* data, int w, int h, const gogl::Sampler& sampler, gogl::Format fmt,
     gogl::Format gpuFmt) {
-    return std::unique_ptr<Texture>(
-        new Texture{TextureHandle::Null(), data, w, h, sampler, fmt, gpuFmt});
+    return std::unique_ptr<Texture>(new Texture{
+        TextureHandle::Null(), {}, data, w, h, sampler, fmt, gpuFmt});
 }
 
 toml::table TextureManager::Save2Toml() const {
@@ -57,15 +56,14 @@ toml::table TextureManager::Save2Toml() const {
     tbl.emplace("type", std::string_view("texture"));
     tbl.emplace("root_path", GetRootPath().string());
     toml::array arr;
-    for (auto& [handle, filename] : associateFiles_) {
-        const Texture& texture = Get(handle);
+    for (auto& [handle, texture] : AllDatas()) {
         toml::table textureTbl;
         textureTbl.emplace("id", (HandleInnerIDType)handle);
-        if (!texture.Filename().empty()) {
-            textureTbl.emplace("filename", texture.Filename().string());
+        if (!texture->RelativePath().empty()) {
+            textureTbl.emplace("filename", texture->RelativePath().string());
         }
         toml::table samplerTbl;
-        ::mirrow::serd::srefl::serialize<gogl::Sampler>(texture.Sampler(),
+        ::mirrow::serd::srefl::serialize<gogl::Sampler>(texture->Sampler(),
                                                         samplerTbl);
         textureTbl.emplace("sampler", samplerTbl);
         arr.push_back(textureTbl);
@@ -106,17 +104,18 @@ void TextureManager::LoadFromToml(toml::table& tbl) {
     }
 }
 
-TextureHandle TextureManager::LoadSVG(const std::string& filename, const gogl::Sampler&,
-                          std::optional<cgmath::Vec2> size) {
-    auto doc = lunasvg::Document::loadFromFile(
-        (GetRootPath() / std::filesystem::path{filename}).string());
+TextureHandle TextureManager::LoadSVG(const std::filesystem::path& filename,
+                                      const gogl::Sampler&,
+                                      std::optional<cgmath::Vec2> size) {
+    auto doc =
+        lunasvg::Document::loadFromFile((GetRootPath() / filename).string());
     auto bitmap = doc->renderToBitmap(size ? size->w : 0, size ? size->h : 0);
     bitmap.convertToRGBA();
 
     auto handle = TextureHandle::Create();
 
     auto texture = std::unique_ptr<Texture>(
-        new Texture(handle, (void*)bitmap.data(), bitmap.width(),
+        new Texture(handle, filename, (void*)bitmap.data(), bitmap.width(),
                     bitmap.height(), gogl::Sampler::CreateLinearRepeat()));
     storeNewItem(handle, std::move(texture));
 

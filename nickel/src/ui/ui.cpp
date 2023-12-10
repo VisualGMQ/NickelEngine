@@ -87,6 +87,10 @@ void renderLabel(gecs::entity ent, const Label& label,
             continue;
         }
 
+        if (i >= textTextures.size()) {
+            continue;
+        }
+
         auto& c = textTextures[i];
         auto& t = text[i];
         cgmath::Rect region = {{}, c.size};

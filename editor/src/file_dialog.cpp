@@ -1,6 +1,6 @@
 #include "file_dialog.hpp"
 
-std::vector<std::string> OpenFileDialog(const std::string& title) {
+std::vector<std::filesystem::path> OpenFileDialog(const std::string& title) {
     OPENFILENAME ofn;
     char szFile[MAX_PATH] = {0};
 
@@ -15,20 +15,20 @@ std::vector<std::string> OpenFileDialog(const std::string& title) {
     ofn.lpstrTitle = title.c_str();
 
     if (GetOpenFileName(&ofn) == TRUE) {
-        return {std::string{szFile}};
+        return {std::filesystem::path{szFile}};
     } else {
         return {};
     }
 }
 
-std::string OpenDirDialog(const std::string& title) {
+std::filesystem::path OpenDirDialog(const std::string& title) {
     BROWSEINFO bi = {0};
     bi.hwndOwner = NULL;
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
     bi.lpszTitle = title.c_str();
 
     LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
-    std::string result;
+    std::filesystem::path result;
     if (pidl != NULL) {
         char folderPath[MAX_PATH] = {0};
         SHGetPathFromIDList(pidl, folderPath);

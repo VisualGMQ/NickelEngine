@@ -11,63 +11,70 @@ public:
     Manager(const Manager&) = delete;
     Manager operator=(const Manager&) = delete;
 
-    void Destroy(Handle<T> handle) { datas_.erase(handle); }
+    using AssetType = T;
+    using AssetHandle = Handle<AssetType>;
+    using AssetStoreType = std::unique_ptr<AssetType>;
 
-    const T& Get(Handle<T> handle) const {
+    void Destroy(AssetHandle handle) { datas_.erase(handle); }
+
+    const AssetType& Get(AssetHandle handle) const {
         if (auto it = datas_.find(handle); it != datas_.end()) {
             return *it->second;
         } else {
-            return T::Null;
+            return AssetType::Null;
         }
     }
 
-    T& Get(Handle<T> handle) {
-        return const_cast<T&>(std::as_const(*this).Get(handle));
+    AssetType& Get(AssetHandle handle) {
+        return const_cast<AssetType&>(std::as_const(*this).Get(handle));
     }
 
-    bool Has(Handle<T> handle) const { return datas_.find(handle) != datas_.end(); }
+    AssetHandle GetHandle(const std::filesystem::path& path) const {
+        for (auto& [handle, texture] : AllDatas()) {
+            if (GetRootPath() / texture->RelativePath() ==
+                GetRootPath() / path) {
+                return handle;
+            }
+        }
+        return {};
+    }
 
-    std::filesystem::path GetRootPath() const { return rootPath_; }
+    const AssetType& Get(const std::filesystem::path& path) const {
+        for (auto& [handle, texture] : AllDatas()) {
+            if (GetRootPath() / texture->RelativePath() ==
+                GetRootPath() / path) {
+                return Get(handle);
+            }
+        }
+        return AssetType::Null;
+    }
+
+    bool Has(AssetHandle handle) const {
+        return datas_.find(handle) != datas_.end();
+    }
+
+    auto& GetRootPath() const { return rootPath_; }
+
     void SetRootPath(const std::filesystem::path& path) { rootPath_ = path; }
 
-    void Associate2File(Handle<T> handle, const std::string& filename) {
-        if (associateFiles_.count(handle) == 0) {
-            associateFiles_.emplace(handle, handle);
-        } else {
-            // TODO: error handling
-        }
-    }
+    void ReleaseAll() { datas_.clear(); }
 
-    void ReleaseAll() {
-        datas_.clear();
-        associateFiles_.clear();
-    }
-
-    std::string_view GetFilename(Handle<T> handle) const {
-        if (auto it = associateFiles_.find(handle); it != associateFiles_.end()) {
-            return it->second;
-        } else {
-            return {};
-        }
-    }
+    auto& AllDatas() const { return datas_; }
 
 protected:
-    void storeNewItem(Handle<T> handle, std::unique_ptr<T>&& item) {
+    void storeNewItem(AssetHandle handle, AssetStoreType&& item) {
         if (handle) {
             datas_.emplace(handle, std::move(item));
         }
     }
 
     std::filesystem::path addRootPath(const std::filesystem::path& path) const {
-        return rootPath_/path;
+        return rootPath_ / path;
     }
 
-    std::unordered_map<Handle<T>, std::unique_ptr<T>, typename Handle<T>::Hash,
+    std::unordered_map<AssetHandle, AssetStoreType, typename Handle<T>::Hash,
                        typename Handle<T>::HashEq>
         datas_;
-    std::unordered_map<Handle<T>, std::string, typename Handle<T>::Hash,
-                       typename Handle<T>::HashEq>
-        associateFiles_;
     std::filesystem::path rootPath_ = "./";
 };
 

@@ -3,17 +3,20 @@
 #include "context.hpp"
 #include "imgui_plugin.hpp"
 #include "nickel.hpp"
+#include "file_dialog.hpp"
+#include "filetype.hpp"
 
 struct ContentBrowserInfo {
     std::filesystem::path rootPath;
     std::filesystem::path path;
+    nickel::cgmath::Vec2 thumbnailSize = {32, 32};
 
     void RescanDir();
 
     auto& Files() const { return files_; }
 
     nickel::Texture& FindTextureOrGen(const std::string& extension);
-    nickel::Texture& GetDirIcon() { return textureMgr_.Get(dirIconHandle_); }
+    const nickel::Texture& GetDirIcon() const { return textureMgr_.Get(dirIconHandle_); }
 
     void RegistFileIcon(const std::string& extension,
                         const std::filesystem::path& svgPath) {
@@ -33,4 +36,4 @@ private:
     nickel::TextureHandle dirIconHandle_;
 };
 
-void EditorContentBrowser(bool& show, ContentBrowserInfo&);
+void EditorContentBrowser(bool& show);

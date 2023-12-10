@@ -2,22 +2,16 @@
 #include "core/utf8string.hpp"
 #include "imgui_plugin.hpp"
 
-#include "lunasvg.h"
-#include "mirrow/drefl/cast_any.hpp"
-#include "mirrow/drefl/factory.hpp"
-#include "misc/project.hpp"
-#include "nickel.hpp"
-
+#include "asset_window.hpp"
 #include "content_browser.hpp"
 #include "file_dialog.hpp"
+#include "mirrow/drefl/cast_any.hpp"
+#include "mirrow/drefl/factory.hpp"
+#include "mirrow/drefl/make_any.hpp"
+#include "misc/project.hpp"
 #include "refl/drefl.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
-
-
-#include "refl/cgmath.hpp"
-#include "refl/sprite.hpp"
-#include "refl/tilesheet.hpp"
 #include "ui/style.hpp"
 
 enum class EditorScene {
@@ -55,7 +49,7 @@ void ProjectManagerUpdate(
                 textureMgr->ReleaseAll();
                 SaveAssets(dir, textureMgr.get());
 
-                projInitInfo->projectPath = dir;
+                projInitInfo->projectPath = dir.string();
 
                 LOGI(log_tag::Nickel, "Create new project to ", dir);
                 cmds.switch_state(EditorScene::Editor);
@@ -118,6 +112,21 @@ void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
     }
 }
 
+template <typename MgrType>
+nickel::Handle<typename MgrType::AssetType> SelectAndChangeAsset(
+    MgrType& mgr, std::string_view buttonText, const std::string& title) {
+    using AssetType = typename MgrType::AssetType;
+    if (ImGui::Button(buttonText.data())) {
+        ImGui::OpenPopup(title.c_str());
+    }
+    if constexpr (std::is_same_v<AssetType, nickel::Texture>) {
+        return TextureAssetWindow(mgr, title);
+    } else if constexpr (std::is_same_v<AssetType, nickel::Font>) {
+        return FontAssetWindow(mgr, title);
+    }
+    return {};
+}
+
 void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
                        mirrow::drefl::any& value, gecs::registry reg,
                        const std::vector<int>&) {
@@ -130,17 +139,46 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
     char buf[1024] = {0};
     if (handle) {
         auto& texture = mgr->Get(handle);
-        std::filesystem::path texturePath = texture.Filename(),
-                              rootPath = mgr->GetRootPath();
-        snprintf(buf, sizeof(buf), "res::%ls",
-                 std::filesystem::relative(texturePath, rootPath).c_str());
+        std::filesystem::path texturePath = texture.RelativePath();
+        snprintf(buf, sizeof(buf), "Res://%s", texturePath.string().c_str());
     }
-    ImGui::InputText("texture", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
+
+    static std::string title = "asset texture";
+    auto newHandle = SelectAndChangeAsset(
+        reg.res<gecs::mut<TextureManager>>().get(), buf, title);
+    if (newHandle) {
+        handle = newHandle;
+    }
 
     if (handle && ImGui::TreeNode("thumbnail")) {
         auto& texture = mgr->Get(handle);
         ImGui::Image(texture.Raw(), ImVec2(texture.Width(), texture.Height()));
         ImGui::TreePop();
+    }
+}
+
+void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
+                    mirrow::drefl::any& value, gecs::registry reg,
+                    const std::vector<int>&) {
+    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<FontHandle>(),
+           "type incorrect");
+
+    auto& handle = *mirrow::drefl::try_cast<FontHandle>(value);
+    auto mgr = reg.res<FontManager>();
+    char buf[1024] = {0};
+    if (handle) {
+        auto& font = mgr->Get(handle);
+        std::filesystem::path path = font.RelativePath();
+        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
+    } else {
+        snprintf(buf, sizeof(buf), "no font");
+    }
+
+    static std::string title = "asset font";
+    auto newHandle =
+        SelectAndChangeAsset(reg.res<FontManager>().get(), buf, title);
+    if (newHandle) {
+        handle = newHandle;
     }
 }
 
@@ -156,7 +194,7 @@ void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
     auto& mgr = reg.res<AnimationManager>().get();
     static char buf[1024] = {0};
     if (handle && mgr.Has(handle)) {
-        snprintf(buf, sizeof(buf), "%s", mgr.GetFilename(handle).data());
+        // snprintf(buf, sizeof(buf), "%s", mgr.Get(handle).RelativePath());
     } else {
         snprintf(buf, sizeof(buf), "%s", "no animation");
     }
@@ -200,6 +238,12 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
     if (size != label.GetPtSize()) {
         label.SetPtSize(size);
     }
+
+    // show font
+    auto fontHandle = label.GetFont();
+    auto ref = mirrow::drefl::any_make_ref(fontHandle);
+    ShowFontHandle(ref.type_info(), "font", ref, reg, {});
+    label.ChangeFont(fontHandle);
 }
 
 void RegistComponentShowMethods() {
@@ -273,8 +317,7 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
     contentBrowserInfo.path = resourceDir;
     contentBrowserInfo.rootPath = resourceDir;
     if (!std::filesystem::exists(contentBrowserInfo.rootPath)) {
-        if (!std::filesystem::create_directory(
-                contentBrowserInfo.rootPath)) {
+        if (!std::filesystem::create_directory(contentBrowserInfo.rootPath)) {
             LOGF(log_tag::Editor, "create resource dir ",
                  contentBrowserInfo.rootPath, " failed!");
         }
@@ -456,7 +499,7 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
         EditorInspectorWindow(ctx->openInspector, {}, reg, cmds);
     }
 
-    EditorContentBrowser(ctx->openContentBrowser, cbInfo.get());
+    EditorContentBrowser(ctx->openContentBrowser);
 
     static bool demoWindowOpen = true;
 

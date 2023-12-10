@@ -1,8 +1,6 @@
 #include "misc/project.hpp"
 #include "core/log_tag.hpp"
-#include "misc/hierarchy.hpp"
 #include "refl/drefl.hpp"
-#include "refl/window.hpp"
 #include "renderer/context.hpp"
 #include "renderer/font.hpp"
 #include "renderer/texture.hpp"
@@ -11,16 +9,16 @@
 
 namespace nickel {
 
-void SaveAssets(const std::string& rootPath, const TextureManager& textureMgr) {
+void SaveAssets(const std::filesystem::path& rootPath, const TextureManager& textureMgr) {
     toml::table tbl;
     auto textureMgrTbl = textureMgr.Save2Toml();
     tbl.emplace("textures", textureMgrTbl);
 
-    std::ofstream file(rootPath + "/assets.toml");
+    std::ofstream file(rootPath/"assets.toml");
     file << toml::toml_formatter{tbl} << std::flush;
 }
 
-void SaveBasicProjectInfo(const std::string& rootPath,
+void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
                           const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
@@ -30,7 +28,7 @@ void SaveBasicProjectInfo(const std::string& rootPath,
 
     // TODO: serialize camera information
 
-    std::ofstream file(rootPath + "/project.toml");
+    std::ofstream file(rootPath/"project.toml");
     file << toml::toml_formatter{tbl} << std::endl;
 }
 

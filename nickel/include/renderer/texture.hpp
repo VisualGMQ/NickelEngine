@@ -32,9 +32,7 @@ public:
 
     Texture& operator=(const Texture&) = delete;
 
-    explicit operator bool() const {
-        return texture_ != nullptr;
-    }
+    explicit operator bool() const { return texture_ != nullptr; }
 
     int Width() const { return w_; }
 
@@ -44,9 +42,12 @@ public:
         return cgmath::Vec2{static_cast<float>(w_), static_cast<float>(h_)};
     }
 
-    void* Raw() const { return reinterpret_cast<void*>(texture_->Id()); }
+    void* Raw() const {
+        return texture_ ? reinterpret_cast<void*>(texture_->Id()) : 0;
+    }
 
     auto& Filename() const { return RelativePath(); }
+
     auto& Sampler() const { return sampler_; }
 
 private:
@@ -60,8 +61,9 @@ private:
             const std::filesystem::path& filename, const gogl::Sampler&,
             gogl::Format fmt = gogl::Format::RGBA,
             gogl::Format gpuFmt = gogl::Format::RGBA);
-    Texture(TextureHandle handle, void*, int w, int h,
-            const gogl::Sampler& sampler, gogl::Format fmt = gogl::Format::RGBA,
+    Texture(TextureHandle handle, const std::filesystem::path& filename, void*,
+            int w, int h, const gogl::Sampler& sampler,
+            gogl::Format fmt = gogl::Format::RGBA,
             gogl::Format gpuFmt = gogl::Format::RGBA);
     Texture() = default;
 };
@@ -76,8 +78,10 @@ public:
     friend std::enable_if_t<std::is_same_v<T, TextureManager>> deserialize(
         const toml::node&, T&);
 
-    TextureHandle Load(const std::string& filename, const gogl::Sampler&);
-    TextureHandle LoadSVG(const std::string& filename, const gogl::Sampler&,
+    TextureHandle Load(const std::filesystem::path& filename,
+                       const gogl::Sampler&);
+    TextureHandle LoadSVG(const std::filesystem::path& filename,
+                          const gogl::Sampler&,
                           std::optional<cgmath::Vec2> size = std::nullopt);
     std::unique_ptr<Texture> CreateSolitary(
         void* data, int w, int h, const gogl::Sampler&,

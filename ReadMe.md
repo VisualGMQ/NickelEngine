@@ -47,7 +47,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
     - [x] Entity list window to show entities
     - [x] Inspector window to show components of selected entity
     - [x] Game scene display
-    - [ ] Assets window
+    - [x] Assets window
     - [ ] Animation editor
 
 ## Editor

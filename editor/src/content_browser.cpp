@@ -1,5 +1,5 @@
 #include "content_browser.hpp"
-#include "imgui.h"
+#include "import_asset.hpp"
 
 ContentBrowserInfo::ContentBrowserInfo() {
     textureMgr_.SetRootPath("./editor/resources");
@@ -20,11 +20,18 @@ void ContentBrowserInfo::RescanDir() {
     }
 }
 
-void EditorContentBrowser(bool& show, ContentBrowserInfo& cbInfo) {
+void EditorContentBrowser(bool& show) {
+    auto& cbInfo =
+        gWorld->cur_registry()->res<gecs::mut<ContentBrowserInfo>>().get();
     if (ImGui::Begin("content browser", &show)) {
         auto relativePath =
             std::filesystem::relative(cbInfo.path, cbInfo.rootPath);
         ImGui::Text("Res://%s", relativePath.string().c_str());
+        ImGui::SameLine();
+
+        if (ImGui::Button("+")) {
+            SelectAndLoadAsset(*gWorld->cur_registry());
+        }
 
         if (cbInfo.path != cbInfo.rootPath) {
             if (ImGui::Button("..")) {
@@ -38,6 +45,8 @@ void EditorContentBrowser(bool& show, ContentBrowserInfo& cbInfo) {
             float groupX =
                 ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
             bool enteredDir = false;
+            auto& textureMgr =
+                gWorld->cur_registry()->res<nickel::TextureManager>().get();
             // please ensure all files are exists
             for (int i = 0; i < cbInfo.Files().size(); i++) {
                 auto& entry = cbInfo.Files()[i];
@@ -45,17 +54,28 @@ void EditorContentBrowser(bool& show, ContentBrowserInfo& cbInfo) {
                 ImGui::PushID(i);
 
                 auto extension = entry.path().extension().string();
-                nickel::Texture* texture = nullptr;
+                auto filetype = DetectFileType(entry.path());
+                const nickel::Texture* texture = nullptr;
                 if (entry.is_directory()) {
                     texture = &cbInfo.GetDirIcon();
                 } else {
+                    if (filetype == FileType::Image) {
+                        auto handle = textureMgr.GetHandle(entry);
+                        if (handle) {
+                            texture = &textureMgr.Get(handle);
+                        }
+                    }
+                }
+                if (!texture) {
                     texture = &cbInfo.FindTextureOrGen(extension);
                 }
                 ImGui::BeginGroup();
                 {
                     if (*texture) {
-                        if (ImGui::ImageButton((ImTextureID)texture->Raw(),
-                                               ImVec2{32, 32})) {
+                        if (ImGui::ImageButton(
+                                (ImTextureID)texture->Raw(),
+                                ImVec2{cbInfo.thumbnailSize.w,
+                                       cbInfo.thumbnailSize.h})) {
                             if (entry.is_directory()) {
                                 std::cout << "clicked" << std::endl;
                                 cbInfo.path /= entry.path().filename();

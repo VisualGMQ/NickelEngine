@@ -16,19 +16,19 @@ struct ProjectInitInfo final {
     WindowBuilder::Data windowData = WindowBuilder::Data::Default();
 };
 
-void SaveProject(const std::string& rootPath, const TextureManager&,
+void SaveProject(const std::filesystem::path& rootPath, const TextureManager&,
                  const Window&);
 
 /**
  * @brief save basic project information to file
  */
-void SaveBasicProjectInfo(const std::string& rootPath,
+void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
                           const ProjectInitInfo& initInfo);
 
 /**
  * @brief save all assets information to file
  */
-void SaveAssets(const std::string& rootPath, const TextureManager& textureMgr);
+void SaveAssets(const std::filesystem::path& rootPath, const TextureManager& textureMgr);
 
 /**
  * @brief load basic project config
@@ -68,12 +68,13 @@ constexpr std::string_view ResDir = "resources";
 
 /**
  * @brief get resource dir path from project root path
- * 
+ *
  * @param root project root path
- * @return std::filesystem::path 
+ * @return std::filesystem::path
  */
-inline std::filesystem::path GenResourcePath(const std::filesystem::path& root) {
-    return root/std::filesystem::path{ResDir};
+inline std::filesystem::path GenResourcePath(
+    const std::filesystem::path& root) {
+    return root / std::filesystem::path{ResDir};
 }
 
 }  // namespace nickel

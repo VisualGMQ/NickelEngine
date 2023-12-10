@@ -13,6 +13,13 @@ void Label::SetPtSize(int size) {
     regenerateTextCache();
 }
 
+void Label::ChangeFont(FontHandle handle) {
+    if (handle != font_) {
+        font_ = handle;
+        regenerateTextCache();
+    }
+}
+
 void Label::regenerateTextCache() {
     auto& fontMgr = gWorld->cur_registry()->res<gecs::mut<FontManager>>().get();
     if (!fontMgr.Has(font_)) {

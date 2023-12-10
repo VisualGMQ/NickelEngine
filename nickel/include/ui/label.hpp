@@ -14,6 +14,7 @@ public:
     auto& GetTextCache() const { return cache_; }
 
     FontHandle GetFont() const { return font_; }
+    void ChangeFont(FontHandle);
 
     void SetPtSize(int size);
     int GetPtSize() const { return size_; }
