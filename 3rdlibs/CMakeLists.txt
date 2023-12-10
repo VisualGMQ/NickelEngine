@@ -15,3 +15,5 @@ add_subdirectory(nanobench)
 
 set(FT_ENABLE_ERROR_STRINGS ON)
 add_subdirectory(freetype2)
+
+add_subdirectory(lunasvg)

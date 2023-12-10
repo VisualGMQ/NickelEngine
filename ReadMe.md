@@ -14,17 +14,22 @@ cmake --build cmake-build
 
 ## 3rd Libraries
 
-* [SDL2](https://github.com/libsdl-org/SDL): use to support create window, render context and basic input
-* [gecs](https://github.com/VisualGMQ/gecs.git): basic ECS framework
-* [mirrow](https://github.com/VisualGMQ/mirrow.git): TMP framework, use to do dynamic/static reflection and serialization
-* [stb_image](http://nothings.org/stb): use to loading images
-* [glad](https://glad.dav1d.de/): use to load opengl
-* [dear-imgui](https://github.com/ocornut/imgui): use to support GUI in editor
-* [tomlplusplus](https://github.com/marzer/tomlplusplus): use to support toml file parse
-* [miniaudio](https://miniaud.io/): use to play audio cross platform
-* [nanobench](https://nanobench.ankerl.com/): use to do benchmark
-* [nameof](https://github.com/Neargye/nameof): use to get enum name convniently
-* [freetype2](https://freetype.org/): use to render ttf font
+|library|description|
+|--|--|
+|[SDL2](https://github.com/libsdl-org/SDL)| use to support create window, render context and basic input|
+|[gecs](https://github.com/VisualGMQ/gecs.git)| basic ECS framework|
+|[mirrow](https://github.com/VisualGMQ/mirrow.git)| TMP framework, use to do dynamic/static reflection and serialization|
+|[stb_image](http://nothings.org/stb)| use to loading images|
+|[glad](https://glad.dav1d.de/)| use to load opengl|
+|[dear-imgui](https://github.com/ocornut/imgui)| use to support GUI in editor|
+|[tomlplusplus](https://github.com/marzer/tomlplusplus)| use to support toml file parse|
+|[miniaudio](https://miniaud.io/)| use to play audio cross platform|
+|[nanobench](https://nanobench.ankerl.com/)| use to do benchmark|
+|[nameof](https://github.com/Neargye/nameof)| use to get enum name convniently|
+|[freetype2](https://freetype.org/)| use to render ttf font|
+|[lunasvg](https://github.com/sammycage/lunasvg)| use to render svg|
+
+editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-material-icon-theme)
 
 ## Features
 

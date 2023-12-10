@@ -43,6 +43,8 @@
 #include "ft2build.h"
 #include FT_FREETYPE_H
 
+#include "lunasvg.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>

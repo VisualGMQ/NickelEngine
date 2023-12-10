@@ -33,7 +33,7 @@ public:
     Texture& operator=(const Texture&) = delete;
 
     explicit operator bool() const {
-        return handle_ == TextureHandle::Null();
+        return texture_ != nullptr;
     }
 
     int Width() const { return w_; }
@@ -77,6 +77,8 @@ public:
         const toml::node&, T&);
 
     TextureHandle Load(const std::string& filename, const gogl::Sampler&);
+    TextureHandle LoadSVG(const std::string& filename, const gogl::Sampler&,
+                          std::optional<cgmath::Vec2> size = std::nullopt);
     std::unique_ptr<Texture> CreateSolitary(
         void* data, int w, int h, const gogl::Sampler&,
         gogl::Format fmt = gogl::Format::RGBA,

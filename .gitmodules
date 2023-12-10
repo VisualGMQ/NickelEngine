@@ -13,3 +13,6 @@
 [submodule "3rdlibs/freetype2"]
 	path = 3rdlibs/freetype2
 	url = https://gitlab.freedesktop.org/freetype/freetype.git
+[submodule "3rdlibs/lunasvg"]
+	path = 3rdlibs/lunasvg
+	url = https://github.com/sammycage/lunasvg.git

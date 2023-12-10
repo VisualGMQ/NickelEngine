@@ -1,4 +1,5 @@
 #include "renderer/texture.hpp"
+#include "lunasvg.h"
 #include "refl/sampler.hpp"
 
 namespace nickel {
@@ -103,6 +104,23 @@ void TextureManager::LoadFromToml(toml::table& tbl) {
                              ::nickel::gogl::Sampler::CreateLinearRepeat())));
         }
     }
+}
+
+TextureHandle TextureManager::LoadSVG(const std::string& filename, const gogl::Sampler&,
+                          std::optional<cgmath::Vec2> size) {
+    auto doc = lunasvg::Document::loadFromFile(
+        (GetRootPath() / std::filesystem::path{filename}).string());
+    auto bitmap = doc->renderToBitmap(size ? size->w : 0, size ? size->h : 0);
+    bitmap.convertToRGBA();
+
+    auto handle = TextureHandle::Create();
+
+    auto texture = std::unique_ptr<Texture>(
+        new Texture(handle, (void*)bitmap.data(), bitmap.width(),
+                    bitmap.height(), gogl::Sampler::CreateLinearRepeat()));
+    storeNewItem(handle, std::move(texture));
+
+    return handle;
 }
 
 }  // namespace nickel

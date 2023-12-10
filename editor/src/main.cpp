@@ -2,6 +2,7 @@
 #include "core/utf8string.hpp"
 #include "imgui_plugin.hpp"
 
+#include "lunasvg.h"
 #include "mirrow/drefl/cast_any.hpp"
 #include "mirrow/drefl/factory.hpp"
 #include "misc/project.hpp"
@@ -287,6 +288,9 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                           cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
 
     initInfo.get() = std::move(newInfo);
+
+    contentBrowserInfo.RegistFileIcon(".png", "icons/image.svg");
+    contentBrowserInfo.RegistFileIcon(".ttf", "icons/font.svg");
 
     RegistComponentShowMethods();
     RegistSpawnMethods();
