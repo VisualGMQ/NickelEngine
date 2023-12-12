@@ -1,9 +1,9 @@
-#include "asset_window.hpp"
+#include "asset_list_window.hpp"
 #include "content_browser.hpp"
 
-
 bool ShowTexture(nickel::TextureHandle handle,
-                 const nickel::TextureManager::AssetStoreType& texture, int id) {
+                 const nickel::TextureManager::AssetStoreType& texture,
+                 int id) {
     bool result = false;
     ImGui::BeginGroup();
     {

@@ -6,15 +6,15 @@
 #include "renderer/texture.hpp"
 #include "ui/context.hpp"
 
-
 namespace nickel {
 
-void SaveAssets(const std::filesystem::path& rootPath, const TextureManager& textureMgr) {
+void SaveAssets(const std::filesystem::path& rootPath,
+                const TextureManager& textureMgr) {
     toml::table tbl;
     auto textureMgrTbl = textureMgr.Save2Toml();
     tbl.emplace("textures", textureMgrTbl);
 
-    std::ofstream file(rootPath/"assets.toml");
+    std::ofstream file(rootPath / "assets.toml");
     file << toml::toml_formatter{tbl} << std::flush;
 }
 
@@ -28,7 +28,7 @@ void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
 
     // TODO: serialize camera information
 
-    std::ofstream file(rootPath/"project.toml");
+    std::ofstream file(rootPath / "project.toml");
     file << toml::toml_formatter{tbl} << std::endl;
 }
 
@@ -150,6 +150,35 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
         .RegistMethod<double>()
         .RegistMethod<int>()
         .RegistMethod<long>();
+}
+
+bool ImportAsset(const std::filesystem::path& path, TextureManager& textureMgr,
+                 FontManager& fontMgr, FileType hint) {
+    hint = hint == FileType::Unknown ? DetectFileType(path) : hint;
+    switch (hint) {
+        case FileType::Unknown:
+            return false;
+        case FileType::Image:
+            return textureMgr.Load(path, gogl::Sampler::CreateLinearRepeat()) !=
+                   TextureHandle::Null();
+        case FileType::Font:
+            return fontMgr.Load(path) != FontHandle::Null();
+        case FileType::Audio:
+            return false;
+    }
+}
+
+bool RemoveAsset(const std::filesystem::path& path, TextureManager& textureMgr,
+                 FontManager& fontMgr) {
+    if (auto handle = textureMgr.GetHandle(path); handle) {
+        textureMgr.Destroy(handle);
+        return true;
+    }
+    if (auto handle = fontMgr.GetHandle(path); handle) {
+        fontMgr.Destroy(handle);
+        return true;
+    }
+    return false;
 }
 
 }  // namespace nickel

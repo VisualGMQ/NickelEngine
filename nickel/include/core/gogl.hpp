@@ -586,7 +586,7 @@ std::string_view GetTextureFilterTypeName(TextureFilterType);
 std::optional<TextureFilterType> GetTextureFilterTypeByName(std::string_view);
 
 struct Sampler final {
-    struct {
+    struct Wrapper {
         TextureWrapperType s, r, t;
         float borderColor[4] = {1, 1, 1, 1};
 
@@ -595,10 +595,26 @@ struct Sampler final {
                    r == TextureWrapperType::ClampToBorder ||
                    t == TextureWrapperType::ClampToBorder;
         }
+
+        bool operator==(const Wrapper& o) const {
+            return s == o.s && r == o.r && t == o.t && borderColor == o.borderColor;
+        }
+
+        bool operator!=(const Wrapper& o) const {
+            return !(*this == o);
+        }
     } wrapper;
 
-    struct {
+    struct Filter {
         TextureFilterType min, mag;
+
+        bool operator==(const Filter& o) const {
+            return min == o.min && mag == o.mag;
+        }
+
+        bool operator!=(const Filter& o) const {
+            return !(*this == o);
+        }
     } filter;
 
     bool mipmap;
@@ -623,6 +639,13 @@ struct Sampler final {
         sampler.wrapper.r = TextureWrapperType::Repeat;
         sampler.wrapper.t = TextureWrapperType::Repeat;
         return sampler;
+    }
+
+    bool operator==(const Sampler& o) const {
+        return mipmap == o.mipmap && wrapper == o.wrapper && filter == o.filter;
+    }
+    bool operator!=(const Sampler& o) const {
+        return !(*this == o);
     }
 };
 

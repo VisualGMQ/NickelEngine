@@ -22,6 +22,7 @@ target_sources(nickel_core PRIVATE ${nickel_core_src})
 target_include_directories(nickel_core PUBLIC ./include)
 target_compile_features(nickel_core PUBLIC cxx_std_17)
 target_link_libraries(nickel_core PUBLIC SDL2 glad stb_image toml++ debugbreak mirrow gecs miniaudio nameof freetype lunasvg)
+target_compile_definitions(nickel_core PUBLIC _CRT_SECURE_NO_WARNINGS)
 
 add_library(nickel STATIC)
 target_sources(nickel PRIVATE ${nickel_src})

@@ -99,6 +99,39 @@ void reflectUI() {
         .property("pressColor", &ui::Label::pressColor, {AttrColor});
 }
 
+void reflectRenderRelate() {
+    mirrow::drefl::registrar<gogl::Sampler>::instance()
+        .regist("Sampler")
+        .property("filter", &gogl::Sampler::filter)
+        .property("mipmap", &gogl::Sampler::mipmap)
+        .property("wrapper", &gogl::Sampler::wrapper);
+
+    mirrow::drefl::registrar<gogl::Sampler::Wrapper>::instance()
+        .regist("Wrapper")
+        .property("borderColor", &gogl::Sampler::Wrapper::borderColor)
+        .property("r", &gogl::Sampler::Wrapper::r)
+        .property("s", &gogl::Sampler::Wrapper::s)
+        .property("t", &gogl::Sampler::Wrapper::t);
+
+    mirrow::drefl::registrar<gogl::Sampler::Filter>::instance()
+        .regist("Filter")
+        .property("min", &gogl::Sampler::Filter::min)
+        .property("mag", &gogl::Sampler::Filter::mag);
+
+    mirrow::drefl::registrar<gogl::TextureFilterType>::instance()
+        .regist("TextureFilterType")
+        .add("Linear", gogl::TextureFilterType::Linear)
+        .add("Nearest", gogl::TextureFilterType::Nearest);
+        // TODO: add Other filter type enum
+
+    mirrow::drefl::registrar<gogl::TextureWrapperType>::instance()
+        .regist("TextureWrapperType")
+        .add("Repeat", gogl::TextureWrapperType::Repeat)
+        .add("MirrowRepeat", gogl::TextureWrapperType::MirroredRepeat)
+        .add("ClampToBorder", gogl::TextureWrapperType::ClampToBorder)
+        .add("ClampToEdge", gogl::TextureWrapperType::ClampToEdge);
+}
+
 void InitDynamicReflect() {
     reflectVec2();
     reflectVec3();
@@ -109,6 +142,7 @@ void InitDynamicReflect() {
     reflectAnimation();
     reflectSprite();
     reflectUI();
+    reflectRenderRelate();
 }
 
 }  // namespace nickel

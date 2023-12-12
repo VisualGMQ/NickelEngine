@@ -83,6 +83,8 @@ public:
     TextureHandle LoadSVG(const std::filesystem::path& filename,
                           const gogl::Sampler&,
                           std::optional<cgmath::Vec2> size = std::nullopt);
+    bool Replace(TextureHandle, const std::filesystem::path& filename,
+                 const gogl::Sampler&);
     std::unique_ptr<Texture> CreateSolitary(
         void* data, int w, int h, const gogl::Sampler&,
         gogl::Format fmt = gogl::Format::RGBA,

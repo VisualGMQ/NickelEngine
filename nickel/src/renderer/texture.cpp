@@ -33,13 +33,32 @@ Texture::Texture(TextureHandle handle, const std::filesystem::path& filename,
 TextureHandle TextureManager::Load(const std::filesystem::path& filename,
                                    const gogl::Sampler& sampler) {
     TextureHandle handle = TextureHandle::Create();
+    auto relativePath = filename.is_relative() ? filename
+                                               : std::filesystem::relative(
+                                                     filename, GetRootPath());
     auto texture = std::unique_ptr<Texture>(
-        new Texture(handle, GetRootPath(), filename, sampler));
+        new Texture(handle, GetRootPath(), relativePath, sampler));
     if (texture) {
         storeNewItem(handle, std::move(texture));
         return handle;
     } else {
         return TextureHandle::Null();
+    }
+}
+
+bool TextureManager::Replace(TextureHandle handle,
+                             const std::filesystem::path& filename,
+                             const gogl::Sampler& sampler) {
+    if (!Has(handle)) {
+        return false;
+    }
+
+    Texture texture{handle, GetRootPath(), filename, sampler};
+    if (texture) {
+        Get(handle) = std::move(texture);
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -120,6 +139,7 @@ TextureHandle TextureManager::LoadSVG(const std::filesystem::path& filename,
     storeNewItem(handle, std::move(texture));
 
     return handle;
+    return {};
 }
 
 }  // namespace nickel

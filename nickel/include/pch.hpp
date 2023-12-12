@@ -12,12 +12,6 @@
 
 #include "miniaudio.h"
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX  // evil macro to remove Window SDK min&max macro
-#endif
-#endif
-
 #include "SDL.h"
 
 #define MIRROW_ASSERT(expr, msg) Assert(expr, msg)
@@ -71,8 +65,14 @@
 #else
 #define DLLEXPORT
 #endif
+// evil macro to remove Window SDK min&max macro
+#ifndef NOMINMAX
+#define NOMINMAX 
 #endif
-
+// some windows evil macro undef
+#undef near
+#undef far
+#endif
 
 extern std::unique_ptr<gecs::world> gWorld;
 

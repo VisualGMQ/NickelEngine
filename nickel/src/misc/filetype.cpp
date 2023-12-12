@@ -1,4 +1,6 @@
-#include "filetype.hpp"
+#include "misc/filetype.hpp"
+
+namespace nickel {
 
 std::unordered_map<std::string, FileType> gFileTypeMap = {
     // image
@@ -19,4 +21,6 @@ FileType DetectFileType(const std::filesystem::path& path) {
         return it->second;
     }
     return FileType::Unknown;
+}
+
 }

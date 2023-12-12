@@ -1,5 +1,4 @@
 #include "renderer/tilesheet.hpp"
-#include "refl/tilesheet.hpp"
 
 namespace nickel {
 
@@ -49,22 +48,6 @@ Tilesheet& TilesheetManager::CreateFromTexture(TextureHandle handle,
     auto it = tilesheets_.insert_or_assign(
         name, Tilesheet(*imageManager_, handle, col, row, margin, spacing));
     return it.first->second;
-}
-
-Tilesheet& TilesheetManager::LoadFromConfig(TextureHandle handle,
-                                            std::string_view configFilename) {
-    auto parseResult = toml::parse_file(configFilename);
-    if (!parseResult) {
-        LOGE(log_tag::Res, "load tilesheet from config file ", configFilename,
-             " failed!\nError: ", parseResult.error());
-        return Tilesheet::Null;
-    } else {
-        TilesheetConfig config;
-        mirrow::serd::srefl::deserialize<TilesheetConfig>(parseResult.table(),
-                                                          config);
-        return CreateFromTexture(handle, config.name, config.col, config.row,
-                                 config.margin, config.spacing);
-    }
 }
 
 Tilesheet& TilesheetManager::Find(std::string_view name) {

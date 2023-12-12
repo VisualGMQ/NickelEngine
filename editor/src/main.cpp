@@ -2,7 +2,7 @@
 #include "core/utf8string.hpp"
 #include "imgui_plugin.hpp"
 
-#include "asset_window.hpp"
+#include "asset_list_window.hpp"
 #include "content_browser.hpp"
 #include "file_dialog.hpp"
 #include "mirrow/drefl/cast_any.hpp"
@@ -13,6 +13,7 @@
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 #include "ui/style.hpp"
+#include "asset_property_window.hpp"
 
 enum class EditorScene {
     ProjectManager,
@@ -137,10 +138,12 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
     auto& handle = *mirrow::drefl::try_cast<TextureHandle>(value);
     auto mgr = reg.res<TextureManager>();
     char buf[1024] = {0};
-    if (handle) {
+    if (mgr->Has(handle)) {
         auto& texture = mgr->Get(handle);
         std::filesystem::path texturePath = texture.RelativePath();
         snprintf(buf, sizeof(buf), "Res://%s", texturePath.string().c_str());
+    } else {
+        snprintf(buf, sizeof(buf), "no texture");
     }
 
     static std::string title = "asset texture";
@@ -166,7 +169,7 @@ void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
     auto& handle = *mirrow::drefl::try_cast<FontHandle>(value);
     auto mgr = reg.res<FontManager>();
     char buf[1024] = {0};
-    if (handle) {
+    if (mgr->Has(handle)) {
         auto& font = mgr->Get(handle);
         std::filesystem::path path = font.RelativePath();
         snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
@@ -299,6 +302,7 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::commands cmds) {
     std::string path = initInfo->projectPath + "/project.toml";
 
+    cmds.emplace_resource<AssetPropertyWindowContext>();
     auto& editorCtx = cmds.emplace_resource<EditorContext>();
 
     auto newInfo = LoadBasicProjectConfig(initInfo->projectPath);
@@ -331,9 +335,6 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                           cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
 
     initInfo.get() = std::move(newInfo);
-
-    contentBrowserInfo.RegistFileIcon(".png", "icons/image.svg");
-    contentBrowserInfo.RegistFileIcon(".ttf", "icons/font.svg");
 
     RegistComponentShowMethods();
     RegistSpawnMethods();

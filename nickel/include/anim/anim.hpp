@@ -5,7 +5,6 @@
 #include "core/manager.hpp"
 #include "core/singlton.hpp"
 #include "misc/timer.hpp"
-#include "refl/keyframe.hpp"
 
 namespace nickel {
 

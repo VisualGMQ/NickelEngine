@@ -1,5 +1,14 @@
 #include "file_dialog.hpp"
 
+/*
+WARN: Don't move this to .hpp! windows.h defined some macro that will make
+project chaos!
+*/
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#endif
+
 std::vector<std::filesystem::path> OpenFileDialog(const std::string& title) {
     OPENFILENAME ofn;
     char szFile[MAX_PATH] = {0};

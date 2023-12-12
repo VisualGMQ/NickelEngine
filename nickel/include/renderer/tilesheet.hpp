@@ -73,7 +73,6 @@ public:
                                uint32_t col, uint32_t row,
                                const Margin& margin = Margin::Zero(),
                                const Spacing& spacing = {0, 0});
-    Tilesheet& LoadFromConfig(TextureHandle, std::string_view configFilename);
     Tilesheet& Find(std::string_view name);
 
 private:

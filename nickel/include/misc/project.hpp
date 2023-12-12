@@ -1,6 +1,7 @@
 #pragma once
 
 #include "anim/anim.hpp"
+#include "misc/filetype.hpp"
 #include "misc/timer.hpp"
 #include "pch.hpp"
 #include "renderer/camera.hpp"
@@ -8,6 +9,7 @@
 #include "renderer/texture.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
+#include "renderer/font.hpp"
 
 namespace nickel {
 
@@ -76,5 +78,28 @@ inline std::filesystem::path GenResourcePath(
     const std::filesystem::path& root) {
     return root / std::filesystem::path{ResDir};
 }
+
+/**
+ * @brief import a file as asset
+ * 
+ * @param hint hint the asset type(Unknown will auto-detect)
+ * @return true 
+ * @return false 
+ */
+bool ImportAsset(const std::filesystem::path&, TextureManager&, FontManager&,
+                 FileType hint = FileType::Unknown);
+
+
+/**
+ * @brief remove asset
+ * 
+ * @param path 
+ * @param textureMgr 
+ * @param fontMgr 
+ * @return true 
+ * @return false 
+ */
+bool RemoveAsset(const std::filesystem::path& path, TextureManager& textureMgr,
+                 FontManager& fontMgr);
 
 }  // namespace nickel

@@ -33,23 +33,36 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 
 ## Features
 
-* game engine features:
-    - [x] 2D renderer based on OpenGL4
-    - [x] Data Oriented based on ECS
-    - [x] Animation applyed on arbitary properties
-    - [x] Text render with UTF8 encoding
-    - [ ] UI(WIP)
-    - [ ] Game physics(WIP)
-    - [ ] 3D rendering
-    - [ ] RHI covered OpenGL3/ES and Vulkan
-    - [ ] Game sound playing
-* editor features:
-    - [x] Entity list window to show entities
+- [x] 2D renderer based on OpenGL4
+- [x] Data Oriented based on ECS
+- [x] Animation applyed on arbitary properties
+- [x] Text render with UTF8 encoding
+- [ ] UI(WIP)
+- [ ] Game physics(WIP)
+- [ ] 3D rendering
+- [ ] RHI covered OpenGL3/ES and Vulkan
+- [ ] Game sound playing
+- [ ] script
+    - [ ] cpp(dynamic library)
+    - [ ] lua/quickJs/C#mono (don't determine currently)
+
+## Editor
+
+* features:
+    - [x] Entity list window
+        - [x] show entities
+        - [ ] drag entity to reorder/set hierarchy
     - [x] Inspector window to show components of selected entity
     - [x] Game scene display
     - [x] Assets window
+        - [x] show assets
+        - [x] load/release asset
+        - [ ] asset property window
+            - [x] texture asset property window
+            - [ ] font asset property window
+            - [ ] audio asset property window
+            - [ ] script asset property window
     - [ ] Animation editor
-
-## Editor
+    - [ ] Project Save/Load
 
 ![editor](./snapshot/editor.png)

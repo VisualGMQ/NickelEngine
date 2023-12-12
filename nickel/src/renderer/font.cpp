@@ -76,7 +76,10 @@ FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
 
 FontHandle FontManager::Load(const std::filesystem::path& filename) {
     auto handle = FontHandle::Create();
-    auto font = std::unique_ptr<Font>(new Font{GetRootPath(), filename});
+    auto relativePath = filename.is_relative() ? filename
+                                               : std::filesystem::relative(
+                                                     filename, GetRootPath());
+    auto font = std::unique_ptr<Font>(new Font{GetRootPath(), relativePath});
     if (font) {
         storeNewItem(handle, std::move(font));
         return handle;

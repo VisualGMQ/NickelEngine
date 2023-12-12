@@ -27,7 +27,12 @@ protected:
 class Camera2D : public BaseCamera {
 public:
     struct ConfigData final {
-        float left, right, top, bottom, near, far;
+        float left;
+        float right;
+        float top;
+        float bottom;
+        float near;
+        float far;
     };
 
     static Camera2D Create(float left, float right, float top, float bottom,
@@ -39,9 +44,6 @@ public:
         auto size = window.Size();
         return Camera2D(0.0, size.w, 0.0, size.h, 1.0, -1.0);
     }
-
-    static std::optional<Camera2D> FromConfigFile(std::string_view filename);
-    static Camera2D FromConfig(const toml::table&);
 
     void MoveTo(const cgmath::Vec2& position) {
         position_ = position;
