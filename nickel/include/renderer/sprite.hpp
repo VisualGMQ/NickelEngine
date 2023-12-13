@@ -1,13 +1,13 @@
 #pragma once
 
 #include "core/cgmath.hpp"
+#include "misc/asset.hpp"
 #include "misc/hierarchy.hpp"
 #include "misc/transform.hpp"
 #include "renderer/camera.hpp"
 #include "renderer/context.hpp"
 #include "renderer/renderer2d.hpp"
 #include "renderer/texture.hpp"
-
 
 namespace nickel {
 
@@ -57,7 +57,7 @@ void CollectSpriteRenderInfo(
     gecs::querier<Sprite, Transform, gecs::without<Parent>>,
     gecs::querier<Sprite, Transform, GlobalTransform, Child,
                   gecs::without<Parent>>,
-    gecs::resource<TextureManager>, gecs::resource<gecs::mut<RenderContext>>,
+    gecs::resource<AssetManager>, gecs::resource<gecs::mut<RenderContext>>,
     gecs::registry);
 
 void RenderElements(gecs::resource<gecs::mut<Renderer2D>> renderer2d,

@@ -49,6 +49,10 @@ public:
         return AssetType::Null;
     }
 
+    bool Has(const std::filesystem::path& path) const {
+        return GetHandle(path) != AssetHandle::Null();
+    }
+
     bool Has(AssetHandle handle) const {
         return datas_.find(handle) != datas_.end();
     }

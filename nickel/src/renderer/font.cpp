@@ -1,5 +1,6 @@
 #include "renderer/font.hpp"
 #include "core/gogl.hpp"
+#include "misc/asset.hpp"
 
 namespace nickel {
 
@@ -28,15 +29,14 @@ Character::Character(const FT_GlyphSlot& g)
       advance{cgmath::Vec2(g->advance.x, g->advance.y)} {
     auto bitmap = g->bitmap;
 
-    auto& textureMgr =
-        gWorld->cur_registry()->res<gecs::mut<TextureManager>>().get();
+    auto& assetMgr = gWorld->cur_registry()->res_mut<AssetManager>().get();
     gogl::Sampler sampler = gogl::Sampler::CreateLinearRepeat();
     sampler.wrapper.s = gogl::TextureWrapperType::ClampToEdge;
     sampler.wrapper.t = gogl::TextureWrapperType::ClampToEdge;
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
-    texture = textureMgr.CreateSolitary(bitmap.buffer, bitmap.width,
-                                        bitmap.rows, sampler, gogl::Format::Red,
-                                        gogl::Format::Red);
+    texture = assetMgr.TextureMgr().CreateSolitary(
+        bitmap.buffer, bitmap.width, bitmap.rows, sampler, gogl::Format::Red,
+        gogl::Format::Red);
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
 }
 

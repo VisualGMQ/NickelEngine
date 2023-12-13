@@ -31,7 +31,7 @@ constexpr int ProjectMgrWindowHeight = 300;
 void ProjectManagerUpdate(
     gecs::commands cmds,
     gecs::resource<gecs::mut<ProjectInitInfo>> projInitInfo,
-    gecs::resource<gecs::mut<TextureManager>> textureMgr) {
+    gecs::resource<gecs::mut<AssetManager>> assetMgr) {
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
                                     ImGuiWindowFlags_NoSavedSettings;
@@ -47,8 +47,8 @@ void ProjectManagerUpdate(
             if (!dir.empty()) {
                 ProjectInitInfo initInfo;
                 SaveBasicProjectInfo(dir, initInfo);
-                textureMgr->ReleaseAll();
-                SaveAssets(dir, textureMgr.get());
+                assetMgr->ReleaseAll();
+                SaveAssets(dir, assetMgr->TextureMgr());
 
                 projInitInfo->projectPath = dir.string();
 
@@ -136,7 +136,7 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
         "type incorrect");
 
     auto& handle = *mirrow::drefl::try_cast<TextureHandle>(value);
-    auto mgr = reg.res<TextureManager>();
+    auto mgr = reg.res<AssetManager>();
     char buf[1024] = {0};
     if (mgr->Has(handle)) {
         auto& texture = mgr->Get(handle);
@@ -148,7 +148,7 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
 
     static std::string title = "asset texture";
     auto newHandle = SelectAndChangeAsset(
-        reg.res<gecs::mut<TextureManager>>().get(), buf, title);
+        reg.res_mut<AssetManager>()->TextureMgr(), buf, title);
     if (newHandle) {
         handle = newHandle;
     }
@@ -296,7 +296,7 @@ void RegistSpawnMethods() {
 
 void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::resource<gecs::mut<Window>> window,
-                 gecs::resource<gecs::mut<TextureManager>> textureMgr,
+                 gecs::resource<gecs::mut<AssetManager>> assetMgr,
                  gecs::resource<gecs::mut<FontManager>> fontMgr,
                  gecs::resource<gecs::mut<Renderer2D>> renderer,
                  gecs::commands cmds) {
@@ -306,15 +306,14 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
     auto& editorCtx = cmds.emplace_resource<EditorContext>();
 
     auto newInfo = LoadBasicProjectConfig(initInfo->projectPath);
-    InitProjectByConfig(newInfo, window.get(), textureMgr.get());
+    InitProjectByConfig(newInfo, window.get(), assetMgr->TextureMgr());
     window->SetTitle("NickelEngine Editor - " + newInfo.windowData.title);
     window->Resize(EditorWindowWidth, EditorWindowHeight);
 
     // init resource manager root path
     auto resourceDir =
         GenResourcePath(std::filesystem::path{newInfo.projectPath});
-    textureMgr->SetRootPath(resourceDir);
-    fontMgr->SetRootPath(resourceDir);
+    assetMgr->SetRootPath(resourceDir);
 
     // init content browser info
     auto& contentBrowserInfo = cmds.emplace_resource<ContentBrowserInfo>();
@@ -341,11 +340,11 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
 }
 
 void TestEnter(gecs::commands cmds,
-               gecs::resource<gecs::mut<TextureManager>> textureMgr,
+               gecs::resource<gecs::mut<AssetManager>> assetMgr,
                gecs::resource<gecs::mut<FontManager>> fontMgr) {
     auto entity = cmds.create();
     auto texture =
-        textureMgr->Load("role.png", gogl::Sampler::CreateNearestRepeat());
+        assetMgr->LoadTexture("role.png", gogl::Sampler::CreateNearestRepeat());
 
     SpriteBundle bundle;
     bundle.sprite = Sprite::FromTexture(texture);

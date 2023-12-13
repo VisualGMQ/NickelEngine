@@ -36,13 +36,13 @@ void TestRenderFontSystem(gecs::resource<gecs::mut<Renderer2D>> renderer,
 }
 
 void TestInitSystem(gecs::commands cmds,
-                    gecs::resource<gecs::mut<TextureManager>> textureMgr,
+                    gecs::resource<gecs::mut<AssetManager>> assetMgr,
                     gecs::resource<gecs::mut<AnimationManager>> animMgr,
                     gecs::resource<gecs::mut<FontManager>> fontMgr,
                     gecs::registry reg) {
     auto entity = cmds.create();
-    auto handle = textureMgr->Load("./sandbox/resources/role.png",
-                                   gogl::Sampler::CreateNearestRepeat());
+    auto handle = assetMgr->LoadTexture("./sandbox/resources/role.png",
+                                        gogl::Sampler::CreateNearestRepeat());
 
     SpriteBundle bundle;
     bundle.sprite = Sprite::FromTexture(handle);

@@ -82,15 +82,16 @@ void CollectSpriteRenderInfo(
     gecs::querier<Sprite, Transform, GlobalTransform, Child,
                   gecs::without<Parent>>
         spriteInHies,
-    gecs::resource<TextureManager> textureMgr,
+    gecs::resource<AssetManager> assetMgr,
     gecs::resource<gecs::mut<RenderContext>> renderCtx, gecs::registry reg) {
     for (auto&& [_, sprite, transform] : sprites) {
         if (!sprite.visiable) {
             continue;
         }
 
-        renderCtx->renderInfos.emplace_back(generateRenderInfo(
-            sprite, transform, nullptr, textureMgr.get(), renderCtx.get()));
+        renderCtx->renderInfos.emplace_back(
+            generateRenderInfo(sprite, transform, nullptr,
+                               assetMgr->TextureMgr(), renderCtx.get()));
     }
 
     for (auto&& [_, sprite, trans, gTrans, child] : spriteInHies) {
@@ -98,8 +99,8 @@ void CollectSpriteRenderInfo(
             continue;
         }
 
-        collectSpriteRenderInfoHierarchy(textureMgr.get(), renderCtx.get(),
-                                         child, reg);
+        collectSpriteRenderInfoHierarchy(assetMgr->TextureMgr(),
+                                         renderCtx.get(), child, reg);
     }
 }
 

@@ -62,9 +62,8 @@ void SelectAndLoadAsset(gecs::registry reg) {
             }
         }
 
-        auto& textureMgr = reg.res_mut<nickel::TextureManager>().get();
-        auto& fontMgr = reg.res_mut<nickel::FontManager>().get();
-        contentChanged = nickel::ImportAsset(copyPath, textureMgr, fontMgr);
+        auto assetMgr = reg.res_mut<nickel::AssetManager>();
+        contentChanged = nickel::ImportAsset(copyPath, assetMgr->TextureMgr(), assetMgr->FontMgr());
     }
 
     // TODO: use file watcher to do this
@@ -96,12 +95,12 @@ std::pair<const nickel::Texture&, bool> getIcon(
     return {cbInfo.FindTextureOrGen(entry.path().extension().string()), false};
 }
 
-void showAssetOperationMenu(nickel::FileType filetype, bool hasImported,
+void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
                             const std::filesystem::directory_entry& entry,
                             nickel::TextureManager& textureMgr,
                             nickel::FontManager& fontMgr) {
     if (filetype != nickel::FileType::Unknown) {
-        if (ImGui::BeginPopupContextItem()) {
+        if (ImGui::BeginPopupContextItem(entry.path().string().c_str())) {
             if (!hasImported) {
                 if (ImGui::Button("import")) {
                     nickel::ImportAsset(entry, textureMgr, fontMgr);
@@ -117,11 +116,6 @@ void showAssetOperationMenu(nickel::FileType filetype, bool hasImported,
         }
     }
 }
-
-enum class OperateOnIcon {
-    GotoParent,
-    ClickOnTexture,
-};
 
 bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::TextureManager& textureMgr,
                  nickel::FontManager& fontMgr,
@@ -154,7 +148,7 @@ bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::TextureManager& textureMgr,
             }
         }
 
-        showAssetOperationMenu(filetype, hasImported, entry, textureMgr,
+        showAssetOperationPopupMenu(filetype, hasImported, entry, textureMgr,
                                fontMgr);
 
         ImGui::Text("%s", entry.path().filename().string().c_str());
@@ -173,7 +167,7 @@ void showIcons(ContentBrowserInfo& cbInfo,
             ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 
         auto& textureMgr =
-            gWorld->res<gecs::mut<nickel::TextureManager>>().get();
+            gWorld->res_mut<nickel::AssetManager>()->TextureMgr();
         auto& fontMgr = gWorld->res_mut<nickel::FontManager>().get();
         auto& files = cbInfo.Files();
         static std::optional<int> clickedIdx;
@@ -197,11 +191,13 @@ void showIcons(ContentBrowserInfo& cbInfo,
             clickedIdx = std::nullopt;
         }
 
-        bool clickedImage = TexturePropertyPopupWindow(
-            cbInfo.texturePropertyPopupWindowTitle,
-            clickedIdx ? textureMgr.GetHandle(files[clickedIdx.value()])
-                       : nickel::TextureHandle::Null(),
-            assetPropCtx);
+        if (clickedIdx) {
+            TexturePropertyPopupWindow(
+                cbInfo.texturePropertyPopupWindowTitle,
+                clickedIdx ? textureMgr.GetHandle(files[clickedIdx.value()])
+                           : nickel::TextureHandle::Null(),
+                assetPropCtx);
+        }
 
         ImGui::EndGroup();
     }

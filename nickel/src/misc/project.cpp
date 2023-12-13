@@ -1,5 +1,6 @@
 #include "misc/project.hpp"
 #include "core/log_tag.hpp"
+#include "misc/asset.hpp"
 #include "refl/drefl.hpp"
 #include "renderer/context.hpp"
 #include "renderer/font.hpp"
@@ -126,7 +127,7 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
         &cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build());
 
     cmds.emplace_resource<Time>();
-    cmds.emplace_resource<TextureManager>();
+    cmds.emplace_resource<AssetManager>();
     cmds.emplace_resource<FontManager>();
     cmds.emplace_resource<AnimationManager>();
     cmds.emplace_resource<TimerManager>();
@@ -164,6 +165,8 @@ bool ImportAsset(const std::filesystem::path& path, TextureManager& textureMgr,
         case FileType::Font:
             return fontMgr.Load(path) != FontHandle::Null();
         case FileType::Audio:
+            return false;
+        default:
             return false;
     }
 }

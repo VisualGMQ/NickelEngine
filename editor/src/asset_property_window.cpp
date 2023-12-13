@@ -38,7 +38,7 @@ bool TexturePropertyPopupWindow(const std::string& title,
                                 nickel::TextureHandle handle,
                                 AssetPropertyWindowContext& ctx) {
     auto& reg = *gWorld->cur_registry();
-    auto& textureMgr = gWorld->res_mut<nickel::TextureManager>().get();
+    auto& textureMgr = gWorld->res_mut<nickel::AssetManager>()->TextureMgr();
 
     bool result = false;
     if (ImGui::BeginPopupModal(title.c_str())) {

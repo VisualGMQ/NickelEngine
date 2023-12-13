@@ -49,6 +49,8 @@ public:
     template <typename T>
     friend std::ostream& operator<<(std::ostream&, Handle<T>);
 
+    using ValueType = Tag;
+
     Handle() = default;
 
     struct Hash final {

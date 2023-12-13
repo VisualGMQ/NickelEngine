@@ -2,6 +2,7 @@
 
 #include "pch.hpp"
 #include "renderer/texture.hpp"
+#include "misc/asset.hpp"
 
 namespace nickel {
 
@@ -17,7 +18,7 @@ public:
     TextureHandle texture;
 
     void Bind2GPU() override {
-        auto mgr = gWorld->cur_registry()->res<TextureManager>();
+        auto mgr = gWorld->res<AssetManager>();
         if (mgr->Has(texture)) {
             auto& image = mgr->Get(texture);
             image.texture_->Bind();

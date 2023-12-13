@@ -4,11 +4,14 @@
 
 namespace nickel {
 
+// NOTE: don't change order(related to misc/asset.hpp)
 enum class FileType {
     Unknown = 0,
-    Image = 1,
-    Font = 2,
-    Audio = 3,
+    Image,
+    Font,
+    Audio,
+
+    FileTypeCount,
 };
 
 FileType DetectFileType(const std::filesystem::path& path);
