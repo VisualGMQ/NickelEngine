@@ -1,6 +1,6 @@
 #include "misc/project.hpp"
 #include "core/log_tag.hpp"
-#include "misc/asset.hpp"
+#include "misc/asset_manager.hpp"
 #include "refl/drefl.hpp"
 #include "renderer/context.hpp"
 #include "renderer/font.hpp"
@@ -10,13 +10,20 @@
 namespace nickel {
 
 void SaveAssets(const std::filesystem::path& rootPath,
-                const TextureManager& textureMgr) {
-    toml::table tbl;
-    auto textureMgrTbl = textureMgr.Save2Toml();
-    tbl.emplace("textures", textureMgrTbl);
+                const AssetManager& assetMgr) {
+    assetMgr.Save2TomlFile(rootPath / AssetFilename);
+}
 
-    std::ofstream file(rootPath / "assets.toml");
-    file << toml::toml_formatter{tbl} << std::flush;
+void LoadAssets(const std::filesystem::path& rootPath, AssetManager& assetMgr) {
+    auto path = rootPath / AssetFilename;
+    auto result = toml::parse_file(path.c_str());
+    if (!result) {
+        LOGE(log_tag::Asset, "load saved textures from ", path,
+             " failed: ", result.error());
+        return;
+    }
+
+    assetMgr.LoadFromToml(result.table());
 }
 
 void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
@@ -33,36 +40,23 @@ void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
     file << toml::toml_formatter{tbl} << std::endl;
 }
 
-void SaveProject(const std::string& rootPath, const TextureManager& textureMgr,
+void SaveProject(const std::string& rootPath, const AssetManager& assetMgr,
                  const Window& window) {
     ProjectInitInfo initInfo;
     initInfo.projectPath = rootPath;
     initInfo.windowData.title = window.Title();
     initInfo.windowData.size = window.Size();
     SaveBasicProjectInfo(rootPath, initInfo);
-    SaveAssets(rootPath, textureMgr);
+    SaveAssets(rootPath, assetMgr);
 }
 
 void SaveProjectConfig(const std::string& path, const ProjectInitInfo& info) {}
 
-void LoadAssets(const std::string& rootPath, TextureManager& textureMgr) {
-    auto result = toml::parse_file(rootPath + "/assets.toml");
-    if (!result) {
-        LOGE(log_tag::Res, "load saved textures failed: ", result.error());
-        return;
-    }
-
-    auto& tbl = result.table();
-    if (auto textureMgrTbl = tbl["textures"]; textureMgrTbl.is_table()) {
-        textureMgr.LoadFromToml(*textureMgrTbl.as_table());
-    }
-}
-
-ProjectInitInfo LoadBasicProjectConfig(const std::string& rootPath) {
+ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
     ProjectInitInfo initInfo;
 
     initInfo.projectPath = rootPath;
-    std::filesystem::path path(rootPath + "/project.toml");
+    std::filesystem::path path(rootPath / "project.toml");
     if (!std::filesystem::exists(path)) {
         LOGF(log_tag::Nickel, "project config file ", path.string(),
              " not exists");
@@ -84,17 +78,18 @@ ProjectInitInfo LoadBasicProjectConfig(const std::string& rootPath) {
 }
 
 void LoadProject(const std::string& rootPath, Window& window,
-                 TextureManager& textureMgr) {
-    ProjectInitInfo initInfo = LoadBasicProjectConfig(rootPath);
+                 AssetManager& assetMgr) {
+    ProjectInitInfo initInfo = LoadProjectInfoFromFile(rootPath);
 
-    InitProjectByConfig(initInfo, window, textureMgr);
+    InitProjectByConfig(initInfo, window, assetMgr);
 }
 
 void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
-                         TextureManager& textureMgr) {
+                         AssetManager& assetMgr) {
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
-    LoadAssets(initInfo.projectPath, textureMgr);
+    assetMgr.SetRootPath(GenResourcePath(initInfo.projectPath));
+    LoadAssets(initInfo.projectPath, assetMgr);
 }
 
 void ErrorCallback(int error, const char* description) {
@@ -151,37 +146,6 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
         .RegistMethod<double>()
         .RegistMethod<int>()
         .RegistMethod<long>();
-}
-
-bool ImportAsset(const std::filesystem::path& path, TextureManager& textureMgr,
-                 FontManager& fontMgr, FileType hint) {
-    hint = hint == FileType::Unknown ? DetectFileType(path) : hint;
-    switch (hint) {
-        case FileType::Unknown:
-            return false;
-        case FileType::Image:
-            return textureMgr.Load(path, gogl::Sampler::CreateLinearRepeat()) !=
-                   TextureHandle::Null();
-        case FileType::Font:
-            return fontMgr.Load(path) != FontHandle::Null();
-        case FileType::Audio:
-            return false;
-        default:
-            return false;
-    }
-}
-
-bool RemoveAsset(const std::filesystem::path& path, TextureManager& textureMgr,
-                 FontManager& fontMgr) {
-    if (auto handle = textureMgr.GetHandle(path); handle) {
-        textureMgr.Destroy(handle);
-        return true;
-    }
-    if (auto handle = fontMgr.GetHandle(path); handle) {
-        fontMgr.Destroy(handle);
-        return true;
-    }
-    return false;
 }
 
 }  // namespace nickel

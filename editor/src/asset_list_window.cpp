@@ -20,9 +20,6 @@ bool ShowTexture(nickel::TextureHandle handle,
         ImGui::PopID();
     }
     ImGui::EndGroup();
-    if (ImGui::Button("cancel")) {
-        ImGui::CloseCurrentPopup();
-    }
     return result;
 }
 
@@ -51,9 +48,6 @@ bool ShowFont(nickel::FontHandle handle,
         ImGui::PopID();
     }
     ImGui::EndGroup();
-    if (ImGui::Button("cancel")) {
-        ImGui::CloseCurrentPopup();
-    }
     return result;
 }
 

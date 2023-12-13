@@ -163,7 +163,7 @@ private:
     }
 };
 
-class Animation final {
+class Animation final : public Asset {
 public:
     using track_base_type = AnimationTrack;
     using track_pointer_type = std::unique_ptr<track_base_type>;
@@ -198,6 +198,16 @@ public:
         typename Animation::container_type&& tracks);
     std::shared_ptr<Animation> CreateSolitaryFromTracks(
         typename Animation::container_type&& tracks);
+
+
+    toml::table Save2Toml() const override {
+        // TODO: implement
+        return {};
+    }
+
+    void LoadFromToml(toml::table&) override {
+        // TODO: implement
+    }
 };
 
 class AnimationPlayer final {

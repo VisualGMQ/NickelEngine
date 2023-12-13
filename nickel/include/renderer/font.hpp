@@ -4,7 +4,7 @@
 #include "core/handle.hpp"
 #include "core/manager.hpp"
 #include "renderer/texture.hpp"
-#include "core/resource.hpp"
+#include "core/asset.hpp"
 
 namespace nickel {
 
@@ -12,7 +12,7 @@ class Font;
 
 using FontHandle = Handle<Font>;
 
-class Font final : public Res {
+class Font final : public Asset {
 public:
     friend class FontManager;
 
@@ -26,6 +26,10 @@ public:
     FT_GlyphSlot GetGlyph(uint64_t c, int size) const;
     const FT_Face& GetFace() const { return face_; }
 
+    explicit operator bool() const {
+        return face_ != nullptr;
+    }
+
 private:
     FT_Face face_ = nullptr;
     std::filesystem::path filename_;
@@ -38,6 +42,9 @@ private:
 class FontManager final : public Manager<Font> {
 public:
     FontHandle Load(const std::filesystem::path& filename);
+
+    toml::table Save2Toml() const override;
+    void LoadFromToml(toml::table&) override;
 };
 
 struct Character {

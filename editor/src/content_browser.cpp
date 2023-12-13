@@ -63,7 +63,7 @@ void SelectAndLoadAsset(gecs::registry reg) {
         }
 
         auto assetMgr = reg.res_mut<nickel::AssetManager>();
-        contentChanged = nickel::ImportAsset(copyPath, assetMgr->TextureMgr(), assetMgr->FontMgr());
+        contentChanged = assetMgr->Load(copyPath);
     }
 
     // TODO: use file watcher to do this
@@ -74,17 +74,16 @@ void SelectAndLoadAsset(gecs::registry reg) {
 
 std::pair<const nickel::Texture&, bool> getIcon(
     const std::filesystem::directory_entry& entry, nickel::FileType filetype,
-    ContentBrowserInfo& cbInfo, const nickel::TextureManager& textureMgr,
-    const nickel::FontManager& fontMgr) {
+    ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr) {
     if (entry.is_directory()) {
         return {cbInfo.GetDirIcon(), false};
     } else if (filetype == nickel::FileType::Image) {
-        auto handle = textureMgr.GetHandle(entry);
+        auto handle = assetMgr.TextureMgr().GetHandle(entry);
         if (handle) {
-            return {textureMgr.Get(handle), true};
+            return {assetMgr.Get(handle), true};
         }
     } else if (filetype == nickel::FileType::Font) {
-        if (auto handle = fontMgr.GetHandle(entry); handle) {
+        if (auto handle = assetMgr.FontMgr().GetHandle(entry); handle) {
             // TODO: return font preview texture to texture
             return {cbInfo.FindTextureOrGen(entry.path().extension().string()),
                     true};
@@ -96,19 +95,18 @@ std::pair<const nickel::Texture&, bool> getIcon(
 }
 
 void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
-                            const std::filesystem::directory_entry& entry,
-                            nickel::TextureManager& textureMgr,
-                            nickel::FontManager& fontMgr) {
+                                 const std::filesystem::directory_entry& entry,
+                                 nickel::AssetManager& assetMgr) {
     if (filetype != nickel::FileType::Unknown) {
         if (ImGui::BeginPopupContextItem(entry.path().string().c_str())) {
             if (!hasImported) {
                 if (ImGui::Button("import")) {
-                    nickel::ImportAsset(entry, textureMgr, fontMgr);
+                    assetMgr.Load(entry);
                     ImGui::CloseCurrentPopup();
                 }
             } else {
                 if (ImGui::Button("destroy")) {
-                    nickel::RemoveAsset(entry, textureMgr, fontMgr);
+                    assetMgr.Destroy(entry);
                     ImGui::CloseCurrentPopup();
                 }
             }
@@ -117,14 +115,12 @@ void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
     }
 }
 
-bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::TextureManager& textureMgr,
-                 nickel::FontManager& fontMgr,
+bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr,
                  const std::filesystem::directory_entry& entry) {
     auto extension = entry.path().extension().string();
     auto filetype = nickel::DetectFileType(entry.path());
 
-    auto&& [texture, hasImported] =
-        getIcon(entry, filetype, cbInfo, textureMgr, fontMgr);
+    auto&& [texture, hasImported] = getIcon(entry, filetype, cbInfo, assetMgr);
 
     bool clicked = false;
 
@@ -142,14 +138,13 @@ bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::TextureManager& textureMgr,
             } else if (filetype == nickel::FileType::Image) {
                 ImGui::OpenPopup(texturePropertyWindowTitle.c_str());
                 assetPropertyWindowCtx->sampler =
-                    textureMgr.Get(entry).Sampler();
+                    assetMgr.TextureMgr().Get(entry).Sampler();
             } else if (filetype == nickel::FileType::Font) {
                 // TODO: show font property window
             }
         }
 
-        showAssetOperationPopupMenu(filetype, hasImported, entry, textureMgr,
-                               fontMgr);
+        showAssetOperationPopupMenu(filetype, hasImported, entry, assetMgr);
 
         ImGui::Text("%s", entry.path().filename().string().c_str());
 
@@ -166,15 +161,14 @@ void showIcons(ContentBrowserInfo& cbInfo,
         float groupX =
             ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 
-        auto& textureMgr =
-            gWorld->res_mut<nickel::AssetManager>()->TextureMgr();
+        auto& assetMgr = gWorld->res_mut<nickel::AssetManager>().get();
         auto& fontMgr = gWorld->res_mut<nickel::FontManager>().get();
         auto& files = cbInfo.Files();
         static std::optional<int> clickedIdx;
 
         // please ensure all files are exists
         for (int i = 0; i < files.size(); i++) {
-            if (showOneIcon(cbInfo, textureMgr, fontMgr, files[i])) {
+            if (showOneIcon(cbInfo, assetMgr, files[i])) {
                 clickedIdx = i;
             }
 
@@ -194,7 +188,7 @@ void showIcons(ContentBrowserInfo& cbInfo,
         if (clickedIdx) {
             TexturePropertyPopupWindow(
                 cbInfo.texturePropertyPopupWindowTitle,
-                clickedIdx ? textureMgr.GetHandle(files[clickedIdx.value()])
+                clickedIdx ? assetMgr.TextureMgr().GetHandle(files[clickedIdx.value()])
                            : nickel::TextureHandle::Null(),
                 assetPropCtx);
         }

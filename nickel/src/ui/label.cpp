@@ -1,5 +1,5 @@
 #include "ui/label.hpp"
-#include "renderer/font.hpp"
+#include "misc/asset_manager.hpp"
 
 namespace nickel::ui {
 
@@ -21,7 +21,7 @@ void Label::ChangeFont(FontHandle handle) {
 }
 
 void Label::regenerateTextCache() {
-    auto& fontMgr = gWorld->cur_registry()->res<gecs::mut<FontManager>>().get();
+    auto& fontMgr = gWorld->res_mut<nickel::AssetManager>()->FontMgr();
     if (!fontMgr.Has(font_)) {
         return;
     }

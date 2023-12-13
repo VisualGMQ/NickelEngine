@@ -8,18 +8,18 @@ class utf8char {
 public:
     utf8char(char a, char b, char c, char d) : data_{a, b, c, d} {}
 
-    utf8char(): data_{0} {}
+    utf8char() : data_{0} {}
 
     uint64_t to_uint64() const {
         auto l = len();
         if (l == 1) {
             return data_[0];
         } else if (l == 2) {
-            return data_[1] << 8 | data_[0];
+            return data_[0] << 8 | data_[1];
         } else if (l == 3) {
-            return data_[2] << 16 | data_[1] << 8 | data_[0];
+            return data_[0] << 16 | data_[1] << 8 | data_[2];
         } else {
-            return data_[3] << 24 | data_[2] << 16 | data_[1] << 8 | data_[0];
+            return data_[0] << 24 | data_[1] << 16 | data_[2] << 8 | data_[3];
         }
     }
 
@@ -48,13 +48,9 @@ public:
                (data_[0] == ' ' || data_[0] == '\t' || data_[0] == '\n');
     }
 
-    auto& operator[](size_t idx) {
-        return data_[idx];
-    }
+    auto& operator[](size_t idx) { return data_[idx]; }
 
-    auto& operator[](size_t idx) const {
-        return data_[idx];
-    }
+    auto& operator[](size_t idx) const { return data_[idx]; }
 
 private:
     std::array<char, 4> data_;

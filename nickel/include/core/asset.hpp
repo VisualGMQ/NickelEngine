@@ -6,13 +6,13 @@ namespace nickel {
 /**
  * @brief parent class of all resource classes
  */
-class Res {
+class Asset {
 public:
-    virtual ~Res() = default;
+    virtual ~Asset() = default;
 
-    Res(const std::filesystem::path& relativePath)
+    Asset(const std::filesystem::path& relativePath)
         : relativePath_(relativePath) {}
-    Res() = default;
+    Asset() = default;
 
     auto& RelativePath() const { return relativePath_; }
 

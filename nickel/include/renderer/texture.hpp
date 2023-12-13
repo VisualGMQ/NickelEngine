@@ -4,7 +4,7 @@
 #include "core/gogl.hpp"
 #include "core/handle.hpp"
 #include "core/manager.hpp"
-#include "core/resource.hpp"
+#include "core/asset.hpp"
 
 /**
  * @addtogroup resource-manager
@@ -18,7 +18,7 @@ class Texture;
 
 using TextureHandle = Handle<Texture>;
 
-class Texture final : public Res {
+class Texture final : public Asset {
 public:
     friend class Renderer2D;
     friend class TextureManager;
@@ -90,8 +90,12 @@ public:
         gogl::Format fmt = gogl::Format::RGBA,
         gogl::Format gpuFmt = gogl::Format::RGBA);
 
-    toml::table Save2Toml() const;
-    void LoadFromToml(toml::table&);
+    toml::table Save2Toml() const override;
+    void LoadFromToml(toml::table&) override;
+
+private:
+    toml::table serializeTexture(const Texture&) const;
+    bool deserializeTexture(const toml::table&);
 };
 
 }  // namespace nickel

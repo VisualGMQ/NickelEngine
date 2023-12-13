@@ -587,7 +587,9 @@ std::optional<TextureFilterType> GetTextureFilterTypeByName(std::string_view);
 
 struct Sampler final {
     struct Wrapper {
-        TextureWrapperType s, r, t;
+        TextureWrapperType s = TextureWrapperType::Repeat,
+                           r = TextureWrapperType::Repeat,
+                           t = TextureWrapperType::Repeat;
         float borderColor[4] = {1, 1, 1, 1};
 
         bool NeedBorderColor() const {
@@ -597,27 +599,25 @@ struct Sampler final {
         }
 
         bool operator==(const Wrapper& o) const {
-            return s == o.s && r == o.r && t == o.t && borderColor == o.borderColor;
+            return s == o.s && r == o.r && t == o.t &&
+                   borderColor == o.borderColor;
         }
 
-        bool operator!=(const Wrapper& o) const {
-            return !(*this == o);
-        }
+        bool operator!=(const Wrapper& o) const { return !(*this == o); }
     } wrapper;
 
     struct Filter {
-        TextureFilterType min, mag;
+        TextureFilterType min = TextureFilterType::Linear,
+                          mag = TextureFilterType::Linear;
 
         bool operator==(const Filter& o) const {
             return min == o.min && mag == o.mag;
         }
 
-        bool operator!=(const Filter& o) const {
-            return !(*this == o);
-        }
+        bool operator!=(const Filter& o) const { return !(*this == o); }
     } filter;
 
-    bool mipmap;
+    bool mipmap = false;
 
     static Sampler CreateLinearRepeat() {
         Sampler sampler;
@@ -644,9 +644,8 @@ struct Sampler final {
     bool operator==(const Sampler& o) const {
         return mipmap == o.mipmap && wrapper == o.wrapper && filter == o.filter;
     }
-    bool operator!=(const Sampler& o) const {
-        return !(*this == o);
-    }
+
+    bool operator!=(const Sampler& o) const { return !(*this == o); }
 };
 
 enum class Format {
@@ -713,9 +712,9 @@ public:
                                 static_cast<GLint>(sampler.filter.mag)));
 
         GL_CALL(glTexImage2D(glType, 0, static_cast<GLint>(gpuFmt), w, h,
-                            sampler.wrapper.NeedBorderColor(),
-                            static_cast<GLint>(fmt), static_cast<GLenum>(data_type),
-                            pixels));
+                             sampler.wrapper.NeedBorderColor(),
+                             static_cast<GLint>(fmt),
+                             static_cast<GLenum>(data_type), pixels));
         if (sampler.mipmap) {
             GL_CALL(glGenerateMipmap(glType));
         }
@@ -924,28 +923,24 @@ class RenderBuffer final {
 public:
     friend class Framebuffer;
 
-    RenderBuffer(int w, int h): w_(w), h_(h) {
+    RenderBuffer(int w, int h) : w_(w), h_(h) {
         GL_CALL(glGenRenderbuffers(1, &id_));
         Bind();
-        GL_CALL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h));
+        GL_CALL(
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h));
     }
 
-    void Bind() {
-        GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, id_));
-    }
+    void Bind() { GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, id_)); }
 
-    void Unbind() const {
-        GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
-    }
+    void Unbind() const { GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0)); }
 
-    ~RenderBuffer() {
-        GL_CALL(glDeleteRenderbuffers(1, &id_));
-    }
+    ~RenderBuffer() { GL_CALL(glDeleteRenderbuffers(1, &id_)); }
 
     RenderBuffer(const RenderBuffer&) = delete;
     RenderBuffer& operator=(const RenderBuffer&) = delete;
 
     int Width() const { return w_; }
+
     int Height() const { return h_; }
 
 private:
@@ -998,9 +993,9 @@ public:
 
     void AttacheRenderBuffer(RenderBuffer& buffer) {
         buffer.Bind();
-        GL_CALL(glFramebufferRenderbuffer(
-            static_cast<GLenum>(access_), GL_DEPTH_STENCIL_ATTACHMENT,
-            GL_RENDERBUFFER, buffer.id_));
+        GL_CALL(glFramebufferRenderbuffer(static_cast<GLenum>(access_),
+                                          GL_DEPTH_STENCIL_ATTACHMENT,
+                                          GL_RENDERBUFFER, buffer.id_));
     }
 
     bool CheckValid() const {

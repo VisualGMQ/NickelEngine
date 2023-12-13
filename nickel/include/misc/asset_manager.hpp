@@ -25,21 +25,21 @@ public:
     auto& TextureMgr() const { return textureMgr_; }
     auto& FontMgr() const { return fontMgr_; }
 
-    void Load(const std::filesystem::path& path) {
+    bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
         switch (filetype) {
             case FileType::Image:
-                TextureMgr().Load(path, gogl::Sampler::CreateLinearRepeat());
-                break;
+                return TextureMgr().Load(path,
+                                         gogl::Sampler::CreateLinearRepeat()) !=
+                       TextureHandle::Null();
             case FileType::Font:
-                FontMgr().Load(path);
-                break;
+                return FontMgr().Load(path) != FontHandle::Null();
             case FileType::Audio:
                 // TODO: not finish
-                break;
+                return false;
             default:
                 LOGW(log_tag::Editor, "Unknown asset type: ", path);
-                break;
+                return false;
         }
     }
 
@@ -68,6 +68,25 @@ public:
     template <typename T>
     void Destroy(Handle<T> handle) {
         return switchManager<T>().Destroy(handle);
+    }
+
+    void Destroy(const std::filesystem::path& path) {
+        auto filetype = DetectFileType(path);
+
+        switch (filetype) {
+            case FileType::Image:
+                TextureMgr().Destroy(path);
+                break;
+            case FileType::Font:
+                FontMgr().Destroy(path);
+                break;
+            case FileType::Audio:
+                // TODO: not finish
+                break;
+            case FileType::Unknown:
+            case FileType::FileTypeCount:
+                break;
+        }
     }
 
     template <typename T>
@@ -104,6 +123,29 @@ public:
     void ReleaseAll() {
         textureMgr_.ReleaseAll();
         fontMgr_.ReleaseAll();
+    }
+
+    void Save2TomlFile(const std::filesystem::path& path) const {
+        std::ofstream file(path);
+        file << toml::toml_formatter{Save2Toml()};
+    }
+
+    toml::table Save2Toml() const {
+        toml::table tbl;
+
+        tbl.emplace("texture", TextureMgr().Save2Toml());
+        tbl.emplace("font", FontMgr().Save2Toml());
+
+        return tbl;
+    }
+
+    void LoadFromToml(toml::table& tbl) {
+        if (auto node = tbl.get("texture"); node && node->is_table()) {
+            TextureMgr().LoadFromToml(*node->as_table());
+        }
+        if (auto node = tbl.get("font"); node && node->is_table()) {
+            FontMgr().LoadFromToml(*node->as_table());
+        }
     }
 
 private:

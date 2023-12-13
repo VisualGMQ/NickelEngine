@@ -28,7 +28,13 @@ void VideoSystemUpdate(gecs::resource<EventPoller> poller,
     window->SwapBuffer();
 }
 
-void VideoSystemShutdown(gecs::commands cmds) {}
+void EngineShutdown() {
+    // release all entity&component
+    gWorld->destroy_all_entities();
+    gWorld->remove_res<AssetManager>();
+    FontSystemShutdown();
+    gWorld->remove_res<Renderer2D>();
+}
 
 void EventPollerInit(gecs::commands cmds) {
     cmds.emplace_resource<EventPoller>(EventPoller{});
@@ -123,8 +129,7 @@ int main(int argc, char** argv) {
         .regist_startup_system<InputSystemInit>()
         .regist_startup_system<ui::InitSystem>()
         // shutdown systems
-        .regist_shutdown_system<FontSystemShutdown>()
-        .regist_shutdown_system<VideoSystemShutdown>()
+        .regist_shutdown_system<EngineShutdown>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()
         // other input handle event must put here(after mouse/keyboard update)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/manager.hpp"
+#include "core/asset.hpp"
 #include "pch.hpp"
 
 namespace nickel {
@@ -61,7 +62,7 @@ using TickFunc = std::function<void()>;
 /**
  * @brief a timer that tirge function when reach time
  */
-class Timer final {
+class Timer final : public Asset {
 public:
     Timer(TimerHandle handle, TimeType time, TickFunc func, int loop = 0)
         : handle_(handle), dstTime_(time), func_(func), loop_(loop) {}
@@ -110,6 +111,15 @@ private:
 class TimerManager : public ResourceManager<Timer> {
 public:
     TimerHandle Create(TimeType time, TickFunc func);
+
+    toml::table Save2Toml() const override {
+        // TODO: implement
+        return {};
+    }
+
+    void LoadFromToml(toml::table&) override {
+        // TODO: implement
+    }
 };
 
 }  // namespace nickel

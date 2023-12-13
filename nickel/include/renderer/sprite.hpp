@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/cgmath.hpp"
-#include "misc/asset.hpp"
+#include "misc/asset_manager.hpp"
 #include "misc/hierarchy.hpp"
 #include "misc/transform.hpp"
 #include "renderer/camera.hpp"

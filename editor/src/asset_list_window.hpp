@@ -27,6 +27,9 @@ nickel::Handle<T> AssetWindow(const nickel::Manager<T>& mgr,
             }
             i++;
         }
+        if (ImGui::Button("cancel")) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
     return selectHandle;

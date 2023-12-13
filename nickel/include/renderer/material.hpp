@@ -2,7 +2,7 @@
 
 #include "pch.hpp"
 #include "renderer/texture.hpp"
-#include "misc/asset.hpp"
+#include "misc/asset_manager.hpp"
 
 namespace nickel {
 

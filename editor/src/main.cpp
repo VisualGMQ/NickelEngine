@@ -3,6 +3,7 @@
 #include "imgui_plugin.hpp"
 
 #include "asset_list_window.hpp"
+#include "asset_property_window.hpp"
 #include "content_browser.hpp"
 #include "file_dialog.hpp"
 #include "mirrow/drefl/cast_any.hpp"
@@ -13,7 +14,7 @@
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 #include "ui/style.hpp"
-#include "asset_property_window.hpp"
+
 
 enum class EditorScene {
     ProjectManager,
@@ -47,8 +48,8 @@ void ProjectManagerUpdate(
             if (!dir.empty()) {
                 ProjectInitInfo initInfo;
                 SaveBasicProjectInfo(dir, initInfo);
-                assetMgr->ReleaseAll();
-                SaveAssets(dir, assetMgr->TextureMgr());
+                SaveAssets(dir, assetMgr.get());
+                std::filesystem::create_directories(GenResourcePath(dir));
 
                 projInitInfo->projectPath = dir.string();
 
@@ -167,10 +168,10 @@ void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
            "type incorrect");
 
     auto& handle = *mirrow::drefl::try_cast<FontHandle>(value);
-    auto mgr = reg.res<FontManager>();
+    auto& mgr = reg.res<AssetManager>()->FontMgr();
     char buf[1024] = {0};
-    if (mgr->Has(handle)) {
-        auto& font = mgr->Get(handle);
+    if (mgr.Has(handle)) {
+        auto& font = mgr.Get(handle);
         std::filesystem::path path = font.RelativePath();
         snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
     } else {
@@ -178,8 +179,7 @@ void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
     }
 
     static std::string title = "asset font";
-    auto newHandle =
-        SelectAndChangeAsset(reg.res<FontManager>().get(), buf, title);
+    auto newHandle = SelectAndChangeAsset(mgr, buf, title);
     if (newHandle) {
         handle = newHandle;
     }
@@ -257,6 +257,7 @@ void RegistComponentShowMethods() {
     instance.Regist(::mirrow::drefl::typeinfo<cgmath::Vec4>(), ShowVec4);
     instance.Regist(::mirrow::drefl::typeinfo<TextureHandle>(),
                     ShowTextureHandle);
+    instance.Regist(::mirrow::drefl::typeinfo<FontHandle>(), ShowFontHandle);
     instance.Regist(::mirrow::drefl::typeinfo<AnimationPlayer>(),
                     ShowAnimationPlayer);
     instance.Regist(::mirrow::drefl::typeinfo<ui::Label>(), ShowLabel);
@@ -300,25 +301,22 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
                  gecs::resource<gecs::mut<FontManager>> fontMgr,
                  gecs::resource<gecs::mut<Renderer2D>> renderer,
                  gecs::commands cmds) {
-    std::string path = initInfo->projectPath + "/project.toml";
+    std::filesystem::path path = initInfo->projectPath / "project.toml";
 
     cmds.emplace_resource<AssetPropertyWindowContext>();
     auto& editorCtx = cmds.emplace_resource<EditorContext>();
 
-    auto newInfo = LoadBasicProjectConfig(initInfo->projectPath);
-    InitProjectByConfig(newInfo, window.get(), assetMgr->TextureMgr());
+    auto newInfo = LoadProjectInfoFromFile(initInfo->projectPath);
+    InitProjectByConfig(newInfo, window.get(), assetMgr.get());
     window->SetTitle("NickelEngine Editor - " + newInfo.windowData.title);
     window->Resize(EditorWindowWidth, EditorWindowHeight);
 
-    // init resource manager root path
-    auto resourceDir =
-        GenResourcePath(std::filesystem::path{newInfo.projectPath});
-    assetMgr->SetRootPath(resourceDir);
+    auto assetDir = GenResourcePath(newInfo.projectPath);
 
     // init content browser info
     auto& contentBrowserInfo = cmds.emplace_resource<ContentBrowserInfo>();
-    contentBrowserInfo.path = resourceDir;
-    contentBrowserInfo.rootPath = resourceDir;
+    contentBrowserInfo.path = assetDir;
+    contentBrowserInfo.rootPath = assetDir;
     if (!std::filesystem::exists(contentBrowserInfo.rootPath)) {
         if (!std::filesystem::create_directory(contentBrowserInfo.rootPath)) {
             LOGF(log_tag::Editor, "create resource dir ",
@@ -340,8 +338,7 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
 }
 
 void TestEnter(gecs::commands cmds,
-               gecs::resource<gecs::mut<AssetManager>> assetMgr,
-               gecs::resource<gecs::mut<FontManager>> fontMgr) {
+               gecs::resource<gecs::mut<AssetManager>> assetMgr) {
     auto entity = cmds.create();
     auto texture =
         assetMgr->LoadTexture("role.png", gogl::Sampler::CreateNearestRepeat());
@@ -354,10 +351,23 @@ void TestEnter(gecs::commands cmds,
     bundle.sprite = Sprite::FromTexture(texture);
     cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
 
-    auto font = fontMgr->Load("arial.ttf");
+    auto font = assetMgr->LoadFont("arial.ttf");
     entity = cmds.create();
     cmds.emplace<ui::Style>(entity);
     cmds.emplace<ui::Label>(entity, font);
+}
+
+void EditorMenubar() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("save asset")) {
+                SaveAssets(gWorld->res<ProjectInitInfo>()->projectPath,
+                           gWorld->res<AssetManager>().get());
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
 }
 
 void EditorEntityListWindow(bool& show, int& selected, gecs::registry reg,
@@ -488,6 +498,8 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
                        gecs::registry reg, gecs::commands cmds) {
     // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
+    EditorMenubar();
+
     static int selected = -1;
     EditorEntityListWindow(ctx->openEntityList, selected, reg, cmds);
     if (selected >= 0) {
@@ -504,6 +516,10 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
     static bool demoWindowOpen = true;
 
     ImGui::ShowDemoWindow(&demoWindowOpen);
+}
+
+void EditorExit() {
+    gWorld->remove_res<ContentBrowserInfo>();
 }
 
 void BootstrapSystem(gecs::world& world,
@@ -530,6 +546,7 @@ void BootstrapSystem(gecs::world& world,
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
         .regist_enter_system_to_state<TestEnter>(
             EditorScene::Editor)  // for test
+        .regist_exit_system_to_state<EditorExit>(EditorScene::Editor)
         .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::Editor)
         .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)
         .regist_update_system_to_state<plugin::ImGuiEnd>(EditorScene::Editor)

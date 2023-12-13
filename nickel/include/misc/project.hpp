@@ -1,24 +1,28 @@
 #pragma once
 
 #include "anim/anim.hpp"
+#include "misc/asset_manager.hpp"
 #include "misc/filetype.hpp"
 #include "misc/timer.hpp"
 #include "pch.hpp"
 #include "renderer/camera.hpp"
+#include "renderer/font.hpp"
 #include "renderer/renderer2d.hpp"
 #include "renderer/texture.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
-#include "renderer/font.hpp"
+
 
 namespace nickel {
 
+constexpr std::string_view AssetFilename = "asset.toml";
+
 struct ProjectInitInfo final {
-    std::string projectPath;
+    std::filesystem::path projectPath;
     WindowBuilder::Data windowData = WindowBuilder::Data::Default();
 };
 
-void SaveProject(const std::filesystem::path& rootPath, const TextureManager&,
+void SaveProject(const std::filesystem::path& rootPath, const AssetManager&,
                  const Window&);
 
 /**
@@ -30,7 +34,13 @@ void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
 /**
  * @brief save all assets information to file
  */
-void SaveAssets(const std::filesystem::path& rootPath, const TextureManager& textureMgr);
+void SaveAssets(const std::filesystem::path& rootPath,
+                const AssetManager&);
+
+/**
+ * @brief load all assets from file
+ */
+void LoadAssets(const std::filesystem::path& rootPath, AssetManager&);
 
 /**
  * @brief load basic project config
@@ -38,30 +48,25 @@ void SaveAssets(const std::filesystem::path& rootPath, const TextureManager& tex
  * @param rootPath project root directory path
  * @return ProjectInitInfo project config
  */
-ProjectInitInfo LoadBasicProjectConfig(const std::string& rootPath);
-
-/**
- * @brief load all assets from file
- */
-void LoadAssets(const std::string& rootPath, TextureManager& textureMgr);
+ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath);
 
 /**
  * @brief load project config from file and init project
  *
  * @param rootPath project root directory path
  */
-void LoadProject(const std::string& rootPath, Window& window, TextureManager&);
+void LoadProject(const std::string& rootPath, Window& window, AssetManager&);
 
 /**
  * @brief init project from ProjectInitInfo
  */
 void InitProjectByConfig(const ProjectInitInfo&, Window& window,
-                         TextureManager& textureMgr);
+                         AssetManager&);
 
 /**
  * @brief init all inner ECS systems
  * @note you must call this before you do anything with engine(call in
- * `BootstrapSystem` in usual)
+ * `BootstrapSystem` usually)
  */
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds);
@@ -78,28 +83,5 @@ inline std::filesystem::path GenResourcePath(
     const std::filesystem::path& root) {
     return root / std::filesystem::path{ResDir};
 }
-
-/**
- * @brief import a file as asset
- * 
- * @param hint hint the asset type(Unknown will auto-detect)
- * @return true 
- * @return false 
- */
-bool ImportAsset(const std::filesystem::path&, TextureManager&, FontManager&,
-                 FileType hint = FileType::Unknown);
-
-
-/**
- * @brief remove asset
- * 
- * @param path 
- * @param textureMgr 
- * @param fontMgr 
- * @return true 
- * @return false 
- */
-bool RemoveAsset(const std::filesystem::path& path, TextureManager& textureMgr,
-                 FontManager& fontMgr);
 
 }  // namespace nickel
