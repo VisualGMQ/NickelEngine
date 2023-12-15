@@ -21,11 +21,12 @@ struct Tile final {
     TextureHandle handle;
 };
 
-class Tilesheet final {
+class Tilesheet final: public Asset {
 public:
-    Tilesheet(TextureManager&, TextureHandle, uint32_t col, uint32_t row,
+    Tilesheet(const TextureManager&, TextureHandle, uint32_t col, uint32_t row,
               const Margin& margin = Margin::Zero(),
               const Spacing& spacing = {0, 0});
+    Tilesheet(const std::filesystem::path& root, const std::filesystem::path& relativePath);
 
     static Tilesheet Null;
 
@@ -47,6 +48,13 @@ public:
                 static_cast<float>(tileHeight_)};
     }
 
+    /**
+     * @brief save tilesheet info to toml file
+     */
+    void Save(const std::filesystem::path& path) const;
+
+    toml::table Save2Toml() const override;
+
 private:
     TextureHandle handle_;
     Margin margin_;
@@ -55,29 +63,23 @@ private:
     uint32_t tileHeight_;
     uint32_t col_;
     uint32_t row_;
+    std::filesystem::path configFilename_;
 
     Tilesheet() = default;
 };
 
-struct TilesheetConfig final {
-    std::string name;
-    uint32_t row, col;
-    Margin margin = Margin::Zero();
-    Spacing spacing = {0, 0};
-};
+using TilesheetHandle = Handle<Tilesheet>;
 
-class TilesheetManager final {
+template <>
+std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table&,
+                                     const std::filesystem::path&);
+
+class TilesheetManager final : public Manager<Tilesheet> {
 public:
-    explicit TilesheetManager(TextureManager&);
-    Tilesheet& CreateFromTexture(TextureHandle, const std::string& name,
-                               uint32_t col, uint32_t row,
-                               const Margin& margin = Margin::Zero(),
-                               const Spacing& spacing = {0, 0});
-    Tilesheet& Find(std::string_view name);
-
-private:
-    TextureManager* imageManager_;
-    std::unordered_map<std::string, Tilesheet> tilesheets_;
+    TilesheetHandle Create(TextureHandle, uint32_t col, uint32_t row,
+                           const Margin& margin = Margin::Zero(),
+                           const Spacing& spacing = {0, 0});
+    TilesheetHandle Load(const std::filesystem::path&);
 };
 
 }  // namespace nickel

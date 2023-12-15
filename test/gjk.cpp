@@ -1,6 +1,5 @@
 #include "misc/project.hpp"
 #include "nickel.hpp"
-#include "refl/anim.hpp"
 
 using namespace nickel;
 

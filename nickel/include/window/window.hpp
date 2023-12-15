@@ -33,6 +33,7 @@ public:
     void SwapBuffer() const;
     void Resize(int w, int h);
     void SetTitle(const std::string& title);
+
     std::string_view Title() const { return title_; }
 
     cgmath::Vec2 Size() const;

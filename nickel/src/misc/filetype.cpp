@@ -3,16 +3,20 @@
 namespace nickel {
 
 std::unordered_map<std::string, FileType> gFileTypeMap = {
-    // image
-    {".png", FileType::Image},
-    {".bmp", FileType::Image},
-    {".jpg", FileType::Image},
-    // font
-    {".ttf", FileType::Font},
-    // audio
-    {".wav", FileType::Audio},
-    {".ogg", FileType::Audio},
-    {".mp3", FileType::Audio},
+  // image
+    {  ".png",     FileType::Image},
+    {  ".bmp",     FileType::Image},
+    {  ".jpg",     FileType::Image},
+ // font
+    {  ".ttf",      FileType::Font},
+ // audio
+    {  ".wav",     FileType::Audio},
+    {  ".ogg",     FileType::Audio},
+    {  ".mp3",     FileType::Audio},
+
+    {".timer",     FileType::Timer},
+    { ".anim", FileType::Animation},
+    {   ".ts", FileType::Tilesheet},
 };
 
 FileType DetectFileType(const std::filesystem::path& path) {
@@ -23,4 +27,4 @@ FileType DetectFileType(const std::filesystem::path& path) {
     return FileType::Unknown;
 }
 
-}
+}  // namespace nickel

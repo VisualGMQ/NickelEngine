@@ -10,6 +10,9 @@ enum class FileType {
     Image,
     Font,
     Audio,
+    Tilesheet,
+    Animation,
+    Timer,
 
     FileTypeCount,
 };

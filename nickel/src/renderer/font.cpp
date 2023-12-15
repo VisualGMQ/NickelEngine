@@ -15,11 +15,21 @@ void FontSystemInit() {
 
 void FontSystemShutdown() {
     if (auto err = FT_Done_FreeType(gFtLib); err) {
-        LOGE(log_tag::Asset, "shutdown freetype2 failed! ", FT_Error_String(err));
+        LOGE(log_tag::Asset, "shutdown freetype2 failed! ",
+             FT_Error_String(err));
     }
 }
 
 Font Font::Null;
+
+template <>
+std::unique_ptr<Font> LoadAssetFromToml(const toml::table& tbl,
+                                        const std::filesystem::path& root) {
+    if (auto path = tbl.get("path"); path && path->is_string()) {
+        return std::make_unique<Font>(root, path->as_string()->get());
+    }
+    return nullptr;
+}
 
 Character::Character(const FT_GlyphSlot& g)
     : size{cgmath::Vec2(g->bitmap.width, g->bitmap.rows)},
@@ -38,11 +48,11 @@ Character::Character(const FT_GlyphSlot& g)
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
 }
 
-Font::Font(const std::filesystem::path& rootPath,
+Font::Font(const std::filesystem::path& root,
            const std::filesystem::path& filename)
     : Asset(filename) {
-    if (auto err = FT_New_Face(
-            gFtLib, (rootPath / filename.string()).string().c_str(), 0, &face_);
+    if (auto err =
+            FT_New_Face(gFtLib, (root / filename).string().c_str(), 0, &face_);
         err) {
         LOGE(log_tag::Asset, "load font ", filename,
              " failed! error code: ", FT_Error_String(err));
@@ -65,11 +75,18 @@ FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
 
     auto glyphIdx = FT_Get_Char_Index(face_, c);
     if (auto err = FT_Load_Glyph(face_, glyphIdx, FT_LOAD_RENDER); err) {
-        LOGE(log_tag::Asset, "load glyph ", c, " failed! ", FT_Error_String(err));
+        LOGE(log_tag::Asset, "load glyph ", c, " failed! ",
+             FT_Error_String(err));
         return nullptr;
     }
 
     return face_->glyph;
+}
+
+toml::table Font::Save2Toml() const {
+    toml::table tbl;
+    tbl.emplace("path", RelativePath().string());
+    return tbl;
 }
 
 Font::~Font() {
@@ -91,37 +108,6 @@ FontHandle FontManager::Load(const std::filesystem::path& filename) {
         return handle;
     } else {
         return FontHandle::Null();
-    }
-}
-
-toml::table FontManager::Save2Toml() const {
-    toml::table tbl;
-    tbl.emplace("root_path", GetRootPath().string());
-
-    toml::array arr;
-    for (auto&& [handle, font] : AllDatas()) {
-        arr.push_back(font->RelativePath().string());
-    }
-
-    tbl.emplace("font", std::move(arr));
-    return tbl;
-}
-
-void FontManager::LoadFromToml(toml::table& tbl) {
-    std::filesystem::path rootPath;
-    if (auto path = tbl.get("root_path"); path && path->is_string()) {
-        SetRootPath(path->as_string()->get());
-    }
-
-    if (auto fonts = tbl.get("fonts"); fonts && fonts->is_array()) {
-        auto arr = *fonts->as_array();
-        for (auto&& elem : arr) {
-            if (!elem.is_string()) {
-                continue;
-            }
-
-            Load(elem.as_string()->get());
-        }
     }
 }
 

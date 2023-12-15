@@ -132,6 +132,27 @@ void reflectRenderRelate() {
         .add("ClampToEdge", gogl::TextureWrapperType::ClampToEdge);
 }
 
+void reflectWindow() {
+    mirrow::drefl::registrar<WindowBuilder::Data>::instance()
+        .regist("WindowData")
+        .property("title", &WindowBuilder::Data::title)
+        .property("size", &WindowBuilder::Data::size);
+}
+
+void reflectTilesheet() {
+    mirrow::drefl::registrar<Margin>::instance()
+        .regist("Margin")
+        .property("left", &Margin::left)
+        .property("right", &Margin::right)
+        .property("top", &Margin::top)
+        .property("bottom", &Margin::bottom);
+
+    mirrow::drefl::registrar<Spacing>::instance()
+        .regist("Spacing")
+        .property("x", &Spacing::x)
+        .property("y", &Spacing::y);
+}
+
 void InitDynamicReflect() {
     reflectVec2();
     reflectVec3();
@@ -143,6 +164,8 @@ void InitDynamicReflect() {
     reflectSprite();
     reflectUI();
     reflectRenderRelate();
+    reflectWindow();
+    reflectTilesheet();
 }
 
 }  // namespace nickel

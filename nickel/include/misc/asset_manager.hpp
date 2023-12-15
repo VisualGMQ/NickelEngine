@@ -1,8 +1,11 @@
 #pragma once
 
+#include "anim/anim.hpp"
 #include "misc/filetype.hpp"
-#include "renderer/texture.hpp"
+#include "misc/timer.hpp"
 #include "renderer/font.hpp"
+#include "renderer/texture.hpp"
+#include "renderer/tilesheet.hpp"
 
 namespace nickel {
 
@@ -17,13 +20,30 @@ public:
     void SetRootPath(const std::filesystem::path& path) {
         textureMgr_.SetRootPath(path);
         fontMgr_.SetRootPath(path);
+        timerMgr_.SetRootPath(path);
+        tilesheetMgr_.SetRootPath(path);
+        timerMgr_.SetRootPath(path);
     }
 
     auto& TextureMgr() { return textureMgr_; }
+
     auto& FontMgr() { return fontMgr_; }
 
+    auto& TilesheetMgr() { return tilesheetMgr_; }
+
+    auto& AnimationMgr() { return animMgr_; }
+
+    auto& TimerMgr() { return timerMgr_; }
+
     auto& TextureMgr() const { return textureMgr_; }
+
     auto& FontMgr() const { return fontMgr_; }
+
+    auto& TilesheetMgr() const { return tilesheetMgr_; }
+
+    auto& AnimationMgr() const { return animMgr_; }
+
+    auto& TimerMgr() const { return timerMgr_; }
 
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
@@ -37,6 +57,12 @@ public:
             case FileType::Audio:
                 // TODO: not finish
                 return false;
+            case FileType::Tilesheet:
+                return TilesheetMgr().Load(path) != TilesheetHandle::Null();
+            case FileType::Animation:
+                // return AnimationMgr().Load(path) != TilesheetHandle::Null();
+            case FileType::Timer:
+                return TimerMgr().Load(path) != TimerHandle::Null();
             default:
                 LOGW(log_tag::Editor, "Unknown asset type: ", path);
                 return false;
@@ -47,7 +73,7 @@ public:
         if (auto filetype = DetectFileType(path); filetype == FileType::Image) {
             return TextureMgr().Load(path, gogl::Sampler::CreateLinearRepeat());
         }
-        return TextureHandle::Null();
+        return {};
     }
 
     TextureHandle LoadTexture(const std::filesystem::path& path,
@@ -55,14 +81,37 @@ public:
         if (auto filetype = DetectFileType(path); filetype == FileType::Image) {
             return TextureMgr().Load(path, sampler);
         }
-        return TextureHandle::Null();
+        return {};
     }
 
     FontHandle LoadFont(const std::filesystem::path& path) {
         if (auto filetype = DetectFileType(path); filetype == FileType::Font) {
             return FontMgr().Load(path);
         }
-        return FontHandle::Null();
+        return {};
+    }
+
+    TimerHandle LoadTimer(const std::filesystem::path& path) {
+        if (auto filetype = DetectFileType(path); filetype == FileType::Timer) {
+            return TimerMgr().Load(path);
+        }
+        return {};
+    }
+
+    TilesheetHandle LoadTilesheet(const std::filesystem::path& path) {
+        if (auto filetype = DetectFileType(path);
+            filetype == FileType::Tilesheet) {
+            return TilesheetMgr().Load(path);
+        }
+        return {};
+    }
+
+    AnimationHandle LoadAnimation(const std::filesystem::path& path) {
+        if (auto filetype = DetectFileType(path);
+            filetype == FileType::Animation) {
+            return AnimationMgr().Load(path);
+        }
+        return {};
     }
 
     template <typename T>
@@ -82,6 +131,15 @@ public:
                 break;
             case FileType::Audio:
                 // TODO: not finish
+                break;
+            case FileType::Tilesheet:
+                TilesheetMgr().Destroy(path);
+                break;
+            case FileType::Animation:
+                AnimationMgr().Destroy(path);
+                break;
+            case FileType::Timer:
+                TimerMgr().Destroy(path);
                 break;
             case FileType::Unknown:
             case FileType::FileTypeCount:
@@ -105,6 +163,12 @@ public:
             case FileType::Audio:
                 // TODO: not finish
                 return false;
+            case FileType::Animation:
+                return AnimationMgr().Has(filename);
+            case FileType::Timer:
+                return TimerMgr().Has(filename);
+            case FileType::Tilesheet:
+                return TilesheetMgr().Has(filename);
             default:
                 return false;
         }
@@ -123,6 +187,9 @@ public:
     void ReleaseAll() {
         textureMgr_.ReleaseAll();
         fontMgr_.ReleaseAll();
+        animMgr_.ReleaseAll();
+        timerMgr_.ReleaseAll();
+        tilesheetMgr_.ReleaseAll();
     }
 
     void Save2TomlFile(const std::filesystem::path& path) const {
@@ -135,6 +202,9 @@ public:
 
         tbl.emplace("texture", TextureMgr().Save2Toml());
         tbl.emplace("font", FontMgr().Save2Toml());
+        tbl.emplace("anim", AnimationMgr().Save2Toml());
+        tbl.emplace("tilesheet", TilesheetMgr().Save2Toml());
+        tbl.emplace("timer", TimerMgr().Save2Toml());
 
         return tbl;
     }
@@ -146,18 +216,36 @@ public:
         if (auto node = tbl.get("font"); node && node->is_table()) {
             FontMgr().LoadFromToml(*node->as_table());
         }
+        if (auto node = tbl.get("anim"); node && node->is_table()) {
+            AnimationMgr().LoadFromToml(*node->as_table());
+        }
+        if (auto node = tbl.get("tilesheet"); node && node->is_table()) {
+            TilesheetMgr().LoadFromToml(*node->as_table());
+        }
+        if (auto node = tbl.get("timer"); node && node->is_table()) {
+            TimerMgr().LoadFromToml(*node->as_table());
+        }
     }
 
 private:
     TextureManager textureMgr_;
     FontManager fontMgr_;
+    TimerManager timerMgr_;
+    TilesheetManager tilesheetMgr_;
+    AnimationManager animMgr_;
 
     template <typename T>
-    const auto& switchManager() const {
+    auto& switchManager() const {
         if constexpr (std::is_same_v<T, Texture>) {
             return textureMgr_;
-        } else {
+        } else if constexpr (std::is_same_v<T, Font>) {
             return fontMgr_;
+        } else if constexpr (std::is_same_v<T, Timer>) {
+            return timerMgr_;
+        } else if constexpr (std::is_same_v<T, Tilesheet>) {
+            return tilesheetMgr_;
+        } else if constexpr (std::is_same_v<T, Animation>) {
+            return animMgr_;
         }
     }
 
@@ -165,8 +253,14 @@ private:
     auto& switchManager() {
         if constexpr (std::is_same_v<T, Texture>) {
             return textureMgr_;
-        } else {
+        } else if constexpr (std::is_same_v<T, Font>) {
             return fontMgr_;
+        } else if constexpr (std::is_same_v<T, Timer>) {
+            return timerMgr_;
+        } else if constexpr (std::is_same_v<T, Tilesheet>) {
+            return tilesheetMgr_;
+        } else if constexpr (std::is_same_v<T, Animation>) {
+            return animMgr_;
         }
     }
 };

@@ -8,49 +8,52 @@
 
 namespace nickel {
 
-class AnimationTrack {
+class BasicAnimationTrack {
 public:
-    AnimationTrack() = default;
+    using PropertyLinkContainer = std::vector<std::string>;
 
-    AnimationTrack(const mirrow::drefl::type* typeInfo)
-        : typeInfo_(typeInfo) {}
+    BasicAnimationTrack() = default;
 
-    virtual ~AnimationTrack() = default;
+    explicit BasicAnimationTrack(const mirrow::drefl::type* applyTarget,
+                            const PropertyLinkContainer& propLink)
+        : propLink_(propLink), applyTypeInfo_(applyTarget) {}
+
+    explicit BasicAnimationTrack(const mirrow::drefl::type* applyTarget,
+                            PropertyLinkContainer&& propLink)
+        : propLink_(std::move(propLink)), applyTypeInfo_(applyTarget) {}
+
+    virtual ~BasicAnimationTrack() = default;
 
     virtual mirrow::drefl::any GetValueAt(TimeType) const = 0;
     virtual bool Empty() const = 0;
     virtual size_t Size() const = 0;
     virtual TimeType Duration() const = 0;
 
-    auto TypeInfo() const { return typeInfo_; }
+    auto& PropertyLink() const { return propLink_; }
 
-    void ChangeApplyTarget(const mirrow::drefl::type* typeInfo) { applyTypeInfo_ = typeInfo; }
     auto GetApplyTarget() const { return applyTypeInfo_; }
+
+    virtual toml::table Save2Toml() const = 0;
 
 private:
     const mirrow::drefl::type*
-        applyTypeInfo_;  // which type should this track apply to
-    const mirrow::drefl::type* typeInfo_;  // animate data type
+        applyTypeInfo_;  // which component should this track apply to
+    PropertyLinkContainer propLink_;  // properties link in component
 };
 
 template <typename T>
-class BasicAnimationTrack final : public AnimationTrack {
+class AnimationTrack final : public BasicAnimationTrack {
 public:
     using keyframe_type = KeyFrame<T>;
     using container_type = std::vector<keyframe_type>;
     using time_type = typename keyframe_type::time_type;
 
-    BasicAnimationTrack()
-        : AnimationTrack(mirrow::drefl::typeinfo<T>()) {}
+    AnimationTrack() : BasicAnimationTrack(nullptr, {}) {}
 
-    BasicAnimationTrack(const container_type& keyPoints)
-        : AnimationTrack(mirrow::drefl::typeinfo<
-                         typename keyframe_type::value_type>()),
-          keyPoints_(keyPoints) {}
-
-    BasicAnimationTrack(container_type&& keyPoints)
-        : AnimationTrack(mirrow::drefl::typeinfo<
-                         typename keyframe_type::value_type>()),
+    AnimationTrack(
+        container_type&& keyPoints, const mirrow::drefl::type* applyTarget,
+        typename BasicAnimationTrack::PropertyLinkContainer&& propList)
+        : BasicAnimationTrack(applyTarget, std::move(propList)),
           keyPoints_(std::move(keyPoints)) {}
 
     bool Empty() const override { return keyPoints_.empty(); }
@@ -69,12 +72,12 @@ public:
         }
 
         if (Size() == 1) {
-            return mirrow::drefl::any_make_ref(keyPoints_[0].value);
+            return mirrow::drefl::any_make_constref(keyPoints_[0].value);
         }
 
         auto& last = keyPoints_.back();
         if (t >= last.timePoint) {
-            return mirrow::drefl::any_make_ref(last.value);
+            return mirrow::drefl::any_make_constref(last.value);
         }
 
         for (int i = 0; i < keyPoints_.size() - 1; i++) {
@@ -91,123 +94,167 @@ public:
         return {};
     }
 
-private:
-    container_type keyPoints_;
-};
-
-class AnimTrackSerialMethods : public Singlton<AnimTrackSerialMethods, false> {
-public:
-    using serialize_fn_type = toml::table (*)(const AnimationTrack&);
-    using deserialize_fn_type =
-        std::unique_ptr<AnimationTrack> (*)(const toml::table&);
-    using type_info_type = const mirrow::drefl::type*;
-
-    bool Contain(type_info_type type);
-    serialize_fn_type GetSerializeMethod(type_info_type type);
-    deserialize_fn_type GetDeserializeMethod(type_info_type);
-
-    template <typename T>
-    auto& RegistMethod() {
-        auto type_info = mirrow::drefl::typeinfo<T>();
-        methods_.emplace(type_info,
-                         std::make_pair(serialize<T>, deserialize<T>));
-        return *this;
-    }
-
-private:
-    std::unordered_map<type_info_type,
-                       std::pair<serialize_fn_type, deserialize_fn_type>>
-        methods_;
-
-    template <typename T>
-    static toml::table serialize(const AnimationTrack& animTrack) {
-        auto& track = static_cast<const BasicAnimationTrack<T>&>(animTrack);
+    toml::table Save2Toml() const override {
         toml::table tbl;
+        tbl.emplace("apply_target", GetApplyTarget()->name());
 
-        toml::array keyframeTbl;
-        mirrow::serd::srefl::serialize(track.KeyPoints(), keyframeTbl);
-        tbl.emplace("keyframe", keyframeTbl);
-        auto type_info = mirrow::drefl::typeinfo<T>();
-
-        if (animTrack.GetApplyTarget()) {
-            tbl.emplace("apply_target", animTrack.GetApplyTarget()->name());
+        toml::array arr;
+        for (auto& prop : PropertyLink()) {
+            arr.push_back(prop);
         }
-        tbl.emplace("type", type_info->name());
+        tbl.emplace("property_link", std::move(arr));
+
+        toml::array pointArr;
+        for (auto& point : keyPoints_) {
+            pointArr.push_back(point.Save2Toml());
+        }
+
+        tbl.emplace("key_points", pointArr);
+        tbl.emplace("value_type", mirrow::drefl::typeinfo<T>()->name());
 
         return tbl;
     }
 
-    template <typename T>
-    static std::unique_ptr<AnimationTrack> deserialize(const toml::table& tbl) {
-        auto type_info = mirrow::drefl::typeinfo<T>();
-        auto typeNode = tbl["type"];
-
-        Assert(typeNode.is_string(), "type is not string");
-        auto typeStr = typeNode.as_string()->get();
-        Assert(typeStr == type_info->name(), "deserialize table type not fit");
-
-        auto keyframes = tbl["keyframe"];
-        Assert(keyframes.is_array(),
-               "deserialize KeyPoint must has toml::array node");
-
-        typename BasicAnimationTrack<T>::container_type track;
-        mirrow::serd::srefl::deserialize(*keyframes.as_array(), track);
-
-        auto animTrack = std::make_unique<BasicAnimationTrack<T>>(std::move(track));
-
-        if (auto node = tbl["apply_target"]; node.is_string()) {
-            animTrack->ChangeApplyTarget(::mirrow::drefl::typeinfo(node.as_string()->get()));
+    static std::unique_ptr<AnimationTrack> LoadFromToml(
+        const toml::table& tbl) {
+        if (auto node = tbl.get("value_type"); node && node->is_string()) {
+            if (node->as_string()->get() !=
+                mirrow::drefl::typeinfo<T>()->name()) {
+                LOGW(log_tag::Asset,
+                     "animation track value type not satisfied");
+                return nullptr;
+            }
+        } else {
+            return nullptr;
         }
 
-        return animTrack;
+        const mirrow::drefl::type* applyTargetType = nullptr;
+        if (auto node = tbl.get("apply_target"); node && node->is_string()) {
+            applyTargetType = mirrow::drefl::typeinfo(node->as_string()->get());
+        }
+        if (!applyTargetType) {
+            LOGW(log_tag::Asset, "load animation from toml failed! the type "
+                                 "info of apply_target don't exists");
+            return nullptr;
+        }
+
+        PropertyLinkContainer propLink;
+        if (auto node = tbl.get("property_link"); node && node->is_array()) {
+            auto& arr = *node->as_array();
+            for (auto& elem : arr) {
+                if (!elem.is_string()) {
+                    LOGW(log_tag::Asset,
+                         "load animation from toml failed! property_link array "
+                         "don't contain string");
+                    return nullptr;
+                }
+
+                propLink.push_back(elem.as_string()->get());
+            }
+        } else {
+            LOGW(log_tag::Asset, "load animation from toml failed! "
+                                 "property_link field don't exists");
+        }
+
+        container_type keyPoints;
+        if (auto node = tbl.get("key_points"); node && node->is_array()) {
+            auto& arr = *node->as_array();
+            for (auto& elem : arr) {
+                if (!elem.is_table()) {
+                    LOGW(log_tag::Asset, "load animation from toml failed! "
+                                         "key_points field don't exists");
+                    return nullptr;
+                }
+                keyPoints.push_back(
+                    keyframe_type::LoadFromToml(*elem.as_table()));
+            }
+        }
+
+        return std::make_unique<AnimationTrack>(
+            std::move(keyPoints), applyTargetType, std::move(propLink));
     }
+
+private:
+    container_type keyPoints_;
+};
+
+class AnimTrackLoadMethods : public Singlton<AnimTrackLoadMethods, false> {
+public:
+    using deserialize_fn_type =
+        std::unique_ptr<BasicAnimationTrack> (*)(const toml::table&);
+    using type_info_type = const mirrow::drefl::type*;
+
+    bool Contain(type_info_type type);
+    deserialize_fn_type Find(type_info_type type);
+
+    template <typename T>
+    auto& RegistMethod() {
+        auto type_info = mirrow::drefl::typeinfo<T>();
+        methods_.emplace(
+            type_info,
+            [](const toml::table& tbl) -> std::unique_ptr<BasicAnimationTrack> {
+                return AnimationTrack<T>::LoadFromToml(tbl);
+            });
+        return *this;
+    }
+
+private:
+    std::unordered_map<type_info_type, deserialize_fn_type> methods_;
 };
 
 class Animation final : public Asset {
 public:
-    using track_base_type = AnimationTrack;
+    using track_base_type = BasicAnimationTrack;
     using track_pointer_type = std::unique_ptr<track_base_type>;
-    using container_type = std::unordered_map<std::string, track_pointer_type>;
+    using container_type = std::vector<track_pointer_type>;
 
     static Animation Null;
+
+    explicit operator bool() const { return !tracks_.empty(); }
 
     Animation() = default;
 
     Animation(container_type&& tracks) : tracks_(std::move(tracks)) {
-        lastTime_ = 0;
-        for (auto& [name, track] : tracks_) {
+        for (auto& track : tracks_) {
             auto duration = track->Duration();
             lastTime_ = std::max<TimeType>(lastTime_, duration);
         }
     }
 
+    Animation(const std::filesystem::path& root,
+              const std::filesystem::path& filename);
+
     auto& Tracks() const { return tracks_; }
 
     TimeType Duration() const { return lastTime_; }
 
+    /**
+     * @brief save animation info to toml file(as asset file)
+     */
+    void Save(const std::filesystem::path& path) const;
+
+    toml::table Save2Toml() const override {
+        toml::table tbl;
+        tbl.emplace("path", RelativePath().string());
+        return tbl;
+    }
+
 private:
     container_type tracks_;
-    TimeType lastTime_;
+    TimeType lastTime_ = 0;
 };
+
+template <>
+std::unique_ptr<Animation> LoadAssetFromToml(const toml::table& tbl,
+                                             const std::filesystem::path& root);
 
 using AnimationHandle = Handle<Animation>;
 
 class AnimationManager final : public Manager<Animation> {
 public:
-    AnimationHandle CreateFromTracks(
-        typename Animation::container_type&& tracks);
     std::shared_ptr<Animation> CreateSolitaryFromTracks(
         typename Animation::container_type&& tracks);
-
-
-    toml::table Save2Toml() const override {
-        // TODO: implement
-        return {};
-    }
-
-    void LoadFromToml(toml::table&) override {
-        // TODO: implement
-    }
+    AnimationHandle Load(const std::filesystem::path&);
 };
 
 class AnimationPlayer final {
@@ -219,8 +266,7 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer(AnimationManager& mgr)
-        : mgr_(&mgr) {}
+    AnimationPlayer(AnimationManager& mgr) : mgr_(&mgr) {}
 
     AnimationHandle Anim() const { return handle_; }
 
@@ -248,14 +294,10 @@ public:
     void SetTick(TimeType t) {
         curTime_ = std::clamp<int>(curTime_, 0, static_cast<int>(Duration()));
     }
-    
-    bool Empty() const {
-        return !handle_;
-    }
 
-    AnimationHandle GetAnim() const {
-        return handle_;
-    }
+    bool Empty() const { return !handle_; }
+
+    AnimationHandle GetAnim() const { return handle_; }
 
     void Reset() {
         if (dir_ == Direction::Forward) {

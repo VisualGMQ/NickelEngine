@@ -1,6 +1,8 @@
 #pragma once
 
+#include "core/asset.hpp"
 #include "core/handle.hpp"
+
 
 namespace nickel {
 
@@ -24,7 +26,8 @@ public:
 
     void Destroy(const std::filesystem::path& path) {
         auto relativePath = convert2RelativePath(path);
-        if (auto it = pathHandleMap_.find(relativePath); it != pathHandleMap_.end()) {
+        if (auto it = pathHandleMap_.find(relativePath);
+            it != pathHandleMap_.end()) {
             pathHandleMap_.erase(it);
             datas_.erase(it->second);
         }
@@ -79,12 +82,44 @@ public:
 
     auto& AllDatas() const { return datas_; }
 
-    virtual toml::table Save2Toml() const = 0;
-    virtual void LoadFromToml(toml::table&) = 0;
+    toml::table Save2Toml() const {
+        toml::table tbl;
+
+        tbl.emplace("root_path", GetRootPath().string());
+        toml::array arr;
+        for (auto& [_, asset] : AllDatas()) {
+            arr.push_back(asset->Save2Toml());
+        }
+        tbl.emplace("datas", arr);
+
+        return tbl;
+    }
+
+    void LoadFromToml(toml::table& tbl) {
+        if (auto root = tbl["root_path"]; root.is_string()) {
+            SetRootPath(root.as_string()->get());
+        }
+
+        if (auto datas = tbl["datas"]; datas.is_array()) {
+            for (auto& node : *datas.as_array()) {
+                if (!node.is_table()) {
+                    continue;
+                }
+
+                auto& elemTbl = *node.as_table();
+
+                if (auto asset = LoadAssetFromToml<T>(elemTbl, GetRootPath());
+                    asset&& *asset) {
+                    storeNewItem(AssetHandle::Create(), std::move(asset));
+                }
+            }
+        }
+    }
 
     void Save2TomlFile(const std::filesystem::path& path) const {
         std::ofstream file(path);
-        file << toml::toml_formatter{Save2Toml()};
+        // file << toml::toml_formatter{Save2Toml()};
+        file << Save2Toml();
     }
 
 protected:
@@ -108,11 +143,8 @@ protected:
     std::unordered_map<AssetHandle, AssetStoreType, typename Handle<T>::Hash,
                        typename Handle<T>::HashEq>
         datas_;
-    std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
     std::filesystem::path rootPath_ = "./";
+    std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
 };
-
-template <typename T>
-using ResourceManager = Manager<T>;
 
 }  // namespace nickel

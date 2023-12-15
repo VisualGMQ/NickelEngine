@@ -28,7 +28,7 @@ void SaveProject(const std::filesystem::path& rootPath, const AssetManager&,
 /**
  * @brief save basic project information to file
  */
-void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
+void SaveBasicProjectConfig(const std::filesystem::path& rootPath,
                           const ProjectInitInfo& initInfo);
 
 /**
@@ -82,6 +82,13 @@ constexpr std::string_view ResDir = "resources";
 inline std::filesystem::path GenResourcePath(
     const std::filesystem::path& root) {
     return root / std::filesystem::path{ResDir};
+}
+
+constexpr std::string_view ProjectConfigFile = "project.toml";
+
+inline std::filesystem::path GenProjectConfigFilePath(
+    const std::filesystem::path& root) {
+    return root / std::filesystem::path{ProjectConfigFile};
 }
 
 }  // namespace nickel

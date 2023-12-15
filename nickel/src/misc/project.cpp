@@ -26,27 +26,25 @@ void LoadAssets(const std::filesystem::path& rootPath, AssetManager& assetMgr) {
     assetMgr.LoadFromToml(result.table());
 }
 
-void SaveBasicProjectInfo(const std::filesystem::path& rootPath,
+void SaveBasicProjectConfig(const std::filesystem::path& rootPath,
                           const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
-    toml::table windowDataTbl;
-    mirrow::serd::srefl::serialize(initInfo.windowData, windowDataTbl);
-    tbl.emplace("window", windowDataTbl);
-
+    mirrow::serd::drefl::serialize(
+        tbl, mirrow::drefl::any_make_constref(initInfo.windowData), "window");
     // TODO: serialize camera information
 
-    std::ofstream file(rootPath / "project.toml");
+    std::ofstream file(GenProjectConfigFilePath(rootPath));
     file << toml::toml_formatter{tbl} << std::endl;
 }
 
-void SaveProject(const std::string& rootPath, const AssetManager& assetMgr,
+void SaveProject(const std::filesystem::path& rootPath, const AssetManager& assetMgr,
                  const Window& window) {
     ProjectInitInfo initInfo;
     initInfo.projectPath = rootPath;
     initInfo.windowData.title = window.Title();
     initInfo.windowData.size = window.Size();
-    SaveBasicProjectInfo(rootPath, initInfo);
+    SaveBasicProjectConfig(rootPath, initInfo);
     SaveAssets(rootPath, assetMgr);
 }
 
@@ -56,7 +54,7 @@ ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
     ProjectInitInfo initInfo;
 
     initInfo.projectPath = rootPath;
-    std::filesystem::path path(rootPath / "project.toml");
+    std::filesystem::path path(GenProjectConfigFilePath(rootPath));
     if (!std::filesystem::exists(path)) {
         LOGF(log_tag::Nickel, "project config file ", path.string(),
              " not exists");
@@ -139,9 +137,10 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
         .add<suitCanvas2Window>();
 
     // init animation serialize method
-    AnimTrackSerialMethods::Instance()
+    AnimTrackLoadMethods::Instance()
         .RegistMethod<cgmath::Vec2>()
         .RegistMethod<cgmath::Vec3>()
+        .RegistMethod<cgmath::Vec4>()
         .RegistMethod<float>()
         .RegistMethod<double>()
         .RegistMethod<int>()

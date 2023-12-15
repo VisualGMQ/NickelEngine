@@ -58,51 +58,54 @@ enum class Key {
     Equals = SDL_SCANCODE_EQUALS,
     Leftbracket = SDL_SCANCODE_LEFTBRACKET,
     Rightbracket = SDL_SCANCODE_RIGHTBRACKET,
-    Backslash = SDL_SCANCODE_BACKSLASH, /**< Located at the lower left of the return
-                                  *   key on ISO keyboards and at the right end
-                                  *   of the QWERTY row on ANSI keyboards.
-                                  *   Produces REVERSE SOLIDUS (backslash) and
-                                  *   VERTICAL LINE in a US layout, REVERSE
-                                  *   SOLIDUS and VERTICAL LINE in a UK Mac
-                                  *   layout, NUMBER SIGN and TILDE in a UK
-                                  *   Windows layout, DOLLAR SIGN and POUND SIGN
-                                  *   in a Swiss German layout, NUMBER SIGN and
-                                  *   APOSTROPHE in a German layout, GRAVE
-                                  *   ACCENT and POUND SIGN in a French Mac
-                                  *   layout, and ASTERISK and MICRO SIGN in a
-                                  *   French Windows layout.
-                                  */
-    Nonushash = SDL_SCANCODE_NONUSHASH, /**< ISO USB keyboards actually use this code
-                                  *   instead of 49 for the same key, but all
-                                  *   OSes I've seen treat the two codes
-                                  *   identically. So, as an implementor, unless
-                                  *   your keyboard generates both of those
-                                  *   codes and your OS treats them differently,
-                                  *   you should generate SDL_SCANCODE_BACKSLASH
-                                  *   instead of this code. As a user, you
-                                  *   should not rely on this code because SDL
-                                  *   will never generate it with most (all?)
-                                  *   keyboards.
-                                  */
+    Backslash =
+        SDL_SCANCODE_BACKSLASH, /**< Located at the lower left of the return
+                                 *   key on ISO keyboards and at the right end
+                                 *   of the QWERTY row on ANSI keyboards.
+                                 *   Produces REVERSE SOLIDUS (backslash) and
+                                 *   VERTICAL LINE in a US layout, REVERSE
+                                 *   SOLIDUS and VERTICAL LINE in a UK Mac
+                                 *   layout, NUMBER SIGN and TILDE in a UK
+                                 *   Windows layout, DOLLAR SIGN and POUND SIGN
+                                 *   in a Swiss German layout, NUMBER SIGN and
+                                 *   APOSTROPHE in a German layout, GRAVE
+                                 *   ACCENT and POUND SIGN in a French Mac
+                                 *   layout, and ASTERISK and MICRO SIGN in a
+                                 *   French Windows layout.
+                                 */
+    Nonushash =
+        SDL_SCANCODE_NONUSHASH, /**< ISO USB keyboards actually use this code
+                                 *   instead of 49 for the same key, but all
+                                 *   OSes I've seen treat the two codes
+                                 *   identically. So, as an implementor, unless
+                                 *   your keyboard generates both of those
+                                 *   codes and your OS treats them differently,
+                                 *   you should generate SDL_SCANCODE_BACKSLASH
+                                 *   instead of this code. As a user, you
+                                 *   should not rely on this code because SDL
+                                 *   will never generate it with most (all?)
+                                 *   keyboards.
+                                 */
     Semicolon = SDL_SCANCODE_SEMICOLON,
     Apostrophe = SDL_SCANCODE_APOSTROPHE,
-    Grave = SDL_SCANCODE_GRAVE, /**< Located in the top left corner (on both ANSI
-                              *   and ISO keyboards). Produces GRAVE ACCENT and
-                              *   TILDE in a US Windows layout and in US and UK
-                              *   Mac layouts on ANSI keyboards, GRAVE ACCENT
-                              *   and NOT SIGN in a UK Windows layout, SECTION
-                              *   SIGN and PLUS-MINUS SIGN in US and UK Mac
-                              *   layouts on ISO keyboards, SECTION SIGN and
-                              *   DEGREE SIGN in a Swiss German layout (Mac:
-                              *   only on ISO keyboards), CIRCUMFLEX ACCENT and
-                              *   DEGREE SIGN in a German layout (Mac: only on
-                              *   ISO keyboards), SUPERSCRIPT TWO and TILDE in a
-                              *   French Windows layout, COMMERCIAL AT and
-                              *   NUMBER SIGN in a French Mac layout on ISO
-                              *   keyboards, and LESS-THAN SIGN and GREATER-THAN
-                              *   SIGN in a Swiss German, German, or French Mac
-                              *   layout on ANSI keyboards.
-                              */
+    Grave =
+        SDL_SCANCODE_GRAVE, /**< Located in the top left corner (on both ANSI
+                             *   and ISO keyboards). Produces GRAVE ACCENT and
+                             *   TILDE in a US Windows layout and in US and UK
+                             *   Mac layouts on ANSI keyboards, GRAVE ACCENT
+                             *   and NOT SIGN in a UK Windows layout, SECTION
+                             *   SIGN and PLUS-MINUS SIGN in US and UK Mac
+                             *   layouts on ISO keyboards, SECTION SIGN and
+                             *   DEGREE SIGN in a Swiss German layout (Mac:
+                             *   only on ISO keyboards), CIRCUMFLEX ACCENT and
+                             *   DEGREE SIGN in a German layout (Mac: only on
+                             *   ISO keyboards), SUPERSCRIPT TWO and TILDE in a
+                             *   French Windows layout, COMMERCIAL AT and
+                             *   NUMBER SIGN in a French Mac layout on ISO
+                             *   keyboards, and LESS-THAN SIGN and GREATER-THAN
+                             *   SIGN in a Swiss German, German, or French Mac
+                             *   layout on ANSI keyboards.
+                             */
     Comma = SDL_SCANCODE_COMMA,
     Period = SDL_SCANCODE_PERIOD,
     Slash = SDL_SCANCODE_SLASH,
@@ -125,8 +128,8 @@ enum class Key {
     Printscreen = SDL_SCANCODE_PRINTSCREEN,
     Scrolllock = SDL_SCANCODE_SCROLLLOCK,
     Pause = SDL_SCANCODE_PAUSE,
-    Insert = SDL_SCANCODE_INSERT, /**< insert on PC, help on some Mac keyboards (but
-                                   does send code 73, not 117) */
+    Insert = SDL_SCANCODE_INSERT, /**< insert on PC, help on some Mac keyboards
+                                   (but does send code 73, not 117) */
     Home = SDL_SCANCODE_HOME,
     Pageup = SDL_SCANCODE_PAGEUP,
     Delete = SDL_SCANCODE_DELETE,
@@ -137,8 +140,9 @@ enum class Key {
     Down = SDL_SCANCODE_DOWN,
     Up = SDL_SCANCODE_UP,
 
-    Numlockclear = SDL_SCANCODE_NUMLOCKCLEAR, /**< num lock on PC, clear on Mac keyboards
-                                     */
+    Numlockclear =
+        SDL_SCANCODE_NUMLOCKCLEAR, /**< num lock on PC, clear on Mac keyboards
+                                    */
     Kp_divide = SDL_SCANCODE_KP_DIVIDE,
     Kp_multiply = SDL_SCANCODE_KP_MULTIPLY,
     Kp_minus = SDL_SCANCODE_KP_MINUS,
@@ -156,20 +160,22 @@ enum class Key {
     Kp_0 = SDL_SCANCODE_KP_0,
     Kp_period = SDL_SCANCODE_KP_PERIOD,
 
-    Nonusbackslash = SDL_SCANCODE_NONUSBACKSLASH, /**< This is the additional key that ISO
-                                        *   keyboards have over ANSI ones,
-                                        *   located between left shift and Y.
-                                        *   Produces GRAVE ACCENT and TILDE in a
-                                        *   US or UK Mac layout, REVERSE SOLIDUS
-                                        *   (backslash) and VERTICAL LINE in a
-                                        *   US or UK Windows layout, and
-                                        *   LESS-THAN SIGN and GREATER-THAN SIGN
-                                        *   in a Swiss German, German, or French
-                                        *   layout. */
-    Application = SDL_SCANCODE_APPLICATION, /**< windows contextual menu, compose */
-    Power = SDL_SCANCODE_POWER, /**< The USB document says this is a status flag,
-                               *   not a physical key - but some Mac keyboards
-                               *   do have a power key. */
+    Nonusbackslash =
+        SDL_SCANCODE_NONUSBACKSLASH, /**< This is the additional key that ISO
+                                      *   keyboards have over ANSI ones,
+                                      *   located between left shift and Y.
+                                      *   Produces GRAVE ACCENT and TILDE in a
+                                      *   US or UK Mac layout, REVERSE SOLIDUS
+                                      *   (backslash) and VERTICAL LINE in a
+                                      *   US or UK Windows layout, and
+                                      *   LESS-THAN SIGN and GREATER-THAN SIGN
+                                      *   in a Swiss German, German, or French
+                                      *   layout. */
+    Application =
+        SDL_SCANCODE_APPLICATION, /**< windows contextual menu, compose */
+    Power = SDL_SCANCODE_POWER,   /**< The USB document says this is a status
+                                   * flag,   not a physical key - but some Mac
+                                   * keyboards   do have a power key. */
     Kp_equals = SDL_SCANCODE_KP_EQUALS,
     F13 = SDL_SCANCODE_F13,
     F14 = SDL_SCANCODE_F14,
@@ -188,7 +194,7 @@ enum class Key {
     Menu = SDL_SCANCODE_MENU,
     Select = SDL_SCANCODE_SELECT,
     Stop = SDL_SCANCODE_STOP,
-    Again = SDL_SCANCODE_AGAIN,   /**< redo */
+    Again = SDL_SCANCODE_AGAIN, /**< redo */
     Undo = SDL_SCANCODE_UNDO,
     Cut = SDL_SCANCODE_CUT,
     Copy = SDL_SCANCODE_COPY,
@@ -200,8 +206,8 @@ enum class Key {
     Kp_comma = SDL_SCANCODE_KP_COMMA,
     Kp_equalsas400 = SDL_SCANCODE_KP_EQUALSAS400,
 
-    International1 = SDL_SCANCODE_INTERNATIONAL1, /**< used on Asian keyboards, see
-                                            footnotes in USB doc */
+    International1 = SDL_SCANCODE_INTERNATIONAL1, /**< used on Asian keyboards,
+                                            see footnotes in USB doc */
     International2 = SDL_SCANCODE_INTERNATIONAL2,
     International3 = SDL_SCANCODE_INTERNATIONAL3, /**< Yen */
     International4 = SDL_SCANCODE_INTERNATIONAL4,
@@ -289,10 +295,10 @@ enum class Key {
     Ralt = SDL_SCANCODE_RALT, /**< alt gr, option */
     Rgui = SDL_SCANCODE_RGUI, /**< windows, command (apple), meta */
 
-    Mode = SDL_SCANCODE_MODE,    /**< I'm not sure if this is really not covered
-                                 *   by any of the above, but since there's a
-                                 *   special KMOD_MODE for it I'm adding it here
-                                 */
+    Mode = SDL_SCANCODE_MODE, /**< I'm not sure if this is really not covered
+                               *   by any of the above, but since there's a
+                               *   special KMOD_MODE for it I'm adding it here
+                               */
 
     Audionext = SDL_SCANCODE_AUDIONEXT,
     Audioprev = SDL_SCANCODE_AUDIOPREV,
@@ -314,8 +320,8 @@ enum class Key {
 
     Brightnessdown = SDL_SCANCODE_BRIGHTNESSDOWN,
     Brightnessup = SDL_SCANCODE_BRIGHTNESSUP,
-    Displayswitch = SDL_SCANCODE_DISPLAYSWITCH, /**< display mirroring/dual display
-                                           switch, video mode switch */
+    Displayswitch = SDL_SCANCODE_DISPLAYSWITCH, /**< display mirroring/dual
+                                           display switch, video mode switch */
     Kbdillumtoggle = SDL_SCANCODE_KBDILLUMTOGGLE,
     Kbdillumdown = SDL_SCANCODE_KBDILLUMDOWN,
     Kbdillumup = SDL_SCANCODE_KBDILLUMUP,
@@ -379,7 +385,7 @@ struct MouseMotionEvent final {
 struct MouseButtonEvent final {
     MouseButtonType btn;
     Action action;
-    uint8_t clicks; // 1 for singl-click, 2 for double-click
+    uint8_t clicks;  // 1 for singl-click, 2 for double-click
 };
 
 struct ScrollEvent final {
@@ -392,7 +398,7 @@ struct WindowResizeEvent final {
 
 class EventPoller final {
 public:
-    using event_handler = void(*)(const SDL_Event& event);
+    using event_handler = void (*)(const SDL_Event& event);
 
     void Poll() const;
 

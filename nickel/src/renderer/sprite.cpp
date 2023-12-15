@@ -1,4 +1,5 @@
 #include "renderer/sprite.hpp"
+#include "misc/asset_manager.hpp"
 
 namespace nickel {
 

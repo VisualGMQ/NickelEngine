@@ -26,6 +26,15 @@ public:
 
     static Texture Null;
 
+    Texture(const std::filesystem::path& root,
+            const std::filesystem::path& filename, const gogl::Sampler&,
+            gogl::Format fmt = gogl::Format::RGBA,
+            gogl::Format gpuFmt = gogl::Format::RGBA);
+    Texture(void*, int w, int h, const gogl::Sampler& sampler,
+            gogl::Format fmt = gogl::Format::RGBA,
+            gogl::Format gpuFmt = gogl::Format::RGBA);
+    Texture() = default;
+
     Texture(const Texture&) = delete;
     Texture(Texture&&) = default;
     Texture& operator=(Texture&&) = default;
@@ -46,29 +55,23 @@ public:
         return texture_ ? reinterpret_cast<void*>(texture_->Id()) : 0;
     }
 
-    auto& Filename() const { return RelativePath(); }
-
     auto& Sampler() const { return sampler_; }
 
+    toml::table Save2Toml() const override;
+
 private:
-    TextureHandle handle_;
     std::unique_ptr<gogl::Texture> texture_ = nullptr;
     gogl::Sampler sampler_;
     int w_ = 0;
     int h_ = 0;
 
-    Texture(TextureHandle handle, const std::filesystem::path& root,
-            const std::filesystem::path& filename, const gogl::Sampler&,
-            gogl::Format fmt = gogl::Format::RGBA,
-            gogl::Format gpuFmt = gogl::Format::RGBA);
-    Texture(TextureHandle handle, const std::filesystem::path& filename, void*,
-            int w, int h, const gogl::Sampler& sampler,
-            gogl::Format fmt = gogl::Format::RGBA,
-            gogl::Format gpuFmt = gogl::Format::RGBA);
-    Texture() = default;
 };
 
-class TextureManager final : public ResourceManager<Texture> {
+template <>
+std::unique_ptr<Texture> LoadAssetFromToml(const toml::table&,
+                                           const std::filesystem::path& root);
+
+class TextureManager final : public Manager<Texture> {
 public:
     template <typename T>
     friend std::enable_if_t<std::is_same_v<T, TextureManager>> serialize(
@@ -89,17 +92,11 @@ public:
         void* data, int w, int h, const gogl::Sampler&,
         gogl::Format fmt = gogl::Format::RGBA,
         gogl::Format gpuFmt = gogl::Format::RGBA);
-
-    toml::table Save2Toml() const override;
-    void LoadFromToml(toml::table&) override;
-
-private:
-    toml::table serializeTexture(const Texture&) const;
-    bool deserializeTexture(const toml::table&);
 };
 
 }  // namespace nickel
 
 /**
- * @}
- */
+     * @brief 
+     * 
+     */

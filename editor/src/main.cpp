@@ -32,6 +32,7 @@ constexpr int ProjectMgrWindowHeight = 300;
 void ProjectManagerUpdate(
     gecs::commands cmds,
     gecs::resource<gecs::mut<ProjectInitInfo>> projInitInfo,
+    gecs::resource<Window> window,
     gecs::resource<gecs::mut<AssetManager>> assetMgr) {
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
@@ -47,11 +48,10 @@ void ProjectManagerUpdate(
 
             if (!dir.empty()) {
                 ProjectInitInfo initInfo;
-                SaveBasicProjectInfo(dir, initInfo);
-                SaveAssets(dir, assetMgr.get());
+                SaveProject(dir, assetMgr.get(), window.get());
                 std::filesystem::create_directories(GenResourcePath(dir));
 
-                projInitInfo->projectPath = dir.string();
+                projInitInfo->projectPath = dir;
 
                 LOGI(log_tag::Nickel, "Create new project to ", dir);
                 cmds.switch_state(EditorScene::Editor);
@@ -360,9 +360,10 @@ void TestEnter(gecs::commands cmds,
 void EditorMenubar() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("save asset")) {
-                SaveAssets(gWorld->res<ProjectInitInfo>()->projectPath,
-                           gWorld->res<AssetManager>().get());
+            if (ImGui::MenuItem("save")) {
+                SaveProject(gWorld->res<ProjectInitInfo>()->projectPath,
+                            gWorld->res<AssetManager>().get(),
+                            gWorld->res<Window>().get());
             }
             ImGui::EndMenu();
         }
@@ -544,8 +545,8 @@ void BootstrapSystem(gecs::world& world,
         // Editor state
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
-        .regist_enter_system_to_state<TestEnter>(
-            EditorScene::Editor)  // for test
+        // .regist_enter_system_to_state<TestEnter>(
+        //     EditorScene::Editor)  // for test
         .regist_exit_system_to_state<EditorExit>(EditorScene::Editor)
         .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::Editor)
         .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)

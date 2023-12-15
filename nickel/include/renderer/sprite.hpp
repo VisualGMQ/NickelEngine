@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/cgmath.hpp"
-#include "misc/asset_manager.hpp"
 #include "misc/hierarchy.hpp"
 #include "misc/transform.hpp"
 #include "renderer/camera.hpp"
@@ -52,6 +51,8 @@ struct SpriteBundle final {
     Sprite sprite;
     Transform transform;
 };
+
+class AssetManager;
 
 void CollectSpriteRenderInfo(
     gecs::querier<Sprite, Transform, gecs::without<Parent>>,

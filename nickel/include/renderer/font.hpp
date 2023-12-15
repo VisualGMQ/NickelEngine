@@ -18,6 +18,9 @@ public:
 
     static Font Null;
 
+    Font(const std::filesystem::path& root, const std::filesystem::path& filename);
+    Font() = default;
+
     ~Font();
 
     Font(const Font&) = delete;
@@ -30,21 +33,19 @@ public:
         return face_ != nullptr;
     }
 
+    toml::table Save2Toml() const override;
+
 private:
     FT_Face face_ = nullptr;
-    std::filesystem::path filename_;
-
-    Font(const std::filesystem::path& rootPath,
-         const std::filesystem::path& filename);
-    Font() = default;
 };
+
+template <>
+std::unique_ptr<Font> LoadAssetFromToml(const toml::table&,
+                                        const std::filesystem::path&);
 
 class FontManager final : public Manager<Font> {
 public:
     FontHandle Load(const std::filesystem::path& filename);
-
-    toml::table Save2Toml() const override;
-    void LoadFromToml(toml::table&) override;
 };
 
 struct Character {
@@ -59,7 +60,9 @@ struct Character {
 class TextCache final {
 public:
     void Push(Character&& c) { texts_.emplace_back(std::move(c)); }
+
     auto& Texts() const { return texts_; }
+
     void Clear() { texts_.clear(); }
 
 private:

@@ -2,7 +2,6 @@
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
 #include "misc/project.hpp"
 #include "nickel.hpp"
-#include "refl/anim.hpp"
 #include "renderer/font.hpp"
 
 using namespace nickel;
@@ -37,8 +36,6 @@ void TestRenderFontSystem(gecs::resource<gecs::mut<Renderer2D>> renderer,
 
 void TestInitSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<AssetManager>> assetMgr,
-                    gecs::resource<gecs::mut<AnimationManager>> animMgr,
-                    gecs::resource<gecs::mut<FontManager>> fontMgr,
                     gecs::registry reg) {
     auto entity = cmds.create();
     auto handle = assetMgr->LoadTexture("./sandbox/resources/role.png",
@@ -49,52 +46,34 @@ void TestInitSystem(gecs::commands cmds,
     bundle.transform = Transform::FromTranslation({100, 200});
     cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
 
-    std::unique_ptr<AnimationTrack> posTrack =
-        std::make_unique<BasicAnimationTrack<cgmath::Vec2>>(std::vector{
-            KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{100.0f, 200.0f}, 0),
-            KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{300.0f, 500.0f}, 100)});
-    posTrack->ChangeApplyTarget(mirrow::drefl::typeinfo<Transform>());
+    auto transformType = mirrow::drefl::typeinfo<Transform>();
+    std::unique_ptr<BasicAnimationTrack> posTrack =
+        std::unique_ptr<AnimationTrack<cgmath::Vec2>>(
+            new AnimationTrack<cgmath::Vec2>{
+                {KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{100.0f, 200.0f},
+                 0),
+                 KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{300.0f, 500.0f},
+                 100)},
+                transformType,
+                {"position"}
+    });
 
-    std::unique_ptr<AnimationTrack> rotTrack =
-        std::make_unique<BasicAnimationTrack<float>>(
-            std::vector{KeyFrame<float>::Create(0.0, 0),
-                        KeyFrame<float>::Create(360, 200)});
-    rotTrack->ChangeApplyTarget(mirrow::drefl::typeinfo<Transform>());
+    std::unique_ptr<BasicAnimationTrack> rotTrack =
+        std::unique_ptr<AnimationTrack<float>>(new AnimationTrack<float>{
+            {KeyFrame<float>::Create(0.0, 0),
+             KeyFrame<float>::Create(360, 200)},
+            transformType,
+            {"rotation"}
+    });
 
-    Animation::container_type tracks;
-    tracks["translation"] = std::move(posTrack);
-    tracks["rotation"] = std::move(rotTrack);
-    auto anim = animMgr->CreateFromTracks(std::move(tracks));
+    typename Animation::container_type tracks;
+    tracks.emplace_back(std::move(posTrack));
+    tracks.emplace_back(std::move(rotTrack));
+    Animation anim{std::move(tracks)};
 
-    toml::table tbl;
-    mirrow::serd::srefl::serialize<Animation>(animMgr->Get(anim), tbl);
-    toml::toml_formatter fmt{tbl};
+    anim.Save("test.anim");
 
-    std::stringstream ss;
-
-    ss << fmt;
-
-    std::string tomlData = ss.str();
-
-    std::ofstream file("anim.res.toml");
-    file << fmt;
-    file.close();
-
-    Animation serdAnim;
-    mirrow::serd::srefl::deserialize<Animation>(toml::parse(tomlData).table(),
-                                                serdAnim);
-
-    auto& animPlayer =
-        cmds.emplace<AnimationPlayer>(entity, AnimationPlayer(animMgr.get()));
-    animPlayer.ChangeAnim(anim);
-    animPlayer.Play();
-
-    tbl = SaveAsPrefab(entity, reg);
-    std::ofstream file2("ent1.prefab.toml");
-    file2 << tbl;
-    file2.close();
-
-    fhandle = fontMgr->Load("sandbox/resources/svgafix.fon");
+    Animation anim2("", "test.anim");
 }
 
 void BootstrapSystem(gecs::world& world,
