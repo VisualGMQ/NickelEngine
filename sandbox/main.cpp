@@ -55,7 +55,7 @@ void TestInitSystem(gecs::commands cmds,
                  KeyFrame<cgmath::Vec2>::Create(cgmath::Vec2{300.0f, 500.0f},
                  100)},
                 transformType,
-                {"position"}
+                {"translation"}
     });
 
     std::unique_ptr<BasicAnimationTrack> rotTrack =
@@ -74,6 +74,15 @@ void TestInitSystem(gecs::commands cmds,
     anim.Save("test.anim");
 
     Animation anim2("", "test.anim");
+
+    auto animHandle = assetMgr->AnimationMgr().Create(
+        std::make_unique<Animation>(std::move(anim2)), "test.anim");
+
+    auto& player = cmds.emplace<AnimationPlayer>(entity, assetMgr->AnimationMgr());
+    player.ChangeAnim(animHandle);
+    player.Play();
+
+    assetMgr->LoadFont("sandbox/resources/arial.ttf");
 }
 
 void BootstrapSystem(gecs::world& world,

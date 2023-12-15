@@ -1,9 +1,6 @@
 [window]
+title = 'NickelEngine Editor - NickelEngine'
 
-title = "NickelEngine"
-size = {x = 1024, y = 720}
-
-[camera]
-
-type = "2D"
-size = {x = 1024, y = 720}
+    [window.size]
+    x = 1024.0
+    y = 720.0

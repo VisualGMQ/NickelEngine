@@ -1,0 +1,3 @@
+'icons/font.svg' = ['.ttf']
+'icons/image.svg' = ['.png', '.bmp', '.jpg', '.gif']
+'icons/document.svg' = ['.txt']

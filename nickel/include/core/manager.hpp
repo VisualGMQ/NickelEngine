@@ -28,8 +28,8 @@ public:
         auto relativePath = convert2RelativePath(path);
         if (auto it = pathHandleMap_.find(relativePath);
             it != pathHandleMap_.end()) {
-            pathHandleMap_.erase(it);
             datas_.erase(it->second);
+            pathHandleMap_.erase(it);
         }
     }
 
@@ -69,6 +69,13 @@ public:
 
     bool Has(AssetHandle handle) const {
         return datas_.find(handle) != datas_.end();
+    }
+
+    AssetHandle Create(AssetStoreType&& asset, const std::filesystem::path& filename) {
+        auto handle = AssetHandle::Create();
+        asset->associateFile(filename);
+        storeNewItem(handle, std::move(asset));
+        return handle;
     }
 
     auto& GetRootPath() const { return rootPath_; }

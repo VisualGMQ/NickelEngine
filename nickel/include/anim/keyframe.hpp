@@ -46,6 +46,8 @@ struct BasicKeyFrame {
             frame.timePoint = node->as_integer()->get();
         }
 
+        frame.interpolate = Interpolation<T>::Linear;
+
         return frame;
     }
 

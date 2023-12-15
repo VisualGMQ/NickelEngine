@@ -1,6 +1,5 @@
 imgui.ini
 new_sandbox
-*.toml
 new-sandbox
 .*
 cmake-build*

@@ -22,7 +22,7 @@ public:
         fontMgr_.SetRootPath(path);
         timerMgr_.SetRootPath(path);
         tilesheetMgr_.SetRootPath(path);
-        timerMgr_.SetRootPath(path);
+        animMgr_.SetRootPath(path);
     }
 
     auto& TextureMgr() { return textureMgr_; }
