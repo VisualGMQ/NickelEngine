@@ -1,15 +1,19 @@
 #include "file_dialog.hpp"
 
+// TODO: add file dialog under ubuntu
+
 /*
 WARN: Don't move this to .hpp! windows.h defined some macro that will make
 project chaos!
 */
 #ifdef _WIN32
-#include <windows.h>
 #include <shlobj.h>
+#include <windows.h>
+
 #endif
 
 std::vector<std::filesystem::path> OpenFileDialog(const std::string& title) {
+#ifdef _WIN32
     OPENFILENAME ofn;
     char szFile[MAX_PATH] = {0};
 
@@ -28,9 +32,13 @@ std::vector<std::filesystem::path> OpenFileDialog(const std::string& title) {
     } else {
         return {};
     }
+#else
+    return {};
+#endif
 }
 
 std::filesystem::path OpenDirDialog(const std::string& title) {
+#ifdef _WIN32
     BROWSEINFO bi = {0};
     bi.hwndOwner = NULL;
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
@@ -47,4 +55,7 @@ std::filesystem::path OpenDirDialog(const std::string& title) {
     }
 
     return result;
+#else
+    return {};
+#endif
 }

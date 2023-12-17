@@ -27,9 +27,8 @@ public:
     Renderer2D();
 
     void BeginRenderTexture(const Camera& camera);
-    void EndRender();
-
     void BeginRenderFont(const Camera& camera);
+    void EndRender();
 
     void EnableDepthTest() { GL_CALL(glEnable(GL_DEPTH_TEST)); }
     void DisableDepthTest() { GL_CALL(glDisable(GL_DEPTH_TEST)); }
@@ -42,9 +41,15 @@ public:
         GL_CALL(glClearColor(color.x, color.y, color.z, color.w));
     }
 
-    void Clear() { GL_CALL(glClear(GL_COLOR_BUFFER_BIT)); }
+    void Clear(const Camera& camera) {
+        camera.ApplyRenderTarget();
+        GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
+    }
 
-    void ClearDepth() { GL_CALL(glClear(GL_DEPTH_BUFFER_BIT)); }
+    void ClearDepth(const Camera& camera) {
+        camera.ApplyRenderTarget();
+        GL_CALL(glClear(GL_DEPTH_BUFFER_BIT));
+    }
 
     template <typename Vertices, typename = std::enable_if_t<std::is_same_v<
                                      typename Vertices::value_type, Vertex>>>

@@ -65,13 +65,14 @@
 #else
 #define DLLEXPORT
 #endif
+// some windows evil macro
 // evil macro to remove Window SDK min&max macro
-#ifndef NOMINMAX
-#define NOMINMAX 
-#endif
-// some windows evil macro undef
-#undef near
-#undef far
+// #ifndef NOMINMAX
+// #define NOMINMAX 
+// #endif
+// // some windows evil macro undef
+// #undef near
+// #undef far
 #endif
 
 extern std::unique_ptr<gecs::world> gWorld;

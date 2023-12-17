@@ -4,6 +4,10 @@ namespace plugin {
 
 using namespace nickel;
 
+void imguiProcessEvent(const SDL_Event& event) {
+    ImGui_ImplSDL2_ProcessEvent(&event);
+}
+
 void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
                gecs::resource<gecs::mut<Renderer2D>> renderer2d,
                gecs::resource<gecs::mut<EventPoller>> poller) {
@@ -23,10 +27,7 @@ void ImGuiInit(gecs::resource<gecs::mut<Window>> window,
 
     renderer2d->SetClearColor({0.1f, 0.1f, 0.1f, 1.0});
 
-    constexpr auto f = +[](const SDL_Event& event) {
-        ImGui_ImplSDL2_ProcessEvent(&event);
-    };
-    poller->InjectHandler<f>();
+    poller->InjectHandler<imguiProcessEvent>();
 }
 
 void ImGuiStart() {

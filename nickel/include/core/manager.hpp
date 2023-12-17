@@ -3,7 +3,6 @@
 #include "core/asset.hpp"
 #include "core/handle.hpp"
 
-
 namespace nickel {
 
 template <typename T>
@@ -71,7 +70,8 @@ public:
         return datas_.find(handle) != datas_.end();
     }
 
-    AssetHandle Create(AssetStoreType&& asset, const std::filesystem::path& filename) {
+    AssetHandle Create(AssetStoreType&& asset,
+                       const std::filesystem::path& filename) {
         auto handle = AssetHandle::Create();
         asset->associateFile(filename);
         storeNewItem(handle, std::move(asset));
@@ -89,10 +89,11 @@ public:
 
     auto& AllDatas() const { return datas_; }
 
-    toml::table Save2Toml() const {
+    toml::table Save2Toml(const std::filesystem::path& rootDir) const {
         toml::table tbl;
 
-        tbl.emplace("root_path", GetRootPath().string());
+        auto relativePath = std::filesystem::relative(GetRootPath(), rootDir);
+        tbl.emplace("root_path", relativePath.string());
         toml::array arr;
         for (auto& [_, asset] : AllDatas()) {
             arr.push_back(asset->Save2Toml());
@@ -102,9 +103,13 @@ public:
         return tbl;
     }
 
-    void LoadFromToml(toml::table& tbl) {
+    /**
+     * @brief ignore `root_path` in tbl and use resourcePath to load assets
+     */
+    void LoadFromTomlWithPath(const toml::table& tbl,
+                              const std::filesystem::path& configDir) {
         if (auto root = tbl["root_path"]; root.is_string()) {
-            SetRootPath(root.as_string()->get());
+            SetRootPath(configDir / root.as_string()->get());
         }
 
         if (auto datas = tbl["datas"]; datas.is_array()) {
@@ -116,12 +121,17 @@ public:
                 auto& elemTbl = *node.as_table();
 
                 if (auto asset = LoadAssetFromToml<T>(elemTbl, GetRootPath());
-                    asset&& *asset) {
+                    asset && *asset) {
                     storeNewItem(AssetHandle::Create(), std::move(asset));
                 }
             }
         }
     }
+
+    /**
+     * @brief load assets from config toml table
+     */
+    void LoadFromToml(const toml::table& tbl) { LoadFromTomlWithPath(tbl, ""); }
 
     void Save2TomlFile(const std::filesystem::path& path) const {
         std::ofstream file(path);
@@ -147,8 +157,8 @@ protected:
         return rootPath_ / path;
     }
 
-    std::unordered_map<AssetHandle, AssetStoreType, typename Handle<T>::Hash,
-                       typename Handle<T>::HashEq>
+    std::unordered_map<AssetHandle, AssetStoreType, typename AssetHandle::Hash,
+                       typename AssetHandle::HashEq>
         datas_;
     std::filesystem::path rootPath_ = "./";
     std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;

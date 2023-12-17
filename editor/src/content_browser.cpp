@@ -105,10 +105,16 @@ void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
                     ImGui::CloseCurrentPopup();
                 }
             } else {
-                if (ImGui::Button("destroy")) {
+                if (ImGui::Button("release")) {
                     assetMgr.Destroy(entry);
                     ImGui::CloseCurrentPopup();
                 }
+            }
+            if (ImGui::Button("delete")) {
+                assetMgr.Destroy(entry);
+                std::filesystem::remove(entry);
+                gWorld->res_mut<ContentBrowserInfo>()->RescanDir();
+                ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
         }
@@ -198,6 +204,8 @@ void showIcons(ContentBrowserInfo& cbInfo,
 }
 
 void EditorContentBrowser(bool& show) {
+    if (!show) return;
+
     auto cbInfo = gWorld->res_mut<ContentBrowserInfo>();
     auto assetPropCtx = gWorld->res_mut<AssetPropertyWindowContext>();
 
@@ -221,9 +229,8 @@ void EditorContentBrowser(bool& show) {
         }
 
         showIcons(cbInfo.get(), assetPropCtx.get());
-
-        ImGui::End();
     }
+    ImGui::End();
 }
 
 nickel::Texture& ContentBrowserInfo::FindTextureOrGen(

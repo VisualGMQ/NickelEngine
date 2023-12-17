@@ -7,6 +7,7 @@ project(NickelEngine
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # some cmake utilities
+option(NICKEL_COPYDLL "auto copy needed dll to output dir" OFF)
 include(cmake/copy_dll.cmake)
 
 add_subdirectory(3rdlibs)

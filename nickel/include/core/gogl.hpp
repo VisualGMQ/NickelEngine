@@ -974,40 +974,81 @@ public:
     void AttachColorTexture2D(Texture& texture, uint32_t idx = 0) {
         Assert(texture.Type() == Texture::Type::Dimension2,
                "bind 2D color texture need a Texture2D");
+        if (!checkAndSetSize(texture)) {
+            return;
+        }
 
+        Bind();
         texture.Bind();
-        glFramebufferTexture2D(static_cast<GLenum>(access_),
+        GL_CALL(glFramebufferTexture2D(static_cast<GLenum>(access_),
                                GL_COLOR_ATTACHMENT0 + idx, GL_TEXTURE_2D,
-                               texture.id_, 0);
+                               texture.id_, 0));
+        Unbind();
     }
 
     void AttachDepthStencilTexture(Texture& texture) {
         Assert(texture.Type() == Texture::Type::Dimension2,
-               "bind 2D color texture need a Texture2D");
+               "bind 2D depth stencil texture need a Texture2D");
+        if (!checkAndSetSize(texture)) {
+            return;
+        }
 
+        Bind();
         texture.Bind();
-        glFramebufferTexture2D(static_cast<GLenum>(access_),
+        GL_CALL(glFramebufferTexture2D(static_cast<GLenum>(access_),
                                GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
-                               texture.id_, 0);
+                               texture.id_, 0));
+        Unbind();
     }
 
     void AttacheRenderBuffer(RenderBuffer& buffer) {
+        if (!checkAndSetSize(buffer)) {
+            return;
+        }
+
+        Bind();
         buffer.Bind();
-        GL_CALL(glFramebufferRenderbuffer(static_cast<GLenum>(access_),
+        GL_CALL(GL_CALL(glFramebufferRenderbuffer(static_cast<GLenum>(access_),
                                           GL_DEPTH_STENCIL_ATTACHMENT,
-                                          GL_RENDERBUFFER, buffer.id_));
+                                          GL_RENDERBUFFER, buffer.id_)));
+        Unbind();
     }
 
-    bool CheckValid() const {
-        return glCheckFramebufferStatus(static_cast<GLenum>(access_)) ==
-               GL_FRAMEBUFFER_COMPLETE;
+    bool CheckValid(GLenum* errorCode = nullptr) const {
+        Bind();
+        auto err = glCheckFramebufferStatus(static_cast<GLenum>(access_));
+        if (errorCode) {
+            *errorCode = err;
+        }
+        return err == GL_FRAMEBUFFER_COMPLETE;
+        Unbind();
     }
+
+    auto& Size() const { return size_; }
 
     ~Framebuffer() { GL_CALL(glDeleteFramebuffers(1, &id_)); }
 
 private:
     GLuint id_;
     FramebufferAccess access_;
+    cgmath::Vec2 size_;
+
+    bool hasSize() const {
+        return size_.w != 0 && size_.h != 0;
+    }
+
+    template <typename T>
+    bool checkAndSetSize(const T& value) {
+        if (hasSize()) {
+            if (value.Width() != size_.w || value.Height() != size_.h) {
+                LOGW(log_tag::GL, "inconsistent width and height");
+                return false;
+            }
+        } else {
+            size_.Set(value.Width(), value.Height());
+        }
+        return true;
+    }
 };
 
 /************ physic device *****************/

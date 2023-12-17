@@ -1,9 +1,12 @@
 #include "core/cgmath.hpp"
+#include "core/gogl.hpp"
 #include "core/utf8string.hpp"
+#include "imgui.h"
 #include "imgui_plugin.hpp"
 
 #include "asset_list_window.hpp"
 #include "asset_property_window.hpp"
+#include "config.hpp"
 #include "content_browser.hpp"
 #include "file_dialog.hpp"
 #include "mirrow/drefl/cast_any.hpp"
@@ -11,10 +14,10 @@
 #include "mirrow/drefl/make_any.hpp"
 #include "misc/project.hpp"
 #include "refl/drefl.hpp"
+#include "renderer/renderer2d.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 #include "ui/style.hpp"
-
 
 enum class EditorScene {
     ProjectManager,
@@ -23,17 +26,10 @@ enum class EditorScene {
 
 using namespace nickel;
 
-constexpr int EditorWindowWidth = 1024;
-constexpr int EditorWindowHeight = 720;
-
-constexpr int ProjectMgrWindowWidth = 450;
-constexpr int ProjectMgrWindowHeight = 300;
-
-void ProjectManagerUpdate(
-    gecs::commands cmds,
-    gecs::resource<gecs::mut<ProjectInitInfo>> projInitInfo,
-    gecs::resource<Window> window,
-    gecs::resource<gecs::mut<AssetManager>> assetMgr) {
+void ProjectManagerUpdate(gecs::commands cmds,
+                          gecs::resource<gecs::mut<EditorContext>> editorCtx,
+                          gecs::resource<Window> window,
+                          gecs::resource<gecs::mut<AssetManager>> assetMgr) {
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
                                     ImGuiWindowFlags_NoSavedSettings;
@@ -47,11 +43,7 @@ void ProjectManagerUpdate(
             auto dir = OpenDirDialog("Choose Empty Directory");
 
             if (!dir.empty()) {
-                ProjectInitInfo initInfo;
-                SaveProject(dir, assetMgr.get(), window.get());
-                std::filesystem::create_directories(GenResourcePath(dir));
-
-                projInitInfo->projectPath = dir;
+                editorCtx->projectInfo = CreateNewProject(dir, assetMgr.get());
 
                 LOGI(log_tag::Nickel, "Create new project to ", dir);
                 cmds.switch_state(EditorScene::Editor);
@@ -62,10 +54,10 @@ void ProjectManagerUpdate(
         if (ImGui::Button("Open Project", ImVec2(200, 200))) {
             auto files = OpenFileDialog("Open Project");
             if (!files.empty()) {
-                projInitInfo->projectPath =
+                editorCtx->projectInfo.projectPath =
                     std::filesystem::path{files[0]}.parent_path().string();
                 LOGI(log_tag::Nickel, "Open project at ",
-                     projInitInfo->projectPath);
+                     editorCtx->projectInfo.projectPath);
 
                 cmds.switch_state(EditorScene::Editor);
             }
@@ -295,23 +287,34 @@ void RegistSpawnMethods() {
     instance.Regist<ui::Label>(GeneralSpawnMethod<ui::Label>);
 }
 
-void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
-                 gecs::resource<gecs::mut<Window>> window,
+void createAndSetRenderTarget(nickel::gogl::Framebuffer& fbo, Camera& camera) {
+    camera.SetRenderTarget(fbo);
+}
+
+void EditorEnter(gecs::resource<gecs::mut<Window>> window,
                  gecs::resource<gecs::mut<AssetManager>> assetMgr,
                  gecs::resource<gecs::mut<FontManager>> fontMgr,
                  gecs::resource<gecs::mut<Renderer2D>> renderer,
+                 gecs::resource<gecs::mut<EditorContext>> editorCtx,
+                 gecs::resource<gecs::mut<Camera>> camera,
+                 gecs::resource<gecs::mut<ui::Context>> uiCtx,
                  gecs::commands cmds) {
-    std::filesystem::path path = initInfo->projectPath / "project.toml";
+    createAndSetRenderTarget(*editorCtx->gameContentTarget_, camera.get());
+    createAndSetRenderTarget(*editorCtx->gameContentTarget_, uiCtx->camera);
 
     cmds.emplace_resource<AssetPropertyWindowContext>();
-    auto& editorCtx = cmds.emplace_resource<EditorContext>();
 
-    auto newInfo = LoadProjectInfoFromFile(initInfo->projectPath);
-    InitProjectByConfig(newInfo, window.get(), assetMgr.get());
-    window->SetTitle("NickelEngine Editor - " + newInfo.windowData.title);
-    window->Resize(EditorWindowWidth, EditorWindowHeight);
+    editorCtx->projectInfo =
+        LoadProjectInfoFromFile(editorCtx->projectInfo.projectPath);
 
-    auto assetDir = GenResourcePath(newInfo.projectPath);
+    auto editorConfig = editorCtx->projectInfo;
+    editorConfig.windowData.size.Set(EditorWindowWidth, EditorWindowHeight);
+    editorConfig.windowData.title =
+        "NickelEngine Editor - " + editorCtx->projectInfo.windowData.title;
+    InitProjectByConfig(editorConfig, window.get(), assetMgr.get());
+
+    auto assetDir =
+        GenAssetsDefaultStoreDir(editorCtx->projectInfo.projectPath);
 
     // init content browser info
     auto& contentBrowserInfo = cmds.emplace_resource<ContentBrowserInfo>();
@@ -326,53 +329,40 @@ void EditorEnter(gecs::resource<gecs::mut<ProjectInitInfo>> initInfo,
     }
     contentBrowserInfo.RescanDir();
 
-    // TODO: change renderer default texture to canvas
-
     renderer->SetViewport({0, 0},
                           cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
-
-    initInfo.get() = std::move(newInfo);
 
     RegistComponentShowMethods();
     RegistSpawnMethods();
 }
 
-void TestEnter(gecs::commands cmds,
-               gecs::resource<gecs::mut<AssetManager>> assetMgr) {
-    auto entity = cmds.create();
-    auto texture =
-        assetMgr->LoadTexture("role.png", gogl::Sampler::CreateNearestRepeat());
-
-    SpriteBundle bundle;
-    bundle.sprite = Sprite::FromTexture(texture);
-    cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
-
-    entity = cmds.create();
-    bundle.sprite = Sprite::FromTexture(texture);
-    cmds.emplace_bundle<SpriteBundle>(entity, std::move(bundle));
-
-    auto font = assetMgr->LoadFont("arial.ttf");
-    entity = cmds.create();
-    cmds.emplace<ui::Style>(entity);
-    cmds.emplace<ui::Label>(entity, font);
-}
-
-void EditorMenubar() {
+void EditorMenubar(EditorContext& ctx) {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("save")) {
-                SaveProject(gWorld->res<ProjectInitInfo>()->projectPath,
-                            gWorld->res<AssetManager>().get(),
-                            gWorld->res<Window>().get());
+                SaveProjectByConfig(gWorld->res<EditorContext>()->projectInfo,
+                                    gWorld->res<AssetManager>().get());
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("View")) {
+            ImGui::MenuItem("game content window", nullptr,
+                            &ctx.openGameWindow);
+            ImGui::MenuItem("inspector", nullptr, &ctx.openInspector);
+            ImGui::MenuItem("entity list", nullptr, &ctx.openEntityList);
+            ImGui::MenuItem("content browser", nullptr,
+                            &ctx.openContentBrowser);
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
 }
 
 void EditorEntityListWindow(bool& show, int& selected, gecs::registry reg,
                             gecs::commands cmds) {
+    if (!show) return;
+
     if (ImGui::Begin("Entity List", &show)) {
         if (ImGui::Button("add")) {
             cmds.create();
@@ -391,12 +381,15 @@ void EditorEntityListWindow(bool& show, int& selected, gecs::registry reg,
                 selected = i;
             }
         }
-        ImGui::End();
     }
+
+    ImGui::End();
 }
 
 void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg,
                            gecs::commands cmds) {
+    if (!show) return;
+
     if (ImGui::Begin("Inspector", &show)) {
         auto& types = mirrow::drefl::all_typeinfo();
 
@@ -488,21 +481,90 @@ void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg,
             it->second(cmds, entity, reg);
             shouldSpawn = false;
         }
-
-        ImGui::End();
     }
+    ImGui::End();
+}
+
+void DrawCoordLine(EditorContext& ctx, nickel::Renderer2D& renderer,
+                   const Camera& camera, const Camera& uiCamera) {
+    renderer.BeginRenderTexture(camera);
+    cgmath::Rect rect{0, 0, ctx.projectInfo.windowData.size.w,
+                      ctx.projectInfo.windowData.size.h};
+    renderer.DrawRect(rect, {0, 0, 1, 1});
+    // TODO: clip line start&end point to draw
+    renderer.DrawLine({-10000, 0}, {10000, 0}, {1, 0, 0, 1});
+    renderer.DrawLine({0, -10000}, {0, 10000}, {0, 1, 0, 1});
+
+    renderer.EndRender();
+}
+
+void GameContentWindow(EditorContext& ctx, nickel::Renderer2D& renderer,
+                       Camera& camera, Camera& uiCamera) {
+    if (!ctx.openGameWindow) return;
+
+    DrawCoordLine(ctx, renderer, camera, uiCamera);
+
+    auto oldStyle = ImGui::GetStyle();
+    auto newStyle = oldStyle;
+    newStyle.WindowPadding.x = 0;
+    newStyle.WindowPadding.y = 0;
+    ImGui::GetStyle() = newStyle;
+
+    if (ImGui::Begin("game", &ctx.openGameWindow)) {
+        auto windowPos = ImGui::GetWindowPos();
+        auto windowSize= ImGui::GetWindowSize();
+        auto& gameWindowSize = ctx.projectInfo.windowData.size;
+        ImGui::GetWindowDrawList()->AddImage(
+            (ImTextureID)ctx.gameContentTexture_->Id(), windowPos,
+            ImVec2{windowPos.x + windowSize.x, windowPos.y + windowSize.y},
+            {0, windowSize.y / gameWindowSize.h},
+            {windowSize.x / gameWindowSize.w, 0});
+
+        auto& io = ImGui::GetIO();
+        if (io.MouseWheel && ImGui::IsWindowHovered()) {
+            auto scale = camera.Scale();
+            constexpr float ScaleFactor = 0.02;
+            constexpr float minScaleFactor = 0.0001;
+            scale.x += ScaleFactor * io.MouseWheel;
+            scale.y += ScaleFactor * io.MouseWheel;
+            scale.x = scale.x < minScaleFactor ? minScaleFactor : scale.x;
+            scale.y = scale.y < minScaleFactor ? minScaleFactor : scale.y;
+            camera.SetScale(scale);
+
+            scale = uiCamera.Scale();
+            scale.x += ScaleFactor * io.MouseWheel;
+            scale.y += ScaleFactor * io.MouseWheel;
+            scale.x = scale.x < minScaleFactor ? minScaleFactor : scale.x;
+            scale.y = scale.y < minScaleFactor ? minScaleFactor : scale.y;
+            uiCamera.SetScale(scale);
+        }
+        if (io.MouseDelta.x != 0 && io.MouseDelta.y != 0 &&
+            ImGui::IsWindowHovered() && io.MouseDown[ImGuiMouseButton_Left]) {
+            auto offset = cgmath::Vec2{-io.MouseDelta.x, -io.MouseDelta.y};
+            camera.As2D()->Move(offset);
+            uiCamera.As2D()->Move(offset);
+        }
+    }
+    ImGui::End();
+
+    ImGui::GetStyle() = oldStyle;
 }
 
 void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
                        gecs::resource<gecs::mut<EditorContext>> ctx,
                        gecs::resource<gecs::mut<ContentBrowserInfo>> cbInfo,
+                       gecs::resource<gecs::mut<nickel::Camera>> camera,
+                       gecs::resource<gecs::mut<nickel::ui::Context>> uiCtx,
                        gecs::registry reg, gecs::commands cmds) {
-    // ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-    EditorMenubar();
+    EditorMenubar(ctx.get());
+
+    GameContentWindow(ctx.get(), renderer.get(), camera.get(), uiCtx->camera);
 
     static int selected = -1;
     EditorEntityListWindow(ctx->openEntityList, selected, reg, cmds);
+
     if (selected >= 0) {
         EditorInspectorWindow(ctx->openInspector,
                               static_cast<typename gecs::entity>(
@@ -514,9 +576,9 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
 
     EditorContentBrowser(ctx->openContentBrowser);
 
-    static bool demoWindowOpen = true;
-
-    ImGui::ShowDemoWindow(&demoWindowOpen);
+    if (ctx->openDemoWindow) {
+        ImGui::ShowDemoWindow(&ctx->openDemoWindow);
+    }
 }
 
 void EditorExit() {
@@ -530,7 +592,7 @@ void BootstrapSystem(gecs::world& world,
     initInfo.windowData.size.Set(ProjectMgrWindowWidth, ProjectMgrWindowHeight);
     InitSystem(world, initInfo, reg.commands());
 
-    reg.commands().emplace_resource<ProjectInitInfo>(std::move(initInfo));
+    reg.commands().emplace_resource<EditorContext>();
 
     reg.add_state(EditorScene::ProjectManager)
         .regist_startup_system<plugin::ImGuiInit>()
@@ -545,8 +607,6 @@ void BootstrapSystem(gecs::world& world,
         // Editor state
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
-        // .regist_enter_system_to_state<TestEnter>(
-        //     EditorScene::Editor)  // for test
         .regist_exit_system_to_state<EditorExit>(EditorScene::Editor)
         .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::Editor)
         .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/cgmath.hpp"
-#include <optional>
 
 namespace nickel {
 
@@ -261,6 +260,10 @@ T LinePtDistSqrd(const Line<T, N>& l, const cgmath::Vec<T, N>& pt) {
 }
 
 // intersect check
+
+// fwd
+template <typename T, uint32_t N>
+T PtDistSqrd(const cgmath::Vec<T, N>& v1, const cgmath::Vec<T, N>& v2);
 
 template <typename T, uint32_t N>
 bool IsCircularIntersect(const Circular<T, N>& c1, const Circular<T, N>& c2) {

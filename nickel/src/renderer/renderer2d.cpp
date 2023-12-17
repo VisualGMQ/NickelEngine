@@ -25,6 +25,7 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
 }
 
 void Renderer2D::BeginRenderTexture(const Camera& camera) {
+    camera.ApplyRenderTarget();
     shader_ = textureShader_.get();
     shader_->Use();
     shader_->SetMat4("Project", camera.Project());
@@ -32,6 +33,7 @@ void Renderer2D::BeginRenderTexture(const Camera& camera) {
 }
 
 void Renderer2D::BeginRenderFont(const Camera& camera) {
+    camera.ApplyRenderTarget();
     shader_ = fontShader_.get();
     shader_->Use();
     shader_->SetMat4("Project", camera.Project());
@@ -39,6 +41,7 @@ void Renderer2D::BeginRenderFont(const Camera& camera) {
 }
 
 void Renderer2D::EndRender() {
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
 template <typename Vertices, typename Indices>

@@ -192,24 +192,25 @@ public:
         tilesheetMgr_.ReleaseAll();
     }
 
-    void Save2TomlFile(const std::filesystem::path& path) const {
-        std::ofstream file(path);
-        file << toml::toml_formatter{Save2Toml()};
+    void Save2TomlFile(const std::filesystem::path& rootDir,
+                       const std::filesystem::path& filename) const {
+        std::ofstream file(filename);
+        file << Save2Toml(rootDir);
     }
 
-    toml::table Save2Toml() const {
+    toml::table Save2Toml(const std::filesystem::path& rootDir) const {
         toml::table tbl;
 
-        tbl.emplace("texture", TextureMgr().Save2Toml());
-        tbl.emplace("font", FontMgr().Save2Toml());
-        tbl.emplace("anim", AnimationMgr().Save2Toml());
-        tbl.emplace("tilesheet", TilesheetMgr().Save2Toml());
-        tbl.emplace("timer", TimerMgr().Save2Toml());
+        tbl.emplace("texture", TextureMgr().Save2Toml(rootDir));
+        tbl.emplace("font", FontMgr().Save2Toml(rootDir));
+        tbl.emplace("anim", AnimationMgr().Save2Toml(rootDir));
+        tbl.emplace("tilesheet", TilesheetMgr().Save2Toml(rootDir));
+        tbl.emplace("timer", TimerMgr().Save2Toml(rootDir));
 
         return tbl;
     }
 
-    void LoadFromToml(toml::table& tbl) {
+    void LoadFromToml(const toml::table& tbl) {
         if (auto node = tbl.get("texture"); node && node->is_table()) {
             TextureMgr().LoadFromToml(*node->as_table());
         }
@@ -224,6 +225,24 @@ public:
         }
         if (auto node = tbl.get("timer"); node && node->is_table()) {
             TimerMgr().LoadFromToml(*node->as_table());
+        }
+    }
+
+    void LoadFromTomlWithPath(const toml::table& tbl, const std::filesystem::path& configDir) {
+        if (auto node = tbl.get("texture"); node && node->is_table()) {
+            TextureMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
+        }
+        if (auto node = tbl.get("font"); node && node->is_table()) {
+            FontMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
+        }
+        if (auto node = tbl.get("anim"); node && node->is_table()) {
+            AnimationMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
+        }
+        if (auto node = tbl.get("tilesheet"); node && node->is_table()) {
+            TilesheetMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
+        }
+        if (auto node = tbl.get("timer"); node && node->is_table()) {
+            TimerMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
         }
     }
 

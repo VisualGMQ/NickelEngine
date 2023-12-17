@@ -91,7 +91,7 @@ void ComponentShowMethods::DefaultMethods::ShowString(
     auto str = string_type->get_str(value);
 
     char buf[1024] = {0};
-    strcpy_s(buf, 1024, str.c_str());
+    strcpy(buf, str.c_str());
     ImGui::InputText(name.data(), buf, sizeof(buf));
 
     if (buf != str) {

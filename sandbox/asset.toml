@@ -1,15 +1,15 @@
 [anim]
 datas = []
-root_path = './'
+root_path = 'resources'
 
 [font]
-root_path = 'D:\Code\NickelEngine\sandbox\resources'
+root_path = 'resources'
 
     [[font.datas]]
     path = 'arial.ttf'
 
 [texture]
-root_path = 'D:\Code\NickelEngine\sandbox\resources'
+root_path = 'resources'
 
     [[texture.datas]]
     path = 'angle.png'
@@ -34,8 +34,8 @@ root_path = 'D:\Code\NickelEngine\sandbox\resources'
         mipmap = false
 
             [texture.datas.Sampler.filter]
-            mag = 9729
-            min = 9729
+            mag = 9728
+            min = 9728
 
             [texture.datas.Sampler.wrapper]
             borderColor = [ 1.0, 1.0, 1.0, 1.0 ]
@@ -45,8 +45,8 @@ root_path = 'D:\Code\NickelEngine\sandbox\resources'
 
 [tilesheet]
 datas = []
-root_path = 'D:\Code\NickelEngine\sandbox\resources'
+root_path = 'resources'
 
 [timer]
 datas = []
-root_path = 'D:\Code\NickelEngine\sandbox\resources'
+root_path = 'resources'

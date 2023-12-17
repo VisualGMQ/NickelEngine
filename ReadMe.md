@@ -12,6 +12,14 @@ cmake -S . -B cmake-build
 cmake --build cmake-build
 ```
 
+in some system, you may want to copy needed dll to your output dir, use:
+
+```bash
+cmake -S . -B cmake-build -DNICKEL_COPYDLL=ON
+```
+
+to enable auto copy dlls
+
 ## 3rd Libraries
 
 |library|description|

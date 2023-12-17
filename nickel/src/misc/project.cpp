@@ -1,5 +1,6 @@
 #include "misc/project.hpp"
 #include "core/log_tag.hpp"
+#include "mirrow/drefl/make_any.hpp"
 #include "misc/asset_manager.hpp"
 #include "refl/drefl.hpp"
 #include "renderer/context.hpp"
@@ -11,44 +12,50 @@ namespace nickel {
 
 void SaveAssets(const std::filesystem::path& rootPath,
                 const AssetManager& assetMgr) {
-    assetMgr.Save2TomlFile(rootPath / AssetFilename);
+    assetMgr.Save2TomlFile(rootPath, rootPath / AssetFilename);
 }
 
-void LoadAssets(const std::filesystem::path& rootPath, AssetManager& assetMgr) {
-    auto path = rootPath / AssetFilename;
-    auto result = toml::parse_file(path.c_str());
+ProjectInitInfo CreateNewProject(const std::filesystem::path& dir, AssetManager& assetMgr) {
+    std::filesystem::create_directories(GenAssetsDefaultStoreDir(dir));
+    ProjectInitInfo initInfo;
+    initInfo.projectPath = dir;
+    initInfo.windowData.title = "new project";
+    initInfo.windowData.size.Set(720, 680);
+    assetMgr.SetRootPath(GenAssetsDefaultStoreDir(dir));
+    SaveProjectByConfig(initInfo, assetMgr);
+
+    LOGI(log_tag::Nickel, "Create new project to ", dir);
+
+    return initInfo;
+}
+
+void LoadAssetsWithPath(AssetManager& assetMgr, const std::filesystem::path& configDir) {
+    auto path = GenAssetsConfigFilePath(configDir);
+    auto result = toml::parse_file(path.string());
     if (!result) {
         LOGE(log_tag::Asset, "load saved textures from ", path,
              " failed: ", result.error());
         return;
     }
 
-    assetMgr.LoadFromToml(result.table());
+    assetMgr.LoadFromTomlWithPath(result.table(), configDir);
 }
 
-void SaveBasicProjectConfig(const std::filesystem::path& rootPath,
-                          const ProjectInitInfo& initInfo) {
+void SaveBasicProjectConfig(const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
     mirrow::serd::drefl::serialize(
         tbl, mirrow::drefl::any_make_constref(initInfo.windowData), "window");
     // TODO: serialize camera information
 
-    std::ofstream file(GenProjectConfigFilePath(rootPath));
+    std::ofstream file(GenProjectConfigFilePath(initInfo.projectPath));
     file << toml::toml_formatter{tbl} << std::endl;
 }
 
-void SaveProject(const std::filesystem::path& rootPath, const AssetManager& assetMgr,
-                 const Window& window) {
-    ProjectInitInfo initInfo;
-    initInfo.projectPath = rootPath;
-    initInfo.windowData.title = window.Title();
-    initInfo.windowData.size = window.Size();
-    SaveBasicProjectConfig(rootPath, initInfo);
-    SaveAssets(rootPath, assetMgr);
+void SaveProjectByConfig(const ProjectInitInfo& info, const AssetManager& assetMgr) {
+    SaveBasicProjectConfig(info);
+    SaveAssets(info.projectPath, assetMgr);
 }
-
-void SaveProjectConfig(const std::string& path, const ProjectInitInfo& info) {}
 
 ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
     ProjectInitInfo initInfo;
@@ -69,7 +76,8 @@ ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
 
     auto& tbl = result.table();
     if (auto node = tbl["window"]; node.is_table()) {
-        mirrow::serd::srefl::deserialize(*node.as_table(), initInfo.windowData);
+        auto ref = mirrow::drefl::any_make_ref(initInfo.windowData);
+        mirrow::serd::drefl::deserialize(ref, *node.as_table());
     }
 
     return initInfo;
@@ -86,8 +94,7 @@ void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
                          AssetManager& assetMgr) {
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
-    assetMgr.SetRootPath(GenResourcePath(initInfo.projectPath));
-    LoadAssets(initInfo.projectPath, assetMgr);
+    LoadAssetsWithPath(assetMgr, initInfo.projectPath);
 }
 
 void ErrorCallback(int error, const char* description) {

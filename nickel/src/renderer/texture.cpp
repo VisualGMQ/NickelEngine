@@ -4,7 +4,8 @@ namespace nickel {
 
 Texture Texture::Null = Texture{};
 
-Texture::Texture(const std::filesystem::path& root, const std::filesystem::path& filename,
+Texture::Texture(const std::filesystem::path& root,
+                 const std::filesystem::path& filename,
                  const gogl::Sampler& sampler, gogl::Format fmt,
                  gogl::Format gpuFmt)
     : Asset(filename), sampler_(sampler) {
@@ -42,13 +43,15 @@ std::unique_ptr<Texture> LoadAssetFromToml(const toml::table& tbl,
 
     gogl::Sampler sampler;
     auto samplerTypeinfo = mirrow::drefl::typeinfo<gogl::Sampler>();
-    if (!tbl.contains(samplerTypeinfo->name())) {
-        LOGW(log_tag::Asset,
-             "deserialize texture failed! `sampler` field not table");
-        return nullptr;
-    } else {
+    auto samplerName = samplerTypeinfo->name();
+    if (auto node = tbl.get(samplerName);
+        node && node->is_table()) {
         auto ref = mirrow::drefl::any_make_ref(sampler);
-        mirrow::serd::drefl::deserialize(ref, tbl);
+        mirrow::serd::drefl::deserialize(ref, *node->as_table());
+    } else {
+        LOGW(log_tag::Asset,
+             "deserialize texture failed! `", samplerName, "` field not table");
+        return nullptr;
     }
 
     return std::make_unique<Texture>(root, filename, sampler);
@@ -102,8 +105,8 @@ bool TextureManager::Replace(TextureHandle handle,
 std::unique_ptr<Texture> TextureManager::CreateSolitary(
     void* data, int w, int h, const gogl::Sampler& sampler, gogl::Format fmt,
     gogl::Format gpuFmt) {
-    auto texture = std::unique_ptr<Texture>(
-        new Texture{data, w, h, sampler, fmt, gpuFmt});
+    auto texture =
+        std::unique_ptr<Texture>(new Texture{data, w, h, sampler, fmt, gpuFmt});
     if (texture && *texture) {
         return std::move(texture);
     } else {

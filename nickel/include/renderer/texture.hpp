@@ -73,14 +73,6 @@ std::unique_ptr<Texture> LoadAssetFromToml(const toml::table&,
 
 class TextureManager final : public Manager<Texture> {
 public:
-    template <typename T>
-    friend std::enable_if_t<std::is_same_v<T, TextureManager>> serialize(
-        const T&, ::mirrow::serd::srefl::serialize_destination_type_t<T>&);
-
-    template <typename T>
-    friend std::enable_if_t<std::is_same_v<T, TextureManager>> deserialize(
-        const toml::node&, T&);
-
     TextureHandle Load(const std::filesystem::path& filename,
                        const gogl::Sampler&);
     TextureHandle LoadSVG(const std::filesystem::path& filename,

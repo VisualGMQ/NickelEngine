@@ -1,4 +1,3 @@
-# download SDL for github action
 message("find package: SDL2 ...")
 find_package(SDL2 QUIET)
 
@@ -21,9 +20,23 @@ if (NOT SDL2_FOUND)
     find_package(PkgConfig QUIET)
     if (PKG_CONFIG_FOUND)
         message("pkg-config found OK")
-        pkg_check_modules(SDL2 sdl2 QUIET IMPORTED_TARGET)
+        pkg_check_modules(SDL2 sdl2 QUIET IMPORTED_TARGET GLOBAL)
         if (SDL2_FOUND)
-            add_library(SDL2 ALIAS PkgConfig::SDL2)
+            message("pkg-config found SDL2")
+            message("SDL2 information:")
+            message("\tinclude dir: ${SDL2_INCLUDE_DIRS}")
+            message("\tSDL libs: ${SDL2_LIBRARIES}")
+            if (WIN32)
+                add_library(SDL2 INTERFACE IMPORTED GLOBAL)
+                target_link_libraries(SDL2 INTERFACE SDL2::SDL2 SDL2::SDL2main)
+            else()
+                add_library(SDL2 SHARED IMPORTED GLOBAL)
+                target_include_directories(SDL2 SHARED ${SDL2_INCLUDE_DIRS})
+                set_target_properties(SDL2
+                    PROPERTIES
+                        IMPORTED_IMPLIB ${SDL2_LIBRARIES}
+                        IMPORTED_LINK_INTERFACE_LANGUAGES C)
+            endif()
         else() 
             message("pkg-config can't find SDL2!")
         endif()

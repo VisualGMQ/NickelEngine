@@ -25,62 +25,25 @@ void World::collide(Real interval,
     }
 
     // handle contacts
-    for (auto& contactList : contacts) {
-        for (auto& contact : contactList) {
-            auto& manifold = contact->GetManifold();
-            if (manifold.pointCount == 0) {
-                continue;
+    for (int i = 0; i < 5; i++) {
+        for (auto& contactList : contacts) {
+            for (auto& contact : contactList) {
+                auto& manifold = contact->GetManifold();
+                if (manifold.pointCount == 0) {
+                    continue;
+                }
+                contact->ApplyImpulse();
+
+                auto b1 = contact->GetBody1();
+                auto b2 = contact->GetBody1();
+
+                renderer.DrawCircle(manifold.points[0], 5, {1, 0, 1, 1}, 10);
+                renderer.DrawLine(
+                    manifold.points[0],
+                    manifold.points[0] + manifold.normal * manifold.depth,
+                    {0, 1, 1, 1});
             }
-
-            // handle contacts
-            auto b1 = contact->GetBody1();
-            auto b2 = contact->GetBody2();
-            Vec2 mtv;
-            dealContact(manifold, *b1, *b2);
-
-            renderer.DrawCircle(manifold.points[0], 5, {1, 0, 1, 1}, 10);
-            renderer.DrawLine(
-                manifold.points[0],
-                manifold.points[0] + manifold.normal * manifold.depth,
-                {0, 1, 1, 1});
         }
-    }
-}
-
-void World::dealContact(const Manifold& manifold, Body& b1, Body& b2,
-                        bool shouldRecurse) {
-    auto mtv = manifold.normal * manifold.depth;
-    if (b1.type == Body::Type::Dynamic) {
-        switch (b2.type) {
-            case Body::Type::Static: {
-                auto j = -(1 + std::min(b1.restitution, b2.restitution)) *
-                         b1.vel.Dot(manifold.normal) / (b1.massInv * 2.0);
-                b1.pos += mtv;
-                b1.vel = b1.vel.Dot(manifold.tangent) * manifold.tangent;
-                b1.vel += j * b1.massInv * manifold.normal;
-            } break;
-            case Body::Type::Dynamic: {
-                auto j = -(1 + std::min(b1.restitution, b2.restitution)) *
-                         (b1.vel - b2.vel).Dot(manifold.normal) /
-                         (b1.massInv + b2.massInv);
-
-                b1.pos += mtv * 0.5;
-                b2.pos -= mtv * 0.5;
-
-                b1.vel = b1.vel.Dot(manifold.tangent) * manifold.tangent;
-                b2.vel = b2.vel.Dot(manifold.tangent) * manifold.tangent;
-
-                b1.vel += j * b1.massInv * manifold.normal;
-                b2.vel -= j * b2.massInv * manifold.normal;
-            } break;
-            case Body::Type::Kinematic:
-                // b1.pos += mtv;
-                break;
-        }
-    } else if (shouldRecurse) {
-        Manifold newManifold = manifold;
-        newManifold.normal = -newManifold.normal;
-        dealContact(newManifold, b2, b1, false);
     }
 }
 
@@ -88,11 +51,20 @@ void World::Step(Real interval,
                  gecs::querier<gecs::mut<Body>, CollideShape> querier,
                  gecs::resource<gecs::mut<Renderer2D>> renderer) {
     for (auto&& [_, body, shape] : querier) {
-        physicSolver_.Step(interval, body);
+        body.acc = body.force * interval;
+        body.vel += body.acc * interval;
+
+        if (body.vel.LengthSqrd() > 100* 100) {
+            body.vel = cgmath::Normalize(body.vel) * 100;
+        }
+
+        body.force = Vec2{0, 0};
     }
+
     collide(interval, querier, renderer.get());
+
     for (auto&& [_, body, shape] : querier) {
-        physicSolver_.Step(interval, body);
+        body.pos += body.vel * interval;
     }
 }
 

@@ -30,7 +30,7 @@ struct Control {};
 void TestbedStartup(gecs::commands cmds,
                     gecs::resource<gecs::mut<physics::World>> world) {
     world->forceGenerators.emplace_back([](physics::Body& b) {
-        b.force += cgmath::Vec2{0, 9.8};
+        b.force += cgmath::Vec2{0, 0.98};
     });
 
     auto ent2 = cmds.create();
