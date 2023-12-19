@@ -6,7 +6,7 @@
 namespace nickel::ui {
 
 enum class Event {
-    None = 0,
+    None = -1,
     Hover,
     Press,
     Release,
@@ -19,8 +19,12 @@ enum class Event {
  */
 struct EventRecorder {
     gecs::entity entity = gecs::null_entity;
-    std::array<bool, static_cast<size_t>(Event::MaxEventCount)> events;
+    std::array<bool, static_cast<size_t>(Event::MaxEventCount)> events{false};
     cgmath::Rect region;
+
+    void Reset() {
+        events.fill(false);
+    }
 
     void PushEvent(Event event) {
         events[static_cast<size_t>(event)] = true;
@@ -30,8 +34,8 @@ struct EventRecorder {
         events[static_cast<size_t>(event)] = false;
     }
 
-    bool HasEvent(Event event) const {
-        return events[static_cast<size_t>(event)];
+    bool HasEvent(gecs::entity ent, Event event) const {
+        return ent == entity && events[static_cast<size_t>(event)];
     }
 };
 

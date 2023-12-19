@@ -149,6 +149,7 @@ int main(int argc, char** argv) {
         // 2D UI render
         .regist_update_system<ui::RenderUI>()
         .regist_update_system<EndRenderPipeline>()
+        .regist_update_system<ui::ClearEventRecorder>()
         // time update
         .regist_update_system<Time::Update>();
     gWorld->start_with("MainReg");

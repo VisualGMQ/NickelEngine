@@ -55,13 +55,11 @@ void renderButton(gecs::entity ent, const Button& btn,
                   const cgmath::Rect& contentRect, Renderer2D& renderer,
                   const EventRecorder& recorder) {
     const cgmath::Color* color = &btn.color;
-    if (recorder.entity == ent) {
-        if (recorder.HasEvent(Event::Hover)) {
-            color = &btn.hoverColor;
-        }
-        if (recorder.HasEvent(Event::Press)) {
-            color = &btn.pressColor;
-        }
+    if (recorder.HasEvent(ent, Event::Hover)) {
+        color = &btn.hoverColor;
+    }
+    if (recorder.HasEvent(ent, Event::Press)) {
+        color = &btn.pressColor;
     }
 
     renderer.FillRect(contentRect, *color);
@@ -71,10 +69,10 @@ void renderLabel(gecs::entity ent, const Label& label,
                  const cgmath::Rect& contentRect, Renderer2D& renderer,
                  const EventRecorder& recorder) {
     const cgmath::Color* color = &label.color;
-    if (recorder.HasEvent(Event::Hover)) {
+    if (recorder.HasEvent(ent, Event::Hover)) {
         color = &label.hoverColor;
     }
-    if (recorder.HasEvent(Event::Press)) {
+    if (recorder.HasEvent(ent, Event::Press)) {
         color = &label.pressColor;
     }
 
@@ -195,15 +193,19 @@ void HandleEventSystem(gecs::resource<gecs::mut<Context>> ctx,
     if (reg.has<EventHandler>(recorder.entity)) {
         auto& handler = reg.get<EventHandler>(recorder.entity);
 
-        if (recorder.HasEvent(Event::Hover)) {
+        if (recorder.HasEvent(recorder.entity, Event::Hover)) {
             handler.onHover(recorder.entity, reg);
         }
-        if (recorder.HasEvent(Event::Press)) {
+        if (recorder.HasEvent(recorder.entity, Event::Press)) {
             handler.onClick(recorder.entity, reg);
         }
     }
 
     ctx->eventRecorder = std::move(recorder);
+}
+
+void ClearEventRecorder(gecs::resource<gecs::mut<Context>> ctx) {
+    ctx->eventRecorder.Reset();
 }
 
 }  // namespace nickel::ui
