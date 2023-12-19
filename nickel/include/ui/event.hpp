@@ -1,13 +1,12 @@
 #pragma once
 
-#include "core/cgmath.hpp"
 #include "pch.hpp"
-
+#include "core/cgmath.hpp"
 
 namespace nickel::ui {
 
 enum class Event {
-    None = -1,
+    None = 0,
     Hover,
     Press,
     Release,
@@ -20,19 +19,19 @@ enum class Event {
  */
 struct EventRecorder {
     gecs::entity entity = gecs::null_entity;
-    std::array<bool, static_cast<size_t>(Event::MaxEventCount)> events{false};
+    std::array<bool, static_cast<size_t>(Event::MaxEventCount)> events;
     cgmath::Rect region;
 
-    void Reset() { events.fill(false); }
-
-    void PushEvent(Event event) { events[static_cast<size_t>(event)] = true; }
+    void PushEvent(Event event) {
+        events[static_cast<size_t>(event)] = true;
+    }
 
     void RemoveEvent(Event event) {
         events[static_cast<size_t>(event)] = false;
     }
 
-    bool HasEvent(gecs::entity ent, Event event) const {
-        return ent == entity && events[static_cast<size_t>(event)];
+    bool HasEvent(Event event) const {
+        return events[static_cast<size_t>(event)];
     }
 };
 
@@ -47,4 +46,4 @@ struct EventHandler {
     OnHover onHover;
 };
 
-}  // namespace nickel::ui
+}

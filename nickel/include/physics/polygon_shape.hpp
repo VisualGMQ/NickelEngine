@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geom/geom2d.hpp"
 #include "physics/config.hpp"
 #include "physics/shape.hpp"
 

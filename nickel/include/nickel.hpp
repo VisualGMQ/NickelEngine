@@ -12,6 +12,7 @@
 #include "input/input.hpp"
 #include "misc/asset_manager.hpp"
 #include "misc/hierarchy.hpp"
+#include "misc/name.hpp"
 #include "misc/prefab.hpp"
 #include "misc/project.hpp"
 #include "misc/transform.hpp"
@@ -23,4 +24,3 @@
 #include "ui/ui.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
-

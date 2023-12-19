@@ -35,15 +35,12 @@ public:
     Body* GetBody1() { return b1_; }
     Body* GetBody2() { return b2_; }
 
-    void ApplyImpulse();
-
 protected:
     Manifold manifold_;
     const CollideShape* shape1_ = nullptr;
     const CollideShape* shape2_ = nullptr;
     Body* b1_ = nullptr;
     Body* b2_ = nullptr;
-    float lambda_ = 0;
 
     void init(const CollideShape& shape1, const CollideShape& shape2, Body* b1, Body* b2) {
         shape1_ = &shape1;

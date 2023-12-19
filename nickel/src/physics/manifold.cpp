@@ -88,37 +88,6 @@ void CircleAABBContact::Evaluate(const CollideShape& shape1,
     }
 }
 
-void Contact::ApplyImpulse() {
-    constexpr float bias = 0.25;
-
-    // auto j1 = manifold_.normal;
-    // auto j2 = -manifold_.normal;
-    // auto jv = j1.Dot(b1_->vel) + j2.Dot(b2_->vel);
-
-    auto dv = b1_->vel - b2_->vel;
-    float vn = Dot(dv, manifold_.normal);
-
-    // auto jm1 = j1 * b1_->massInv;
-    // auto jm2 = j2 * b2_->massInv;
-
-    float dLambda = (-vn + bias) / (b1_->massInv + b2_->massInv);
-
-    auto oldLambda = lambda_;
-    // auto dLambda = -(jv - bias) / (b1_->massInv + b2_->massInv);
-    lambda_ = std::max<float>(lambda_ + dLambda, 0);
-    dLambda = lambda_ - oldLambda;
-    // dLambda = std::max(dLambda, 0.0f);
-
-    auto impuls = dLambda * manifold_.normal;
-
-    if (b1_->type == Body::Type::Dynamic) {
-        b1_->vel += impuls * b1_->massInv;
-    }
-    if (b2_->type == Body::Type::Dynamic) {
-        b2_->vel -= impuls * b2_->massInv;
-    }
-}
-
 }  // namespace physics
 
 }  // namespace nickel

@@ -1,6 +1,9 @@
 #include "core/cgmath.hpp"
 #include "core/gogl.hpp"
+#include "core/log_tag.hpp"
 #include "core/utf8string.hpp"
+#include "gecs/entity/entity.hpp"
+#include "gecs/entity/querier.hpp"
 #include "imgui.h"
 #include "imgui_plugin.hpp"
 
@@ -352,6 +355,7 @@ void EditorMenubar(EditorContext& ctx) {
             ImGui::MenuItem("entity list", nullptr, &ctx.openEntityList);
             ImGui::MenuItem("content browser", nullptr,
                             &ctx.openContentBrowser);
+            ImGui::MenuItem("imgui demo window", nullptr, &ctx.openDemoWindow);
             ImGui::EndMenu();
         }
 
@@ -359,30 +363,140 @@ void EditorMenubar(EditorContext& ctx) {
     }
 }
 
-void EditorEntityListWindow(bool& show, int& selected, gecs::registry reg,
-                            gecs::commands cmds) {
+struct DragDropInfo {
+    gecs::entity dragEnt = gecs::null_entity;
+    gecs::entity targetEnt = gecs::null_entity;
+};
+
+void showOneEntity(bool showNameBar, gecs::entity& selected, gecs::entity ent,
+                   const Name& name, DragDropInfo& dragDropOutInfo) {
+    if (showNameBar) {
+        if (ImGui::Selectable(name.name.c_str(), selected == ent)) {
+            selected = ent;
+        }
+    }
+
+    // deal drag target
+    if (ImGui::BeginDragDropSource()) {
+        ImGui::SetDragDropPayload("entity", &ent, sizeof(gecs::entity));
+        ImGui::EndDragDropSource();
+    }
+
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload =
+                ImGui::AcceptDragDropPayload("entity")) {
+            Assert(payload->DataSize == sizeof(gecs::entity),
+                   "drag non-entity in entity list window");
+            gecs::entity dragEnt = *(const gecs::entity*)payload->Data;
+            dragDropOutInfo.targetEnt = ent;
+            dragDropOutInfo.dragEnt = dragEnt;
+
+            LOGW(log_tag::Editor, "targetEnt = ", ent, ", dragEnt = ", dragEnt);
+        }
+        ImGui::EndDragDropTarget();
+    }
+}
+
+void showHierarchyEntities(gecs::entity entity, gecs::entity& selected,
+                           const Name& name, const nickel::Child* children,
+                           DragDropInfo& dragDropInfo) {
+    if ((children && children->entities.empty()) || !children) {
+        showOneEntity(true, entity, selected, name, dragDropInfo);
+    } else {
+        gecs::entity selectedEnt = gecs::null_entity;
+
+        if (ImGui::TreeNodeEx((void*)name.name.c_str(),
+                              ImGuiTreeNodeFlags_Selected |
+                                  ImGuiTreeNodeFlags_OpenOnDoubleClick |
+                                  ImGuiTreeNodeFlags_SpanAvailWidth,
+                              "%s", name.name.c_str())) {
+            showOneEntity(false, entity, selected, name, dragDropInfo);
+            for (auto ent : children->entities) {
+                if (gWorld->cur_registry()->has<nickel::Name>(ent)) {
+                    if (gWorld->cur_registry()->has<Child>(ent)) {
+                        auto& child = gWorld->cur_registry()->get<Child>(ent);
+                        auto& childName =
+                            gWorld->cur_registry()->get<nickel::Name>(ent);
+                        showHierarchyEntities(ent, selected, childName, &child,
+                                              dragDropInfo);
+                    } else {
+                        auto& childName =
+                            gWorld->cur_registry()->get<nickel::Name>(ent);
+                        showHierarchyEntities(ent, selected, childName, nullptr,
+                                              dragDropInfo);
+                    }
+                }
+            }
+
+            if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+                selected = entity;
+            }
+            ImGui::TreePop();
+        }
+    }
+}
+
+void EditorEntityListWindow(bool& show, gecs::entity& selected,
+                            gecs::registry reg, gecs::commands cmds) {
     if (!show) return;
 
     if (ImGui::Begin("Entity List", &show)) {
         if (ImGui::Button("add")) {
-            cmds.create();
+            auto ent = cmds.create();
+            cmds.emplace<nickel::Name>(
+                ent, nickel::Name{"entity-" +
+                                  std::to_string(static_cast<uint32_t>(ent))});
         }
-        ImGui::SameLine();
-        if (ImGui::Button("delete") && selected >= 0) {
-            cmds.destroy(static_cast<typename gecs::registry::entity_type>(
-                reg.entities().packed()[selected]));
-        }
-
-        auto& entities = reg.entities().packed();
-        for (int i = 0; i < reg.entities().size(); i++) {
-            static char buf[64] = {0};
-            std::snprintf(buf, sizeof(buf), "entity(ID %d)", entities[i]);
-            if (ImGui::Selectable(buf, selected == i)) {
-                selected = i;
+        if (reg.alive(selected)) {
+            ImGui::SameLine();
+            if (ImGui::Button("delete")) {
+                cmds.destroy(selected);
             }
         }
-    }
 
+        auto hierarchyEntities = gWorld->cur_registry()
+                                     ->query<nickel::Child, nickel::Name,
+                                             gecs::without<nickel::Parent>>();
+        DragDropInfo dragDropInfo;
+        for (auto&& [ent, child, name] : hierarchyEntities) {
+            showHierarchyEntities(ent, selected, name, &child, dragDropInfo);
+        }
+
+        auto flatEntities =
+            gWorld->cur_registry()->query<Name, gecs::without<Parent, Child>>();
+        for (auto&& [ent, name] : flatEntities) {
+            showOneEntity(true, selected, ent, name, dragDropInfo);
+        }
+
+        // drag and drop handle
+        auto dragEnt = dragDropInfo.dragEnt;
+        auto targetEnt = dragDropInfo.targetEnt;
+        if (dragEnt != gecs::null_entity && targetEnt != gecs::null_entity) {
+            nickel::Parent* parent = nullptr;
+            if (reg.has<nickel::Parent>(dragEnt)) {
+                parent = &reg.get_mut<nickel::Parent>(dragEnt);
+                if (reg.alive(parent->entity)) {
+                    auto& parentChildren =
+                        reg.get_mut<nickel::Child>(parent->entity).entities;
+                    parentChildren.erase(
+                        std::remove(parentChildren.begin(),
+                                    parentChildren.end(), dragEnt),
+                        parentChildren.end());
+                }
+            } else {
+                parent = &reg.commands().emplace<nickel::Parent>(dragEnt);
+            }
+
+            parent->entity = targetEnt;
+            nickel::Child* children = nullptr;
+            if (reg.has<nickel::Child>(targetEnt)) {
+                children = &reg.get_mut<nickel::Child>(targetEnt);
+            } else {
+                children = &reg.commands().emplace<nickel::Child>(targetEnt);
+            }
+            children->entities.push_back(dragEnt);
+        }
+    }
     ImGui::End();
 }
 
@@ -392,6 +506,11 @@ void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg,
 
     if (ImGui::Begin("Inspector", &show)) {
         auto& types = mirrow::drefl::all_typeinfo();
+
+        if (!reg.alive(entity)) {
+            ImGui::End();
+            return;
+        }
 
         int id = 0;
         for (auto [name, typeInfo] : types) {
@@ -512,7 +631,7 @@ void GameContentWindow(EditorContext& ctx, nickel::Renderer2D& renderer,
 
     if (ImGui::Begin("game", &ctx.openGameWindow)) {
         auto windowPos = ImGui::GetWindowPos();
-        auto windowSize= ImGui::GetWindowSize();
+        auto windowSize = ImGui::GetWindowSize();
         auto& gameWindowSize = ctx.projectInfo.windowData.size;
         ImGui::GetWindowDrawList()->AddImage(
             (ImTextureID)ctx.gameContentTexture_->Id(), windowPos,
@@ -529,20 +648,20 @@ void GameContentWindow(EditorContext& ctx, nickel::Renderer2D& renderer,
             scale.y += ScaleFactor * io.MouseWheel;
             scale.x = scale.x < minScaleFactor ? minScaleFactor : scale.x;
             scale.y = scale.y < minScaleFactor ? minScaleFactor : scale.y;
-            camera.ScaleTo(scale);
+            camera.SetScale(scale);
 
             scale = uiCamera.Scale();
             scale.x += ScaleFactor * io.MouseWheel;
             scale.y += ScaleFactor * io.MouseWheel;
             scale.x = scale.x < minScaleFactor ? minScaleFactor : scale.x;
             scale.y = scale.y < minScaleFactor ? minScaleFactor : scale.y;
-            uiCamera.ScaleTo(scale);
+            uiCamera.SetScale(scale);
         }
         if (io.MouseDelta.x != 0 && io.MouseDelta.y != 0 &&
             ImGui::IsWindowHovered() && io.MouseDown[ImGuiMouseButton_Left]) {
             auto offset = cgmath::Vec2{-io.MouseDelta.x, -io.MouseDelta.y};
-            camera.Move(offset);
-            uiCamera.Move(offset);
+            camera.As2D()->Move(offset);
+            uiCamera.As2D()->Move(offset);
         }
     }
     ImGui::End();
@@ -562,17 +681,10 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
 
     GameContentWindow(ctx.get(), renderer.get(), camera.get(), uiCtx->camera);
 
-    static int selected = -1;
+    static gecs::entity selected = gecs::null_entity;
     EditorEntityListWindow(ctx->openEntityList, selected, reg, cmds);
 
-    if (selected >= 0) {
-        EditorInspectorWindow(ctx->openInspector,
-                              static_cast<typename gecs::entity>(
-                                  reg.entities().packed()[selected]),
-                              reg, cmds);
-    } else {
-        EditorInspectorWindow(ctx->openInspector, {}, reg, cmds);
-    }
+    EditorInspectorWindow(ctx->openInspector, selected, reg, cmds);
 
     EditorContentBrowser(ctx->openContentBrowser);
 

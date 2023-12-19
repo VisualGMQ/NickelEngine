@@ -29,6 +29,4 @@ void HandleEventSystem(gecs::resource<gecs::mut<Context>>,
                        gecs::querier<Style, Child, gecs::without<Parent>>,
                        gecs::resource<Mouse>, gecs::registry);
 
-void ClearEventRecorder(gecs::resource<gecs::mut<Context>> ctx);
-
 }  // namespace nickel::ui
