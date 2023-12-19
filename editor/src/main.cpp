@@ -529,20 +529,20 @@ void GameContentWindow(EditorContext& ctx, nickel::Renderer2D& renderer,
             scale.y += ScaleFactor * io.MouseWheel;
             scale.x = scale.x < minScaleFactor ? minScaleFactor : scale.x;
             scale.y = scale.y < minScaleFactor ? minScaleFactor : scale.y;
-            camera.SetScale(scale);
+            camera.ScaleTo(scale);
 
             scale = uiCamera.Scale();
             scale.x += ScaleFactor * io.MouseWheel;
             scale.y += ScaleFactor * io.MouseWheel;
             scale.x = scale.x < minScaleFactor ? minScaleFactor : scale.x;
             scale.y = scale.y < minScaleFactor ? minScaleFactor : scale.y;
-            uiCamera.SetScale(scale);
+            uiCamera.ScaleTo(scale);
         }
         if (io.MouseDelta.x != 0 && io.MouseDelta.y != 0 &&
             ImGui::IsWindowHovered() && io.MouseDown[ImGuiMouseButton_Left]) {
             auto offset = cgmath::Vec2{-io.MouseDelta.x, -io.MouseDelta.y};
-            camera.As2D()->Move(offset);
-            uiCamera.As2D()->Move(offset);
+            camera.Move(offset);
+            uiCamera.Move(offset);
         }
     }
     ImGui::End();

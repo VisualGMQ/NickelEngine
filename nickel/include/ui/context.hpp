@@ -13,7 +13,7 @@ public:
 
     Context()
         : camera{
-              Camera2D::Default(gWorld->cur_registry()->res<Window>().get())} {}
+              Camera::CreateOrthoByWindow(gWorld->cur_registry()->res<Window>().get())} {}
 };
 
 }  // namespace nickel::ui

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "pch.hpp"
 #include "core/cgmath.hpp"
+#include "pch.hpp"
+
 
 namespace nickel::ui {
 
@@ -22,13 +23,9 @@ struct EventRecorder {
     std::array<bool, static_cast<size_t>(Event::MaxEventCount)> events{false};
     cgmath::Rect region;
 
-    void Reset() {
-        events.fill(false);
-    }
+    void Reset() { events.fill(false); }
 
-    void PushEvent(Event event) {
-        events[static_cast<size_t>(event)] = true;
-    }
+    void PushEvent(Event event) { events[static_cast<size_t>(event)] = true; }
 
     void RemoveEvent(Event event) {
         events[static_cast<size_t>(event)] = false;
@@ -50,4 +47,4 @@ struct EventHandler {
     OnHover onHover;
 };
 
-}
+}  // namespace nickel::ui
