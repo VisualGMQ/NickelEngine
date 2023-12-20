@@ -5,6 +5,7 @@ add_subdirectory(imgui)
 add_subdirectory(stb_image)
 add_subdirectory(tomlplusplus)
 add_subdirectory(debugbreak)
+add_subdirectory(rapidxml)
 
 set(MIRROW_ENABLE_TOML++ ON)
 add_subdirectory(mirrow)

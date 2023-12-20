@@ -30,12 +30,13 @@ to enable auto copy dlls
 |[stb_image](http://nothings.org/stb)| use to loading images|
 |[glad](https://glad.dav1d.de/)| use to load opengl|
 |[dear-imgui](https://github.com/ocornut/imgui)| use to support GUI in editor|
-|[tomlplusplus](https://github.com/marzer/tomlplusplus)| use to support toml file parse|
 |[miniaudio](https://miniaud.io/)| use to play audio cross platform|
 |[nanobench](https://nanobench.ankerl.com/)| use to do benchmark|
 |[nameof](https://github.com/Neargye/nameof)| use to get enum name convniently|
 |[freetype2](https://freetype.org/)| use to render ttf font|
 |[lunasvg](https://github.com/sammycage/lunasvg)| use to render svg|
+|[rapidxml](https://rapidxml.sourceforge.net/)| use to parse XML|
+|[tomlplusplus](https://github.com/marzer/tomlplusplus)| use to support toml file parse|
 
 editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-material-icon-theme)
 
@@ -47,8 +48,8 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [x] Text render with UTF8 encoding
 - [ ] UI(WIP)
 - [ ] Game physics(WIP)
+- [ ] RHI covered OpenGL3/ES and Vulkan(WIP)
 - [ ] 3D rendering
-- [ ] RHI covered OpenGL3/ES and Vulkan
 - [ ] Game sound playing
 - [ ] script
     - [ ] cpp(dynamic library)
@@ -59,7 +60,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 * features:
     - [x] Entity list window
         - [x] show entities
-        - [ ] drag entity to reorder/set hierarchy
+        - [x] drag entity to reorder/set hierarchy
     - [x] Inspector window to show components of selected entity
     - [x] Game scene display
     - [x] Assets window

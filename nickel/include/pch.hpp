@@ -12,6 +12,11 @@
 
 #include "miniaudio.h"
 
+#define RAPIDXML_NO_EXCEPTIONS
+#include "rapidxml.hpp"
+#include "rapidxml_print.hpp"
+#include "rapidxml_utils.hpp"
+
 #include "SDL.h"
 
 #define MIRROW_ASSERT(expr, msg) Assert(expr, msg)

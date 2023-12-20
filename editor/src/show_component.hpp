@@ -1,10 +1,6 @@
 #pragma once
 
-#include "core/singlton.hpp"
-#include "imgui.h"
-#include "mirrow/drefl/value_kind.hpp"
-#include "pch.hpp"
-
+#include "nickel.hpp"
 
 class ComponentShowMethods final
     : public ::nickel::Singlton<ComponentShowMethods, false> {
