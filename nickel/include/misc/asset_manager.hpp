@@ -6,6 +6,7 @@
 #include "renderer/font.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/tilesheet.hpp"
+#include "audio/audio.hpp"
 
 namespace nickel {
 
@@ -23,6 +24,7 @@ public:
         timerMgr_.SetRootPath(path);
         tilesheetMgr_.SetRootPath(path);
         animMgr_.SetRootPath(path);
+        audioMgr_.SetRootPath(path);
     }
 
     auto& TextureMgr() { return textureMgr_; }
@@ -45,6 +47,9 @@ public:
 
     auto& TimerMgr() const { return timerMgr_; }
 
+    auto& AudioMgr() const { return audioMgr_; }
+    auto& AudioMgr() { return audioMgr_; }
+
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
         switch (filetype) {
@@ -55,12 +60,11 @@ public:
             case FileType::Font:
                 return FontMgr().Load(path) != FontHandle::Null();
             case FileType::Audio:
-                // TODO: not finish
-                return false;
+                return AudioMgr().Load(path) != AudioHandle::Null();
             case FileType::Tilesheet:
                 return TilesheetMgr().Load(path) != TilesheetHandle::Null();
             case FileType::Animation:
-                // return AnimationMgr().Load(path) != TilesheetHandle::Null();
+                return AnimationMgr().Load(path) != AnimationHandle::Null();
             case FileType::Timer:
                 return TimerMgr().Load(path) != TimerHandle::Null();
             default:
@@ -114,6 +118,14 @@ public:
         return {};
     }
 
+    AudioHandle LoadAudio(const std::filesystem::path& path) {
+        if (auto filetype = DetectFileType(path);
+            filetype == FileType::Audio) {
+            return AudioMgr().Load(path);
+        }
+        return {};
+    }
+
     template <typename T>
     void Destroy(Handle<T> handle) {
         return switchManager<T>().Destroy(handle);
@@ -130,7 +142,7 @@ public:
                 FontMgr().Destroy(path);
                 break;
             case FileType::Audio:
-                // TODO: not finish
+                AudioManager().Destroy(path);
                 break;
             case FileType::Tilesheet:
                 TilesheetMgr().Destroy(path);
@@ -161,7 +173,7 @@ public:
                 return FontMgr().Has(filename);
                 break;
             case FileType::Audio:
-                // TODO: not finish
+                return AudioManager().Has(filename);
                 return false;
             case FileType::Animation:
                 return AnimationMgr().Has(filename);
@@ -190,6 +202,7 @@ public:
         animMgr_.ReleaseAll();
         timerMgr_.ReleaseAll();
         tilesheetMgr_.ReleaseAll();
+        audioMgr_.ReleaseAll();
     }
 
     void Save2TomlFile(const std::filesystem::path& rootDir,
@@ -206,6 +219,7 @@ public:
         tbl.emplace("anim", AnimationMgr().Save2Toml(rootDir));
         tbl.emplace("tilesheet", TilesheetMgr().Save2Toml(rootDir));
         tbl.emplace("timer", TimerMgr().Save2Toml(rootDir));
+        tbl.emplace("audio", AudioMgr().Save2Toml(rootDir));
 
         return tbl;
     }
@@ -226,6 +240,9 @@ public:
         if (auto node = tbl.get("timer"); node && node->is_table()) {
             TimerMgr().LoadFromToml(*node->as_table());
         }
+        if (auto node = tbl.get("audio"); node && node->is_table()) {
+            AudioMgr().LoadFromToml(*node->as_table());
+        }
     }
 
     void LoadFromTomlWithPath(const toml::table& tbl, const std::filesystem::path& configDir) {
@@ -244,6 +261,9 @@ public:
         if (auto node = tbl.get("timer"); node && node->is_table()) {
             TimerMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
         }
+        if (auto node = tbl.get("audio"); node && node->is_table()) {
+            AudioMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
+        }
     }
 
 private:
@@ -252,6 +272,7 @@ private:
     TimerManager timerMgr_;
     TilesheetManager tilesheetMgr_;
     AnimationManager animMgr_;
+    AudioManager audioMgr_;
 
     template <typename T>
     auto& switchManager() const {
@@ -265,6 +286,8 @@ private:
             return tilesheetMgr_;
         } else if constexpr (std::is_same_v<T, Animation>) {
             return animMgr_;
+        } else if constexpr (std::is_same_v<T, Sound>) {
+            return audioMgr_;
         }
     }
 
@@ -280,6 +303,8 @@ private:
             return tilesheetMgr_;
         } else if constexpr (std::is_same_v<T, Animation>) {
             return animMgr_;
+        } else if constexpr (std::is_same_v<T, Sound>) {
+            return audioMgr_;
         }
     }
 };

@@ -15,6 +15,7 @@ constexpr std::string_view Renderer = "Renderer";
 constexpr std::string_view Nickel = "Nickel";
 constexpr std::string_view Misc = "Misc";
 constexpr std::string_view Editor = "Editor";
+constexpr std::string_view Audio = "Audio";
 
 }
 

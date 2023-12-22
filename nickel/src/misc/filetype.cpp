@@ -13,7 +13,8 @@ std::unordered_map<std::string, FileType> gFileTypeMap = {
     {  ".wav",     FileType::Audio},
     {  ".ogg",     FileType::Audio},
     {  ".mp3",     FileType::Audio},
-
+    { ".flac",     FileType::Audio},
+ // misc
     {".timer",     FileType::Timer},
     { ".anim", FileType::Animation},
     {   ".ts", FileType::Tilesheet},

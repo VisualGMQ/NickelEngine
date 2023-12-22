@@ -1,4 +1,5 @@
 #include "misc/project.hpp"
+#include "audio/audio.hpp"
 #include "core/log_tag.hpp"
 #include "mirrow/drefl/make_any.hpp"
 #include "misc/asset_manager.hpp"
@@ -241,8 +242,10 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
         .regist_startup_system<ui::InitSystem>()
+        .regist_startup_system<InitAudioSystem>()
         // shutdown systems
         .regist_shutdown_system<EngineShutdown>()
+        .regist_shutdown_system<InitAudioSystem>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()
         // other input handle event must put here(after mouse/keyboard update)
