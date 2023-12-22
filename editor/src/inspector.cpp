@@ -16,6 +16,13 @@ void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg) 
         int id = 0;
         for (auto [name, typeInfo] : types) {
             if (reg.has(entity, typeInfo)) {
+                auto& attrs = typeInfo->attributes();
+
+                if (std::find(attrs.begin(), attrs.end(),
+                              nickel::EditorNodisplay) != attrs.end()) {
+                    continue;
+                }
+
                 auto data = reg.get_mut(entity, typeInfo);
 
                 auto& methods = ComponentShowMethods::Instance();

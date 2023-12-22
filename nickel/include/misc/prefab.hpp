@@ -5,8 +5,8 @@
 
 namespace nickel {
 
-toml::table SaveAsPrefab(gecs::entity, gecs::registry);
-gecs::entity CreateFromPrefab(const toml::table& tbl, gecs::registry reg);
+toml::array SaveAsPrefab(gecs::entity, gecs::registry);
+gecs::entity CreateFromPrefab(const toml::array& arr, gecs::registry reg);
 
 class PrefabEmplaceMethods: public Singlton<PrefabEmplaceMethods, false> {
 public:

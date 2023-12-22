@@ -182,6 +182,8 @@ void reflectMisc() {
         "name", &Name::name);
 
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<Name>();
+
+    mirrow::drefl::registrar<gecs::entity>::instance().regist("entity");
 }
 
 void serializeTextureHandle(toml::node& node, const mirrow::drefl::any& elem) {
@@ -220,6 +222,13 @@ void registTextureHandleSerd() {
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
+void reflectHierarchy() {
+    mirrow::drefl::registrar<Parent>::instance().regist("Parent", {EditorNodisplay}).property(
+        "entity", &Parent::entity);
+    mirrow::drefl::registrar<Child>::instance().regist("Child", {EditorNodisplay}).property(
+        "entities", &Child::entities);
+}
+
 void InitDynamicReflect() {
     reflectVec2();
     reflectVec3();
@@ -233,6 +242,7 @@ void InitDynamicReflect() {
     reflectRenderRelate();
     reflectWindow();
     reflectTilesheet();
+    reflectHierarchy();
     reflectMisc();
 
     registTextureHandleSerd();

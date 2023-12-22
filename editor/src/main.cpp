@@ -272,6 +272,7 @@ void RegistSpawnMethods() {
     auto& instance = SpawnComponentMethods::Instance();
 
     instance.Regist<Transform>(GeneralSpawnMethod<Transform>);
+    instance.Regist<ui::Label>(GeneralSpawnMethod<GlobalTransform>);
     instance.Regist<Sprite>(GeneralSpawnMethod<Sprite>);
     instance.Regist<AnimationPlayer>(SpawnAnimationPlayer);
     instance.Regist<ui::Style>(GeneralSpawnMethod<ui::Style>);

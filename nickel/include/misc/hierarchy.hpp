@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pch.hpp"
 #include "gecs/entity/entity.hpp"
 #include "misc/transform.hpp"
+#include "pch.hpp"
 
 namespace nickel {
 
@@ -29,7 +29,7 @@ void UpdateGlobalTransform(
 
 struct HierarchyTool final {
 public:
-    explicit HierarchyTool(gecs::entity ent): ent_(ent) {}
+    explicit HierarchyTool(gecs::entity ent) : ent_(ent) {}
 
     auto GetEntity() const { return ent_; }
 
@@ -75,11 +75,29 @@ public:
 
     bool HasHierarchy() const { return HasHierarchy(ent_); }
 
+    using PreorderVisitFn = std::function<void(gecs::entity, gecs::registry)>;
+
+    void PreorderVisit(const PreorderVisitFn& fn) {
+        gecs::registry reg(*gWorld->cur_registry());
+        doPreorderVisit(ent_, fn, reg);
+    }
+
 private:
     gecs::entity ent_;
 
     Parent& disconnectParentOrCreate(gecs::registry) const;
     Parent* disconnectParent(gecs::registry reg) const;
+
+    void doPreorderVisit(gecs::entity ent, const PreorderVisitFn& fn,
+                         gecs::registry reg) {
+        fn(ent, reg);
+        if (reg.has<Child>(ent)) {
+            auto& children = reg.get<Child>(ent).entities;
+            for (auto child : children) {
+                doPreorderVisit(child, fn, reg);
+            }
+        }
+    }
 };
 
 }  // namespace nickel

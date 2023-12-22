@@ -7,6 +7,7 @@ namespace nickel {
 enum Attribute {
     AttrColor,
     AttrRange01,
+    EditorNodisplay,
 };
 
 void InitDynamicReflect();

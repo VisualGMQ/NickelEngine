@@ -25,11 +25,12 @@ toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg) {
     root.emplace("name", name);
 
     for (int i = 0; i < entities.size(); i++) {
-        auto ent = entities.packed()[i];
-        auto tbl = SaveAsPrefab(static_cast<gecs::entity>(ent), reg);
-        tbl.emplace("id", i);
-
-        arr.push_back(tbl);
+        auto ent = static_cast<gecs::entity>(entities.packed()[i]);
+        if (reg.has<nickel::Parent>(ent)) {
+            continue;
+        }
+        auto entityNode = SaveAsPrefab(static_cast<gecs::entity>(ent), reg);
+        arr.push_back(entityNode);
     }
 
     root.emplace("entities", arr);
@@ -93,14 +94,14 @@ bool LoadRegistryEntities(gecs::registry reg, const std::filesystem::path& filen
     // InitSystem to reg
 
     node = tbl.get("entities");
-    if (!node || !node->is_array_of_tables()) {
+    if (!node || !node->is_array()) {
         LOGW(nickel::log_tag::Editor, "`entities` don't exists or not array of tables");
         return false;
     }
 
     auto& entityList = *node->as_array();
     for (auto& entityTbl : entityList) {
-        CreateFromPrefab(*entityTbl.as_table(), reg);
+        CreateFromPrefab(*entityTbl.as_array(), reg);
     }
 
     return true;
