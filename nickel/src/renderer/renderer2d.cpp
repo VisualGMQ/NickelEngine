@@ -277,4 +277,19 @@ void Renderer2D::SetRenderTarget(Texture* texture) {
     }
 }
 
+void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer,
+                        gecs::resource<Camera> camera,
+                         gecs::resource<gecs::mut<RenderContext>> ctx) {
+    GL_CALL(glEnable(GL_MULTISAMPLE));
+    GL_CALL(glEnable(GL_BLEND));
+    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    renderer->Clear(camera.get());
+    renderer->ClearDepth(camera.get());
+    ctx->ClearRenderInfo();
+    ctx->ResetBias();
+}
+
+void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {
+}
+
 }  // namespace nickel

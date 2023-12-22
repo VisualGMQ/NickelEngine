@@ -291,8 +291,10 @@ void EditorEnter(gecs::resource<gecs::mut<Window>> window,
                  gecs::resource<gecs::mut<Camera>> camera,
                  gecs::resource<gecs::mut<ui::Context>> uiCtx,
                  gecs::commands cmds) {
-    createAndSetRenderTarget(*editorCtx->gameContentTarget_, camera.get());
-    createAndSetRenderTarget(*editorCtx->gameContentTarget_, uiCtx->camera);
+    editorCtx->Init();
+
+    createAndSetRenderTarget(*editorCtx->gameContentTarget, camera.get());
+    createAndSetRenderTarget(*editorCtx->gameContentTarget, uiCtx->camera);
 
     cmds.emplace_resource<AssetPropertyWindowContext>();
     cmds.emplace_resource<EntityListWindowContext>();
@@ -383,7 +385,7 @@ void GameContentWindow(EditorContext& ctx, nickel::Renderer2D& renderer,
         auto windowSize = ImGui::GetWindowSize();
         auto& gameWindowSize = ctx.projectInfo.windowData.size;
         ImGui::GetWindowDrawList()->AddImage(
-            (ImTextureID)ctx.gameContentTexture_->Id(), windowPos,
+            (ImTextureID)ctx.gameContentTexture->Id(), windowPos,
             ImVec2{windowPos.x + windowSize.x, windowPos.y + windowSize.y},
             {0, windowSize.y / gameWindowSize.h},
             {windowSize.x / gameWindowSize.w, 0});

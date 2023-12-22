@@ -7,6 +7,7 @@
 #include "renderer/font.hpp"
 #include "renderer/texture.hpp"
 #include "ui/context.hpp"
+#include "nickel.hpp"
 
 namespace nickel {
 
@@ -15,7 +16,38 @@ void SaveAssets(const std::filesystem::path& rootPath,
     assetMgr.Save2TomlFile(rootPath, rootPath / AssetFilename);
 }
 
-ProjectInitInfo CreateNewProject(const std::filesystem::path& dir, AssetManager& assetMgr) {
+toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg) {
+    auto& entities = reg.entities();
+
+    toml::table root;
+    toml::array arr;
+
+    root.emplace("name", name);
+
+    for (int i = 0; i < entities.size(); i++) {
+        auto ent = entities.packed()[i];
+        auto tbl = SaveAsPrefab(static_cast<gecs::entity>(ent), reg);
+        tbl.emplace("id", i);
+
+        arr.push_back(tbl);
+    }
+
+    root.emplace("entities", arr);
+
+    return root;
+}
+
+void SaveRegistry(bool isMainScene, const std::filesystem::path& rootPath,
+                  const std::string_view sceneName, gecs::registry reg) {
+    std::ofstream file(
+        rootPath /
+        std::filesystem::path{sceneName}.replace_extension(SceneFileExtension));
+    auto tbl = SaveRegistryToToml(sceneName, reg);
+    file << tbl;
+}
+
+ProjectInitInfo CreateNewProject(const std::filesystem::path& dir,
+                                 AssetManager& assetMgr) {
     std::filesystem::create_directories(GenAssetsDefaultStoreDir(dir));
     ProjectInitInfo initInfo;
     initInfo.projectPath = dir;
@@ -29,7 +61,8 @@ ProjectInitInfo CreateNewProject(const std::filesystem::path& dir, AssetManager&
     return initInfo;
 }
 
-void LoadAssetsWithPath(AssetManager& assetMgr, const std::filesystem::path& configDir) {
+void LoadAssetsWithPath(AssetManager& assetMgr,
+                        const std::filesystem::path& configDir) {
     auto path = GenAssetsConfigFilePath(configDir);
     auto result = toml::parse_file(path.string());
     if (!result) {
@@ -39,6 +72,38 @@ void LoadAssetsWithPath(AssetManager& assetMgr, const std::filesystem::path& con
     }
 
     assetMgr.LoadFromTomlWithPath(result.table(), configDir);
+}
+
+bool LoadRegistryEntities(gecs::registry reg, const std::filesystem::path& filename) {
+    auto result = toml::parse_file(filename.string());
+    if (!result) {
+        LOGW(nickel::log_tag::Editor, "load scene from ", filename, " failed");
+        return false;
+    }
+
+    auto& tbl = result.table();
+    auto node = tbl.get("name");
+    if (!node || !node->is_string()) {
+        LOGW(nickel::log_tag::Editor, "can't load anonymous scene");
+        return false;
+    }
+
+    const std::string& name = node->as_string()->get();
+
+    // InitSystem to reg
+
+    node = tbl.get("entities");
+    if (!node || !node->is_array_of_tables()) {
+        LOGW(nickel::log_tag::Editor, "`entities` don't exists or not array of tables");
+        return false;
+    }
+
+    auto& entityList = *node->as_array();
+    for (auto& entityTbl : entityList) {
+        CreateFromPrefab(*entityTbl.as_table(), reg);
+    }
+
+    return true;
 }
 
 void SaveBasicProjectConfig(const ProjectInitInfo& initInfo) {
@@ -52,9 +117,13 @@ void SaveBasicProjectConfig(const ProjectInitInfo& initInfo) {
     file << toml::toml_formatter{tbl} << std::endl;
 }
 
-void SaveProjectByConfig(const ProjectInitInfo& info, const AssetManager& assetMgr) {
+void SaveProjectByConfig(const ProjectInitInfo& info,
+                         const AssetManager& assetMgr) {
     SaveBasicProjectConfig(info);
     SaveAssets(info.projectPath, assetMgr);
+    SaveRegistry(true, info.projectPath,
+                 gWorld->cur_registry_name(),
+                 *gWorld->cur_registry());
 }
 
 ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
@@ -95,6 +164,7 @@ void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
     LoadAssetsWithPath(assetMgr, initInfo.projectPath);
+    LoadRegistryEntities(*gWorld->cur_registry(), initInfo.projectPath/"MainReg.scene");
 }
 
 void ErrorCallback(int error, const char* description) {
@@ -152,6 +222,45 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
         .RegistMethod<double>()
         .RegistMethod<int>()
         .RegistMethod<long>();
+}
+
+void EngineShutdown() {
+    // release all entity&component
+    gWorld->destroy_all_entities();
+    gWorld->remove_res<AssetManager>();
+    FontSystemShutdown();
+    gWorld->remove_res<Renderer2D>();
+}
+
+void RegistEngineSystem(typename gecs::world::registry_type& reg) {
+    reg
+        // startup systems
+        .regist_startup_system<VideoSystemInit>()
+        .regist_startup_system<FontSystemInit>()
+        .regist_startup_system<EventPollerInit>()
+        .regist_startup_system<InputSystemInit>()
+        .regist_startup_system<ui::InitSystem>()
+        // shutdown systems
+        .regist_shutdown_system<EngineShutdown>()
+        // update systems
+        .regist_update_system<VideoSystemUpdate>()
+        // other input handle event must put here(after mouse/keyboard update)
+        .regist_update_system<Mouse::Update>()
+        .regist_update_system<Keyboard::Update>()
+        .regist_update_system<HandleInputEvents>()
+        .regist_update_system<UpdateGlobalTransform>()
+        .regist_update_system<ui::UpdateGlobalPosition>()
+        .regist_update_system<ui::HandleEventSystem>()
+        // start render pipeline
+        .regist_update_system<BeginRenderPipeline>()
+        // 2D sprite render
+        .regist_update_system<CollectSpriteRenderInfo>()
+        .regist_update_system<RenderElements>()
+        // 2D UI render
+        .regist_update_system<ui::RenderUI>()
+        .regist_update_system<EndRenderPipeline>()
+        // time update
+        .regist_update_system<Time::Update>();
 }
 
 }  // namespace nickel

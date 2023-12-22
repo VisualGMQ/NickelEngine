@@ -307,4 +307,9 @@ void EventPoller::Poll() const {
     }
 }
 
+void EventPollerInit(gecs::commands cmds) {
+    cmds.emplace_resource<EventPoller>(EventPoller{});
+    EventPoller::AssociatePollerAndECS(*gWorld->cur_registry());
+}
+
 }  // namespace nickel

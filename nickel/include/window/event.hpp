@@ -418,4 +418,6 @@ private:
     std::vector<event_handler> handlers_;
 };
 
+void EventPollerInit(gecs::commands cmds);
+
 }  // namespace nickel

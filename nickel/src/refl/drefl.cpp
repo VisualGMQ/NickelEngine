@@ -1,6 +1,7 @@
 #include "refl/drefl.hpp"
 #include "mirrow/drefl/factory.hpp"
 #include "nickel.hpp"
+#include "misc/prefab.hpp"
 
 namespace nickel {
 
@@ -41,11 +42,15 @@ void reflectTramsform() {
         .property("translation", &Transform::translation)
         .property("rotation", &Transform::rotation)
         .property("scale", &Transform::scale);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Transform>();
 }
 
 void reflectGlobalTramsform() {
     mirrow::drefl::registrar<GlobalTransform>::instance().regist(
         "GlobalTransform");
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<GlobalTransform>();
 }
 
 void reflectSprite() {
@@ -68,11 +73,16 @@ void reflectSprite() {
         .add("Both", Flip::Both);
 
     mirrow::drefl::registrar<TextureHandle>::instance().regist("TextureHandle");
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Sprite>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Flip>();
 }
 
 void reflectAnimation() {
     mirrow::drefl::registrar<AnimationPlayer>::instance().regist(
         "AnimationPlayer");
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
 void reflectUI() {
@@ -97,6 +107,10 @@ void reflectUI() {
         .property("color", &ui::Label::color, {AttrColor})
         .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
         .property("pressColor", &ui::Label::pressColor, {AttrColor});
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Style>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Button>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Label>();
 }
 
 void reflectRenderRelate() {
@@ -130,6 +144,11 @@ void reflectRenderRelate() {
         .add("MirrowRepeat", gogl::TextureWrapperType::MirroredRepeat)
         .add("ClampToBorder", gogl::TextureWrapperType::ClampToBorder)
         .add("ClampToEdge", gogl::TextureWrapperType::ClampToEdge);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::Sampler>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::Sampler::Wrapper>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::TextureFilterType>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::TextureWrapperType>();
 }
 
 void reflectWindow() {
@@ -137,6 +156,8 @@ void reflectWindow() {
         .regist("WindowData")
         .property("title", &WindowBuilder::Data::title)
         .property("size", &WindowBuilder::Data::size);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<WindowBuilder::Data>();
 }
 
 void reflectTilesheet() {
@@ -151,6 +172,52 @@ void reflectTilesheet() {
         .regist("Spacing")
         .property("x", &Spacing::x)
         .property("y", &Spacing::y);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Margin>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Spacing>();
+}
+
+void reflectMisc() {
+    mirrow::drefl::registrar<Name>::instance().regist("Name").property(
+        "name", &Name::name);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Name>();
+}
+
+void serializeTextureHandle(toml::node& node, const mirrow::drefl::any& elem) {
+    Assert(node.is_table(), "serialize texture-handle to table");
+    auto assetMgr = gWorld->res<AssetManager>();
+    auto handle =  mirrow::drefl::try_cast_const<TextureHandle>(elem);
+    if (assetMgr->Has(*handle)) {
+        auto& texture = assetMgr->Get(*handle);
+        node.as_table()->emplace("path", texture.RelativePath().string());
+    }
+}
+
+void deserializeTextureHandle(const toml::node& node, mirrow::drefl::any& elem) {
+    Assert(node.is_table(), "serialize texture-handle to table");
+    auto& tbl = *node.as_table();
+
+    auto assetMgr = gWorld->res<AssetManager>();
+    if (auto path = tbl.get("path"); path && path->is_string())  {
+        auto& textureMgr = gWorld->res_mut<AssetManager>()->TextureMgr();
+        auto filename = path->as_string()->get();
+        auto& handle = *mirrow::drefl::try_cast<TextureHandle>(elem);
+
+        if (textureMgr.Has(filename)) {
+            handle = textureMgr.GetHandle(filename);
+        } else {
+            handle = textureMgr.Load(filename, gogl::Sampler::CreateLinearRepeat());
+        }
+    }
+}
+
+void registTextureHandleSerd() {
+    auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
+    serd.regist_serialize(mirrow::drefl::typeinfo<TextureHandle>(), serializeTextureHandle);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<TextureHandle>(), deserializeTextureHandle);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
 void InitDynamicReflect() {
@@ -166,6 +233,9 @@ void InitDynamicReflect() {
     reflectRenderRelate();
     reflectWindow();
     reflectTilesheet();
+    reflectMisc();
+
+    registTextureHandleSerd();
 }
 
 }  // namespace nickel

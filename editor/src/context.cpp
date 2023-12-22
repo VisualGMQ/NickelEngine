@@ -3,28 +3,42 @@
 #include "core/gogl.hpp"
 
 EditorContext::EditorContext() {
-    renderBuffer_ = std::make_unique<nickel::gogl::RenderBuffer>(
+}
+
+void EditorContext::Init() {
+    /* NOTE: currently we can't load custom font due to bug in ImGui itself
+    auto& io = ImGui::GetIO();
+    imguiIconFont = io.Fonts->AddFontFromFileTTF(
+        "editor/resources/fonts/forkawesome-webfont.ttf", 20, nullptr,
+        io.Fonts->GetGlyphRangesDefault());
+    if (!imguiIconFont) {
+        LOGW(nickel::log_tag::Editor, "load icon font failed");
+        imguiIconFont = nullptr;
+    }
+    */
+
+    renderBuffer = std::make_unique<nickel::gogl::RenderBuffer>(
         EditorWindowWidth, EditorWindowHeight);
-    gameContentTexture_ = std::make_unique<nickel::gogl::Texture>(
+    gameContentTexture = std::make_unique<nickel::gogl::Texture>(
         nickel::gogl::Texture::Type::Dimension2, nullptr, EditorWindowWidth,
         EditorWindowHeight, nickel::gogl::Sampler::CreateLinearRepeat(),
         nickel::gogl::Format::RGBA, nickel::gogl::Format::RGBA,
         nickel::gogl::DataType::UByte);
-    gameContentTarget_ = std::make_unique<nickel::gogl::Framebuffer>(
+    gameContentTarget = std::make_unique<nickel::gogl::Framebuffer>(
         nickel::gogl::FramebufferAccess::ReadDraw);
-    gameContentTarget_->AttachColorTexture2D(*gameContentTexture_);
-    gameContentTarget_->AttacheRenderBuffer(*renderBuffer_);
+    gameContentTarget->AttachColorTexture2D(*gameContentTexture);
+    gameContentTarget->AttacheRenderBuffer(*renderBuffer);
 
     GLenum err;
-    if (!gameContentTarget_->CheckValid(&err)) {
+    if (!gameContentTarget->CheckValid(&err)) {
         LOGW(nickel::log_tag::Renderer,
-            // TODO: output human readable error
-             "create game content framebuffer failed! ",  err);
+             // TODO: output human readable error
+             "create game content framebuffer failed! ", err);
     }
 }
 
 EditorContext::~EditorContext() {
-    renderBuffer_.reset();
-    gameContentTexture_.reset();
-    gameContentTarget_.reset();
+    renderBuffer.reset();
+    gameContentTexture.reset();
+    gameContentTarget.reset();
 }

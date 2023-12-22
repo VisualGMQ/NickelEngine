@@ -20,9 +20,8 @@ toml::table SaveAsPrefab(gecs::entity entity, gecs::registry reg) {
         if (reg.has(entity, typeinfo.type_info)) {
             auto component = reg.get_mut(entity, typeinfo.type_info);
             mirrow::serd::drefl::serialize(tbl, component, typeinfo.type_info->name());
+            tbl.emplace(typeinfo.type_info->name(), std::move(componentTbl));
         }
-
-        tbl.emplace(typeinfo.type_info->name(), std::move(componentTbl));
     }
 
     return tbl;
@@ -33,6 +32,10 @@ gecs::entity CreateFromPrefab(const toml::table& tbl, gecs::registry reg) {
     gecs::entity ent = cmd.create();
 
     for (auto [key, value]: tbl) {
+        if (key == "id") {
+            continue;
+        }
+
         auto typeinfo = mirrow::drefl::typeinfo(key);
         mirrow::drefl::any component;
         auto class_info = typeinfo->as_class();
@@ -44,8 +47,12 @@ gecs::entity CreateFromPrefab(const toml::table& tbl, gecs::registry reg) {
             LOGW(log_tag::Nickel, "read component ", key, " from prefab failed");
             continue;
         }
-        auto ref = mirrow::drefl::any_make_ref(component);
-        mirrow::serd::drefl::deserialize(ref, *tbl[key].as_table());
+
+        mirrow::serd::drefl::deserialize(component, *tbl[key].as_table());
+
+        if (auto fn = PrefabEmplaceMethods::Instance().Find(component.type_info()); fn) {
+            fn(reg.commands(), ent, component);
+        }
     }
 
     return ent;

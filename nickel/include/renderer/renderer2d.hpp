@@ -4,8 +4,10 @@
 #include "core/gogl.hpp"
 #include "core/log_tag.hpp"
 #include "renderer/camera.hpp"
+#include "renderer/context.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/vertex.hpp"
+
 
 namespace nickel {
 
@@ -31,6 +33,7 @@ public:
     void EndRender();
 
     void EnableDepthTest() { GL_CALL(glEnable(GL_DEPTH_TEST)); }
+
     void DisableDepthTest() { GL_CALL(glDisable(GL_DEPTH_TEST)); }
 
     void SetViewport(const cgmath::Vec2& offset, const cgmath::Vec2& size);
@@ -66,8 +69,9 @@ public:
              std::array<uint32_t, 0>{});
     }
 
-    template <typename Container, typename = std::enable_if_t<std::is_same_v<
-                                      typename Container::value_type, cgmath::Vec2>>>
+    template <typename Container,
+              typename = std::enable_if_t<
+                  std::is_same_v<typename Container::value_type, cgmath::Vec2>>>
     void DrawLines(const Container& pts, const cgmath::Color& color) {
         for (int i = 0; i < pts.size() - 1; i++) {
             DrawLine(pts[i], pts[(i + 1) % pts.size()], color);
@@ -120,12 +124,10 @@ public:
 
     void DrawTexture(const Texture& texture, const cgmath::Rect& region,
                      const cgmath::Vec2& size, const cgmath::Vec4& color,
-                     const cgmath::Vec2& anchor = {},
-                     float z = 0,
+                     const cgmath::Vec2& anchor = {}, float z = 0,
                      const cgmath::Mat44& model = cgmath::Mat44::Identity());
 
     void SetRenderTarget(Texture* texture);
-
 
     template <typename Vertices, typename Indices>
     void Draw(gogl::PrimitiveType primitive, Vertices vertices,
@@ -144,7 +146,8 @@ private:
     std::unique_ptr<gogl::Buffer> indicesBuffer_;
     std::unique_ptr<gogl::AttributePointer> attrPtr_;
 
-    std::unique_ptr<gogl::Shader> initShader(std::string_view vert, std::string_view frag);
+    std::unique_ptr<gogl::Shader> initShader(std::string_view vert,
+                                             std::string_view frag);
     std::unique_ptr<gogl::Texture> initWhiteTexture();
     std::unique_ptr<gogl::Buffer> initVertexBuffer();
     std::unique_ptr<gogl::Buffer> initIndicesBuffer();
@@ -182,5 +185,11 @@ void Renderer2D::Draw(gogl::PrimitiveType primitive, Vertices vertices,
         shader_->DrawElements(primitive, indices.size(), GL_UNSIGNED_INT, 0);
     }
 }
+
+void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>>,
+                         gecs::resource<Camera>,
+                         gecs::resource<gecs::mut<RenderContext>>);
+
+void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>>);
 
 }  // namespace nickel

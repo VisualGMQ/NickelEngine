@@ -40,9 +40,17 @@ public:
 
     void* Raw() { return window_; }
 
+    bool ShouldClose() const { return shouldClose_; }
+
+    /**
+     * @brief close window
+     */
+    void Close() { shouldClose_ = true; }
+
 private:
     SDL_Window* window_;
     std::string title_;
+    bool shouldClose_ = false;
 };
 
 class WindowBuilder final {
@@ -66,5 +74,13 @@ public:
 private:
     Data buildData_;
 };
+
+class QuitEvent;
+class EventPoller;
+
+void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit, gecs::commands cmds);
+
+void VideoSystemUpdate(gecs::resource<EventPoller> poller,
+                       gecs::resource<Window> window);
 
 }  // namespace nickel

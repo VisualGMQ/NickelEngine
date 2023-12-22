@@ -55,8 +55,25 @@ bool beginShowOneEntity(bool isLeaf, gecs::entity& selected,
     return expanded;
 }
 
+void popupMenu(gecs::entity entity) {
+    if (ImGui::BeginPopupContextItem(
+            std::to_string(gecs::internal::entity_to_integral(entity))
+                .c_str())) {
+        if (ImGui::Button("delete")) {
+            // TODO: not finish
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::Button("make prefabe")) {
+            // TODO: not finish
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void endShowOneEntity(const gecs::entity& ent, DragDropInfo& dragDropOutInfo) {
     ImGui::TreePop();
+    popupMenu(ent);
 }
 
 void showHierarchyEntities(const gecs::entity& entity, gecs::entity& selected,

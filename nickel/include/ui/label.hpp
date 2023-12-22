@@ -34,6 +34,8 @@ public:
     */
     Label(const Label&) = delete;
     Label& operator=(const Label&) = delete;
+    Label(Label&&) = default;
+    Label& operator=(Label&&) = default;
 
     Label() = default;
     Label(FontHandle font): font_(font) {}

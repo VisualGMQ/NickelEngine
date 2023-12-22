@@ -1,4 +1,6 @@
 #include "window/window.hpp"
+#include "window/event.hpp"
+#include "renderer/renderer2d.hpp"
 #include "config/config.hpp"
 #include "core/log_tag.hpp"
 
@@ -58,6 +60,22 @@ WindowBuilder::Data WindowBuilder::Data::Default() {
 
 WindowBuilder WindowBuilder::Default() {
     return WindowBuilder(WindowBuilder::Data::Default());
+}
+
+void detectAppShouldExit(const QuitEvent& event,
+                         gecs::resource<gecs::mut<Window>> win) {
+    win->Close();
+}
+
+void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit,
+                     gecs::commands cmds) {
+    quit.sink().add<detectAppShouldExit>();
+}
+
+void VideoSystemUpdate(gecs::resource<EventPoller> poller,
+                       gecs::resource<Window> window) {
+    poller->Poll();
+    window->SwapBuffer();
 }
 
 }  // namespace nickel

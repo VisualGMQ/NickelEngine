@@ -94,4 +94,10 @@ private:
     std::unique_ptr<BasicInput> input_;
 };
 
+void InputSystemInit(
+    gecs::commands cmds,
+    gecs::event_dispatcher<MouseButtonEvent> mouseBtnDispatcher,
+    gecs::event_dispatcher<MouseMotionEvent> mouseMotionDispatcher,
+    gecs::event_dispatcher<KeyboardEvent> keyboardDispatcher);
+
 }  // namespace nickel
