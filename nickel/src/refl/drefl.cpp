@@ -1,5 +1,7 @@
 #include "refl/drefl.hpp"
+#include "mirrow/drefl/cast_any.hpp"
 #include "mirrow/drefl/factory.hpp"
+#include "misc/transform.hpp"
 #include "nickel.hpp"
 #include "misc/prefab.hpp"
 
@@ -222,6 +224,28 @@ void registTextureHandleSerd() {
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
+void serializeGlobalTransform(toml::node& node, const mirrow::drefl::any& elem) {
+    Assert(elem.type_info() == mirrow::drefl::typeinfo<GlobalTransform>(),
+           "elem type incorrect");
+    Assert(node.is_table(), "serialize GlobalTransform require table");
+
+    node.as_table()->emplace(elem.type_info()->name(), toml::table{});
+}
+
+void deserializeGlobalTransform(const toml::node& node, mirrow::drefl::any& elem) {
+    Assert(elem.type_info() == mirrow::drefl::typeinfo<GlobalTransform>(),
+           "elem type incorrect");
+    Assert(node.is_table(), "serialize GlobalTransform require table");
+
+    mirrow::drefl::try_cast<GlobalTransform>(elem)->mat = cgmath::Mat44::Identity();
+}
+
+void registGlobalTransformSerd() {
+    auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
+    serd.regist_serialize(mirrow::drefl::typeinfo<GlobalTransform>(), serializeGlobalTransform);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<GlobalTransform>(), deserializeGlobalTransform);
+}
+
 void reflectHierarchy() {
     mirrow::drefl::registrar<Parent>::instance().regist("Parent", {EditorNodisplay}).property(
         "entity", &Parent::entity);
@@ -246,6 +270,7 @@ void InitDynamicReflect() {
     reflectMisc();
 
     registTextureHandleSerd();
+    registGlobalTransformSerd();
 }
 
 }  // namespace nickel

@@ -508,7 +508,7 @@ template <typename T, CGMATH_LEN_TYPE Col, CGMATH_LEN_TYPE Row,
           typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 class Mat {
 public:
-    T data[Col * Row];
+    T data[Col * Row] = {T{}};
 
     static Mat Zeros() {
         Mat mat;
@@ -615,7 +615,6 @@ public:
 
     constexpr int H() const { return Row; }
 
-private:
     Mat() = default;
 };
 

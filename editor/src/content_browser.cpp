@@ -55,6 +55,9 @@ void SelectAndLoadAsset(gecs::registry reg) {
         auto type = nickel::DetectFileType(filename);
         auto copyPath = cbInfo.path / filename.filename();
         if (filename != copyPath) {
+            if (std::filesystem::exists(copyPath)) {
+                std::filesystem::remove(copyPath);
+            }
             if (!std::filesystem::copy_file(filename, copyPath)) {
                 LOGW(nickel::log_tag::Editor, "copy ", filename, " to ",
                      copyPath, " failed");

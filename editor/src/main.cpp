@@ -1,3 +1,4 @@
+#include "misc/transform.hpp"
 #include "nickel.hpp"
 #include "imgui_plugin.hpp"
 
@@ -10,6 +11,7 @@
 #include "spawn_component.hpp"
 #include "entity_list_window.hpp"
 #include "inspector.hpp"
+#include <type_traits>
 
 enum class EditorScene {
     ProjectManager,
@@ -272,7 +274,7 @@ void RegistSpawnMethods() {
     auto& instance = SpawnComponentMethods::Instance();
 
     instance.Regist<Transform>(GeneralSpawnMethod<Transform>);
-    instance.Regist<ui::Label>(GeneralSpawnMethod<GlobalTransform>);
+    instance.Regist<GlobalTransform>(GeneralSpawnMethod<GlobalTransform>);
     instance.Regist<Sprite>(GeneralSpawnMethod<Sprite>);
     instance.Regist<AnimationPlayer>(SpawnAnimationPlayer);
     instance.Regist<ui::Style>(GeneralSpawnMethod<ui::Style>);
