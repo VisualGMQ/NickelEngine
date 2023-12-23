@@ -1,20 +1,23 @@
 #pragma once
 
-#include "nickel.hpp"
 #include "imgui_plugin.hpp"
+#include "nickel.hpp"
 
 class AssetPropertyWindowContext {
 public:
-    nickel::gogl::Sampler sampler;  // saved sampler for TexturePropertyPopupWindow
+    nickel::gogl::Sampler
+        sampler;  // saved sampler for TexturePropertyPopupWindow
 };
 
 /**
  * @brief [ImGui] Declare a popup window that show texture properties
  * @note Don't forget reset AssetPropertyWindowContext::sampler before open it
- *
- * @param title
- * @return true     texture reimported
- * @return false
  */
-bool TexturePropertyPopupWindow(const std::string& title,
-                           nickel::TextureHandle, AssetPropertyWindowContext&);
+bool TexturePropertyPopupWindow(const std::string& title, nickel::TextureHandle,
+                                AssetPropertyWindowContext&);
+
+/**
+ * @brief [ImGui] Declare a popup window that show audio properties
+ */
+bool SoundPropertyPopupWindow(const std::string& title,
+                              nickel::AudioHandle handle);

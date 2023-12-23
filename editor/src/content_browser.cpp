@@ -87,7 +87,11 @@ std::pair<const nickel::Texture&, bool> getIcon(
         }
     } else if (filetype == nickel::FileType::Font) {
         if (auto handle = assetMgr.FontMgr().GetHandle(entry); handle) {
-            // TODO: return font preview texture to texture
+            return {cbInfo.FindTextureOrGen(entry.path().extension().string()),
+                    true};
+        }
+    } else if (filetype == nickel::FileType::Audio) {
+        if (auto handle = assetMgr.AudioMgr().GetHandle(entry); handle) {
             return {cbInfo.FindTextureOrGen(entry.path().extension().string()),
                     true};
         }
@@ -137,19 +141,29 @@ bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr,
     {
         auto assetPropertyWindowCtx =
             gWorld->res_mut<AssetPropertyWindowContext>();
-        static std::string texturePropertyWindowTitle = "texture property";
         if (ImGui::ImageButton(
                 (ImTextureID)texture.Raw(),
                 ImVec2{cbInfo.thumbnailSize.w, cbInfo.thumbnailSize.h})) {
             clicked = true;
             if (entry.is_directory()) {
                 cbInfo.path /= entry.path().filename();
-            } else if (filetype == nickel::FileType::Image) {
-                ImGui::OpenPopup(texturePropertyWindowTitle.c_str());
-                assetPropertyWindowCtx->sampler =
-                    assetMgr.TextureMgr().Get(entry).Sampler();
-            } else if (filetype == nickel::FileType::Font) {
-                // TODO: show font property window
+            } else {
+                switch (filetype) {
+                    case nickel::FileType::Image:
+                        ImGui::OpenPopup(cbInfo.texturePropertyPopupWindowTitle.c_str());
+                        assetPropertyWindowCtx->sampler =
+                            assetMgr.TextureMgr().Get(entry).Sampler();
+                            break;
+                    case nickel::FileType::Audio:
+                        ImGui::OpenPopup(cbInfo.soundPropertyPopupWindowTitle.c_str());
+                    case nickel::FileType::Font:
+                    case nickel::FileType::Tilesheet:
+                    case nickel::FileType::Animation:
+                    case nickel::FileType::Timer:
+                    case nickel::FileType::FileTypeCount:
+                    case nickel::FileType::Unknown:
+                        break;
+                }
             }
         }
 
@@ -195,11 +209,30 @@ void showIcons(ContentBrowserInfo& cbInfo,
         }
 
         if (clickedIdx) {
-            TexturePropertyPopupWindow(
-                cbInfo.texturePropertyPopupWindowTitle,
-                clickedIdx ? assetMgr.TextureMgr().GetHandle(files[clickedIdx.value()])
-                           : nickel::TextureHandle::Null(),
-                assetPropCtx);
+            nickel::FileType filetype = nickel::DetectFileType(files[clickedIdx.value()]);
+            switch (filetype) {
+                case nickel::FileType::Image:
+                    TexturePropertyPopupWindow(
+                        cbInfo.texturePropertyPopupWindowTitle,
+                        clickedIdx ? assetMgr.TextureMgr().GetHandle(files[clickedIdx.value()])
+                                : nickel::TextureHandle::Null(),
+                        assetPropCtx);
+                    break;
+                case nickel::FileType::Audio:
+                    SoundPropertyPopupWindow(
+                        cbInfo.soundPropertyPopupWindowTitle,
+                        clickedIdx ? assetMgr.AudioMgr().GetHandle(
+                                         files[clickedIdx.value()])
+                                   : nickel::AudioHandle::Null());
+                    break;
+                case nickel::FileType::Font:
+                case nickel::FileType::Tilesheet:
+                case nickel::FileType::Animation:
+                case nickel::FileType::Timer:
+                case nickel::FileType::Unknown:
+                case nickel::FileType::FileTypeCount:
+                    break;
+            }
         }
 
         ImGui::EndGroup();

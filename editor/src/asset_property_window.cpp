@@ -81,3 +81,59 @@ bool TexturePropertyPopupWindow(const std::string& title,
 
     return result;
 }
+
+bool SoundPropertyPopupWindow(const std::string& title,
+                                nickel::AudioHandle handle) {
+    auto& mgr = gWorld->res_mut<nickel::AssetManager>()->AudioMgr();
+
+    bool result = false;
+    if (ImGui::BeginPopupModal(title.c_str())) {
+        if (!mgr.Has(handle)) {
+            ImGui::Text("invalid audio handle");
+            ImGui::EndPopup();
+            return false;
+        }
+
+        auto& elem = mgr.Get(handle);
+
+        char buf[512] = {0};
+        snprintf(buf, sizeof(buf), "Res://%s",
+                 elem.RelativePath().string().c_str());
+        ImGui::InputText("filename", buf, sizeof(buf),
+                         ImGuiInputTextFlags_ReadOnly);
+
+        if (elem.IsPlaying()) {
+            if (ImGui::Button("pause")) {
+                elem.Pause();
+            }
+        } else {
+            if (ImGui::Button("play")) {
+                elem.Play();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("rewind")) {
+            elem.Rewind();
+        }
+        
+        float cursor = elem.GetCursor();
+        float len = elem.Length();
+        std::string progress = std::to_string(cursor) + "/" + std::to_string(len) + "s";
+        ImGui::SliderFloat(progress.c_str(), &cursor, 0, len, "%.2f");
+
+        bool isLooping = elem.IsLooping();
+        ImGui::Checkbox("looping", &isLooping);
+        if (isLooping != elem.IsLooping()) {
+            elem.SetLoop(isLooping);
+        }
+
+        // show cancel button
+        if (ImGui::Button("cancel")) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+
+    return result;
+}

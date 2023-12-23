@@ -1,3 +1,4 @@
 'icons/font.svg' = ['.ttf']
 'icons/image.svg' = ['.png', '.bmp', '.jpg', '.gif']
 'icons/document.svg' = ['.txt']
+'icons/audio.svg' = ['.wav', '.mp3', '.ogg', '.flac']

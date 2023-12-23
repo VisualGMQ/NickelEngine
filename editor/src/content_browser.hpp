@@ -3,7 +3,6 @@
 #include "context.hpp"
 #include "file_dialog.hpp"
 #include "imgui_plugin.hpp"
-#include "misc/filetype.hpp"
 #include "nickel.hpp"
 
 struct ContentBrowserInfo {
@@ -11,6 +10,7 @@ struct ContentBrowserInfo {
     std::filesystem::path path;
     nickel::cgmath::Vec2 thumbnailSize = {32, 32};
     const std::string texturePropertyPopupWindowTitle = "texture property";
+    const std::string soundPropertyPopupWindowTitle = "sound property";
 
     void RescanDir();
 
