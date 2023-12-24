@@ -56,3 +56,32 @@ bool ShowComponentDefault(std::string_view name, T& component) {
 
     return false;
 }
+
+void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry,
+              const std::vector<int>&);
+
+
+void ShowVec3(const mirrow::drefl::type* type, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry,
+              const std::vector<int>&);
+
+void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry,
+              const std::vector<int>&);
+
+void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
+                       mirrow::drefl::any& value, gecs::registry reg,
+                       const std::vector<int>&);
+
+void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
+                    mirrow::drefl::any& value, gecs::registry reg,
+                    const std::vector<int>&);
+
+void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
+                         mirrow::drefl::any& value, gecs::registry reg,
+                         const std::vector<int>&);
+
+void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
+               mirrow::drefl::any& value, gecs::registry reg,
+               const std::vector<int>&);

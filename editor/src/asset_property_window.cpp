@@ -129,6 +129,7 @@ bool SoundPropertyPopupWindow(const std::string& title,
 
         // show cancel button
         if (ImGui::Button("cancel")) {
+            elem.Stop();
             ImGui::CloseCurrentPopup();
         }
 
