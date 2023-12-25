@@ -31,8 +31,7 @@ public:
 
     bool HasAssociatedFile() const { return !relativePath_.empty(); }
 
-protected:
-    void associateFile(const std::filesystem::path& path) {
+    void AssociateFile(const std::filesystem::path& path) {
         relativePath_ = path;
     }
 

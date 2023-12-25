@@ -62,6 +62,7 @@
 #include <vector>
 #include <cstring>
 #include <type_traits>
+#include <variant>
 
 
 #ifdef _WIN32

@@ -5,6 +5,19 @@
 #include "imgui_plugin.hpp"
 #include "nickel.hpp"
 
+/**
+ * @brief [Editor Event] triggered when asset release
+ */
+struct ReleaseAssetEvent {
+    using HandleContainer = std::variant<nickel::TextureHandle, nickel::FontHandle, nickel::AudioHandle>;
+
+    explicit ReleaseAssetEvent(const HandleContainer& handle): handle(handle) {}
+    explicit ReleaseAssetEvent(const std::filesystem::path& path): path(path) {}
+
+    std::optional<HandleContainer> handle;
+    std::optional<std::filesystem::path> path;
+};
+
 struct ContentBrowserInfo {
     std::filesystem::path rootPath;
     std::filesystem::path path;
@@ -26,7 +39,8 @@ struct ContentBrowserInfo {
 
 private:
     const nickel::cgmath::Vec2 iconSize_ = {200, 200};
-    const std::filesystem::path iconConfigFilename_ = "./editor/resources/file_icon_map.toml";
+    const std::filesystem::path iconConfigFilename_ =
+        "./editor/resources/file_icon_map.toml";
 
     std::vector<std::filesystem::directory_entry> files_;
 
@@ -37,6 +51,7 @@ private:
     nickel::TextureHandle unknownFileIconHandle_;
 
     void initExtensionIconMap();
+
     void registFileIcon(const std::string& extension,
                         const std::filesystem::path& svgPath) {
         extensionIconMap_.insert_or_assign(extension, svgPath);
@@ -45,3 +60,5 @@ private:
 
 void EditorContentBrowser(bool& show);
 void SelectAndLoadAsset(gecs::registry);
+
+void RegistEventHandler(gecs::event_dispatcher<ReleaseAssetEvent>);

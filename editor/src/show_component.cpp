@@ -1,7 +1,7 @@
 #include "show_component.hpp"
 #include "core/assert.hpp"
-#include "imgui.h"
 #include "asset_list_window.hpp"
+#include "image_view_canva.hpp"
 
 using namespace nickel;
 
@@ -231,11 +231,11 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
         handle = newHandle;
     }
 
-    if (handle && ImGui::TreeNode("thumbnail")) {
-        auto& texture = mgr->Get(handle);
-        ImGui::Image(texture.Raw(), ImVec2(texture.Width(), texture.Height()));
-        ImGui::TreePop();
-    }
+    float size = ImGui::GetWindowContentRegionMax().x -
+                 (ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x);
+    static cgmath::Vec2 offset;
+    static float scale = 1.0;
+    ShowImage({size, size}, offset, scale, handle);
 }
 
 void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,

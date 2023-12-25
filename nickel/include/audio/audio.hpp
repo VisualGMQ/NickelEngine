@@ -3,6 +3,7 @@
 #include "core/asset.hpp"
 #include "core/cgmath.hpp"
 #include "core/manager.hpp"
+#include "misc/filetype.hpp"
 #include "pch.hpp"
 
 namespace nickel {
@@ -21,6 +22,11 @@ public:
     Sound(const std::filesystem::path& rootPath,
           const std::filesystem::path& filename);
     ~Sound();
+
+    Sound(const Sound&) = delete;
+    Sound(Sound&&) = default;
+    Sound& operator=(const Sound&) = delete;
+    Sound& operator=(Sound&&) = default;
 
     void Play() { MA_CALL(ma_sound_start(&data_)); }
 
@@ -128,6 +134,8 @@ using AudioHandle = Handle<Sound>;
 
 class AudioManager : public Manager<Sound> {
 public:
+    static FileType GetFileType() { return FileType::Audio; }
+
     AudioHandle Load(const std::filesystem::path& filename) {
         auto sound = std::make_unique<Sound>(GetRootPath(),
                                              convert2RelativePath(filename));

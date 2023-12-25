@@ -9,7 +9,7 @@
 	url = https://github.com/VisualGMQ/mirrow.git
 [submodule "3rdlibs/efsw"]
 	path = 3rdlibs/efsw
-	url = https://github.com/SpartanJ/efsw.git
+	url = https://github.com/VisualGMQ/efsw.git
 [submodule "3rdlibs/freetype2"]
 	path = 3rdlibs/freetype2
 	url = https://gitlab.freedesktop.org/freetype/freetype.git

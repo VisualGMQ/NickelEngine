@@ -2,6 +2,7 @@
 
 #include "core/asset.hpp"
 #include "core/manager.hpp"
+#include "misc/filetype.hpp"
 #include "pch.hpp"
 
 
@@ -80,6 +81,8 @@ public:
 
     bool shouldSendEvent;
 
+    static Timer Null;
+
     Timer(TimerID id, TimeType time, int loop = 0)
         : id_(id), dstTime_(time), loop_(loop), shouldSendEvent(true) {}
 
@@ -87,6 +90,8 @@ public:
 
     Timer(const Timer&) = delete;
     Timer& operator=(const Timer&) = delete;
+    Timer(Timer&&) = default;
+    Timer& operator=(Timer&&) = default;
 
     explicit operator bool() const { return id_.has_value(); }
 
@@ -128,12 +133,22 @@ public:
         return tbl;
     }
 
+    bool operator==(const Timer& o) const {
+        return o.id_ == id_ && o.loop_ == id_ && o.dstTime_ == dstTime_;
+    }
+
+    bool operator!=(const Timer& o) const {
+        return !(*this == o);
+    }
+
 private:
     std::optional<TimerID> id_;
     int loop_ = 0;
     bool isTicking_ = false;
     TimeType curTime_{};
     TimeType dstTime_;
+
+    Timer() {}
 };
 
 template <>
@@ -142,6 +157,8 @@ std::unique_ptr<Timer> LoadAssetFromToml(const toml::table& tbl,
 
 class TimerManager : public Manager<Timer> {
 public:
+    static FileType GetFileType() { return FileType::Timer; }
+
     TimerHandle Create(const std::filesystem::path& path, TimerID, TimeType, int loop = 0);
     TimerHandle Load(const std::filesystem::path& path);
 };

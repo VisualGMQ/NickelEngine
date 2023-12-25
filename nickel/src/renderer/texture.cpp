@@ -136,7 +136,7 @@ TextureHandle TextureManager::LoadSVG(const std::filesystem::path& filename,
     auto texture = std::make_unique<Texture>(
         (void*)bitmap.data(), bitmap.width(), bitmap.height(),
         gogl::Sampler::CreateLinearRepeat());
-    texture->associateFile(relativePath);
+    texture->AssociateFile(relativePath);
     if (texture && *texture) {
         storeNewItem(handle, std::move(texture));
         return handle;

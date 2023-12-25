@@ -1,5 +1,7 @@
 #include "asset_property_window.hpp"
+#include "image_view_canva.hpp"
 #include "show_component.hpp"
+
 
 void showWrapper(nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
     if (ImGui::TreeNode("wrapper")) {
@@ -44,6 +46,9 @@ bool TexturePropertyPopupWindow(const std::string& title,
     if (ImGui::BeginPopupModal(title.c_str())) {
         if (!textureMgr.Has(handle)) {
             ImGui::Text("invalid texture handle");
+            if (ImGui::Button("close")) {
+                ImGui::CloseCurrentPopup();
+            }
             ImGui::EndPopup();
             return false;
         }
@@ -56,7 +61,11 @@ bool TexturePropertyPopupWindow(const std::string& title,
         ImGui::InputText("filename", buf, sizeof(buf),
                          ImGuiInputTextFlags_ReadOnly);
 
-        ImGui::Image(texture.Raw(), ImVec2(texture.Width(), texture.Height()));
+        float size = ImGui::GetWindowContentRegionMax().x -
+                     ImGui::GetStyle().WindowPadding.x * 2.0;
+        static nickel::cgmath::Vec2 offset = {0, 0};
+        static float scale = 1.0;
+        ShowImage({size, size}, offset, scale, handle);
 
         auto& sampler = ctx.sampler;
         showSampler(sampler, reg);
@@ -83,13 +92,16 @@ bool TexturePropertyPopupWindow(const std::string& title,
 }
 
 bool SoundPropertyPopupWindow(const std::string& title,
-                                nickel::AudioHandle handle) {
+                              nickel::AudioHandle handle) {
     auto& mgr = gWorld->res_mut<nickel::AssetManager>()->AudioMgr();
 
     bool result = false;
     if (ImGui::BeginPopupModal(title.c_str())) {
         if (!mgr.Has(handle)) {
             ImGui::Text("invalid audio handle");
+            if (ImGui::Button("close")) {
+                ImGui::CloseCurrentPopup();
+            }
             ImGui::EndPopup();
             return false;
         }
@@ -115,10 +127,11 @@ bool SoundPropertyPopupWindow(const std::string& title,
         if (ImGui::Button("rewind")) {
             elem.Rewind();
         }
-        
+
         float cursor = elem.GetCursor();
         float len = elem.Length();
-        std::string progress = std::to_string(cursor) + "/" + std::to_string(len) + "s";
+        std::string progress =
+            std::to_string(cursor) + "/" + std::to_string(len) + "s";
         ImGui::SliderFloat(progress.c_str(), &cursor, 0, len, "%.2f");
 
         bool isLooping = elem.IsLooping();

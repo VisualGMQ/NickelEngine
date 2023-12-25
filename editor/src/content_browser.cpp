@@ -1,5 +1,6 @@
 #include "content_browser.hpp"
 #include "asset_property_window.hpp"
+#include "watch_file.hpp"
 
 ContentBrowserInfo::ContentBrowserInfo() {
     textureMgr_.SetRootPath("./editor/resources");
@@ -65,8 +66,8 @@ void SelectAndLoadAsset(gecs::registry reg) {
             }
         }
 
-        auto assetMgr = reg.res_mut<nickel::AssetManager>();
-        contentChanged = assetMgr->Load(copyPath);
+        // auto assetMgr = reg.res_mut<nickel::AssetManager>();
+        // contentChanged = assetMgr->Load(copyPath);
     }
 
     // TODO: use file watcher to do this
@@ -104,6 +105,7 @@ std::pair<const nickel::Texture&, bool> getIcon(
 void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
                                  const std::filesystem::directory_entry& entry,
                                  nickel::AssetManager& assetMgr) {
+    auto fileChangeEvent = gWorld->cur_registry()->event_dispatcher<FileChangeEvent>();
     if (filetype != nickel::FileType::Unknown) {
         if (ImGui::BeginPopupContextItem(entry.path().string().c_str())) {
             if (!hasImported) {
@@ -118,7 +120,6 @@ void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
                 }
             }
             if (ImGui::Button("delete")) {
-                assetMgr.Destroy(entry);
                 std::filesystem::remove(entry);
                 gWorld->res_mut<ContentBrowserInfo>()->RescanDir();
                 ImGui::CloseCurrentPopup();
@@ -150,12 +151,14 @@ bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr,
             } else {
                 switch (filetype) {
                     case nickel::FileType::Image:
-                        ImGui::OpenPopup(cbInfo.texturePropertyPopupWindowTitle.c_str());
+                        ImGui::OpenPopup(
+                            cbInfo.texturePropertyPopupWindowTitle.c_str());
                         assetPropertyWindowCtx->sampler =
                             assetMgr.TextureMgr().Get(entry).Sampler();
-                            break;
+                        break;
                     case nickel::FileType::Audio:
-                        ImGui::OpenPopup(cbInfo.soundPropertyPopupWindowTitle.c_str());
+                        ImGui::OpenPopup(
+                            cbInfo.soundPropertyPopupWindowTitle.c_str());
                     case nickel::FileType::Font:
                     case nickel::FileType::Tilesheet:
                     case nickel::FileType::Animation:
@@ -209,13 +212,15 @@ void showIcons(ContentBrowserInfo& cbInfo,
         }
 
         if (clickedIdx) {
-            nickel::FileType filetype = nickel::DetectFileType(files[clickedIdx.value()]);
+            nickel::FileType filetype =
+                nickel::DetectFileType(files[clickedIdx.value()]);
             switch (filetype) {
                 case nickel::FileType::Image:
                     TexturePropertyPopupWindow(
                         cbInfo.texturePropertyPopupWindowTitle,
-                        clickedIdx ? assetMgr.TextureMgr().GetHandle(files[clickedIdx.value()])
-                                : nickel::TextureHandle::Null(),
+                        clickedIdx ? assetMgr.TextureMgr().GetHandle(
+                                         files[clickedIdx.value()])
+                                   : nickel::TextureHandle::Null(),
                         assetPropCtx);
                     break;
                 case nickel::FileType::Audio:
@@ -290,4 +295,25 @@ nickel::Texture& ContentBrowserInfo::FindTextureOrGen(
         }
         return textureMgr_.Get(unknownFileIconHandle_);
     }
+}
+
+void releaseAsset(const ReleaseAssetEvent& event,
+                  gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr) {
+    if (event.handle) {
+        std::visit(
+            [&](auto&& h) {
+                const_cast<gecs::resource<gecs::mut<nickel::AssetManager>>&>(
+                    assetMgr)
+                    ->Destroy(h);
+            },
+            event.handle.value());
+    } else if (event.path) {
+        const_cast<gecs::resource<gecs::mut<nickel::AssetManager>>&>(assetMgr)
+            ->Destroy(event.path.value());
+    }
+}
+
+void RegistEventHandler(
+    gecs::event_dispatcher<ReleaseAssetEvent> releaseAssetEvent) {
+    releaseAssetEvent.sink().add<releaseAsset>();
 }

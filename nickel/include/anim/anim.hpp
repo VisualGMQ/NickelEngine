@@ -4,6 +4,7 @@
 #include "core/handle.hpp"
 #include "core/manager.hpp"
 #include "core/singlton.hpp"
+#include "misc/filetype.hpp"
 #include "misc/timer.hpp"
 
 namespace nickel {
@@ -252,6 +253,8 @@ using AnimationHandle = Handle<Animation>;
 
 class AnimationManager final : public Manager<Animation> {
 public:
+    static FileType GetFileType() { return FileType::Animation; }
+
     std::shared_ptr<Animation> CreateSolitaryFromTracks(
         typename Animation::container_type&& tracks);
     AnimationHandle Load(const std::filesystem::path&);

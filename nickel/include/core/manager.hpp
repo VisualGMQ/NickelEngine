@@ -40,6 +40,14 @@ public:
         }
     }
 
+    void Reload(AssetHandle handle, const std::filesystem::path& filename) {
+        if (Has(handle)) {
+            auto& elem = Get(handle);
+            AssetType newElem(GetRootPath(), filename);
+            elem = std::move(newElem);
+        }
+    }
+
     AssetType& Get(AssetHandle handle) {
         return const_cast<AssetType&>(std::as_const(*this).Get(handle));
     }
@@ -73,7 +81,7 @@ public:
     AssetHandle Create(AssetStoreType&& asset,
                        const std::filesystem::path& filename) {
         auto handle = AssetHandle::Create();
-        asset->associateFile(filename);
+        asset->AssociateFile(filename);
         storeNewItem(handle, std::move(asset));
         return handle;
     }
@@ -135,8 +143,16 @@ public:
 
     void Save2TomlFile(const std::filesystem::path& path) const {
         std::ofstream file(path);
-        // file << toml::toml_formatter{Save2Toml()};
         file << Save2Toml();
+    }
+
+    void AssociateFile(AssetHandle handle, const std::filesystem::path& filename) {
+        if (Has(handle)) {
+            auto& elem = Get(handle);
+            pathHandleMap_.erase(elem.RelativePath());
+            elem.AssociateFile(convert2RelativePath(filename));
+            pathHandleMap_[elem.RelativePath()] = handle;
+        }
     }
 
 protected:

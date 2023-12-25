@@ -37,6 +37,7 @@ to enable auto copy dlls
 |[lunasvg](https://github.com/sammycage/lunasvg)| use to render svg|
 |[rapidxml](https://rapidxml.sourceforge.net/)| use to parse XML|
 |[tomlplusplus](https://github.com/marzer/tomlplusplus)| use to support toml file parse|
+|[esfw](https://github.com/SpartanJ/efsw)| use to watch file change in editor|
 
 editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-material-icon-theme)
 
@@ -50,8 +51,8 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [ ] UI(WIP)
 - [ ] Game physics(WIP)
 - [ ] RHI covered OpenGL3/ES and Vulkan(WIP)
+- [ ] Game sound playing(WIP)
 - [ ] 3D rendering
-- [ ] Game sound playing
 - [ ] Scene change/load/save
     - [x] scene save/load
     - [ ] multiple scene
@@ -74,7 +75,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
         - [ ] asset property window
             - [x] texture asset property window
             - [ ] font asset property window
-            - [ ] audio asset property window
+            - [x] audio asset property window
             - [ ] script asset property window
     - [ ] Animation editor
     - [x] Project Save/Load

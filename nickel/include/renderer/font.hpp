@@ -25,6 +25,8 @@ public:
 
     Font(const Font&) = delete;
     Font& operator=(const Font&) = delete;
+    Font(Font&&) = default;
+    Font& operator=(Font&&) = default;
 
     FT_GlyphSlot GetGlyph(uint64_t c, int size) const;
     const FT_Face& GetFace() const { return face_; }
@@ -45,6 +47,8 @@ std::unique_ptr<Font> LoadAssetFromToml(const toml::table&,
 
 class FontManager final : public Manager<Font> {
 public:
+    static FileType GetFileType() { return FileType::Font; }
+
     FontHandle Load(const std::filesystem::path& filename);
 };
 

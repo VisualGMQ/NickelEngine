@@ -10,6 +10,26 @@
 
 namespace nickel {
 
+template <typename F, typename... Args, size_t... Indices>
+void doVisitTuple(std::tuple<Args...>& t, std::index_sequence<Indices...>, F f) {
+    (f(std::get<Indices>(t)), ...);
+}
+
+template <typename F, typename... Args>
+void VisitTuple(std::tuple<Args...>& t, F f) {
+    doVisitTuple(t, std::make_index_sequence<sizeof...(Args)>(), f);
+}
+
+template <typename F, typename... Args, size_t... Indices>
+void doVisitTuple(const std::tuple<Args...>& t, std::index_sequence<Indices...>, F f) {
+    (f(std::get<Indices>(t)), ...);
+}
+
+template <typename F, typename... Args>
+void VisitTuple(const std::tuple<Args...>& t, F f) {
+    doVisitTuple(t, std::make_index_sequence<sizeof...(Args)>(), f);
+}
+
 class AssetManager final {
 public:
     AssetManager() = default;
@@ -19,58 +39,41 @@ public:
     }
 
     void SetRootPath(const std::filesystem::path& path) {
-        textureMgr_.SetRootPath(path);
-        fontMgr_.SetRootPath(path);
-        timerMgr_.SetRootPath(path);
-        tilesheetMgr_.SetRootPath(path);
-        animMgr_.SetRootPath(path);
-        audioMgr_.SetRootPath(path);
+        VisitTuple(mgrs_, [&](auto&& mgr) { mgr.SetRootPath(path); });
     }
 
-    auto& TextureMgr() { return textureMgr_; }
+    auto& TextureMgr() { return std::get<TextureManager>(mgrs_); }
+    auto& FontMgr() { return std::get<FontManager>(mgrs_); }
+    auto& TilesheetMgr() { return std::get<TilesheetManager>(mgrs_); }
+    auto& AnimationMgr() {return std::get<AnimationManager>(mgrs_); }
+    auto& TimerMgr() {return std::get<TimerManager>(mgrs_); }
+    auto& AudioMgr() {return std::get<AudioManager>(mgrs_); }
 
-    auto& FontMgr() { return fontMgr_; }
+    auto& TextureMgr() const { return std::get<TextureManager>(mgrs_); }
+    auto& FontMgr() const { return std::get<FontManager>(mgrs_); }
+    auto& TilesheetMgr() const { return std::get<TilesheetManager>(mgrs_); }
+    auto& AnimationMgr() const {return std::get<AnimationManager>(mgrs_); }
+    auto& TimerMgr() const {return std::get<TimerManager>(mgrs_); }
+    auto& AudioMgr() const {return std::get<AudioManager>(mgrs_); }
 
-    auto& TilesheetMgr() { return tilesheetMgr_; }
+    auto& GetRootPath() const {
+        // we assure that all manager are at same root path
+        // so pick arbitary manager is OK
+        return TextureMgr().GetRootPath();
+    }
 
-    auto& AnimationMgr() { return animMgr_; }
-
-    auto& TimerMgr() { return timerMgr_; }
-
-    auto& TextureMgr() const { return textureMgr_; }
-
-    auto& FontMgr() const { return fontMgr_; }
-
-    auto& TilesheetMgr() const { return tilesheetMgr_; }
-
-    auto& AnimationMgr() const { return animMgr_; }
-
-    auto& TimerMgr() const { return timerMgr_; }
-
-    auto& AudioMgr() const { return audioMgr_; }
-    auto& AudioMgr() { return audioMgr_; }
 
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
-        switch (filetype) {
-            case FileType::Image:
-                return TextureMgr().Load(path,
-                                         gogl::Sampler::CreateLinearRepeat()) !=
-                       TextureHandle::Null();
-            case FileType::Font:
-                return FontMgr().Load(path) != FontHandle::Null();
-            case FileType::Audio:
-                return AudioMgr().Load(path) != AudioHandle::Null();
-            case FileType::Tilesheet:
-                return TilesheetMgr().Load(path) != TilesheetHandle::Null();
-            case FileType::Animation:
-                return AnimationMgr().Load(path) != AnimationHandle::Null();
-            case FileType::Timer:
-                return TimerMgr().Load(path) != TimerHandle::Null();
-            default:
-                LOGW(log_tag::Editor, "Unknown asset type: ", path);
-                return false;
-        }
+        bool success = false;
+
+        VisitTuple(mgrs_, [=, &path, &success](auto&& mgr){
+            if (mgr.GetFileType() == filetype) {
+                success = success || mgr.Load(path);
+            }
+        });
+
+        return success;
     }
 
     TextureHandle LoadTexture(const std::filesystem::path& path) {
@@ -119,8 +122,7 @@ public:
     }
 
     AudioHandle LoadAudio(const std::filesystem::path& path) {
-        if (auto filetype = DetectFileType(path);
-            filetype == FileType::Audio) {
+        if (auto filetype = DetectFileType(path); filetype == FileType::Audio) {
             return AudioMgr().Load(path);
         }
         return {};
@@ -134,29 +136,16 @@ public:
     void Destroy(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
 
-        switch (filetype) {
-            case FileType::Image:
-                TextureMgr().Destroy(path);
-                break;
-            case FileType::Font:
-                FontMgr().Destroy(path);
-                break;
-            case FileType::Audio:
-                AudioManager().Destroy(path);
-                break;
-            case FileType::Tilesheet:
-                TilesheetMgr().Destroy(path);
-                break;
-            case FileType::Animation:
-                AnimationMgr().Destroy(path);
-                break;
-            case FileType::Timer:
-                TimerMgr().Destroy(path);
-                break;
-            case FileType::Unknown:
-            case FileType::FileTypeCount:
-                break;
-        }
+        VisitTuple(mgrs_, [=, &path](auto&& mgr){
+            if (mgr.GetFileType() == filetype) {
+                mgr.Destroy(path);
+            }
+        });
+    }
+
+    template <typename T>
+    void AssociateFile(Handle<T> handle, const std::filesystem::path& path) {
+        switchManager<T>().AssociateFile(handle, path);
     }
 
     template <typename T>
@@ -166,24 +155,16 @@ public:
 
     bool Has(const std::filesystem::path& filename) const {
         auto filetype = DetectFileType(filename);
-        switch (filetype) {
-            case FileType::Image:
-                return TextureMgr().Has(filename);
-            case FileType::Font:
-                return FontMgr().Has(filename);
-                break;
-            case FileType::Audio:
-                return AudioManager().Has(filename);
-                return false;
-            case FileType::Animation:
-                return AnimationMgr().Has(filename);
-            case FileType::Timer:
-                return TimerMgr().Has(filename);
-            case FileType::Tilesheet:
-                return TilesheetMgr().Has(filename);
-            default:
-                return false;
-        }
+
+        bool has = false;
+
+        VisitTuple(mgrs_, [=, &filename, &has](auto&& mgr){
+            if (mgr.GetFileType() == filetype) {
+                has = has || mgr.Has(filename);
+            }
+        });
+
+        return has;
     }
 
     template <typename T>
@@ -197,12 +178,7 @@ public:
     }
 
     void ReleaseAll() {
-        textureMgr_.ReleaseAll();
-        fontMgr_.ReleaseAll();
-        animMgr_.ReleaseAll();
-        timerMgr_.ReleaseAll();
-        tilesheetMgr_.ReleaseAll();
-        audioMgr_.ReleaseAll();
+        VisitTuple(mgrs_, [](auto&& mgr) { mgr.ReleaseAll(); });
     }
 
     void Save2TomlFile(const std::filesystem::path& rootDir,
@@ -245,7 +221,8 @@ public:
         }
     }
 
-    void LoadFromTomlWithPath(const toml::table& tbl, const std::filesystem::path& configDir) {
+    void LoadFromTomlWithPath(const toml::table& tbl,
+                              const std::filesystem::path& configDir) {
         if (auto node = tbl.get("texture"); node && node->is_table()) {
             TextureMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
         }
@@ -266,46 +243,39 @@ public:
         }
     }
 
+    auto& Managers() const { return mgrs_; }
+    auto& Managers() { return mgrs_; }
+
 private:
-    TextureManager textureMgr_;
-    FontManager fontMgr_;
-    TimerManager timerMgr_;
-    TilesheetManager tilesheetMgr_;
-    AnimationManager animMgr_;
-    AudioManager audioMgr_;
+    std::tuple<TextureManager, FontManager, TimerManager, TilesheetManager,
+               AnimationManager, AudioManager>
+        mgrs_;
 
     template <typename T>
     auto& switchManager() const {
         if constexpr (std::is_same_v<T, Texture>) {
-            return textureMgr_;
+            return std::get<TextureManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Font>) {
-            return fontMgr_;
+            return std::get<FontManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Timer>) {
-            return timerMgr_;
+            return std::get<TimerManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Tilesheet>) {
-            return tilesheetMgr_;
+            return std::get<TilesheetManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Animation>) {
-            return animMgr_;
+            return std::get<AnimationManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Sound>) {
-            return audioMgr_;
+            return std::get<AudioManager>(mgrs_);
         }
     }
 
     template <typename T>
     auto& switchManager() {
-        if constexpr (std::is_same_v<T, Texture>) {
-            return textureMgr_;
-        } else if constexpr (std::is_same_v<T, Font>) {
-            return fontMgr_;
-        } else if constexpr (std::is_same_v<T, Timer>) {
-            return timerMgr_;
-        } else if constexpr (std::is_same_v<T, Tilesheet>) {
-            return tilesheetMgr_;
-        } else if constexpr (std::is_same_v<T, Animation>) {
-            return animMgr_;
-        } else if constexpr (std::is_same_v<T, Sound>) {
-            return audioMgr_;
-        }
+        using type = decltype(std::declval<const AssetManager>()
+                                  .template switchManager<T>());
+
+        using refType = std::remove_const_t<std::remove_reference_t<type>>&;
+        return const_cast<refType>(
+            std::as_const(*this).template switchManager<T>());
     }
 };
 

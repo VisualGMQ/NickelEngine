@@ -1,7 +1,6 @@
-#include "imgui.h"
+#include "nickel.hpp"
 #include "imgui_plugin.hpp"
 #include "misc/transform.hpp"
-#include "nickel.hpp"
 
 #include "asset_property_window.hpp"
 #include "config.hpp"
@@ -11,6 +10,7 @@
 #include "inspector.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
+#include "watch_file.hpp"
 
 enum class EditorScene {
     ProjectManager,
@@ -117,8 +117,12 @@ void EditorEnter(gecs::resource<gecs::mut<Window>> window,
                  gecs::resource<gecs::mut<EditorContext>> editorCtx,
                  gecs::resource<gecs::mut<Camera>> camera,
                  gecs::resource<gecs::mut<ui::Context>> uiCtx,
+                 gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
+                 gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
                  gecs::commands cmds) {
     editorCtx->Init();
+
+    RegistEventHandler(releaseAsetEvent);
 
     createAndSetRenderTarget(*editorCtx->gameContentTarget, camera.get());
     createAndSetRenderTarget(*editorCtx->gameContentTarget, uiCtx->camera);
@@ -137,6 +141,9 @@ void EditorEnter(gecs::resource<gecs::mut<Window>> window,
 
     auto assetDir =
         GenAssetsDefaultStoreDir(editorCtx->projectInfo.projectPath);
+
+    cmds.emplace_resource<FileWatcher>(assetDir, *gWorld->cur_registry());
+    RegistFileChangeEventHandler(fileChangeEvent);
 
     // init content browser info
     auto& contentBrowserInfo = cmds.emplace_resource<ContentBrowserInfo>();
@@ -246,7 +253,6 @@ void GameContentWindow(EditorContext& ctx, nickel::Renderer2D& renderer,
 
     ImGui::GetStyle() = oldStyle;
 }
-
 
 void EditorImGuiUpdate(gecs::resource<gecs::mut<Renderer2D>> renderer,
                        gecs::resource<gecs::mut<EditorContext>> ctx,

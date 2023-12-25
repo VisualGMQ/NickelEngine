@@ -76,6 +76,8 @@ std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table&,
 
 class TilesheetManager final : public Manager<Tilesheet> {
 public:
+    static FileType GetFileType() { return FileType::Tilesheet; }
+
     TilesheetHandle Create(TextureHandle, uint32_t col, uint32_t row,
                            const Margin& margin = Margin::Zero(),
                            const Spacing& spacing = {0, 0});

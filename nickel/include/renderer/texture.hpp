@@ -5,6 +5,7 @@
 #include "core/handle.hpp"
 #include "core/manager.hpp"
 #include "core/asset.hpp"
+#include "misc/filetype.hpp"
 
 /**
  * @addtogroup resource-manager
@@ -27,7 +28,8 @@ public:
     static Texture Null;
 
     Texture(const std::filesystem::path& root,
-            const std::filesystem::path& filename, const gogl::Sampler&,
+            const std::filesystem::path& filename,
+            const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat(),
             gogl::Format fmt = gogl::Format::RGBA,
             gogl::Format gpuFmt = gogl::Format::RGBA);
     Texture(void*, int w, int h, const gogl::Sampler& sampler,
@@ -64,7 +66,6 @@ private:
     gogl::Sampler sampler_;
     int w_ = 0;
     int h_ = 0;
-
 };
 
 template <>
@@ -73,8 +74,11 @@ std::unique_ptr<Texture> LoadAssetFromToml(const toml::table&,
 
 class TextureManager final : public Manager<Texture> {
 public:
-    TextureHandle Load(const std::filesystem::path& filename,
-                       const gogl::Sampler&);
+    static FileType GetFileType() { return FileType::Image; }
+
+    TextureHandle Load(
+        const std::filesystem::path& filename,
+        const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat());
     TextureHandle LoadSVG(const std::filesystem::path& filename,
                           const gogl::Sampler&,
                           std::optional<cgmath::Vec2> size = std::nullopt);
@@ -87,8 +91,3 @@ public:
 };
 
 }  // namespace nickel
-
-/**
-     * @brief 
-     * 
-     */

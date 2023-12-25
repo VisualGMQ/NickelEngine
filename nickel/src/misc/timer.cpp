@@ -8,6 +8,8 @@ Time::Time() : elapse_(1) {
     curTime_ = clock_t::now();
 }
 
+Timer Timer::Null;
+
 Timer::Timer(const std::filesystem::path& root,
              const std::filesystem::path& filename)
     : Asset(filename) {
@@ -77,7 +79,7 @@ TimerHandle TimerManager::Create(const std::filesystem::path& path, TimerID id,
                                  TimeType time, int loop) {
     auto handle = TimerHandle::Create();
     auto timer = std::make_unique<Timer>(id, time, loop);
-    timer->associateFile(path);
+    timer->AssociateFile(path);
     storeNewItem(handle, std::move(timer));
     return handle;
 }
