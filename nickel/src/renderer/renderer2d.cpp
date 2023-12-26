@@ -24,7 +24,7 @@ void Renderer2D::SetViewport(const cgmath::Vec2& offset,
         static_cast<GLsizei>(size.w), static_cast<GLsizei>(size.h)));
 }
 
-void Renderer2D::BeginRenderTexture(const Camera& camera) {
+void Renderer2D::BeginRenderTexture(Camera& camera) {
     camera.ApplyRenderTarget();
     shader_ = textureShader_.get();
     shader_->Use();
@@ -32,7 +32,7 @@ void Renderer2D::BeginRenderTexture(const Camera& camera) {
     shader_->SetMat4("View", camera.View());
 }
 
-void Renderer2D::BeginRenderFont(const Camera& camera) {
+void Renderer2D::BeginRenderFont(Camera& camera) {
     camera.ApplyRenderTarget();
     shader_ = fontShader_.get();
     shader_->Use();
@@ -278,7 +278,7 @@ void Renderer2D::SetRenderTarget(Texture* texture) {
 }
 
 void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer,
-                        gecs::resource<Camera> camera,
+                        gecs::resource<gecs::mut<Camera>> camera,
                          gecs::resource<gecs::mut<RenderContext>> ctx) {
     GL_CALL(glEnable(GL_MULTISAMPLE));
     GL_CALL(glEnable(GL_BLEND));

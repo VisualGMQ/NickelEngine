@@ -28,8 +28,8 @@ public:
 
     Renderer2D();
 
-    void BeginRenderTexture(const Camera& camera);
-    void BeginRenderFont(const Camera& camera);
+    void BeginRenderTexture(Camera& camera);
+    void BeginRenderFont(Camera& camera);
     void EndRender();
 
     void EnableDepthTest() { GL_CALL(glEnable(GL_DEPTH_TEST)); }
@@ -44,12 +44,12 @@ public:
         GL_CALL(glClearColor(color.x, color.y, color.z, color.w));
     }
 
-    void Clear(const Camera& camera) {
+    void Clear(Camera& camera) {
         camera.ApplyRenderTarget();
         GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
     }
 
-    void ClearDepth(const Camera& camera) {
+    void ClearDepth(Camera& camera) {
         camera.ApplyRenderTarget();
         GL_CALL(glClear(GL_DEPTH_BUFFER_BIT));
     }
@@ -187,7 +187,7 @@ void Renderer2D::Draw(gogl::PrimitiveType primitive, Vertices vertices,
 }
 
 void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>>,
-                         gecs::resource<Camera>,
+                         gecs::resource<gecs::mut<Camera>>,
                          gecs::resource<gecs::mut<RenderContext>>);
 
 void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>>);

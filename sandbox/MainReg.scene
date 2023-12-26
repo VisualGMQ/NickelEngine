@@ -1,0 +1,9 @@
+entities = [
+    [ {} ],
+    [ {} ],
+    [ {} ],
+    [
+        { Name = { name = 'entity-0' }, Sprite = { anchor = { x = 0.0, y = 0.0 }, color = { w = 1.0, x = 1.0, y = 1.0, z = 1.0 }, flip = 0, texture = { path = 'role.png' }, visiable = true, z-index = 0.0 }, Transform = { rotation = 0.0, scale = { x = 5.0, y = 5.0 }, translation = { x = 198.0, y = 171.0 } } }
+    ]
+]
+name = 'MainReg'

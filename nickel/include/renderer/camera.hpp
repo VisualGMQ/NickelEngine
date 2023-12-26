@@ -27,6 +27,7 @@ public:
     auto& Project() const { return proj_; }
 
     void SetProject(const cgmath::Mat44& proj) { proj_ = proj; }
+    void SetView(const cgmath::Mat44& view) { view_ = view; }
 
     auto& View() const { return view_; }
 
@@ -34,11 +35,17 @@ public:
 
     auto& GetRenderTarget() const { return renderTarget_; }
 
-    void ApplyRenderTarget() const {
+    void ApplyRenderTarget() {
         if (renderTarget_) {
             renderTarget_->Bind();
             GL_CALL(glViewport(0, 0, renderTarget_->Size().w,
                                renderTarget_->Size().h));
+            if (IsOrtho()) {
+                // TODO: record cube to create ortho
+                SetProject(cgmath::CreateOrtho(0, renderTarget_->Size().w, 0,
+                                               renderTarget_->Size().h, 10000,
+                                               -10000));
+            }
         } else {
             GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
         }

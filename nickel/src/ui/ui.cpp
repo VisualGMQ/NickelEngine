@@ -106,7 +106,7 @@ void renderLabel(gecs::entity ent, const Label& label,
 
 void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
               gecs::resource<gecs::mut<Renderer2D>> renderer,
-              gecs::resource<Context> ctx, gecs::registry reg) {
+              gecs::resource<gecs::mut<Context>> ctx, gecs::registry reg) {
     for (auto&& [entity, style] : querier) {
         renderer->BeginRenderTexture(ctx->camera);
         renderer->DisableDepthTest();

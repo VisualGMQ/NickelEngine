@@ -4,7 +4,7 @@
 GameWindow::GameWindow() {
     auto screenSize = nickel::Screen::Instance().Size();
     rbo_ = std::make_unique<nickel::gogl::RenderBuffer>(screenSize.w,
-                                                        screenSize.w);
+                                                        screenSize.h);
     texture_ = std::make_unique<nickel::gogl::Texture>(
         nickel::gogl::Texture::Type::Dimension2, nullptr, screenSize.w,
         screenSize.h, nickel::gogl::Sampler::CreateLinearRepeat(),
@@ -33,12 +33,11 @@ GameWindow::GameWindow() {
         0, fbo_->Size().w, 0, fbo_->Size().h, 1000, -1000));
 }
 
-void drawCoordLine(EditorContext& ctx, nickel::Renderer2D& renderer,
-                   const nickel::Camera& camera,
-                   const nickel::Camera& uiCamera) {
+void drawCoordLine(const nickel::cgmath::Vec2& winSize, nickel::Renderer2D& renderer,
+                   nickel::Camera& camera,
+                   nickel::Camera& uiCamera) {
     renderer.BeginRenderTexture(camera);
-    nickel::cgmath::Rect rect{0, 0, ctx.projectInfo.windowData.size.w,
-                              ctx.projectInfo.windowData.size.h};
+    nickel::cgmath::Rect rect{0, 0, winSize.w, winSize.h};
     renderer.DrawRect(rect, {0, 0, 1, 1});
     // TODO: clip line start&end point to draw
     renderer.DrawLine({-10000, 0}, {10000, 0}, {1, 0, 0, 1});
@@ -55,7 +54,9 @@ void GameWindow::Update() {
     auto& camera = gWorld->res_mut<nickel::Camera>().get();
     auto& uiCamera = gWorld->res_mut<nickel::ui::Context>()->camera;
 
-    drawCoordLine(ctx, renderer, camera, uiCamera);
+    auto gameWindownSize = ctx.projectInfo.windowData.size;
+
+    drawCoordLine(gameWindownSize, renderer, camera, uiCamera);
 
     auto oldStyle = ImGui::GetStyle();
     auto newStyle = oldStyle;
@@ -64,12 +65,18 @@ void GameWindow::Update() {
     ImGui::GetStyle() = newStyle;
 
     if (ImGui::Begin("game", &ctx.openGameWindow)) {
+        auto regionMin = ImGui::GetWindowContentRegionMin();
+        auto regionMax = ImGui::GetWindowContentRegionMax();
         auto windowPos = ImGui::GetWindowPos();
+        windowPos.x += regionMin.x;
+        windowPos.y += regionMin.y;
         auto windowSize = ImGui::GetWindowSize();
-        auto& gameWindowSize = ctx.projectInfo.windowData.size;
+        windowSize.x -= regionMin.x;
+        windowSize.y -= regionMin.y;
 
-        ImVec2 uvMin = {0, windowSize.y / fbo_->Size().h};
-        ImVec2 uvMax = {windowSize.x / fbo_->Size().w, 0};
+        ImVec2 uvMin = {0, 1};
+        ImVec2 uvMax = {windowSize.x / fbo_->Size().w,
+                        (fbo_->Size().h - windowSize.y) / fbo_->Size().h};
 
         ImGui::GetWindowDrawList()->AddImage(
             (ImTextureID)texture_->Id(), windowPos,
@@ -80,21 +87,24 @@ void GameWindow::Update() {
         if (io.MouseWheel && ImGui::IsWindowHovered()) {
             scale_ += ScaleFactor * io.MouseWheel;
             scale_ = scale_ < minScaleFactor ? minScaleFactor : scale_;
+        }
+        if (ImGui::IsWindowHovered() &&
+            (io.MouseDelta.x != 0 || io.MouseDelta.y != 0) &&
+            io.MouseDown[ImGuiMouseButton_Left]) {
+            offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
+        }
+        nickel::cgmath::Vec2 halfWindowSize{windowSize.x * 0.5f,
+                                            windowSize.y * 0.5f};
+        // TODO: imporve interaction
+        auto view = nickel::cgmath::CreateTranslation(
+                        nickel::cgmath::Vec3{halfWindowSize} +
+                        nickel::cgmath::Vec3{offset_}) *
+                    nickel::cgmath::CreateScale({scale_, scale_, scale_}) *
+                    nickel::cgmath::CreateTranslation(
+                        -nickel::cgmath::Vec3{halfWindowSize});
 
-            camera.ScaleTo(nickel::cgmath::Vec2{scale_, scale_});
-            uiCamera.ScaleTo(nickel::cgmath::Vec2{scale_, scale_});
-        }
-        if (io.MouseDelta.x != 0 && io.MouseDelta.y != 0 &&
-            ImGui::IsWindowHovered() && io.MouseDown[ImGuiMouseButton_Left]) {
-            offset_ -= nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
-        }
-        auto finalOffset = offset_;
-        if (nickel::cgmath::Vec2{camera.Position()} != finalOffset) {
-            camera.MoveTo(finalOffset);
-        }
-        if (nickel::cgmath::Vec2{uiCamera.Position()} != finalOffset) {
-            uiCamera.MoveTo(finalOffset);
-        }
+        camera.SetView(view);
+        uiCamera.SetView(view);
     }
     ImGui::End();
 

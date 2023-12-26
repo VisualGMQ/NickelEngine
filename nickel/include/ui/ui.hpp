@@ -13,11 +13,11 @@ namespace nickel::ui {
 
 void InitSystem(gecs::commands cmds);
 void RenderStyle(gecs::querier<Style>, gecs::resource<gecs::mut<Renderer2D>>,
-                 gecs::resource<Context>);
+                 gecs::resource<gecs::mut<Context>>);
 
 void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
               gecs::resource<gecs::mut<Renderer2D>> renderer,
-              gecs::resource<Context> ctx, gecs::registry reg);
+              gecs::resource<gecs::mut<Context>> ctx, gecs::registry reg);
 
 void UpdateGlobalPosition(
     gecs::querier<gecs::mut<Style>, Child, gecs::without<Parent>>,

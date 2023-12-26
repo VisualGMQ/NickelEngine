@@ -19,7 +19,7 @@ void TestUpdateSystem(
 
 void TestRenderFontSystem(gecs::resource<gecs::mut<Renderer2D>> renderer,
                           gecs::resource<FontManager> fontMgr,
-                          gecs::resource<Camera> camera) {
+                          gecs::resource<gecs::mut<Camera>> camera) {
     auto& font = fontMgr->Get(fhandle);
     auto glyph = font.GetGlyph('x', 16);
 

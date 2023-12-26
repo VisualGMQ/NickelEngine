@@ -63,6 +63,6 @@ void CollectSpriteRenderInfo(
 
 void RenderElements(gecs::resource<gecs::mut<Renderer2D>> renderer2d,
                     gecs::resource<gecs::mut<RenderContext>> ctx,
-                    gecs::resource<Camera> camera);
+                    gecs::resource<gecs::mut<Camera>> camera);
 
 }  // namespace nickel
