@@ -2,9 +2,10 @@
 
 using namespace nickel;
 
-bool beginShowOneEntity(bool isLeaf, gecs::entity& selected,
-                        const gecs::entity& ent, const Name& name,
-                        DragDropInfo& dragDropOutInfo) {
+bool EntityListWindow::beginShowOneEntity(bool isLeaf, gecs::entity& selected,
+                                          const gecs::entity& ent,
+                                          const Name& name,
+                                          DragDropInfo& dragDropOutInfo) {
     auto flag = ImGuiTreeNodeFlags_OpenOnDoubleClick |
                 ImGuiTreeNodeFlags_SpanAvailWidth;
     if (isLeaf) {
@@ -55,7 +56,7 @@ bool beginShowOneEntity(bool isLeaf, gecs::entity& selected,
     return expanded;
 }
 
-void popupMenu(gecs::entity entity) {
+void EntityListWindow::popupMenu(gecs::entity entity) {
     if (ImGui::BeginPopupContextItem(
             std::to_string(gecs::internal::entity_to_integral(entity))
                 .c_str())) {
@@ -71,14 +72,17 @@ void popupMenu(gecs::entity entity) {
     }
 }
 
-void endShowOneEntity(const gecs::entity& ent, DragDropInfo& dragDropOutInfo) {
+void EntityListWindow::endShowOneEntity(const gecs::entity& ent,
+                                        DragDropInfo& dragDropOutInfo) {
     ImGui::TreePop();
     popupMenu(ent);
 }
 
-void showHierarchyEntities(const gecs::entity& entity, gecs::entity& selected,
-                           const Name& name, const nickel::Child* children,
-                           DragDropInfo& dragDropInfo) {
+void EntityListWindow::showHierarchyEntities(const gecs::entity& entity,
+                                             gecs::entity& selected,
+                                             const Name& name,
+                                             const nickel::Child* children,
+                                             DragDropInfo& dragDropInfo) {
     if ((children && children->entities.empty()) || !children) {
         if (beginShowOneEntity(true, selected, entity, name, dragDropInfo)) {
             endShowOneEntity(entity, dragDropInfo);
@@ -104,74 +108,74 @@ void showHierarchyEntities(const gecs::entity& entity, gecs::entity& selected,
     }
 }
 
-void EditorEntityListWindow(bool& show, gecs::entity& selected,
-                            gecs::registry reg) {
-    if (!show) return;
+void EntityListWindow::Update() {
+    if (!IsVisiable()) return;
 
-    auto cmds = reg.commands();
+    auto reg = gWorld->cur_registry();
+    auto cmds = reg->commands();
 
-    if (ImGui::Begin("Entity List", &show)) {
+    if (ImGui::Begin("Entity List", &show_)) {
         if (ImGui::Button("add")) {
             auto ent = cmds.create();
             cmds.emplace<nickel::Name>(
                 ent, nickel::Name{"entity-" +
                                   std::to_string(static_cast<uint32_t>(ent))});
         }
-        if (reg.alive(selected)) {
+        if (reg->alive(selected_)) {
             ImGui::SameLine();
             if (ImGui::Button("delete")) {
-                cmds.destroy(selected);
+                cmds.destroy(selected_);
             }
         }
 
-        auto hierarchyEntities = gWorld->cur_registry()
-                                     ->query<nickel::Child, nickel::Name,
+        auto hierarchyEntities = reg->query<nickel::Child, nickel::Name,
                                              gecs::without<nickel::Parent>>();
 
-        auto ctx = reg.res_mut<EntityListWindowContext>();
-        DragDropInfo& dragDropInfo = ctx->dragDropInfo;
-
         for (auto&& [ent, child, name] : hierarchyEntities) {
-            showHierarchyEntities(ent, selected, name, &child, dragDropInfo);
+            showHierarchyEntities(ent, selected_, name, &child, dragDropInfo_);
         }
 
         auto flatEntities =
             gWorld->cur_registry()->query<Name, gecs::without<Parent, Child>>();
         for (auto&& [ent, name] : flatEntities) {
-            if (beginShowOneEntity(true, selected, ent, name, dragDropInfo)) {
-                endShowOneEntity(ent, dragDropInfo);
+            if (beginShowOneEntity(true, selected_, ent, name, dragDropInfo_)) {
+                endShowOneEntity(ent, dragDropInfo_);
             }
         }
 
-        if (dragDropInfo.dragging &&
-            dragDropInfo.nearestEnt != gecs::null_entity) {
+        if (dragDropInfo_.dragging &&
+            dragDropInfo_.nearestEnt != gecs::null_entity) {
             ImGui::GetForegroundDrawList()->AddLine(
-                dragDropInfo.linePos,
-                {ImGui::GetWindowSize().x - dragDropInfo.linePos.x -
+                dragDropInfo_.linePos,
+                {ImGui::GetWindowSize().x - dragDropInfo_.linePos.x -
                      ImGui::GetStyle().WindowPadding.x,
-                 dragDropInfo.linePos.y},
+                 dragDropInfo_.linePos.y},
                 ImGui::GetColorU32({1, 1, 0, 1}), 1);
         }
 
         // drag and drop handle
-        auto dragEnt = dragDropInfo.dragEnt;
-        auto targetEnt = dragDropInfo.targetEnt;
-        auto nearestEnt = dragDropInfo.nearestEnt;
+        auto dragEnt = dragDropInfo_.dragEnt;
+        auto targetEnt = dragDropInfo_.targetEnt;
+        auto nearestEnt = dragDropInfo_.nearestEnt;
 
         // change hierarchy
-        if (dragDropInfo.IsChangingHierarchy()) {
+        if (dragDropInfo_.IsChangingHierarchy()) {
             HierarchyTool tool(targetEnt);
             tool.MoveEntityAsChild(dragEnt);
-        } else if (dragDropInfo.CanBeSibling() &&
+        } else if (dragDropInfo_.CanBeSibling() &&
                    ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-            HierarchyTool tool(dragDropInfo.oldNearestEnt);
-            tool.MoveAsSibling(dragDropInfo.oldDragEnt);
+            HierarchyTool tool(dragDropInfo_.oldNearestEnt);
+            tool.MoveAsSibling(dragDropInfo_.oldDragEnt);
 
-            dragDropInfo.nearestEnt = gecs::null_entity;
+            dragDropInfo_.nearestEnt = gecs::null_entity;
         }
 
-        dragDropInfo.Update();
+        dragDropInfo_.Update();
     }
 
     ImGui::End();
+
+    if (!reg->alive(selected_)) {
+        selected_ = gecs::null_entity;
+    }
 }

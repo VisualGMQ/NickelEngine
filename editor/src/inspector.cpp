@@ -1,11 +1,14 @@
 #include "inspector.hpp"
+#include "context.hpp"
 
-void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg) {
-    if (!show) return;
+void InspectorWindow::Update() {
+    if (!IsVisible()) return;
 
+    auto& reg = *gWorld->cur_registry();
+    auto entity = reg.res<EditorContext>()->entityListWindow.GetSelected();
     auto cmds = reg.commands();
 
-    if (ImGui::Begin("Inspector", &show)) {
+    if (ImGui::Begin(GetTitle().c_str(), &show_)) {
         auto& types = mirrow::drefl::all_typeinfo();
 
         if (!reg.alive(entity)) {
@@ -28,7 +31,7 @@ void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg) 
                 auto& methods = ComponentShowMethods::Instance();
                 auto func = methods.Find(typeInfo);
 
-                ImGui::PushID(id);
+                ImGui::PushID(id++);
                 if (ImGui::Button("delete")) {
                     cmds.remove(entity, typeInfo);
                     ImGui::PopID();
@@ -43,7 +46,6 @@ void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg) 
                     }
                 }
             }
-            id++;
         }
 
         // show add componet button

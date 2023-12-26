@@ -2,43 +2,55 @@
 
 #include "imgui_plugin.hpp"
 #include "nickel.hpp"
+#include "widget.hpp"
 
 template <typename T>
-using AssetShowFn = std::function<bool(
-    nickel::Handle<T>, const typename nickel::Manager<T>::AssetStoreType&,
-    int)>;
+bool ShowAsset(PopupWindow&, nickel::Handle<T>, const T&, int);
 
-bool ShowTexture(nickel::TextureHandle handle,
-                 const nickel::TextureManager::AssetStoreType& texture, int id);
+template <>
+bool ShowAsset<nickel::Texture>(PopupWindow&, nickel::TextureHandle handle,
+                                const nickel::Texture&, int id);
 
-bool ShowFont(nickel::FontHandle handle,
-              const nickel::FontManager::AssetStoreType& texture, int id);
+template <>
+bool ShowAsset<nickel::Font>(PopupWindow&, nickel::FontHandle handle, const nickel::Font&,
+                             int id);
 
 template <typename T>
-nickel::Handle<T> AssetWindow(const nickel::Manager<T>& mgr,
-                              const std::string& title,
-                              const AssetShowFn<T>& showFn) {
-    nickel::Handle<T> selectHandle;
-    if (ImGui::BeginPopupModal(title.c_str())) {
-        int i = 0;
-        for (auto& [handle, elem] : mgr.AllDatas()) {
-            if (showFn(handle, elem, i)) {
-                selectHandle = handle;
+class AssetListWindow : public PopupWindow {
+public:
+    using HandleType = nickel::Handle<T>;
+
+    using SelectCallbackFn = std::function<void(HandleType handle)>;
+
+    explicit AssetListWindow(const std::string& title) : PopupWindow(title) {}
+
+    void SetSelectCallback(SelectCallbackFn fn) { fn_ = fn; }
+
+protected:
+    void update() override {
+        if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_)) {
+            int i = 0;
+            for (auto& [handle, elem] : gWorld->res<nickel::AssetManager>()
+                                            ->SwitchManager<T>()
+                                            .AllDatas()) {
+                if (ShowAsset(*this, handle, *elem, i)) {
+                    if (fn_) {
+                        fn_(handle);
+                    }
+                }
+                i++;
             }
-            i++;
+            if (ImGui::Button("cancel")) {
+                Hide();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
         }
-        if (ImGui::Button("cancel")) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
     }
-    return selectHandle;
-}
 
-inline nickel::TextureHandle TextureAssetWindow(
-    const nickel::TextureManager& mgr, const std::string& title) {
-    return AssetWindow<nickel::Texture>(mgr, title, ShowTexture);
-}
+protected:
+    SelectCallbackFn fn_;
+};
 
-nickel::FontHandle FontAssetWindow(const nickel::FontManager& mgr,
-                                          const std::string& title);
+using TextureAssetListWindow = AssetListWindow<nickel::Texture>;
+using FontAssetListWindow = AssetListWindow<nickel::Font>;

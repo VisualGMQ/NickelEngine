@@ -62,7 +62,6 @@ public:
         return TextureMgr().GetRootPath();
     }
 
-
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
         bool success = false;
@@ -130,7 +129,7 @@ public:
 
     template <typename T>
     void Destroy(Handle<T> handle) {
-        return switchManager<T>().Destroy(handle);
+        return SwitchManager<T>().Destroy(handle);
     }
 
     void Destroy(const std::filesystem::path& path) {
@@ -145,12 +144,12 @@ public:
 
     template <typename T>
     void AssociateFile(Handle<T> handle, const std::filesystem::path& path) {
-        switchManager<T>().AssociateFile(handle, path);
+        SwitchManager<T>().AssociateFile(handle, path);
     }
 
     template <typename T>
     bool Has(Handle<T> handle) const {
-        return switchManager<T>().Has(handle);
+        return SwitchManager<T>().Has(handle);
     }
 
     bool Has(const std::filesystem::path& filename) const {
@@ -169,7 +168,7 @@ public:
 
     template <typename T>
     const T& Get(Handle<T> handle) const {
-        return switchManager<T>().Get(handle);
+        return SwitchManager<T>().Get(handle);
     }
 
     template <typename T>
@@ -246,13 +245,8 @@ public:
     auto& Managers() const { return mgrs_; }
     auto& Managers() { return mgrs_; }
 
-private:
-    std::tuple<TextureManager, FontManager, TimerManager, TilesheetManager,
-               AnimationManager, AudioManager>
-        mgrs_;
-
     template <typename T>
-    auto& switchManager() const {
+    auto& SwitchManager() const {
         if constexpr (std::is_same_v<T, Texture>) {
             return std::get<TextureManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Font>) {
@@ -269,14 +263,21 @@ private:
     }
 
     template <typename T>
-    auto& switchManager() {
+    auto& SwitchManager() {
         using type = decltype(std::declval<const AssetManager>()
-                                  .template switchManager<T>());
+                                  .template SwitchManager<T>());
 
         using refType = std::remove_const_t<std::remove_reference_t<type>>&;
         return const_cast<refType>(
-            std::as_const(*this).template switchManager<T>());
+            std::as_const(*this).template SwitchManager<T>());
     }
+
+
+
+private:
+    std::tuple<TextureManager, FontManager, TimerManager, TilesheetManager,
+               AnimationManager, AudioManager>
+        mgrs_;
 };
 
 }  // namespace nickel

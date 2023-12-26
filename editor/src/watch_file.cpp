@@ -76,8 +76,13 @@ void handleAssetChange(nickel::TextureManager& mgr,
 void FileChangeEventHandler(
     const FileChangeEvent& event,
     gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
-    gecs::resource<gecs::mut<ContentBrowserInfo>> cbInfo) {
+    gecs::resource<gecs::mut<EditorContext>> ctx) {
     auto absolutePath = event.dir / event.filename;
+
+    if (std::filesystem::exists(absolutePath) &&
+        std::filesystem::is_directory(absolutePath)) {
+        return;
+    }
 
     if (event.action == FileChangeEvent::Action::Add) {
         assetMgr->Load(absolutePath);
@@ -113,29 +118,8 @@ void FileChangeEventHandler(
             });
     }
 
-    std::string action;
-    switch (event.action) {
-        case FileChangeEvent::Action::Delete:
-            action = "delete";
-            break;
-        case FileChangeEvent::Action::Add:
-            action = "add";
-            break;
-        case FileChangeEvent::Action::Modified:
-            action = "modified";
-            break;
-        case FileChangeEvent::Action::Moved:
-            action = "moved";
-            break;
+    auto& cbWindow = ctx->contentBrowserWindow;
+    if (std::filesystem::equivalent(cbWindow.CurPath(), event.dir)) {
+        cbWindow.RescanDir();
     }
-
-    LOGW("editor", "cbInfo path = ", cbInfo->path);
-    LOGW("editor", "event.dir = ", event.dir);
-    if (std::filesystem::equivalent(cbInfo->path, event.dir)) {
-        cbInfo->RescanDir();
-    }
-
-    LOGW(nickel::log_tag::Editor, "file ", action,
-         " oldFilename = ", event.oldFilename,
-         ", new filename = ", event.filename, ", dir = ", event.dir);
 }

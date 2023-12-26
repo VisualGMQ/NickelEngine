@@ -2,6 +2,7 @@
 #include "core/assert.hpp"
 #include "asset_list_window.hpp"
 #include "image_view_canva.hpp"
+#include "context.hpp"
 
 using namespace nickel;
 
@@ -192,18 +193,22 @@ void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
 }
 
 template <typename MgrType>
-nickel::Handle<typename MgrType::AssetType> SelectAndChangeAsset(
-    MgrType& mgr, std::string_view buttonText, const std::string& title) {
+void SelectAndChangeAsset(EditorContext& ctx,
+    MgrType& mgr, std::string_view buttonText, typename MgrType::AssetHandle& handle) {
     using AssetType = typename MgrType::AssetType;
     if (ImGui::Button(buttonText.data())) {
-        ImGui::OpenPopup(title.c_str());
+        if constexpr (std::is_same_v<AssetType, Texture>) {
+            ctx.textureAssetListWindow.Show();
+            ctx.textureAssetListWindow.SetSelectCallback([&](TextureHandle h){
+                handle = h;
+            });
+        } else if constexpr (std::is_same_v<AssetType, Font>) {
+            ctx.fontAssetListWindow.Show();
+            ctx.fontAssetListWindow.SetSelectCallback([&](FontHandle h){
+                handle = h;
+            });
+        }
     }
-    if constexpr (std::is_same_v<AssetType, nickel::Texture>) {
-        return TextureAssetWindow(mgr, title);
-    } else if constexpr (std::is_same_v<AssetType, nickel::Font>) {
-        return FontAssetWindow(mgr, title);
-    }
-    return {};
 }
 
 void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
@@ -225,17 +230,20 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
     }
 
     static std::string title = "asset texture";
-    auto newHandle = SelectAndChangeAsset(
-        reg.res_mut<AssetManager>()->TextureMgr(), buf, title);
-    if (newHandle) {
-        handle = newHandle;
-    }
+    SelectAndChangeAsset(reg.res_mut<EditorContext>().get(),
+                         reg.res_mut<AssetManager>()->TextureMgr(), buf,
+                         handle);
 
     float size = ImGui::GetWindowContentRegionMax().x -
                  (ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x);
     static cgmath::Vec2 offset;
     static float scale = 1.0;
-    ShowImage({size, size}, offset, scale, handle);
+    static ImageViewCanva imageViewer;
+    if (mgr->Has(handle)) {
+        imageViewer.ChangeTexture(handle);
+        imageViewer.Resize({size, size});
+        imageViewer.Update();
+    }
 }
 
 void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
@@ -256,10 +264,9 @@ void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
     }
 
     static std::string title = "asset font";
-    auto newHandle = SelectAndChangeAsset(mgr, buf, title);
-    if (newHandle) {
-        handle = newHandle;
-    }
+    SelectAndChangeAsset(reg.res_mut<EditorContext>().get(),
+                         reg.res_mut<AssetManager>()->FontMgr(), buf,
+                         handle);
 }
 
 void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,

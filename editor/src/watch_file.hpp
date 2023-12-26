@@ -2,7 +2,7 @@
 
 #include "nickel.hpp"
 #include "efsw/efsw.hpp"
-#include "content_browser.hpp"
+#include "context.hpp"
 
 // Inherits from the abstract listener class, and implements the the file action
 // handler
@@ -44,5 +44,5 @@ struct FileChangeEvent final {
 void RegistFileChangeEventHandler(gecs::event_dispatcher<FileChangeEvent>);
 void FileChangeEventHandler(
     const FileChangeEvent& event,
-    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
-    gecs::resource<gecs::mut<ContentBrowserInfo>> cbInfo);
+    gecs::resource<gecs::mut<nickel::AssetManager>>,
+    gecs::resource<gecs::mut<EditorContext>>);

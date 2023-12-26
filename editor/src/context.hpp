@@ -4,11 +4,25 @@
 #include "pch.hpp"
 #include "nickel.hpp"
 #include "imgui_plugin.hpp"
+#include "content_browser.hpp"
+#include "entity_list_window.hpp"
+#include "inspector.hpp"
+#include "asset_list_window.hpp"
+#include "game_window.hpp"
 
 struct EditorContext {
-    bool openContentBrowser = true;
-    bool openInspector = true;
-    bool openEntityList = true;
+    // normal windows
+    ContentBrowserWindow contentBrowserWindow;
+    EntityListWindow entityListWindow;
+    InspectorWindow inspectorWindow;
+    GameWindow gameWindow;
+
+    // popup windows
+    TextureAssetListWindow textureAssetListWindow;
+    FontAssetListWindow fontAssetListWindow;
+    TexturePropertyPopupWindow texturePropWindow;
+    SoundPropertyPopupWindow soundPropWindow;
+
     bool openGameWindow = true;
     bool openDemoWindow = false;
 
@@ -18,12 +32,13 @@ struct EditorContext {
     // opened project information
     nickel::ProjectInitInfo projectInfo;
 
-    std::unique_ptr<nickel::gogl::RenderBuffer> renderBuffer;
-    std::unique_ptr<nickel::gogl::Framebuffer> gameContentTarget;
-    std::unique_ptr<nickel::gogl::Texture> gameContentTexture;
+    void Update();
 
     EditorContext();
     ~EditorContext();
 
-    void Init();
 };
+
+inline void InitEditorContexta(gecs::commands cmds) {
+    cmds.emplace_resource<EditorContext>();
+}

@@ -1,19 +1,20 @@
 #include "content_browser.hpp"
 #include "asset_property_window.hpp"
-#include "watch_file.hpp"
+#include "context.hpp"
 
-ContentBrowserInfo::ContentBrowserInfo() {
+ContentBrowserWindow::ContentBrowserWindow() {
+    auto iconSize = nickel::cgmath::Vec2{IconSize, IconSize};
     textureMgr_.SetRootPath("./editor/resources");
     initExtensionIconMap();
     dirIconHandle_ = textureMgr_.LoadSVG(
         "icons/folder-windows.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
-        iconSize_);
+        iconSize);
     unknownFileIconHandle_ = textureMgr_.LoadSVG(
         "icons/assembly.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
-        iconSize_);
+        iconSize);
 }
 
-void ContentBrowserInfo::initExtensionIconMap() {
+void ContentBrowserWindow::initExtensionIconMap() {
     auto result = toml::parse_file(iconConfigFilename_.string());
     if (!result) {
         LOGW(nickel::log_tag::Editor, "parse icon config file ",
@@ -34,27 +35,25 @@ void ContentBrowserInfo::initExtensionIconMap() {
     }
 }
 
-void ContentBrowserInfo::RescanDir() {
-    auto entry = std::filesystem::directory_entry{path};
+void ContentBrowserWindow::RescanDir() {
+    auto entry = std::filesystem::directory_entry{path_};
     if (!entry.exists() || !entry.is_directory()) {
         return;
     }
 
     files_.clear();
-    for (auto content : std::filesystem::directory_iterator{path}) {
+    for (auto content : std::filesystem::directory_iterator{path_}) {
         files_.emplace_back(content);
     }
 }
 
-void SelectAndLoadAsset(gecs::registry reg) {
+void ContentBrowserWindow::selectAndLoadAsset() {
+    auto& reg = *gWorld->cur_registry();
     auto filenames = OpenFileDialog("load assets");
-
-    bool contentChanged = false;
-    auto& cbInfo = reg.res<gecs::mut<ContentBrowserInfo>>().get();
 
     for (auto& filename : filenames) {
         auto type = nickel::DetectFileType(filename);
-        auto copyPath = cbInfo.path / filename.filename();
+        auto copyPath = path_ / filename.filename();
         if (filename != copyPath) {
             if (std::filesystem::exists(copyPath)) {
                 std::filesystem::remove(copyPath);
@@ -65,22 +64,14 @@ void SelectAndLoadAsset(gecs::registry reg) {
                 continue;
             }
         }
-
-        // auto assetMgr = reg.res_mut<nickel::AssetManager>();
-        // contentChanged = assetMgr->Load(copyPath);
-    }
-
-    // TODO: use file watcher to do this
-    if (contentChanged) {
-        cbInfo.RescanDir();
     }
 }
 
-std::pair<const nickel::Texture&, bool> getIcon(
+std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
     const std::filesystem::directory_entry& entry, nickel::FileType filetype,
-    ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr) {
+    nickel::AssetManager& assetMgr) {
     if (entry.is_directory()) {
-        return {cbInfo.GetDirIcon(), false};
+        return {textureMgr_.Get(dirIconHandle_), false};
     } else if (filetype == nickel::FileType::Image) {
         auto handle = assetMgr.TextureMgr().GetHandle(entry);
         if (handle) {
@@ -88,24 +79,24 @@ std::pair<const nickel::Texture&, bool> getIcon(
         }
     } else if (filetype == nickel::FileType::Font) {
         if (auto handle = assetMgr.FontMgr().GetHandle(entry); handle) {
-            return {cbInfo.FindTextureOrGen(entry.path().extension().string()),
-                    true};
+            // TODO: return font preview texture
+            return {FindTextureOrGen(entry.path().extension().string()), true};
         }
     } else if (filetype == nickel::FileType::Audio) {
         if (auto handle = assetMgr.AudioMgr().GetHandle(entry); handle) {
-            return {cbInfo.FindTextureOrGen(entry.path().extension().string()),
-                    true};
+            // TODO: return audio preview texture
+            return {FindTextureOrGen(entry.path().extension().string()), true};
         }
     }
     // TODO: other type assets
 
-    return {cbInfo.FindTextureOrGen(entry.path().extension().string()), false};
+    return {FindTextureOrGen(entry.path().extension().string()), false};
 }
 
-void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
-                                 const std::filesystem::directory_entry& entry,
-                                 nickel::AssetManager& assetMgr) {
-    auto fileChangeEvent = gWorld->cur_registry()->event_dispatcher<FileChangeEvent>();
+void ContentBrowserWindow::showAssetOperationPopupMenu(
+    nickel::FileType filetype, bool hasImported,
+    const std::filesystem::directory_entry& entry,
+    nickel::AssetManager& assetMgr) {
     if (filetype != nickel::FileType::Unknown) {
         if (ImGui::BeginPopupContextItem(entry.path().string().c_str())) {
             if (!hasImported) {
@@ -121,7 +112,6 @@ void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
             }
             if (ImGui::Button("delete")) {
                 std::filesystem::remove(entry);
-                gWorld->res_mut<ContentBrowserInfo>()->RescanDir();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
@@ -129,36 +119,34 @@ void showAssetOperationPopupMenu(nickel::FileType filetype, bool hasImported,
     }
 }
 
-bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr,
-                 const std::filesystem::directory_entry& entry) {
+void ContentBrowserWindow::showOneIcon(
+    nickel::AssetManager& assetMgr,
+    const std::filesystem::directory_entry& entry) {
     auto extension = entry.path().extension().string();
     auto filetype = nickel::DetectFileType(entry.path());
 
-    auto&& [texture, hasImported] = getIcon(entry, filetype, cbInfo, assetMgr);
+    auto&& [texture, hasImported] = getIcon(entry, filetype, assetMgr);
 
-    bool clicked = false;
-
+    auto ctx = gWorld->res_mut<EditorContext>();
     ImGui::BeginGroup();
     {
-        auto assetPropertyWindowCtx =
-            gWorld->res_mut<AssetPropertyWindowContext>();
-        if (ImGui::ImageButton(
-                (ImTextureID)texture.Raw(),
-                ImVec2{cbInfo.thumbnailSize.w, cbInfo.thumbnailSize.h})) {
-            clicked = true;
+        if (ImGui::ImageButton((ImTextureID)texture.Raw(),
+                               ImVec2{thumbnailSize_.w, thumbnailSize_.h})) {
             if (entry.is_directory()) {
-                cbInfo.path /= entry.path().filename();
+                path_ /= entry.path().filename();
+                RescanDir();
             } else {
                 switch (filetype) {
                     case nickel::FileType::Image:
-                        ImGui::OpenPopup(
-                            cbInfo.texturePropertyPopupWindowTitle.c_str());
-                        assetPropertyWindowCtx->sampler =
-                            assetMgr.TextureMgr().Get(entry).Sampler();
+                        ctx->texturePropWindow.Show();
+                        ctx->texturePropWindow.ChangeTexture(
+                            assetMgr.TextureMgr().GetHandle(entry));
                         break;
                     case nickel::FileType::Audio:
-                        ImGui::OpenPopup(
-                            cbInfo.soundPropertyPopupWindowTitle.c_str());
+                        ctx->soundPropWindow.Show();
+                        ctx->soundPropWindow.ChangeAudio(
+                            assetMgr.AudioMgr().GetHandle(entry));
+                        break;
                     case nickel::FileType::Font:
                     case nickel::FileType::Tilesheet:
                     case nickel::FileType::Animation:
@@ -176,12 +164,9 @@ bool showOneIcon(ContentBrowserInfo& cbInfo, nickel::AssetManager& assetMgr,
 
         ImGui::EndGroup();
     }
-
-    return clicked;
 }
 
-void showIcons(ContentBrowserInfo& cbInfo,
-               AssetPropertyWindowContext& assetPropCtx) {
+void ContentBrowserWindow::showIcons() {
     ImGui::BeginGroup();
     {
         float groupX =
@@ -189,54 +174,17 @@ void showIcons(ContentBrowserInfo& cbInfo,
 
         auto& assetMgr = gWorld->res_mut<nickel::AssetManager>().get();
         auto& fontMgr = gWorld->res_mut<nickel::FontManager>().get();
-        auto& files = cbInfo.Files();
         static std::optional<int> clickedIdx;
 
         // please ensure all files are exists
-        for (int i = 0; i < files.size(); i++) {
-            if (showOneIcon(cbInfo, assetMgr, files[i])) {
-                clickedIdx = i;
-            }
+        for (int i = 0; i < files_.size(); i++) {
+            showOneIcon(assetMgr, files_[i]);
 
             float buttonX = ImGui::GetItemRectMax().x;
             float nextButtonX = buttonX + ImGui::GetStyle().ItemSpacing.x +
                                 ImGui::GetItemRectSize().x;
-            if (i + 1 < cbInfo.Files().size() && nextButtonX < groupX) {
+            if (i + 1 < files_.size() && nextButtonX < groupX) {
                 ImGui::SameLine();
-            }
-        }
-
-        if (clickedIdx && files[clickedIdx.value()].is_directory()) {
-            cbInfo.RescanDir();
-            clickedIdx = std::nullopt;
-        }
-
-        if (clickedIdx) {
-            nickel::FileType filetype =
-                nickel::DetectFileType(files[clickedIdx.value()]);
-            switch (filetype) {
-                case nickel::FileType::Image:
-                    TexturePropertyPopupWindow(
-                        cbInfo.texturePropertyPopupWindowTitle,
-                        clickedIdx ? assetMgr.TextureMgr().GetHandle(
-                                         files[clickedIdx.value()])
-                                   : nickel::TextureHandle::Null(),
-                        assetPropCtx);
-                    break;
-                case nickel::FileType::Audio:
-                    SoundPropertyPopupWindow(
-                        cbInfo.soundPropertyPopupWindowTitle,
-                        clickedIdx ? assetMgr.AudioMgr().GetHandle(
-                                         files[clickedIdx.value()])
-                                   : nickel::AudioHandle::Null());
-                    break;
-                case nickel::FileType::Font:
-                case nickel::FileType::Tilesheet:
-                case nickel::FileType::Animation:
-                case nickel::FileType::Timer:
-                case nickel::FileType::Unknown:
-                case nickel::FileType::FileTypeCount:
-                    break;
             }
         }
 
@@ -244,37 +192,37 @@ void showIcons(ContentBrowserInfo& cbInfo,
     }
 }
 
-void EditorContentBrowser(bool& show) {
-    if (!show) return;
+void ContentBrowserWindow::Update() {
+    if (!IsVisible()) return;
 
-    auto cbInfo = gWorld->res_mut<ContentBrowserInfo>();
-    auto assetPropCtx = gWorld->res_mut<AssetPropertyWindowContext>();
-
-    if (ImGui::Begin("content browser", &show)) {
-        auto relativePath =
-            std::filesystem::relative(cbInfo->path, cbInfo->rootPath);
+    if (ImGui::Begin("content browser", &show_)) {
+        auto relativePath = std::filesystem::relative(path_, rootPath_);
         ImGui::Text("Res://%s", relativePath.string().c_str());
         ImGui::SameLine();
 
         // import button
         if (ImGui::Button("+")) {
-            SelectAndLoadAsset(*gWorld->cur_registry());
+            selectAndLoadAsset();
         }
 
         // goto parent dir button
-        if (cbInfo->path != cbInfo->rootPath) {
+        if (path_ != rootPath_) {
             if (ImGui::Button("..")) {
-                cbInfo->path = cbInfo->path.parent_path();
-                cbInfo->RescanDir();
+                path_ = path_.parent_path();
+                RescanDir();
             }
         }
 
-        showIcons(cbInfo.get(), assetPropCtx.get());
+        showIcons();
     }
     ImGui::End();
+
+    // auto ctx = gWorld->res_mut<EditorContext>();
+    // ctx->texturePropWindow.PrepareOpen();
+    // ctx->soundPropWindow.PrepareOpen();
 }
 
-nickel::Texture& ContentBrowserInfo::FindTextureOrGen(
+nickel::Texture& ContentBrowserWindow::FindTextureOrGen(
     const std::string& extension) {
     if (auto it = extensionHandleMap_.find(extension);
         it != extensionHandleMap_.end()) {
@@ -287,9 +235,10 @@ nickel::Texture& ContentBrowserInfo::FindTextureOrGen(
     } else {
         if (auto it2 = extensionIconMap_.find(extension);
             it2 != extensionIconMap_.end()) {
-            auto handle = textureMgr_.LoadSVG(
-                it2->second.string(),
-                nickel::gogl::Sampler::CreateLinearRepeat(), iconSize_);
+            auto handle =
+                textureMgr_.LoadSVG(it2->second.string(),
+                                    nickel::gogl::Sampler::CreateLinearRepeat(),
+                                    nickel::cgmath::Vec2{IconSize, IconSize});
             extensionHandleMap_.insert_or_assign(extension, handle);
             return textureMgr_.Get(handle);
         }

@@ -12,13 +12,21 @@ cmake -S . -B cmake-build
 cmake --build cmake-build
 ```
 
+Under Windows, if cmake can't find SDL, you should set `SDL2_ROOT` to your SDL path:
+
+```bash
+cmake -S . -B cmake-build -DSDL2_ROOT=<your-sdl2-path>
+```
+
 in some system, you may want to copy needed dll to your output dir, use:
 
 ```bash
 cmake -S . -B cmake-build -DNICKEL_COPYDLL=ON
 ```
 
-to enable auto copy dlls
+to enable auto copy dlls.
+
+**Each program should run at project root path**
 
 ## 3rd Libraries
 

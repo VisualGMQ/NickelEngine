@@ -84,6 +84,7 @@ public:
     void ScaleTo(const cgmath::Vec2& scale) {
         scale_.x = scale.x;
         scale_.y = scale.y;
+        scale_.z = 1.0;
         recalcView();
     }
 

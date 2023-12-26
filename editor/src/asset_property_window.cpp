@@ -2,8 +2,8 @@
 #include "image_view_canva.hpp"
 #include "show_component.hpp"
 
-
-void showWrapper(nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
+void TexturePropertyPopupWindow::showWrapper(
+    nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
     if (ImGui::TreeNode("wrapper")) {
         // show texture wrapper info
         auto textureWrapperTypeInfo =
@@ -28,7 +28,8 @@ void showWrapper(nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
     }
 }
 
-void showSampler(nickel::gogl::Sampler& sampler, gecs::registry reg) {
+void TexturePropertyPopupWindow::showSampler(nickel::gogl::Sampler& sampler,
+                                             gecs::registry reg) {
     if (ImGui::TreeNode("sampler")) {
         ShowComponentDefault("filter", sampler.filter);
         showWrapper(sampler.wrapper, reg);
@@ -36,24 +37,23 @@ void showSampler(nickel::gogl::Sampler& sampler, gecs::registry reg) {
     }
 }
 
-bool TexturePropertyPopupWindow(const std::string& title,
-                                nickel::TextureHandle handle,
-                                AssetPropertyWindowContext& ctx) {
+void TexturePropertyPopupWindow::update() {
     auto& reg = *gWorld->cur_registry();
     auto& textureMgr = gWorld->res_mut<nickel::AssetManager>()->TextureMgr();
 
-    bool result = false;
-    if (ImGui::BeginPopupModal(title.c_str())) {
-        if (!textureMgr.Has(handle)) {
+    if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (!textureMgr.Has(handle_)) {
             ImGui::Text("invalid texture handle");
             if (ImGui::Button("close")) {
+                Hide();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
-            return false;
+            return;
         }
 
-        auto& texture = textureMgr.Get(handle);
+        auto& texture = textureMgr.Get(handle_);
 
         char buf[512] = {0};
         snprintf(buf, sizeof(buf), "Res://%s",
@@ -65,48 +65,47 @@ bool TexturePropertyPopupWindow(const std::string& title,
                      ImGui::GetStyle().WindowPadding.x * 2.0;
         static nickel::cgmath::Vec2 offset = {0, 0};
         static float scale = 1.0;
-        ShowImage({size, size}, offset, scale, handle);
 
-        auto& sampler = ctx.sampler;
-        showSampler(sampler, reg);
-        ShowComponentDefault("mipmap", sampler.mipmap);
+        imageViewer_.Resize({size, size});
+        imageViewer_.Update();
+
+        showSampler(sampler_, reg);
+        ShowComponentDefault("mipmap", sampler_.mipmap);
 
         // show reimport button
-        if (sampler != texture.Sampler()) {
+        if (sampler_ != texture.Sampler()) {
             if (ImGui::Button("re-import")) {
-                textureMgr.Replace(handle, texture.RelativePath(), sampler);
-                result = true;
+                textureMgr.Replace(handle_, texture.RelativePath(), sampler_);
             }
             ImGui::SameLine();
         }
 
         // show cancel button
         if (ImGui::Button("cancel")) {
+            Hide();
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
     }
-
-    return result;
 }
 
-bool SoundPropertyPopupWindow(const std::string& title,
-                              nickel::AudioHandle handle) {
+void SoundPropertyPopupWindow::update() {
     auto& mgr = gWorld->res_mut<nickel::AssetManager>()->AudioMgr();
 
-    bool result = false;
-    if (ImGui::BeginPopupModal(title.c_str())) {
-        if (!mgr.Has(handle)) {
+    if (ImGui::BeginPopupModal(GetTitle().c_str(), nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (!mgr.Has(handle_)) {
             ImGui::Text("invalid audio handle");
             if (ImGui::Button("close")) {
+                Hide();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
-            return false;
+            return;
         }
 
-        auto& elem = mgr.Get(handle);
+        auto& elem = mgr.Get(handle_);
 
         char buf[512] = {0};
         snprintf(buf, sizeof(buf), "Res://%s",
@@ -143,11 +142,10 @@ bool SoundPropertyPopupWindow(const std::string& title,
         // show cancel button
         if (ImGui::Button("cancel")) {
             elem.Stop();
+            Hide();
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
     }
-
-    return result;
 }

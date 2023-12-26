@@ -1,23 +1,47 @@
 #pragma once
 
+#include "image_view_canva.hpp"
 #include "imgui_plugin.hpp"
 #include "nickel.hpp"
+#include "widget.hpp"
 
-class AssetPropertyWindowContext {
+
+class TexturePropertyPopupWindow : public PopupWindow {
 public:
-    nickel::gogl::Sampler
-        sampler;  // saved sampler for TexturePropertyPopupWindow
+    TexturePropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+
+    void ChangeTexture(nickel::TextureHandle handle) {
+        handle_ = handle;
+        imageViewer_.ChangeTexture(handle);
+        auto assetMgr = gWorld->res<nickel::AssetManager>();
+        if (assetMgr->Has(handle_)) {
+            sampler_ = assetMgr->Get(handle_).Sampler();
+        }
+    }
+
+protected:
+    void update() override;
+
+private:
+    nickel::gogl::Sampler sampler_ =
+        nickel::gogl::Sampler::CreateLinearRepeat();
+    nickel::TextureHandle handle_;
+    ImageViewCanva imageViewer_;
+
+    void showWrapper(nickel::gogl::Sampler::Wrapper& wrapper,
+                     gecs::registry reg);
+    void showSampler(nickel::gogl::Sampler& sampler, gecs::registry reg);
 };
 
-/**
- * @brief [ImGui] Declare a popup window that show texture properties
- * @note Don't forget reset AssetPropertyWindowContext::sampler before open it
- */
-bool TexturePropertyPopupWindow(const std::string& title, nickel::TextureHandle,
-                                AssetPropertyWindowContext&);
+class SoundPropertyPopupWindow : public PopupWindow {
+public:
+    SoundPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
 
-/**
- * @brief [ImGui] Declare a popup window that show audio properties
- */
-bool SoundPropertyPopupWindow(const std::string& title,
-                              nickel::AudioHandle handle);
+    void ChangeAudio(nickel::AudioHandle handle) { handle_ = handle; }
+
+protected:
+    void update() override;
+
+private:
+    nickel::AudioHandle handle_;
+};

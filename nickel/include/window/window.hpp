@@ -5,6 +5,7 @@
 #include "core/gogl.hpp"
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
+#include "core/singlton.hpp"
 #include "pch.hpp"
 
 namespace nickel {
@@ -33,6 +34,18 @@ public:
     void SwapBuffer() const;
     void Resize(int w, int h);
     void SetTitle(const std::string& title);
+
+    void SetFullScreen(bool b) {
+        if (b) {
+            SDL_SetWindowFullscreen(window_, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        } else {
+            SDL_SetWindowFullscreen(window_, 0);
+        }
+    }
+
+    void SetResizable(bool b) {
+        SDL_SetWindowResizable(window_, static_cast<SDL_bool>(b));
+    }
 
     std::string_view Title() const { return title_; }
 
@@ -75,10 +88,20 @@ private:
     Data buildData_;
 };
 
+class Screen final: public Singlton<Screen, false> {
+public:
+    cgmath::Vec2 Size() {
+        SDL_DisplayMode mode;
+        SDL_GetDesktopDisplayMode(0, &mode);
+        return cgmath::Vec2(mode.w, mode.h);
+    }
+};
+
 class QuitEvent;
 class EventPoller;
 
-void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit, gecs::commands cmds);
+void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit,
+                     gecs::commands cmds);
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
                        gecs::resource<Window> window);
