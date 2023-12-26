@@ -43,7 +43,7 @@ public:
     void Reload(AssetHandle handle, const std::filesystem::path& filename) {
         if (Has(handle)) {
             auto& elem = Get(handle);
-            AssetType newElem(GetRootPath(), filename);
+            AssetType newElem(GetRootPath(), convert2RelativePath(filename));
             elem = std::move(newElem);
         }
     }
