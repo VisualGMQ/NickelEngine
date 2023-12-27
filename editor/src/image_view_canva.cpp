@@ -1,4 +1,5 @@
 #include "image_view_canva.hpp"
+#include "util.hpp"
 
 using namespace nickel;
 
@@ -34,6 +35,7 @@ void ImageViewCanva::Update() {
 
         if (ImGui::IsItemFocused() && ImGui::IsKeyDown(ImGuiKey_Space)) {
             offset_.Set(0, 0);
+            scale_ = 1.0;
         }
 
         scale_ = scale_ < minScaleFactor ? minScaleFactor : scale_;
@@ -43,18 +45,17 @@ void ImageViewCanva::Update() {
         auto assetMgr = gWorld->res<AssetManager>();
         if (assetMgr->Has(handle_)) {
             auto& texture = assetMgr->Get(handle_);
-            cgmath::Vec2 minPt{canvasMin.x, canvasMin.y};
-            cgmath::Vec2 maxPt{texture.Size().w + canvasMin.x,
-                               texture.Size().h + canvasMin.y};
+            cgmath::Vec2 minPt{0, 0};
+            cgmath::Vec2 maxPt{texture.Size()};
 
             auto calcTrans = [&](const cgmath::Vec2& p) {
-                return calcPtTransform(
-                    p, offset_ + size_ * 0.5 - texture.Size() * 0.5, scale_,
-                    canvasCenter);
+                return ScaleByAnchor(
+                    p, scale_, size_ * 0.5,
+                    size_ * 0.5 + offset_ - texture.Size() * 0.5);
             };
 
-            minPt = calcTrans(minPt);
-            maxPt = calcTrans(maxPt);
+            minPt = calcTrans(minPt) + canvasMin;
+            maxPt = calcTrans(maxPt) + canvasMin;
             drawList->AddImage(texture.Raw(), {minPt.x, minPt.y},
                                {maxPt.x, maxPt.y});
         }

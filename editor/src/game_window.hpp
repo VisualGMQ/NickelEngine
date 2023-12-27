@@ -9,7 +9,7 @@ public:
     void Update() override;
 
 private:
-    static constexpr float ScaleFactor = 0.1;
+    static constexpr float ScaleFactor = 0.05;
     static constexpr float minScaleFactor = 0.0001;
 
     float scale_ = 1.0;

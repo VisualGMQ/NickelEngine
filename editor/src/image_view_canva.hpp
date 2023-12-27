@@ -23,13 +23,4 @@ private:
     nickel::cgmath::Vec2 offset_;
     float scale_ = 1.0;
     nickel::TextureHandle handle_;
-
-    nickel::cgmath::Vec2 calcPtTransform(const nickel::cgmath::Vec2& p,
-                                         const nickel::cgmath::Vec2& offset,
-                                         float scale,
-                                         const nickel::cgmath::Vec2& center) {
-        auto transP = p + offset;
-        auto v = transP - center;
-        return v * scale + center;
-    }
 };

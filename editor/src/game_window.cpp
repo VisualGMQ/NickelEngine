@@ -1,5 +1,6 @@
 #include "game_window.hpp"
 #include "context.hpp"
+#include "util.hpp"
 
 GameWindow::GameWindow() {
     auto screenSize = nickel::Screen::Instance().Size();
@@ -84,6 +85,9 @@ void GameWindow::Update() {
             uvMin, uvMax);
 
         auto& io = ImGui::GetIO();
+        nickel::cgmath::Vec2 halfWindowSize{windowSize.x * 0.5f,
+                                            windowSize.y * 0.5f};
+
         if (io.MouseWheel && ImGui::IsWindowHovered()) {
             scale_ += ScaleFactor * io.MouseWheel;
             scale_ = scale_ < minScaleFactor ? minScaleFactor : scale_;
@@ -93,15 +97,10 @@ void GameWindow::Update() {
             io.MouseDown[ImGuiMouseButton_Left]) {
             offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
         }
-        nickel::cgmath::Vec2 halfWindowSize{windowSize.x * 0.5f,
-                                            windowSize.y * 0.5f};
-        // TODO: imporve interaction
-        auto view = nickel::cgmath::CreateTranslation(
-                        nickel::cgmath::Vec3{halfWindowSize} +
-                        nickel::cgmath::Vec3{offset_}) *
-                    nickel::cgmath::CreateScale({scale_, scale_, scale_}) *
-                    nickel::cgmath::CreateTranslation(
-                        -nickel::cgmath::Vec3{halfWindowSize});
+
+        auto view = ScaleByAnchorAsMat(
+            {0, 0}, scale_, {windowSize.x * 0.5f, windowSize.y * 0.5f},
+            offset_);
 
         camera.SetView(view);
         uiCamera.SetView(view);
