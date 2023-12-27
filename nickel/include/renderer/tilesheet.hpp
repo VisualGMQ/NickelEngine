@@ -23,10 +23,19 @@ struct Tile final {
 
 class Tilesheet final: public Asset {
 public:
+    friend class TilesheetInnerAccessor;
+
     Tilesheet(const TextureManager&, TextureHandle, uint32_t col, uint32_t row,
               const Margin& margin = Margin::Zero(),
               const Spacing& spacing = {0, 0});
     Tilesheet(const std::filesystem::path& root, const std::filesystem::path& relativePath);
+
+    explicit Tilesheet(const toml::table& tbl);
+
+    Tilesheet(const Tilesheet&) = delete;
+    Tilesheet(Tilesheet&&) = default;
+    Tilesheet& operator=(const Tilesheet&) = delete;
+    Tilesheet& operator=(Tilesheet&&) = default;
 
     static Tilesheet Null;
 
@@ -44,14 +53,8 @@ public:
     TextureHandle Handle() const { return handle_; }
 
     cgmath::Vec2 TileSize() const {
-        return {static_cast<float>(tileWidth_),
-                static_cast<float>(tileHeight_)};
+        return {tileWidth_, tileHeight_};
     }
-
-    /**
-     * @brief save tilesheet info to toml file
-     */
-    void Save(const std::filesystem::path& path) const;
 
     toml::table Save2Toml() const override;
 
@@ -59,20 +62,54 @@ private:
     TextureHandle handle_;
     Margin margin_;
     Spacing spacing_;
-    uint32_t tileWidth_;
-    uint32_t tileHeight_;
+    float tileWidth_;
+    float tileHeight_;
     uint32_t col_;
     uint32_t row_;
-    std::filesystem::path configFilename_;
+
+    void parseFromToml(const toml::table&);
+
+    void recalcTile(const cgmath::Vec2& textureSize) {
+        tileWidth_ = (textureSize.w - margin_.left - margin_.right -
+                      (col_ - 1) * spacing_.x) /
+                     static_cast<float>(col_);
+        tileHeight_ = (textureSize.h - margin_.top - margin_.bottom -
+                       (row_ - 1) * spacing_.y) /
+                      static_cast<float>(row_);
+    }
 
     Tilesheet() = default;
 };
 
 using TilesheetHandle = Handle<Tilesheet>;
 
+class TilesheetInnerAccessor final {
+public:
+    explicit TilesheetInnerAccessor(Tilesheet& ts) : ts_{ts} {}
+
+    auto& Margin() { return ts_.margin_; }
+
+    auto& Spacing() { return ts_.spacing_; }
+
+    auto& Col() { return ts_.col_; }
+
+    auto& Row() { return ts_.row_; }
+
+    auto& Margin() const { return ts_.margin_; }
+
+    auto& Spacing() const { return ts_.spacing_; }
+
+    auto& Col() const { return ts_.col_; }
+
+    auto& Row() const { return ts_.row_; }
+
+private:
+    Tilesheet& ts_;
+};
+
 template <>
 std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table&,
-                                     const std::filesystem::path&);
+                                             const std::filesystem::path&);
 
 class TilesheetManager final : public Manager<Tilesheet> {
 public:

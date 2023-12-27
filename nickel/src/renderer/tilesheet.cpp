@@ -15,12 +15,7 @@ Tilesheet::Tilesheet(const TextureManager& manager, TextureHandle handle,
       col_(col) {
     if (manager.Has(handle)) {
         auto& image = manager.Get(handle);
-        tileWidth_ = (image.Width() - margin.left - margin.right -
-                      (col - 1) * spacing.x) /
-                     col;
-        tileHeight_ = (image.Height() - margin.top - margin.bottom -
-                       (row - 1) * spacing.y) /
-                      row;
+        recalcTile(image.Size());
     } else {
         handle_ = TextureHandle::Null();
     }
@@ -42,13 +37,21 @@ Tile Tilesheet::Get(uint32_t index) {
 
 Tilesheet::Tilesheet(const std::filesystem::path& root,
                      const std::filesystem::path& relativePath) {
-    auto result = toml::parse_file((root/relativePath).string());
+    auto result = toml::parse_file((root / relativePath).string());
     if (!result) {
         LOGW(log_tag::Asset, "load tilesheet from ", relativePath,
              " failed: ", result.error());
+    } else {
+        auto& tbl = result.table();
+        parseFromToml(tbl);
     }
+}
 
-    auto& tbl = result.table();
+Tilesheet::Tilesheet(const toml::table& tbl) {
+    parseFromToml(tbl);
+}
+
+void Tilesheet::parseFromToml(const toml::table& tbl) {
     auto ref = mirrow::drefl::any_make_ref(margin_);
     if (auto node = tbl.get(ref.type_info()->name());
         node && node->is_table()) {
@@ -76,9 +79,11 @@ Tilesheet::Tilesheet(const std::filesystem::path& root,
             handle_ = assetMgr->TextureMgr().GetHandle(texturePath);
         }
     }
+
+    recalcTile(assetMgr->Get(handle_).Size());
 }
 
-void Tilesheet::Save(const std::filesystem::path& path) const {
+toml::table Tilesheet::Save2Toml() const {
     toml::table tbl;
 
     auto ref = mirrow::drefl::any_make_constref(margin_);
@@ -93,27 +98,16 @@ void Tilesheet::Save(const std::filesystem::path& path) const {
     if (assetMgr->Has(handle_)) {
         tbl.emplace("texture", assetMgr->Get(handle_).RelativePath().string());
     }
-
-    std::ofstream file(path);
-    if (file) {
-        file << tbl;
-    }
-}
-
-toml::table Tilesheet::Save2Toml() const {
-    toml::table tbl;
-    tbl.emplace("path", RelativePath().string());
     return tbl;
 }
 
 template <>
 std::unique_ptr<Tilesheet> LoadAssetFromToml(
     const toml::table& tbl, const std::filesystem::path& root) {
-    if (auto node = tbl.get("path"); node && node->is_string()) {
-        return std::make_unique<Tilesheet>(root, node->as_string()->get());
-    }
-
-    return nullptr;
+    auto tilesheet = std::make_unique<Tilesheet>(tbl);
+    tilesheet->AssociateFile(
+        std::filesystem::relative(tbl.source().path->c_str(), root));
+    return tilesheet;
 }
 
 TilesheetHandle TilesheetManager::Create(TextureHandle handle, uint32_t col,

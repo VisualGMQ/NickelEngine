@@ -15,6 +15,7 @@ namespace nickel {
 void SaveAssets(const std::filesystem::path& rootPath,
                 const AssetManager& assetMgr) {
     assetMgr.Save2TomlFile(rootPath, rootPath / AssetFilename);
+    assetMgr.SaveAssets2File();
 }
 
 toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg) {

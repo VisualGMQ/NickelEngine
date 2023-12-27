@@ -77,6 +77,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
         - [x] drag entity to reorder/set hierarchy
     - [x] Inspector window to show components of selected entity
     - [x] Game scene display
+    - [x] Tilesheet Editor
     - [x] Assets window
         - [x] show assets
         - [x] load/release asset

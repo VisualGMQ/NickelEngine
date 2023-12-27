@@ -4,16 +4,26 @@
 #include "nickel.hpp"
 #include "widget.hpp"
 
+/**
+ * @brief determine how to show selected asset
+ *
+ * @tparam T
+ * @return true     need to show this asset
+ * @return false    don't need to show this asset
+ */
 template <typename T>
-bool ShowAsset(PopupWindow&, nickel::Handle<T>, const T&, int);
+void ShowAsset(nickel::Handle<T>, const T&) {}
 
 template <>
-bool ShowAsset<nickel::Texture>(PopupWindow&, nickel::TextureHandle handle,
-                                const nickel::Texture&, int id);
+void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
+                                const nickel::Texture&);
 
 template <>
-bool ShowAsset<nickel::Font>(PopupWindow&, nickel::FontHandle handle, const nickel::Font&,
-                             int id);
+void ShowAsset<nickel::Font>(nickel::FontHandle handle, const nickel::Font&);
+
+template <>
+void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
+                                  const nickel::Tilesheet&);
 
 template <typename T>
 class AssetListWindow : public PopupWindow {
@@ -29,21 +39,39 @@ public:
 protected:
     void update() override {
         if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_)) {
-            int i = 0;
-            for (auto& [handle, elem] : gWorld->res<nickel::AssetManager>()
-                                            ->SwitchManager<T>()
-                                            .AllDatas()) {
-                if (ShowAsset(*this, handle, *elem, i)) {
+            auto& datas = gWorld->res<nickel::AssetManager>()
+                              ->SwitchManager<T>()
+                              .AllDatas();
+            if (datas.empty()) {
+                ImGui::Text("no asset");
+                ImGui::EndPopup();
+                return;
+            }
+
+            HandleType selectedHandle;
+            T* selectedAsset = nullptr;
+
+            for (auto&& [handle, elem] : datas) {
+                if (ImGui::Selectable(elem->RelativePath().string().c_str(),
+                                      false)) {
                     if (fn_) {
                         fn_(handle);
                     }
+
+                    Hide();
+                    ImGui::CloseCurrentPopup();
                 }
-                i++;
+
+                if (ImGui::IsItemHovered()) {
+                    selectedHandle = handle;
+                    selectedAsset = elem.get();
+                }
             }
-            if (ImGui::Button("cancel")) {
-                Hide();
-                ImGui::CloseCurrentPopup();
+
+            if (selectedAsset) {
+                ShowAsset(selectedHandle, *selectedAsset);
             }
+
             ImGui::EndPopup();
         }
     }
@@ -54,3 +82,4 @@ protected:
 
 using TextureAssetListWindow = AssetListWindow<nickel::Texture>;
 using FontAssetListWindow = AssetListWindow<nickel::Font>;
+using TilesheetAssetListWindow = AssetListWindow<nickel::Tilesheet>;

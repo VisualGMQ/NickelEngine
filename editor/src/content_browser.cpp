@@ -43,13 +43,16 @@ void ContentBrowserWindow::RescanDir() {
 
     files_.clear();
     for (auto content : std::filesystem::directory_iterator{path_}) {
-        files_.emplace_back(content);
+        auto& path = content.path();
+        if (!content.is_directory() && path.extension() != ".meta") {
+            files_.emplace_back(content);
+        }
     }
 }
 
 void ContentBrowserWindow::selectAndLoadAsset() {
     auto& reg = *gWorld->cur_registry();
-    auto filenames = OpenFileDialog("load assets");
+    auto filenames = OpenFileDialog("load assets", {".*"});
 
     for (auto& filename : filenames) {
         auto type = nickel::DetectFileType(filename);

@@ -175,8 +175,12 @@ void reflectTilesheet() {
         .property("x", &Spacing::x)
         .property("y", &Spacing::y);
 
+    mirrow::drefl::registrar<Tilesheet>::instance()
+        .regist("Tilesheet");
+
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<Margin>();
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<Spacing>();
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Tilesheet>();
 }
 
 void reflectMisc() {

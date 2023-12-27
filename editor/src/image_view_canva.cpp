@@ -1,5 +1,4 @@
 #include "image_view_canva.hpp"
-#include "util.hpp"
 
 using namespace nickel;
 
@@ -43,21 +42,18 @@ void ImageViewCanva::Update() {
         // begin draw
         auto drawList = ImGui::GetWindowDrawList();
         auto assetMgr = gWorld->res<AssetManager>();
+
         if (assetMgr->Has(handle_)) {
             auto& texture = assetMgr->Get(handle_);
             cgmath::Vec2 minPt{0, 0};
             cgmath::Vec2 maxPt{texture.Size()};
 
-            auto calcTrans = [&](const cgmath::Vec2& p) {
-                return ScaleByAnchor(
-                    p, scale_, size_ * 0.5,
-                    size_ * 0.5 + offset_ - texture.Size() * 0.5);
-            };
-
-            minPt = calcTrans(minPt) + canvasMin;
-            maxPt = calcTrans(maxPt) + canvasMin;
+            minPt = transformPt(minPt, -texture.Size() * 0.5) + canvasMin;
+            maxPt = transformPt(maxPt, -texture.Size() * 0.5) + canvasMin;
             drawList->AddImage(texture.Raw(), {minPt.x, minPt.y},
                                {maxPt.x, maxPt.y});
+
+            additionalDraw(drawList, texture, canvasMin);
         }
 
         ImGui::PopClipRect();

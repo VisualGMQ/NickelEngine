@@ -18,8 +18,14 @@ public:
         : relativePath_(relativePath) {}
     Asset() = default;
 
+    /**
+     * @brief save asset content to toml
+     */
     virtual toml::table Save2Toml() const = 0;
 
+    /**
+     * @brief save asset content to file
+     */
     void Save2File(const std::filesystem::path& filename) const {
         std::ofstream file(filename);
         if (file) {

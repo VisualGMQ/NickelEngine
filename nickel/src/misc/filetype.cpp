@@ -4,20 +4,20 @@ namespace nickel {
 
 std::unordered_map<std::string, FileType> gFileTypeMap = {
   // image
-    {  ".png",     FileType::Image},
-    {  ".bmp",     FileType::Image},
-    {  ".jpg",     FileType::Image},
+    {      ".png",     FileType::Image},
+    {      ".bmp",     FileType::Image},
+    {      ".jpg",     FileType::Image},
  // font
-    {  ".ttf",      FileType::Font},
+    {      ".ttf",      FileType::Font},
  // audio
-    {  ".wav",     FileType::Audio},
-    {  ".ogg",     FileType::Audio},
-    {  ".mp3",     FileType::Audio},
-    { ".flac",     FileType::Audio},
+    {      ".wav",     FileType::Audio},
+    {      ".ogg",     FileType::Audio},
+    {      ".mp3",     FileType::Audio},
+    {     ".flac",     FileType::Audio},
  // misc
-    {".timer",     FileType::Timer},
-    { ".anim", FileType::Animation},
-    {   ".ts", FileType::Tilesheet},
+    {    ".timer",     FileType::Timer},
+    {     ".anim", FileType::Animation},
+    {".tilesheet", FileType::Tilesheet},
 };
 
 FileType DetectFileType(const std::filesystem::path& path) {
@@ -26,6 +26,38 @@ FileType DetectFileType(const std::filesystem::path& path) {
         return it->second;
     }
     return FileType::Unknown;
+}
+
+std::string_view GetMetaFileExtension(FileType filetype) {
+    switch (filetype) {
+        case FileType::Tilesheet:
+            return ".tilesheet";
+        case FileType::Animation:
+            return ".anim";
+        case FileType::Timer:
+            return ".timer";
+        case FileType::Image:
+        case FileType::Font:
+        case FileType::Audio:
+        case FileType::Unknown:
+        case FileType::FileTypeCount:
+            return ".meta";
+    }
+}
+
+bool HasMetaFile(FileType filetype) {
+    switch (filetype) {
+        case FileType::Tilesheet:
+        case FileType::Animation:
+        case FileType::Timer:
+         return false;
+        case FileType::Image:
+        case FileType::Font:
+        case FileType::Audio:
+        case FileType::Unknown:
+        case FileType::FileTypeCount:
+         return true;
+    }
 }
 
 }  // namespace nickel

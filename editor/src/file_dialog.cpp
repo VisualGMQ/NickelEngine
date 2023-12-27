@@ -9,13 +9,25 @@ project chaos!
 #ifdef _WIN32
 #include <shlobj.h>
 #include <windows.h>
+#include <commdlg.h>
 
 #endif
 
-std::vector<std::filesystem::path> OpenFileDialog(const std::string& title) {
+std::string concatExtensions(const std::vector<std::string>& extensions) {
+    std::string extension;
+    for (auto& ext : extensions) {
+        extension += ext + ";";
+    }
+    extension.pop_back();
+    return extension;
+}
+
+std::vector<std::filesystem::path> OpenFileDialog(
+    const std::string& title, const std::vector<std::string>& extensions) {
 #ifdef _WIN32
     OPENFILENAME ofn;
     char szFile[MAX_PATH] = {0};
+    auto extension = concatExtensions(extensions);
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
@@ -25,6 +37,7 @@ std::vector<std::filesystem::path> OpenFileDialog(const std::string& title) {
     ofn.lpstrInitialDir = NULL;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR |
                 OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_ENABLESIZING;
+    ofn.lpstrFilter = extension.c_str();
     ofn.lpstrTitle = title.c_str();
 
     if (GetOpenFileName(&ofn) == TRUE) {
@@ -55,6 +68,35 @@ std::filesystem::path OpenDirDialog(const std::string& title) {
     }
 
     return result;
+#else
+    return {};
+#endif
+}
+
+std::filesystem::path SaveFileDialog(
+    const std::string& title, const std::vector<std::string>& extensions) {
+#ifdef _WIN32
+    OPENFILENAME ofn;
+
+    auto extension = concatExtensions(extensions);
+
+    char szFile[MAX_PATH] = {0};
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags =
+        OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER | OFN_ENABLESIZING;
+    ofn.lpstrFilter = extension.c_str();
+    ofn.lpstrTitle = title.c_str();
+
+    if (GetSaveFileName(&ofn) == TRUE) {
+        return {std::filesystem::path{szFile}};
+    } else {
+        return {};
+    }
 #else
     return {};
 #endif

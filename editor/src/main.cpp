@@ -44,7 +44,7 @@ void ProjectManagerUpdate(
 
         ImGui::SameLine(0.0f, 20.0f);
         if (ImGui::Button("Open Project", ImVec2(200, 200))) {
-            auto files = OpenFileDialog("Open Project");
+            auto files = OpenFileDialog("Open Project", {".toml"});
             if (!files.empty()) {
                 editorCtx->projectInfo.projectPath =
                     std::filesystem::path{files[0]}.parent_path().string();

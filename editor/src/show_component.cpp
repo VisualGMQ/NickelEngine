@@ -1,8 +1,9 @@
 #include "show_component.hpp"
-#include "core/assert.hpp"
 #include "asset_list_window.hpp"
-#include "image_view_canva.hpp"
 #include "context.hpp"
+#include "core/assert.hpp"
+#include "image_view_canva.hpp"
+
 
 using namespace nickel;
 
@@ -51,7 +52,7 @@ void ComponentShowMethods::DefaultMethods::ShowClass(
                 showMethod(varType, var->name(), ref, reg, var->attributes());
             }
             ImGui::PopID();
-            id ++;
+            id++;
         }
 
         ImGui::TreePop();
@@ -103,9 +104,11 @@ void ComponentShowMethods::DefaultMethods::ShowString(
     }
 }
 
-void ComponentShowMethods::DefaultMethods::ShowEnum(
-    type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry, const std::vector<int>&) {
+void ComponentShowMethods::DefaultMethods::ShowEnum(type_info type,
+                                                    std::string_view name,
+                                                    ::mirrow::drefl::any& value,
+                                                    gecs::registry,
+                                                    const std::vector<int>&) {
     Assert(type->is_enum(), "type incorrect");
 
     auto enum_info = type->as_enum();
@@ -193,21 +196,38 @@ void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
 }
 
 template <typename MgrType>
-void SelectAndChangeAsset(EditorContext& ctx,
-    MgrType& mgr, std::string_view buttonText, typename MgrType::AssetHandle& handle) {
+void SelectAndChangeAsset(EditorContext& ctx, MgrType& mgr,
+                          std::string_view buttonText,
+                          typename MgrType::AssetHandle& handle) {
     using AssetType = typename MgrType::AssetType;
     if (ImGui::Button(buttonText.data())) {
         if constexpr (std::is_same_v<AssetType, Texture>) {
             ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback([&](TextureHandle h){
-                handle = h;
-            });
+            ctx.textureAssetListWindow.SetSelectCallback(
+                [&](TextureHandle h) { handle = h; });
         } else if constexpr (std::is_same_v<AssetType, Font>) {
             ctx.fontAssetListWindow.Show();
-            ctx.fontAssetListWindow.SetSelectCallback([&](FontHandle h){
-                handle = h;
-            });
+            ctx.fontAssetListWindow.SetSelectCallback(
+                [&](FontHandle h) { handle = h; });
         }
+    }
+}
+
+template <>
+void SelectAndChangeAsset<TextureManager>(EditorContext& ctx,
+                                          TextureManager& mgr,
+                                          std::string_view buttonText,
+                                          TextureHandle& handle) {
+    const char* items[] = {"set texture", "set tilesheet"};
+    if (ImGui::BeginCombo("operation", nullptr, ImGuiComboFlags_NoPreview)) {
+        if (ImGui::Selectable("from texture")) {
+            ctx.textureAssetListWindow.Show();
+            ctx.textureAssetListWindow.SetSelectCallback(
+                [&](TextureHandle h) { handle = h; });
+        }
+        if (ImGui::Selectable("from tilesheet")) {
+        }
+        ImGui::EndCombo();
     }
 }
 
@@ -219,7 +239,7 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
         "type incorrect");
 
     auto& handle = *mirrow::drefl::try_cast<TextureHandle>(value);
-    auto mgr = reg.res<AssetManager>();
+    auto mgr = reg.res_mut<AssetManager>();
     char buf[1024] = {0};
     if (mgr->Has(handle)) {
         auto& texture = mgr->Get(handle);
@@ -229,10 +249,49 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
         snprintf(buf, sizeof(buf), "no texture");
     }
 
-    static std::string title = "asset texture";
-    SelectAndChangeAsset(reg.res_mut<EditorContext>().get(),
-                         reg.res_mut<AssetManager>()->TextureMgr(), buf,
-                         handle);
+    const char* items[] = {"set texture", "set tilesheet"};
+    if (ImGui::BeginCombo("operation", nullptr, ImGuiComboFlags_NoPreview)) {
+        auto& ctx = reg.res_mut<EditorContext>().get();
+        if (ImGui::Selectable("load texture")) {
+            ctx.textureAssetListWindow.Show();
+            ctx.textureAssetListWindow.SetSelectCallback(
+                [&](TextureHandle h) { handle = h; });
+        }
+        if (ImGui::Selectable("load tilesheet")) {
+            ctx.tilesheetAssetListWindow.Show();
+            ctx.tilesheetAssetListWindow.SetSelectCallback(
+                [&](TilesheetHandle h) {
+                    ctx.tilesheetEditor.Show();
+                    ctx.tilesheetEditor.ChangeTilesheet(h);
+                    ctx.tilesheetEditor.SetSelectCallback([](nickel::Tile tile){
+                        // TODO: not finish
+                    });
+                });
+        }
+        if (ImGui::Selectable("create tilesheet")) {
+            ctx.textureAssetListWindow.Show();
+            ctx.textureAssetListWindow.SetSelectCallback(
+                [&](TextureHandle h) {
+                    auto filename = SaveFileDialog("create new tilesheet", {".tilesheet"});
+                    if (!filename.empty()) {
+                        filename =
+                            filename.extension() != ".tilesheet"
+                                ? filename.replace_extension(".tilesheet")
+                                : filename;
+                        ctx.tilesheetEditor.Show();
+                        auto& tilesheetMgr = mgr->TilesheetMgr();
+                        auto handle = tilesheetMgr.Create(h, 1, 1);
+                        tilesheetMgr.AssociateFile(handle, filename);
+                        ctx.tilesheetEditor.ChangeTilesheet(handle);
+                        ctx.tilesheetEditor.SetSelectCallback([](nickel::Tile tile){
+                            // TODO: not finish
+                        });
+                    }
+                });
+            // TODO: not finish
+        }
+        ImGui::EndCombo();
+    }
 
     float size = ImGui::GetWindowContentRegionMax().x -
                  (ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x);
@@ -265,8 +324,7 @@ void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
 
     static std::string title = "asset font";
     SelectAndChangeAsset(reg.res_mut<EditorContext>().get(),
-                         reg.res_mut<AssetManager>()->FontMgr(), buf,
-                         handle);
+                         reg.res_mut<AssetManager>()->FontMgr(), buf, handle);
 }
 
 void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,

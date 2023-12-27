@@ -2,6 +2,7 @@
 
 #include "core/asset.hpp"
 #include "core/handle.hpp"
+#include "misc/filetype.hpp"
 
 namespace nickel {
 
@@ -97,18 +98,41 @@ public:
 
     auto& AllDatas() const { return datas_; }
 
-    toml::table Save2Toml(const std::filesystem::path& rootDir) const {
+    /**
+     * @brief save all assets metadata to file
+     */
+    void SaveAssets2File() const {
+        for (auto& [_, asset] : AllDatas()) {
+            asset->Save2File(
+                (GetRootPath() / attachMetafileExt(*asset)).string());
+        }
+    }
+
+    /**
+     * @brief save manager info to toml
+     */
+    toml::table Save2Toml(const std::filesystem::path& projRootDir) const {
         toml::table tbl;
 
-        auto relativePath = std::filesystem::relative(GetRootPath(), rootDir);
+        auto relativePath =
+            std::filesystem::relative(GetRootPath(), projRootDir);
         tbl.emplace("root_path", relativePath.string());
         toml::array arr;
         for (auto& [_, asset] : AllDatas()) {
-            arr.push_back(asset->Save2Toml());
+            arr.push_back(attachMetafileExt(*asset).string());
         }
         tbl.emplace("datas", arr);
 
         return tbl;
+    }
+
+    /**
+     * @brief save manager info into file
+     */
+    void Save2File(const std::filesystem::path& projRootDir,
+                   const std::filesystem::path& filename) const {
+        std::ofstream file(filename);
+        file << Save2Toml(projRootDir);
     }
 
     /**
@@ -120,13 +144,23 @@ public:
             SetRootPath(configDir / root.as_string()->get());
         }
 
-        if (auto datas = tbl["datas"]; datas.is_array()) {
-            for (auto& node : *datas.as_array()) {
-                if (!node.is_table()) {
+        if (auto dataPaths = tbl["datas"]; dataPaths.is_array()) {
+            for (auto& node : *dataPaths.as_array()) {
+                if (!node.is_string()) {
                     continue;
                 }
 
-                auto& elemTbl = *node.as_table();
+                auto& dataPath = node.as_string()->get();
+
+                auto parse =
+                    toml::parse_file((GetRootPath() / dataPath).string());
+                if (!parse) {
+                    LOGW(log_tag::Asset, "load asset from", dataPath,
+                         " failed!");
+                    return;
+                }
+
+                auto& elemTbl = parse.table();
 
                 if (auto asset = LoadAssetFromToml<T>(elemTbl, GetRootPath());
                     asset && *asset) {
@@ -141,12 +175,8 @@ public:
      */
     void LoadFromToml(const toml::table& tbl) { LoadFromTomlWithPath(tbl, ""); }
 
-    void Save2TomlFile(const std::filesystem::path& path) const {
-        std::ofstream file(path);
-        file << Save2Toml();
-    }
-
-    void AssociateFile(AssetHandle handle, const std::filesystem::path& filename) {
+    void AssociateFile(AssetHandle handle,
+                       const std::filesystem::path& filename) {
         if (Has(handle)) {
             auto& elem = Get(handle);
             pathHandleMap_.erase(elem.RelativePath());
@@ -167,6 +197,16 @@ protected:
         return path.is_relative()
                    ? path
                    : std::filesystem::relative(path, GetRootPath());
+    }
+
+    std::filesystem::path attachMetafileExt(const T& asset) const {
+        auto filetype = DetectFileType<T>();
+        std::filesystem::path relativePath = asset.RelativePath();
+        if (HasMetaFile(filetype) &&
+            relativePath.extension() != GetMetaFileExtension(filetype)) {
+            relativePath += GetMetaFileExtension(filetype);
+        }
+        return relativePath;
     }
 
     std::filesystem::path addRootPath(const std::filesystem::path& path) const {

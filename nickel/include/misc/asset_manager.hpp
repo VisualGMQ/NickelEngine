@@ -34,6 +34,11 @@ class AssetManager final {
 public:
     AssetManager() = default;
 
+    AssetManager(const AssetManager&) = delete;
+    AssetManager(AssetManager&&) = delete;
+    AssetManager& operator=(const AssetManager&) = default;
+    AssetManager& operator=(AssetManager&&) = default;
+
     AssetManager(const std::filesystem::path& rootPath) {
         SetRootPath(rootPath);
     }
@@ -184,6 +189,15 @@ public:
                        const std::filesystem::path& filename) const {
         std::ofstream file(filename);
         file << Save2Toml(rootDir);
+    }
+
+    void SaveAssets2File() const {
+        TextureMgr().SaveAssets2File();
+        FontMgr().SaveAssets2File();
+        AnimationMgr().SaveAssets2File();
+        TilesheetMgr().SaveAssets2File();
+        TimerMgr().SaveAssets2File();
+        AudioMgr().SaveAssets2File();
     }
 
     toml::table Save2Toml(const std::filesystem::path& rootDir) const {

@@ -9,6 +9,7 @@
 #include "inspector.hpp"
 #include "asset_list_window.hpp"
 #include "game_window.hpp"
+#include "tilesheet_editor.hpp"
 
 struct EditorContext {
     // normal windows
@@ -20,8 +21,10 @@ struct EditorContext {
     // popup windows
     TextureAssetListWindow textureAssetListWindow;
     FontAssetListWindow fontAssetListWindow;
+    TilesheetAssetListWindow tilesheetAssetListWindow;
     TexturePropertyPopupWindow texturePropWindow;
     SoundPropertyPopupWindow soundPropWindow;
+    TilesheetEditor tilesheetEditor;
 
     bool openGameWindow = true;
     bool openDemoWindow = false;

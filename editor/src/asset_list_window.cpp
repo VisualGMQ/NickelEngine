@@ -2,60 +2,28 @@
 #include "content_browser.hpp"
 #include "context.hpp"
 
-
 template <>
-bool ShowAsset<nickel::Texture>(
-    PopupWindow& window,
-    nickel::TextureHandle handle,
-    const nickel::Texture& texture, int id) {
-    bool result = false;
-    ImGui::BeginGroup();
-    {
-        ImGui::PushID(id * 2);
-        ImGui::PushID(id * 2 + 1);
-
-        if (ImGui::ImageButton(texture.Raw(), ImVec2{32, 32})) {
-            window.Hide();
-            ImGui::CloseCurrentPopup();
-            result = true;
-        }
-        ImGui::Text("%s", texture.RelativePath().string().c_str());
-
-        ImGui::PopID();
-        ImGui::PopID();
+void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
+                                const nickel::Texture& texture) {
+    if (ImGui::BeginTooltip()) {
+        ImGui::Image(texture.Raw(), {texture.Size().w, texture.Size().h});
+        ImGui::EndTooltip();
     }
-    ImGui::EndGroup();
-    return result;
 }
 
 template <>
-bool ShowAsset<nickel::Font>(
-    PopupWindow& window,
-    nickel::FontHandle handle,
-    const nickel::Font& texture, int id) {
-    auto& cbWindow =
-        gWorld->res<gecs::mut<EditorContext>>()->contentBrowserWindow;
-    bool result = false;
-    ImGui::BeginGroup();
-    {
-        ImGui::PushID(id * 2);
-        ImGui::PushID(id * 2 + 1);
+void ShowAsset<nickel::Font>(nickel::FontHandle handle,
+                             const nickel::Font& texture) {}
 
-        if (ImGui::ImageButton(
-                cbWindow
-                    .FindTextureOrGen(
-                        texture.RelativePath().extension().string())
-                    .Raw(),
-                ImVec2{32, 32})) {
-            window.Hide();
-            ImGui::CloseCurrentPopup();
-            result = true;
+template <>
+void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
+                                  const nickel::Tilesheet& tilesheet) {
+    auto& mgr = gWorld->res<nickel::AssetManager>().get();
+    if (ImGui::BeginTooltip()) {
+        if (mgr.Has(tilesheet.Handle())) {
+            auto& texture = mgr.Get(tilesheet.Handle());
+            ImGui::Image(texture.Raw(), {texture.Size().w, texture.Size().h});
         }
-        ImGui::Text("%s", texture.RelativePath().string().c_str());
-
-        ImGui::PopID();
-        ImGui::PopID();
+        ImGui::EndTooltip();
     }
-    ImGui::EndGroup();
-    return result;
 }
