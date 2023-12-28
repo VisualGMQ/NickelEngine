@@ -18,7 +18,8 @@ public:
 
     static Font Null;
 
-    Font(const std::filesystem::path& root, const std::filesystem::path& filename);
+    Font(const toml::table&);
+    explicit Font(const std::filesystem::path& filename);
     Font() = default;
 
     ~Font();
@@ -42,8 +43,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Font> LoadAssetFromToml(const toml::table&,
-                                        const std::filesystem::path&);
+std::unique_ptr<Font> LoadAssetFromToml(const toml::table&);
 
 class FontManager final : public Manager<Font> {
 public:

@@ -41,8 +41,7 @@ void TexturePropertyPopupWindow::update() {
     auto& reg = *gWorld->cur_registry();
     auto& textureMgr = gWorld->res_mut<nickel::AssetManager>()->TextureMgr();
 
-    if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_,
-                               ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_)) {
         if (!textureMgr.Has(handle_)) {
             ImGui::Text("invalid texture handle");
             if (ImGui::Button("close")) {

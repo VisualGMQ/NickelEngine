@@ -15,6 +15,9 @@ public:
     void ChangeTilesheet(nickel::Tilesheet& tilesheet) {
         tilesheet_ = &tilesheet;
         ChangeTexture(tilesheet.Handle());
+        Resize(gWorld->res<nickel::AssetManager>()
+                   ->Get(tilesheet.Handle())
+                   .Size());
     }
 
     void SetSelectCallback(SelectCallbackFn fn) { fn_ = fn; }

@@ -56,7 +56,6 @@ ProjectInitInfo CreateNewProject(const std::filesystem::path& dir,
     initInfo.projectPath = dir;
     initInfo.windowData.title = "new project";
     initInfo.windowData.size.Set(720, 680);
-    assetMgr.SetRootPath(GenAssetsDefaultStoreDir(dir));
     SaveProjectByConfig(initInfo, assetMgr);
 
     LOGI(log_tag::Nickel, "Create new project to ", dir);

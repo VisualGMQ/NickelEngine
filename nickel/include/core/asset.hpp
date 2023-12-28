@@ -46,8 +46,7 @@ private:
 };
 
 template <typename T>
-std::unique_ptr<T> LoadAssetFromToml(const toml::table&,
-                                     const std::filesystem::path& = "");
+std::unique_ptr<T> LoadAssetFromToml(const toml::table&);
 
 template <typename T>
 std::unique_ptr<T> LoadAssetFromFile(const std::filesystem::path& path) {

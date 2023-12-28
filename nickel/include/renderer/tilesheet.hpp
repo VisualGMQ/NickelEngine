@@ -28,9 +28,9 @@ public:
     Tilesheet(const TextureManager&, TextureHandle, uint32_t col, uint32_t row,
               const Margin& margin = Margin::Zero(),
               const Spacing& spacing = {0, 0});
-    Tilesheet(const std::filesystem::path& root, const std::filesystem::path& relativePath);
 
     explicit Tilesheet(const toml::table& tbl);
+    explicit Tilesheet(const std::filesystem::path& configFilename);
 
     Tilesheet(const Tilesheet&) = delete;
     Tilesheet(Tilesheet&&) = default;
@@ -108,8 +108,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table&,
-                                             const std::filesystem::path&);
+std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table&);
 
 class TilesheetManager final : public Manager<Tilesheet> {
 public:

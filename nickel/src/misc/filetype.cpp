@@ -60,4 +60,13 @@ bool HasMetaFile(FileType filetype) {
     }
 }
 
+std::filesystem::path StripMetaExtension(const std::filesystem::path& filename) {
+    if (filename.extension() == ".meta") {
+        auto newFilename = filename;
+        newFilename.replace_extension("");
+        return newFilename;
+    }
+    return filename;
+}
+
 }  // namespace nickel

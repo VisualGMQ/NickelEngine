@@ -22,11 +22,31 @@ void FontSystemShutdown() {
 
 Font Font::Null;
 
+Font::Font(const toml::table& tbl) {
+    if (auto node = tbl.get("path"); node && node->is_string()) {
+        *this = Font{node->as_string()->get()};
+    }
+}
+
+Font::Font(const std::filesystem::path& filename) : Asset(filename) {
+    if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &face_);
+        err) {
+        LOGE(log_tag::Asset, "load font ", filename,
+             " failed! error code: ", FT_Error_String(err));
+        err = FT_Select_Charmap(face_, FT_ENCODING_UNICODE);
+        if (err || !face_->charmap ||
+            face_->charmap->encoding != FT_ENCODING_UNICODE) {
+            LOGE(log_tag::Asset, "font ", filename,
+                 " don't support unicode charset! please change a font! ",
+                 FT_Error_String(err));
+        }
+    }
+}
+
 template <>
-std::unique_ptr<Font> LoadAssetFromToml(const toml::table& tbl,
-                                        const std::filesystem::path& root) {
+std::unique_ptr<Font> LoadAssetFromToml(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Font>(root, path->as_string()->get());
+        return std::make_unique<Font>(path->as_string()->get());
     }
     return nullptr;
 }
@@ -46,24 +66,6 @@ Character::Character(const FT_GlyphSlot& g)
         bitmap.buffer, bitmap.width, bitmap.rows, sampler, gogl::Format::Red,
         gogl::Format::Red);
     GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
-}
-
-Font::Font(const std::filesystem::path& root,
-           const std::filesystem::path& filename)
-    : Asset(filename) {
-    if (auto err =
-            FT_New_Face(gFtLib, (root / filename).string().c_str(), 0, &face_);
-        err) {
-        LOGE(log_tag::Asset, "load font ", filename,
-             " failed! error code: ", FT_Error_String(err));
-        err = FT_Select_Charmap(face_, FT_ENCODING_UNICODE);
-        if (err || !face_->charmap ||
-            face_->charmap->encoding != FT_ENCODING_UNICODE) {
-            LOGE(log_tag::Asset, "font ", filename,
-                 " don't support unicode charset! please change a font! ",
-                 FT_Error_String(err));
-        }
-    }
 }
 
 FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
@@ -94,15 +96,12 @@ Font::~Font() {
 }
 
 FontHandle FontManager::Load(const std::filesystem::path& filename) {
-    auto relativePath = filename.is_relative() ? filename
-                                               : std::filesystem::relative(
-                                                     filename, GetRootPath());
-    if (Has(relativePath)) {
-        return GetHandle(relativePath);
+    if (Has(filename)) {
+        return GetHandle(filename);
     }
 
     auto handle = FontHandle::Create();
-    auto font = std::unique_ptr<Font>(new Font{GetRootPath(), relativePath});
+    auto font = std::make_unique<Font>(filename);
     if (font && *font) {
         storeNewItem(handle, std::move(font));
         return handle;

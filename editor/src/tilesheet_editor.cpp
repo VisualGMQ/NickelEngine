@@ -13,15 +13,22 @@ void TilesheetViewCanva::additionalDraw(ImDrawList* drawList,
     drawList->AddRect({p1.x, p1.y}, {p2.x, p2.y},
                       ImGui::GetColorU32({1, 1, 0, 1}), 1.0f);
 
+    nickel::cgmath::Rect canvaRect{canvaMin, GetSize()};
+
     for (int i = 0; i < tilesheet_->Col() * tilesheet_->Row(); i++) {
         auto tile = tilesheet_->Get(i);
-        auto p1 = transformPt(tile.region.position, -halfSize) + canvaMin;
-        auto p2 =
+        auto tileP1 = transformPt(tile.region.position, -halfSize) + canvaMin;
+        auto tileP2 =
             transformPt(tile.region.size + tile.region.position, -halfSize) +
             canvaMin;
-        auto mousePos = ImGui::GetMousePos();
-        auto mouseRelPos = nickel::cgmath::Vec2{mousePos.x, mousePos.y};
-        if (nickel::cgmath::Rect{p1, p2 - p1}.IsPtIn(mouseRelPos)) {
+        auto mousePos = nickel::cgmath::Vec2{ImGui::GetMousePos().x,
+                                             ImGui::GetMousePos().y};
+        nickel::cgmath::Rect tileRect{tileP1, tileP2 - tileP1};
+        if (!canvaRect.IsIntersect(tileRect)) {
+            continue;
+        }
+        auto intersectRect = canvaRect.Intersect(tileRect);
+        if (intersectRect.IsPtIn(mousePos)) {
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (fn_) {
                     fn_(tile);
@@ -29,10 +36,10 @@ void TilesheetViewCanva::additionalDraw(ImDrawList* drawList,
                 owner_->Hide();
                 ImGui::CloseCurrentPopup();
             }
-            drawList->AddRectFilled({p1.x, p1.y}, {p2.x, p2.y},
+            drawList->AddRectFilled({tileP1.x, tileP1.y}, {tileP2.x, tileP2.y},
                                     ImGui::GetColorU32({1, 1, 0, 0.3}), 1.0f);
         } else {
-            drawList->AddRect({p1.x, p1.y}, {p2.x, p2.y},
+            drawList->AddRect({tileP1.x, tileP1.y}, {tileP2.x, tileP2.y},
                               ImGui::GetColorU32({1, 1, 0, 1}), 1.0f);
         }
     }
@@ -102,9 +109,9 @@ void TilesheetEditor::update() {
         }
         ImGui::EndColumns();
 
-        auto newTilesheet = nickel::Tilesheet(assetMgr.TextureMgr(), tilesheet.Handle(),
-                                      accessor.Col(), accessor.Row(),
-                                      accessor.Margin(), accessor.Spacing());
+        auto newTilesheet = nickel::Tilesheet(
+            assetMgr.TextureMgr(), tilesheet.Handle(), accessor.Col(),
+            accessor.Row(), accessor.Margin(), accessor.Spacing());
         newTilesheet.AssociateFile(tilesheet.RelativePath());
         tilesheet = std::move(newTilesheet);
         auto canvasSize = ImGui::GetContentRegionAvail();

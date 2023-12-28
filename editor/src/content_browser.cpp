@@ -4,13 +4,12 @@
 
 ContentBrowserWindow::ContentBrowserWindow() {
     auto iconSize = nickel::cgmath::Vec2{IconSize, IconSize};
-    textureMgr_.SetRootPath("./editor/resources");
     initExtensionIconMap();
     dirIconHandle_ = textureMgr_.LoadSVG(
-        "icons/folder-windows.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
+        "editor/resources/icons/folder-windows.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
         iconSize);
     unknownFileIconHandle_ = textureMgr_.LoadSVG(
-        "icons/assembly.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
+        "editor/resources/icons/assembly.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
         iconSize);
 }
 
@@ -100,6 +99,7 @@ void ContentBrowserWindow::showAssetOperationPopupMenu(
     nickel::FileType filetype, bool hasImported,
     const std::filesystem::directory_entry& entry,
     nickel::AssetManager& assetMgr) {
+    auto ctx = gWorld->res<EditorContext>();
     if (filetype != nickel::FileType::Unknown) {
         if (ImGui::BeginPopupContextItem(entry.path().string().c_str())) {
             if (!hasImported) {

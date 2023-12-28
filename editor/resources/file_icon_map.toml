@@ -1,4 +1,4 @@
-'icons/font.svg' = ['.ttf']
-'icons/image.svg' = ['.png', '.bmp', '.jpg', '.gif']
-'icons/document.svg' = ['.txt']
-'icons/audio.svg' = ['.wav', '.mp3', '.ogg', '.flac']
+'editor/resources/icons/font.svg' = ['.ttf']
+'editor/resources/icons/image.svg' = ['.png', '.bmp', '.jpg', '.gif']
+'editor/resources/icons/document.svg' = ['.txt']
+'editor/resources/icons/audio.svg' = ['.wav', '.mp3', '.ogg', '.flac']

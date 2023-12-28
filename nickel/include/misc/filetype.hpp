@@ -47,5 +47,6 @@ FileType DetectFileType() {
 
 std::string_view GetMetaFileExtension(FileType);
 bool HasMetaFile(FileType);
+std::filesystem::path StripMetaExtension(const std::filesystem::path&);
 
 }  // namespace nickel

@@ -48,71 +48,49 @@ void RegistFileChangeEventHandler(
     dispatcher.sink().add<FileChangeEventHandler>();
 }
 
-void handleAssetChange(nickel::TextureManager& mgr,
-                       const FileChangeEvent& event) {
-    auto filetype = nickel::DetectFileType(event.filename);
-    if (filetype == nickel::FileType::Unknown) {
-        return;
-    }
-
-    auto absolutePath = event.dir / event.filename;
-    if (event.action == FileChangeEvent::Action::Add) {
-        mgr.Load(absolutePath, nickel::gogl::Sampler::CreateLinearRepeat());
-    } else if (event.action == FileChangeEvent::Action::Delete) {
-        mgr.Destroy(absolutePath);
-    } else if (event.action == FileChangeEvent::Action::Moved) {
-        if (std::filesystem::relative(absolutePath, mgr.GetRootPath())
-                .empty()) {
-            mgr.Destroy(event.dir / event.oldFilename);
-        } else {
-            if (mgr.Has(event.oldFilename)) {
-                auto& texture = mgr.Get(event.oldFilename);
-                // TODO: change file path
-            }
-        }
-    }
-}
-
 void FileChangeEventHandler(
-    const FileChangeEvent& event,
+    const FileChangeEvent& event, gecs::resource<EditorContext> editorCtx,
     gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
     gecs::resource<gecs::mut<EditorContext>> ctx) {
     auto absolutePath = event.dir / event.filename;
+    // auto relativePath = std::filesystem::relative(
+    //     absolutePath, editorCtx->projectInfo.projectPath);
+    auto path = absolutePath;
 
-    if (std::filesystem::exists(absolutePath) &&
-        std::filesystem::is_directory(absolutePath)) {
+    if (std::filesystem::exists(path) &&
+        std::filesystem::is_directory(path)) {
         return;
     }
 
     if (event.action == FileChangeEvent::Action::Add) {
-        assetMgr->Load(absolutePath);
+        assetMgr->Load(path);
     }
 
     if (event.action == FileChangeEvent::Action::Delete) {
-        assetMgr->Destroy(absolutePath);
+        assetMgr->Destroy(path);
     }
 
     if (event.action == FileChangeEvent::Action::Moved) {
-        auto filetype = nickel::DetectFileType(absolutePath);
+        auto filetype = nickel::DetectFileType(path);
         auto oldPath = event.dir / event.oldFilename;
         nickel::VisitTuple(assetMgr->Managers(),
-                           [=, &oldPath, &absolutePath](auto&& mgr) {
+                           [=, &oldPath, &path](auto&& mgr) {
                                if (mgr.GetFileType() == filetype) {
                                    if (mgr.Has(oldPath)) {
                                        auto handle = mgr.GetHandle(oldPath);
-                                       mgr.AssociateFile(handle, absolutePath);
+                                       mgr.AssociateFile(handle, path);
                                    }
                                }
                            });
     }
 
     if (event.action == FileChangeEvent::Action::Modified) {
-        auto filetype = nickel::DetectFileType(absolutePath);
+        auto filetype = nickel::DetectFileType(path);
         nickel::VisitTuple(
-            assetMgr->Managers(), [=, &absolutePath](auto&& mgr) {
+            assetMgr->Managers(), [=, &path](auto&& mgr) {
                 if (mgr.GetFileType() == filetype) {
-                    if (auto handle = mgr.GetHandle(absolutePath); handle) {
-                        mgr.Reload(handle, absolutePath);
+                    if (auto handle = mgr.GetHandle(path); handle) {
+                        mgr.Reload(handle, path);
                     }
                 }
             });

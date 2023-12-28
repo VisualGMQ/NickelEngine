@@ -1,11 +1,12 @@
 #pragma once
 
+#include "core/asset.hpp"
 #include "core/cgmath.hpp"
 #include "core/gogl.hpp"
 #include "core/handle.hpp"
 #include "core/manager.hpp"
-#include "core/asset.hpp"
 #include "misc/filetype.hpp"
+
 
 /**
  * @addtogroup resource-manager
@@ -27,11 +28,11 @@ public:
 
     static Texture Null;
 
-    Texture(const std::filesystem::path& root,
-            const std::filesystem::path& filename,
-            const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat(),
-            gogl::Format fmt = gogl::Format::RGBA,
-            gogl::Format gpuFmt = gogl::Format::RGBA);
+    explicit Texture(const toml::table& tbl);
+    explicit Texture(const std::filesystem::path& filename,
+                     const gogl::Sampler&,
+                     gogl::Format fmt = gogl::Format::RGBA,
+                     gogl::Format gpuFmt = gogl::Format::RGBA);
     Texture(void*, int w, int h, const gogl::Sampler& sampler,
             gogl::Format fmt = gogl::Format::RGBA,
             gogl::Format gpuFmt = gogl::Format::RGBA);
@@ -69,8 +70,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Texture> LoadAssetFromToml(const toml::table&,
-                                           const std::filesystem::path& root);
+std::unique_ptr<Texture> LoadAssetFromToml(const toml::table&);
 
 class TextureManager final : public Manager<Texture> {
 public:

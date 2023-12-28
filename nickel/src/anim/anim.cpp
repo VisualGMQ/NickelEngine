@@ -47,36 +47,33 @@ bool AnimationTrack::changeApplyTarget(const mirrow::drefl::type* typeInfo) {
 }
 */
 
-Animation::Animation(const std::filesystem::path& root,
-                     const std::filesystem::path& filename)
-    : Asset(filename) {
-    do {
-        auto path = root / filename;
-        auto result = toml::parse_file(path.string());
-        if (!result) {
-            LOGW(log_tag::Asset, "load animation from ", path,
-                 " failed: ", result.error());
-            break;
-        }
+Animation::Animation(const toml::table& tbl) {
+    if (auto node = tbl.get("tracks"); node && node->is_array_of_tables()) {
+        auto& arr = *node->as_array();
 
-        auto& tbl = result.table();
-        if (auto node = tbl.get("tracks"); node && node->is_array_of_tables()) {
-            auto& arr = *node->as_array();
+        for (auto& elem : arr) {
+            auto& elemTbl = *elem.as_table();
 
-            for (auto& elem : arr) {
-                auto& elemTbl = *elem.as_table();
-
-                if (auto valueNode = elemTbl.get("value_type");
-                    valueNode->is_string()) {
-                    auto f = AnimTrackLoadMethods::Instance().Find(
-                        mirrow::drefl::typeinfo(valueNode->as_string()->get()));
-                    if (f) {
-                        tracks_.emplace_back(f(elemTbl));
-                    }
+            if (auto valueNode = elemTbl.get("value_type");
+                valueNode->is_string()) {
+                auto f = AnimTrackLoadMethods::Instance().Find(
+                    mirrow::drefl::typeinfo(valueNode->as_string()->get()));
+                if (f) {
+                    tracks_.emplace_back(f(elemTbl));
                 }
             }
         }
-    } while (0);
+    }
+}
+
+Animation::Animation(const std::filesystem::path& filename) : Asset(filename) {
+    auto result = toml::parse_file(filename.string());
+    if (!result) {
+        LOGW(log_tag::Asset, "load animation from ", filename,
+             " failed: ", result.error());
+    } else {
+        *this = Animation(result.table());
+    }
 }
 
 void Animation::Save(const std::filesystem::path& path) const {
@@ -94,10 +91,9 @@ void Animation::Save(const std::filesystem::path& path) const {
 }
 
 template <>
-std::unique_ptr<Animation> LoadAssetFromToml(
-    const toml::table& tbl, const std::filesystem::path& root) {
+std::unique_ptr<Animation> LoadAssetFromToml(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Animation>(root, path->as_string()->get());
+        return std::make_unique<Animation>(path->as_string()->get());
     }
     return nullptr;
 }
@@ -108,29 +104,26 @@ std::shared_ptr<Animation> AnimationManager::CreateSolitaryFromTracks(
 }
 
 AnimationHandle AnimationManager::Load(const std::filesystem::path& filename) {
-    auto relativePath = filename.is_relative() ? filename
-                                               : std::filesystem::relative(
-                                                     filename, GetRootPath());
-    if (Has(relativePath)) {
-        return GetHandle(relativePath);
+    if (Has(filename)) {
+        return GetHandle(filename);
     }
 
     AnimationHandle handle = AnimationHandle::Create();
-    auto anim = std::make_unique<Animation>(GetRootPath(), relativePath);
+    auto anim = std::make_unique<Animation>(filename);
     if (anim && *anim) {
         storeNewItem(handle, std::move(anim));
         return handle;
     } else {
         return AnimationHandle::Null();
     }
-
 }
 
 bool AnimTrackLoadMethods::Contain(type_info_type type) {
     return methods_.count(type) != 0;
 }
 
-AnimTrackLoadMethods::deserialize_fn_type AnimTrackLoadMethods::Find(type_info_type type) {
+AnimTrackLoadMethods::deserialize_fn_type AnimTrackLoadMethods::Find(
+    type_info_type type) {
     if (auto it = methods_.find(type); it != methods_.end()) {
         return it->second;
     }

@@ -86,7 +86,8 @@ public:
     Timer(TimerID id, TimeType time, int loop = 0)
         : id_(id), dstTime_(time), loop_(loop), shouldSendEvent(true) {}
 
-    Timer(const std::filesystem::path& root, const std::filesystem::path& path);
+    explicit Timer(const toml::table&);
+    explicit Timer(const std::filesystem::path&);
 
     Timer(const Timer&) = delete;
     Timer& operator=(const Timer&) = delete;
@@ -152,8 +153,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Timer> LoadAssetFromToml(const toml::table& tbl,
-                                         const std::filesystem::path& root);
+std::unique_ptr<Timer> LoadAssetFromToml(const toml::table& tbl);
 
 class TimerManager : public Manager<Timer> {
 public:

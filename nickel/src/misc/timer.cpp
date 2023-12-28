@@ -10,20 +10,8 @@ Time::Time() : elapse_(1) {
 
 Timer Timer::Null;
 
-Timer::Timer(const std::filesystem::path& root,
-             const std::filesystem::path& filename)
-    : Asset(filename) {
-    auto path = root / filename;
-
+Timer::Timer(const toml::table& tbl) {
     do {
-        auto result = toml::parse_file(path.string());
-        if (!result) {
-            LOGW(log_tag::Asset, "load timer from ", path,
-                 " failed:", result.error());
-            break;
-        }
-
-        auto& tbl = result.table();
         if (auto node = tbl.get("id"); node && node->is_integer()) {
             id_ = node->as_integer()->get();
         } else {
@@ -42,6 +30,16 @@ Timer::Timer(const std::filesystem::path& root,
             break;
         }
     } while (0);
+}
+
+Timer::Timer(const std::filesystem::path& filename) : Asset(filename) {
+    auto parse = toml::parse_file(filename.string());
+    if (!parse) {
+        LOGW(log_tag::Asset, "load timer from ", filename,
+             " failed:", parse.error());
+    } else {
+        *this = Timer{parse.table()};
+    }
 }
 
 void Time::Update(gecs::resource<gecs::mut<Time>> t) {
@@ -67,10 +65,9 @@ void Timer::Save(const std::filesystem::path& path) {
 }
 
 template <>
-std::unique_ptr<Timer> LoadAssetFromToml(
-    const toml::table& tbl, const std::filesystem::path& root) {
+std::unique_ptr<Timer> LoadAssetFromToml(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Timer>(root, path->as_string()->get());
+        return std::make_unique<Timer>(path->as_string()->get());
     }
     return nullptr;
 }
@@ -84,8 +81,8 @@ TimerHandle TimerManager::Create(const std::filesystem::path& path, TimerID id,
     return handle;
 }
 
-TimerHandle TimerManager::Load(const std::filesystem::path& path) {
-    auto timer = std::make_unique<Timer>(GetRootPath(), path);
+TimerHandle TimerManager::Load(const std::filesystem::path& filename) {
+    auto timer = std::make_unique<Timer>(filename);
     if (timer && *timer) {
         auto handle = TimerHandle::Create();
         storeNewItem(handle, std::move(timer));

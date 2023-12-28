@@ -248,7 +248,6 @@ Vec<T, N> Normalize(const Vec<T, N>& v) {
     return v / Length(v);
 }
 
-
 template <typename T>
 cgmath::Vec<T, 2> PerpendicVec(const cgmath::Vec<T, 2>& v) {
     return {-v.y, v.x};
@@ -792,8 +791,10 @@ inline Mat22 CreateRotation2D(float radians) {
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
     return Mat22::FromRow({
-        cos, -sin,
-        sin, cos,
+        cos,
+        -sin,
+        sin,
+        cos,
     });
 }
 
@@ -814,7 +815,7 @@ struct Rect {
     Rect() = default;
 
     Rect(const Vec2& position, const Vec2& size)
-        :Rect(position.x, position.y, size.w, size.h) {}
+        : Rect(position.x, position.y, size.w, size.h) {}
 
     Rect(float x, float y, float w, float h) : position{x, y}, size{w, h} {}
 
@@ -828,6 +829,25 @@ struct Rect {
     bool IsPtIn(const cgmath::Vec2& v) {
         return v.x > position.x && v.x < position.x + size.w &&
                v.y > position.y && v.y < position.y + size.h;
+    }
+
+    /**
+     * @brief return two rects intersect
+     * @note if rects are not intersect, will return a invalid rect
+     */
+    Rect Intersect(const cgmath::Rect& o) const {
+        auto minX = std::max(position.x, o.position.x);
+        auto minY = std::max(position.y, o.position.y);
+        auto maxX = std::min(position.x + size.w, o.position.x + o.size.w);
+        auto maxY = std::min(position.y + size.h, o.position.y + o.size.h);
+        return Rect(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    bool IsIntersect(const cgmath::Rect& o) const {
+        return !(position.x > o.position.x + o.size.w ||
+                 position.x + size.w < o.position.x ||
+                 position.y > o.position.y + o.size.h ||
+                 position.y + size.h < o.position.y);
     }
 };
 

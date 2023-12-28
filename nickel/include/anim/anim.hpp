@@ -222,8 +222,8 @@ public:
         }
     }
 
-    Animation(const std::filesystem::path& root,
-              const std::filesystem::path& filename);
+    explicit Animation(const toml::table&);
+    explicit Animation(const std::filesystem::path&);
 
     auto& Tracks() const { return tracks_; }
 
@@ -246,8 +246,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Animation> LoadAssetFromToml(const toml::table& tbl,
-                                             const std::filesystem::path& root);
+std::unique_ptr<Animation> LoadAssetFromToml(const toml::table& tbl);
 
 using AnimationHandle = Handle<Animation>;
 

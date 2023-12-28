@@ -39,14 +39,6 @@ public:
     AssetManager& operator=(const AssetManager&) = default;
     AssetManager& operator=(AssetManager&&) = default;
 
-    AssetManager(const std::filesystem::path& rootPath) {
-        SetRootPath(rootPath);
-    }
-
-    void SetRootPath(const std::filesystem::path& path) {
-        VisitTuple(mgrs_, [&](auto&& mgr) { mgr.SetRootPath(path); });
-    }
-
     auto& TextureMgr() { return std::get<TextureManager>(mgrs_); }
     auto& FontMgr() { return std::get<FontManager>(mgrs_); }
     auto& TilesheetMgr() { return std::get<TilesheetManager>(mgrs_); }
@@ -60,12 +52,6 @@ public:
     auto& AnimationMgr() const {return std::get<AnimationManager>(mgrs_); }
     auto& TimerMgr() const {return std::get<TimerManager>(mgrs_); }
     auto& AudioMgr() const {return std::get<AudioManager>(mgrs_); }
-
-    auto& GetRootPath() const {
-        // we assure that all manager are at same root path
-        // so pick arbitary manager is OK
-        return TextureMgr().GetRootPath();
-    }
 
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);

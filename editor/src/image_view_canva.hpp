@@ -23,7 +23,8 @@ public:
     void ChangeTexture(nickel::TextureHandle handle) { handle_ = handle; }
 
 protected:
-    virtual void additionalDraw(ImDrawList*, const nickel::Texture&, const nickel::cgmath::Vec2& canvasMin) {}
+    virtual void additionalDraw(ImDrawList*, const nickel::Texture&,
+                                const nickel::cgmath::Vec2& canvasMin) {}
 
     nickel::cgmath::Vec2 transformPt(const nickel::cgmath::Vec2& p,
                                      const nickel::cgmath::Vec2& offset = {}) {

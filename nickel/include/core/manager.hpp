@@ -25,8 +25,7 @@ public:
     }
 
     void Destroy(const std::filesystem::path& path) {
-        auto relativePath = convert2RelativePath(path);
-        if (auto it = pathHandleMap_.find(relativePath);
+        if (auto it = pathHandleMap_.find(path);
             it != pathHandleMap_.end()) {
             datas_.erase(it->second);
             pathHandleMap_.erase(it);
@@ -44,7 +43,13 @@ public:
     void Reload(AssetHandle handle, const std::filesystem::path& filename) {
         if (Has(handle)) {
             auto& elem = Get(handle);
-            AssetType newElem(GetRootPath(), convert2RelativePath(filename));
+            auto parse = toml::parse_file(filename.string());
+            if (!parse) {
+                LOGW(log_tag::Asset, "load asset from ", filename, " failed");
+                return;
+            }
+            AssetType newElem(parse.table());
+            newElem.AssociateFile(filename);
             elem = std::move(newElem);
         }
     }
@@ -54,8 +59,7 @@ public:
     }
 
     AssetHandle GetHandle(const std::filesystem::path& path) const {
-        auto relativePath = convert2RelativePath(path);
-        if (auto it = pathHandleMap_.find(relativePath);
+        if (auto it = pathHandleMap_.find(path);
             it != pathHandleMap_.end()) {
             return it->second;
         }
@@ -63,8 +67,7 @@ public:
     }
 
     const AssetType& Get(const std::filesystem::path& path) const {
-        auto relativePath = convert2RelativePath(path);
-        if (auto it = pathHandleMap_.find(relativePath);
+        if (auto it = pathHandleMap_.find(path);
             it != pathHandleMap_.end()) {
             return Get(it->second);
         }
@@ -87,10 +90,6 @@ public:
         return handle;
     }
 
-    auto& GetRootPath() const { return rootPath_; }
-
-    void SetRootPath(const std::filesystem::path& path) { rootPath_ = path; }
-
     void ReleaseAll() {
         datas_.clear();
         pathHandleMap_.clear();
@@ -103,8 +102,7 @@ public:
      */
     void SaveAssets2File() const {
         for (auto& [_, asset] : AllDatas()) {
-            asset->Save2File(
-                (GetRootPath() / attachMetafileExt(*asset)).string());
+            asset->Save2File(attachMetafileExt(*asset));
         }
     }
 
@@ -114,12 +112,11 @@ public:
     toml::table Save2Toml(const std::filesystem::path& projRootDir) const {
         toml::table tbl;
 
-        auto relativePath =
-            std::filesystem::relative(GetRootPath(), projRootDir);
-        tbl.emplace("root_path", relativePath.string());
         toml::array arr;
         for (auto& [_, asset] : AllDatas()) {
-            arr.push_back(attachMetafileExt(*asset).string());
+            if (!asset->RelativePath().empty()) {
+                arr.push_back(attachMetafileExt(*asset).string());
+            }
         }
         tbl.emplace("datas", arr);
 
@@ -135,15 +132,8 @@ public:
         file << Save2Toml(projRootDir);
     }
 
-    /**
-     * @brief ignore `root_path` in tbl and use resourcePath to load assets
-     */
     void LoadFromTomlWithPath(const toml::table& tbl,
                               const std::filesystem::path& configDir) {
-        if (auto root = tbl["root_path"]; root.is_string()) {
-            SetRootPath(configDir / root.as_string()->get());
-        }
-
         if (auto dataPaths = tbl["datas"]; dataPaths.is_array()) {
             for (auto& node : *dataPaths.as_array()) {
                 if (!node.is_string()) {
@@ -152,8 +142,7 @@ public:
 
                 auto& dataPath = node.as_string()->get();
 
-                auto parse =
-                    toml::parse_file((GetRootPath() / dataPath).string());
+                auto parse = toml::parse_file(dataPath);
                 if (!parse) {
                     LOGW(log_tag::Asset, "load asset from", dataPath,
                          " failed!");
@@ -162,8 +151,9 @@ public:
 
                 auto& elemTbl = parse.table();
 
-                if (auto asset = LoadAssetFromToml<T>(elemTbl, GetRootPath());
+                if (auto asset = LoadAssetFromToml<T>(elemTbl);
                     asset && *asset) {
+                    asset->AssociateFile(StripMetaExtension(dataPath));
                     storeNewItem(AssetHandle::Create(), std::move(asset));
                 }
             }
@@ -180,7 +170,7 @@ public:
         if (Has(handle)) {
             auto& elem = Get(handle);
             pathHandleMap_.erase(elem.RelativePath());
-            elem.AssociateFile(convert2RelativePath(filename));
+            elem.AssociateFile(filename);
             pathHandleMap_[elem.RelativePath()] = handle;
         }
     }
@@ -193,12 +183,6 @@ protected:
         }
     }
 
-    auto convert2RelativePath(const std::filesystem::path& path) const {
-        return path.is_relative()
-                   ? path
-                   : std::filesystem::relative(path, GetRootPath());
-    }
-
     std::filesystem::path attachMetafileExt(const T& asset) const {
         auto filetype = DetectFileType<T>();
         std::filesystem::path relativePath = asset.RelativePath();
@@ -209,14 +193,9 @@ protected:
         return relativePath;
     }
 
-    std::filesystem::path addRootPath(const std::filesystem::path& path) const {
-        return rootPath_ / path;
-    }
-
     std::unordered_map<AssetHandle, AssetStoreType, typename AssetHandle::Hash,
                        typename AssetHandle::HashEq>
         datas_;
-    std::filesystem::path rootPath_ = "./";
     std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
 };
 

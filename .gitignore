@@ -1,5 +1,5 @@
 imgui.ini
-sandbox
 .*
 cmake-build*
 compile_commands.json
+sandbox

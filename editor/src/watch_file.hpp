@@ -43,6 +43,6 @@ struct FileChangeEvent final {
 
 void RegistFileChangeEventHandler(gecs::event_dispatcher<FileChangeEvent>);
 void FileChangeEventHandler(
-    const FileChangeEvent& event,
-    gecs::resource<gecs::mut<nickel::AssetManager>>,
-    gecs::resource<gecs::mut<EditorContext>>);
+    const FileChangeEvent& event, gecs::resource<EditorContext> editorCtx,
+    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
+    gecs::resource<gecs::mut<EditorContext>> ctx);

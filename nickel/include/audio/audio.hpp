@@ -19,8 +19,8 @@ class Sound final : public Asset {
 public:
     static Sound Null;
 
-    Sound(const std::filesystem::path& rootPath,
-          const std::filesystem::path& filename);
+    explicit Sound(const toml::table&);
+    explicit Sound(const std::filesystem::path& filename);
     ~Sound();
 
     Sound(const Sound&) = delete;
@@ -137,9 +137,8 @@ public:
     static FileType GetFileType() { return FileType::Audio; }
 
     AudioHandle Load(const std::filesystem::path& filename) {
-        auto sound = std::make_unique<Sound>(GetRootPath(),
-                                             convert2RelativePath(filename));
-        if (!sound || *sound == Sound::Null) {
+        auto sound = std::make_unique<Sound>(filename);
+        if (!sound || !(*sound)) {
             return AudioHandle::Null();
         }
 
@@ -153,7 +152,6 @@ void InitAudioSystem();
 void ShutdownAudioSystem();
 
 template <>
-std::unique_ptr<Sound> LoadAssetFromToml(const toml::table&,
-                                         const std::filesystem::path& root);
+std::unique_ptr<Sound> LoadAssetFromToml(const toml::table&);
 
 }  // namespace nickel
