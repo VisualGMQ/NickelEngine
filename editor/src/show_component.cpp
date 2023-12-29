@@ -4,7 +4,6 @@
 #include "core/assert.hpp"
 #include "image_view_canva.hpp"
 
-
 using namespace nickel;
 
 ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
@@ -231,6 +230,76 @@ void SelectAndChangeAsset<TextureManager>(EditorContext& ctx,
     }
 }
 
+void changeSpriteInteractive(Sprite& sprite) {
+    auto& reg = *gWorld->cur_registry();
+    auto mgr = gWorld->res_mut<AssetManager>();
+    if (ImGui::BeginCombo("operation", nullptr, ImGuiComboFlags_NoPreview)) {
+        auto& ctx = reg.res_mut<EditorContext>().get();
+
+        if (ImGui::Selectable("load texture")) {
+            ctx.textureAssetListWindow.Show();
+            ctx.textureAssetListWindow.SetSelectCallback(
+                [&](TextureHandle h) { sprite.texture = h; });
+        }
+        if (ImGui::Selectable("load tilesheet")) {
+            ctx.tilesheetAssetListWindow.Show();
+            ctx.tilesheetAssetListWindow.SetSelectCallback(
+                [&](TilesheetHandle h) {
+                    ctx.tilesheetEditor.Show();
+                    ctx.tilesheetEditor.ChangeTilesheet(h);
+                    ctx.tilesheetEditor.SetSelectCallback(
+                        [&](nickel::Tile tile) {
+                            sprite.texture = tile.handle;
+                            sprite.region = tile.region;
+                            sprite.customSize = tile.region.size;
+                        });
+                });
+        }
+        if (ImGui::Selectable("create tilesheet")) {
+            ctx.textureAssetListWindow.Show();
+            ctx.textureAssetListWindow.SetSelectCallback([&](TextureHandle h) {
+                auto filename =
+                    SaveFileDialog("create new tilesheet", {".tilesheet"});
+                if (!filename.empty()) {
+                    filename = filename.extension() != ".tilesheet"
+                                   ? filename.replace_extension(".tilesheet")
+                                   : filename;
+                    ctx.tilesheetEditor.Show();
+                    auto& tilesheetMgr = mgr->TilesheetMgr();
+                    auto handle = tilesheetMgr.Create(h, 1, 1);
+                    tilesheetMgr.AssociateFile(handle,
+                                               ctx.GetRelativePath(filename));
+                    ctx.tilesheetEditor.ChangeTilesheet(handle);
+                    ctx.tilesheetEditor.SetSelectCallback([&](nickel::Tile tile) {
+                            sprite.texture = tile.handle;
+                            sprite.region = tile.region;
+                            sprite.customSize = tile.region.size;
+                        });
+                }
+            });
+        }
+        ImGui::EndCombo();
+    }
+}
+
+void ShowSprite(const mirrow::drefl::type* type, std::string_view name,
+                mirrow::drefl::any& value, gecs::registry reg,
+                const std::vector<int>&) {
+    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<Sprite>(),
+           "type incorrect");
+
+    auto classInfo = type->as_class();
+    for (auto&& prop : classInfo->properties()) {
+        if (auto fn = ComponentShowMethods::Instance().Find(prop->type_info());
+            fn) {
+            auto member = prop->call(value);
+            fn(member.type_info(), prop->name(), member, reg, {});
+        }
+    }
+
+    changeSpriteInteractive(*mirrow::drefl::try_cast<Sprite>(value));
+}
+
 void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
                        mirrow::drefl::any& value, gecs::registry reg,
                        const std::vector<int>&) {
@@ -247,50 +316,6 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
         snprintf(buf, sizeof(buf), "Res://%s", texturePath.string().c_str());
     } else {
         snprintf(buf, sizeof(buf), "no texture");
-    }
-
-    const char* items[] = {"set texture", "set tilesheet"};
-    if (ImGui::BeginCombo("operation", nullptr, ImGuiComboFlags_NoPreview)) {
-        auto& ctx = reg.res_mut<EditorContext>().get();
-        if (ImGui::Selectable("load texture")) {
-            ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback(
-                [&](TextureHandle h) { handle = h; });
-        }
-        if (ImGui::Selectable("load tilesheet")) {
-            ctx.tilesheetAssetListWindow.Show();
-            ctx.tilesheetAssetListWindow.SetSelectCallback(
-                [&](TilesheetHandle h) {
-                    ctx.tilesheetEditor.Show();
-                    ctx.tilesheetEditor.ChangeTilesheet(h);
-                    ctx.tilesheetEditor.SetSelectCallback([](nickel::Tile tile){
-                        // TODO: not finish
-                    });
-                });
-        }
-        if (ImGui::Selectable("create tilesheet")) {
-            ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback(
-                [&](TextureHandle h) {
-                    auto filename = SaveFileDialog("create new tilesheet", {".tilesheet"});
-                    if (!filename.empty()) {
-                        filename =
-                            filename.extension() != ".tilesheet"
-                                ? filename.replace_extension(".tilesheet")
-                                : filename;
-                        ctx.tilesheetEditor.Show();
-                        auto& tilesheetMgr = mgr->TilesheetMgr();
-                        auto handle = tilesheetMgr.Create(h, 1, 1);
-                        tilesheetMgr.AssociateFile(handle, filename);
-                        ctx.tilesheetEditor.ChangeTilesheet(handle);
-                        ctx.tilesheetEditor.SetSelectCallback([](nickel::Tile tile){
-                            // TODO: not finish
-                        });
-                    }
-                });
-            // TODO: not finish
-        }
-        ImGui::EndCombo();
     }
 
     float size = ImGui::GetWindowContentRegionMax().x -

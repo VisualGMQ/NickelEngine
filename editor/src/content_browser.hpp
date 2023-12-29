@@ -26,9 +26,11 @@ struct ReleaseAssetEvent {
     std::optional<std::filesystem::path> path;
 };
 
+class EditorContext;
+
 class ContentBrowserWindow : public Window {
 public:
-    ContentBrowserWindow();
+    explicit ContentBrowserWindow(EditorContext* ctx);
 
     void Update() override;
     void RescanDir();
@@ -44,6 +46,7 @@ public:
     nickel::Texture& FindTextureOrGen(const std::string& extension);
 
 private:
+    EditorContext* ctx_;
     std::filesystem::path rootPath_;
     std::filesystem::path path_;
     ImageViewCanva imageViewer_;
@@ -80,7 +83,7 @@ private:
 
     void showAssetOperationPopupMenu(
         nickel::FileType filetype, bool hasImported,
-        const std::filesystem::directory_entry& entry,
+        const std::filesystem::path&,
         nickel::AssetManager& assetMgr);
 
     void openPropWindowByFiletype(nickel::FileType);

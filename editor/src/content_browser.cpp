@@ -2,19 +2,20 @@
 #include "asset_property_window.hpp"
 #include "context.hpp"
 
-ContentBrowserWindow::ContentBrowserWindow() {
+ContentBrowserWindow::ContentBrowserWindow(EditorContext* ctx): ctx_(ctx) {
     auto iconSize = nickel::cgmath::Vec2{IconSize, IconSize};
     initExtensionIconMap();
     dirIconHandle_ = textureMgr_.LoadSVG(
-        "editor/resources/icons/folder-windows.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
-        iconSize);
+        ctx_->Convert2EditorRelatePath(
+            "editor/resources/icons/folder-windows.svg"),
+        nickel::gogl::Sampler::CreateLinearRepeat(), iconSize);
     unknownFileIconHandle_ = textureMgr_.LoadSVG(
-        "editor/resources/icons/assembly.svg", nickel::gogl::Sampler::CreateLinearRepeat(),
-        iconSize);
+        ctx_->Convert2EditorRelatePath("editor/resources/icons/assembly.svg"),
+        nickel::gogl::Sampler::CreateLinearRepeat(), iconSize);
 }
 
 void ContentBrowserWindow::initExtensionIconMap() {
-    auto result = toml::parse_file(iconConfigFilename_.string());
+    auto result = toml::parse_file(ctx_->Convert2EditorRelatePath(iconConfigFilename_).string());
     if (!result) {
         LOGW(nickel::log_tag::Editor, "parse icon config file ",
              iconConfigFilename_, " failed!", result.error());
@@ -29,7 +30,8 @@ void ContentBrowserWindow::initExtensionIconMap() {
             Assert(extension.is_string(), "extension must be string");
             auto& extStr = *extension.as_string();
 
-            registFileIcon(extension.as_string()->get(), iconFilename.data());
+            registFileIcon(extension.as_string()->get(),
+                           ctx_->Convert2EditorRelatePath(iconFilename.data()));
         }
     }
 }
@@ -89,6 +91,10 @@ std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
             // TODO: return audio preview texture
             return {FindTextureOrGen(entry.path().extension().string()), true};
         }
+    } else if (filetype == nickel::FileType::Tilesheet) {
+        if (auto handle = assetMgr.TilesheetMgr().GetHandle(entry); handle) {
+            return {FindTextureOrGen(entry.path().extension().string()), true};
+        }
     }
     // TODO: other type assets
 
@@ -97,24 +103,24 @@ std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
 
 void ContentBrowserWindow::showAssetOperationPopupMenu(
     nickel::FileType filetype, bool hasImported,
-    const std::filesystem::directory_entry& entry,
+    const std::filesystem::path& path,
     nickel::AssetManager& assetMgr) {
     auto ctx = gWorld->res<EditorContext>();
     if (filetype != nickel::FileType::Unknown) {
-        if (ImGui::BeginPopupContextItem(entry.path().string().c_str())) {
+        if (ImGui::BeginPopupContextItem(path.string().c_str())) {
             if (!hasImported) {
                 if (ImGui::Button("import")) {
-                    assetMgr.Load(entry);
+                    assetMgr.Load(path);
                     ImGui::CloseCurrentPopup();
                 }
             } else {
                 if (ImGui::Button("release")) {
-                    assetMgr.Destroy(entry);
+                    assetMgr.Destroy(path);
                     ImGui::CloseCurrentPopup();
                 }
             }
             if (ImGui::Button("delete")) {
-                std::filesystem::remove(entry);
+                std::filesystem::remove(path);
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
@@ -128,7 +134,8 @@ void ContentBrowserWindow::showOneIcon(
     auto extension = entry.path().extension().string();
     auto filetype = nickel::DetectFileType(entry.path());
 
-    auto&& [texture, hasImported] = getIcon(entry, filetype, assetMgr);
+   std::filesystem::directory_entry relativeEntry{ctx_->GetRelativePath(entry.path())};
+    auto&& [texture, hasImported] = getIcon(relativeEntry, filetype, assetMgr);
 
     auto ctx = gWorld->res_mut<EditorContext>();
     ImGui::BeginGroup();
@@ -139,16 +146,17 @@ void ContentBrowserWindow::showOneIcon(
                 path_ /= entry.path().filename();
                 RescanDir();
             } else {
+                auto path = relativeEntry.path();
                 switch (filetype) {
                     case nickel::FileType::Image:
                         ctx->texturePropWindow.Show();
                         ctx->texturePropWindow.ChangeTexture(
-                            assetMgr.TextureMgr().GetHandle(entry));
+                            assetMgr.TextureMgr().GetHandle(path));
                         break;
                     case nickel::FileType::Audio:
                         ctx->soundPropWindow.Show();
                         ctx->soundPropWindow.ChangeAudio(
-                            assetMgr.AudioMgr().GetHandle(entry));
+                            assetMgr.AudioMgr().GetHandle(path));
                         break;
                     case nickel::FileType::Font:
                     case nickel::FileType::Tilesheet:
@@ -161,9 +169,9 @@ void ContentBrowserWindow::showOneIcon(
             }
         }
 
-        showAssetOperationPopupMenu(filetype, hasImported, entry, assetMgr);
+        showAssetOperationPopupMenu(filetype, hasImported, relativeEntry.path(), assetMgr);
 
-        ImGui::Text("%s", entry.path().filename().string().c_str());
+        ImGui::Text("%s", relativeEntry.path().filename().string().c_str());
 
         ImGui::EndGroup();
     }

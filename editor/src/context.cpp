@@ -8,7 +8,9 @@ EditorContext::EditorContext()
       tilesheetAssetListWindow("tilesheets"),
       texturePropWindow("texture property"),
       soundPropWindow("sound property"),
-      tilesheetEditor("tilesheet editor") {
+      tilesheetEditor("tilesheet editor"),
+      contentBrowserWindow(this),
+      editorPath_{std::filesystem::current_path()} {
     contentBrowserWindow.SetTitle("content browser");
     entityListWindow.SetTitle("entity list");
     inspectorWindow.SetTitle("inspector");

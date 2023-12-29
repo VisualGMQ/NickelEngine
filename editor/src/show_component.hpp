@@ -70,6 +70,10 @@ void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
               mirrow::drefl::any& value, gecs::registry,
               const std::vector<int>&);
 
+void ShowSprite(const mirrow::drefl::type* type, std::string_view name,
+                       mirrow::drefl::any& value, gecs::registry reg,
+                       const std::vector<int>&);
+
 void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
                        mirrow::drefl::any& value, gecs::registry reg,
                        const std::vector<int>&);

@@ -11,8 +11,11 @@
 #include "pch.hpp"
 #include "tilesheet_editor.hpp"
 
-
 struct EditorContext {
+private:
+    std::filesystem::path editorPath_;
+
+public:
     // normal windows
     ContentBrowserWindow contentBrowserWindow;
     EntityListWindow entityListWindow;
@@ -38,13 +41,22 @@ struct EditorContext {
 
     void Update();
 
+    /**
+     * @brief Get the relative path from project root path
+     */
     std::filesystem::path GetRelativePath(
         const std::filesystem::path& path) const {
-        return std::filesystem::relative(path, projectInfo.projectPath);
+        return path.is_relative()
+                   ? path
+                   : std::filesystem::relative(path, projectInfo.projectPath);
     }
+
+    auto& EditorPath() const { return editorPath_; }
+    auto Convert2EditorRelatePath(const std::filesystem::path& p) const { return editorPath_/p; }
 
     EditorContext();
     ~EditorContext();
+
 };
 
 inline void InitEditorContexta(gecs::commands cmds) {

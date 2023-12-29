@@ -21,6 +21,7 @@ RenderContext::RenderInfo generateRenderInfo(const Sprite& sprite,
         sprite.customSize ? sprite.customSize.value() : cgmath::Vec2{100, 50};
 
     const Texture* texture = nullptr;
+    cgmath::Vec2 textureSize = {1, 1};
 
     if (mgr.Has(sprite.texture)) {
         texture = &mgr.Get(sprite.texture);
@@ -30,24 +31,25 @@ RenderContext::RenderInfo generateRenderInfo(const Sprite& sprite,
                                     static_cast<float>(texture->Height())};
         customSize =
             sprite.customSize ? sprite.customSize.value() : texture->Size();
+        textureSize = texture->Size();
     }
 
     std::array<Vertex, 4> vertices = {
         Vertex{{0, 0, depth},
-               {region.position.x / customSize.w,
-               region.position.y / customSize.h},
+               {region.position.x / textureSize.w,
+               region.position.y / textureSize.h},
                sprite.color},
         Vertex{{1, 0, depth},
-               {(region.position.x + region.size.w) / customSize.w,
-               region.position.y / customSize.h},
+               {(region.position.x + region.size.w) / textureSize.w,
+               region.position.y / textureSize.h},
                sprite.color},
         Vertex{{0, 1, depth},
-               {region.position.x / customSize.w,
-               (region.position.y + region.size.h) / customSize.h},
+               {region.position.x / textureSize.w,
+               (region.position.y + region.size.h) / textureSize.h},
                sprite.color},
         Vertex{{1, 1, depth},
-               {(region.position.x + region.size.w) / customSize.w,
-               (region.position.y + region.size.h) / customSize.h},
+               {(region.position.x + region.size.w) / textureSize.w,
+               (region.position.y + region.size.h) / textureSize.h},
                sprite.color},
     };
     auto model =

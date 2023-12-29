@@ -26,3 +26,5 @@ inline nickel::cgmath::Mat44 ScaleByAnchorAsMat(
            nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{
                p.x + offset.x - halfSize.x, p.y + offset.y - halfSize.y, 0});
 }
+
+bool ChDir(const std::filesystem::path&);

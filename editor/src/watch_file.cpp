@@ -49,13 +49,13 @@ void RegistFileChangeEventHandler(
 }
 
 void FileChangeEventHandler(
-    const FileChangeEvent& event, gecs::resource<EditorContext> editorCtx,
+    const FileChangeEvent& event,
     gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
     gecs::resource<gecs::mut<EditorContext>> ctx) {
     auto absolutePath = event.dir / event.filename;
+    auto path = ctx->GetRelativePath(absolutePath);
     // auto relativePath = std::filesystem::relative(
     //     absolutePath, editorCtx->projectInfo.projectPath);
-    auto path = absolutePath;
 
     if (std::filesystem::exists(path) &&
         std::filesystem::is_directory(path)) {

@@ -3,7 +3,7 @@
 namespace nickel {
 
 std::unordered_map<std::string, FileType> gFileTypeMap = {
-  // image
+ // image
     {      ".png",     FileType::Image},
     {      ".bmp",     FileType::Image},
     {      ".jpg",     FileType::Image},

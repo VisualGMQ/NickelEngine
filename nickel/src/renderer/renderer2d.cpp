@@ -192,10 +192,10 @@ void Renderer2D::DrawTexture(const Texture& texture, const cgmath::Rect& src,
                              const cgmath::Mat44& model) {
     // clang-format off
     std::array<Vertex, 4> vertices = {
-        Vertex{{0, 0, z}, {src.position.x / size.w, src.position.y / size.h},               color},
-        Vertex{{1, 0, z}, {(src.position.x + src.size.w) / size.w, src.position.y / size.h}, color},
-        Vertex{{0, 1, z}, {src.position.x / size.w, (src.position.y + src.size.h) / size.h}, color},
-        Vertex{{1, 1, z}, {(src.position.x + src.size.w) / size.w, (src.position.y + src.size.h) / size.h}, color},
+        Vertex{{0, 0, z}, {src.position.x / texture.Size().w, src.position.y / texture.Size().h},               color},
+        Vertex{{1, 0, z}, {(src.position.x + src.size.w) / texture.Size().w, src.position.y / texture.Size().h}, color},
+        Vertex{{0, 1, z}, {src.position.x / texture.Size().w, (src.position.y + src.size.h) / texture.Size().h}, color},
+        Vertex{{1, 1, z}, {(src.position.x + src.size.w) / texture.Size().w, (src.position.y + src.size.h) / texture.Size().h}, color},
     };
     // clang-format on
     std::array<uint32_t, 6> indices = {0, 1, 2, 1, 2, 3};

@@ -38,7 +38,11 @@ void ProjectManagerUpdate(
                 editorCtx->projectInfo = CreateNewProject(dir, assetMgr.get());
 
                 LOGI(nickel::log_tag::Nickel, "Create new project to ", dir);
-                cmds.switch_state(EditorScene::Editor);
+                if (!ChDir(editorCtx->projectInfo.projectPath)) {
+                    LOGE(nickel::log_tag::Editor, "can't change directory to ", editorCtx->projectInfo.projectPath);
+                } else {
+                    cmds.switch_state(EditorScene::Editor);
+                }
             }
         }
 
@@ -48,10 +52,14 @@ void ProjectManagerUpdate(
             if (!files.empty()) {
                 editorCtx->projectInfo.projectPath =
                     std::filesystem::path{files[0]}.parent_path().string();
-                LOGI(nickel::log_tag::Nickel, "Open project at ",
-                     editorCtx->projectInfo.projectPath);
 
-                cmds.switch_state(EditorScene::Editor);
+                if (!ChDir(editorCtx->projectInfo.projectPath)) {
+                    LOGE(nickel::log_tag::Editor, "can't change directory to ", editorCtx->projectInfo.projectPath);
+                } else {
+                    cmds.switch_state(EditorScene::Editor);
+                    LOGI(nickel::log_tag::Nickel, "Open project at ",
+                        editorCtx->projectInfo.projectPath);
+                }
             }
         }
         ImGui::End();
@@ -69,6 +77,8 @@ void RegistComponentShowMethods() {
                     ShowVec4);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::TextureHandle>(),
                     ShowTextureHandle);
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::Sprite>(),
+                    ShowSprite);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::FontHandle>(),
                     ShowFontHandle);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::AnimationPlayer>(),
