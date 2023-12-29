@@ -1,6 +1,7 @@
 #include "asset_property_window.hpp"
 #include "image_view_canva.hpp"
 #include "show_component.hpp"
+#include "context.hpp"
 
 void TexturePropertyPopupWindow::showWrapper(
     nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
@@ -147,4 +148,39 @@ void SoundPropertyPopupWindow::update() {
 
         ImGui::EndPopup();
     }
+}
+
+void FontPropertyPopupWindow::update() {
+    auto& mgr = gWorld->res_mut<nickel::AssetManager>()->FontMgr();
+
+    if (ImGui::BeginPopupModal(GetTitle().c_str(), nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (!mgr.Has(handle_)) {
+            ImGui::Text("invalid audio handle");
+            if (ImGui::Button("close")) {
+                Hide();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+            return;
+        }
+
+        auto& elem = mgr.Get(handle_);
+
+        char buf[512] = {0};
+        snprintf(buf, sizeof(buf), "Res://%s",
+                 elem.RelativePath().string().c_str());
+        ImGui::InputText("filename", buf, sizeof(buf),
+                         ImGuiInputTextFlags_ReadOnly);
+
+        auto ctx = gWorld->res_mut<EditorContext>();
+        auto& preview = ctx->FindOrGenFontPrewview(handle_);
+        for (auto& ch : preview.Texts()) {
+            ImGui::Image(ch.texture->Raw(), {ch.texture->Size().w, ch.texture->Size().h});
+            ImGui::SameLine();
+        }
+
+        ImGui::EndPopup();
+    }
+
 }

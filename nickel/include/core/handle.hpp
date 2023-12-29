@@ -59,7 +59,7 @@ public:
         }
     };
 
-    struct HashEq final {
+    struct Eq final {
         size_t operator()(const Handle& h1, const Handle& h2) const {
             return h1 == h2;
         }

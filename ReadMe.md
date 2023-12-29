@@ -64,7 +64,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [ ] Scene change/load/save
     - [x] scene save/load
     - [ ] multiple scene
-    - [ ] scene chagne
+    - [ ] scene change
 - [ ] script
     - [ ] cpp(dynamic library)
     - [ ] lua/quickJs/C#mono (don't determine currently)
@@ -83,7 +83,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
         - [x] load/release asset
         - [ ] asset property window
             - [x] texture asset property window
-            - [ ] font asset property window
+            - [x] font asset property window
             - [x] audio asset property window
             - [ ] script asset property window
     - [ ] Animation editor

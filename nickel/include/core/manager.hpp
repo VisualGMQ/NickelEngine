@@ -194,7 +194,7 @@ protected:
     }
 
     std::unordered_map<AssetHandle, AssetStoreType, typename AssetHandle::Hash,
-                       typename AssetHandle::HashEq>
+                       typename AssetHandle::Eq>
         datas_;
     std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
 };

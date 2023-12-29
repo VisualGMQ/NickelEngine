@@ -45,3 +45,16 @@ protected:
 private:
     nickel::AudioHandle handle_;
 };
+
+class FontPropertyPopupWindow : public PopupWindow {
+public:
+    FontPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+
+    void ChangeFont(nickel::FontHandle handle) { handle_ = handle; }
+
+protected:
+    void update() override;
+
+private:
+    nickel::FontHandle handle_;
+};

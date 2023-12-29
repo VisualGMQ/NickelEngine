@@ -63,6 +63,8 @@ struct Character {
 
 class TextCache final {
 public:
+    static TextCache Null;
+
     void Push(Character&& c) { texts_.emplace_back(std::move(c)); }
 
     auto& Texts() const { return texts_; }

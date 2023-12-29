@@ -278,7 +278,7 @@ void Renderer2D::SetRenderTarget(Texture* texture) {
 }
 
 void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer,
-                        gecs::resource<gecs::mut<Camera>> camera,
+                         gecs::resource<gecs::mut<Camera>> camera,
                          gecs::resource<gecs::mut<RenderContext>> ctx) {
     GL_CALL(glEnable(GL_MULTISAMPLE));
     GL_CALL(glEnable(GL_BLEND));
@@ -289,7 +289,6 @@ void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer,
     ctx->ResetBias();
 }
 
-void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {
-}
+void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {}
 
 }  // namespace nickel

@@ -4,6 +4,8 @@
 
 namespace nickel {
 
+TextCache TextCache::Null;
+
 FT_Library gFtLib;
 
 void FontSystemInit() {

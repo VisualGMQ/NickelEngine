@@ -19,11 +19,12 @@ void ImageViewCanva::Update() {
 
         ImGui::InvisibleButton("canvas", ImVec2{size_.w, size_.h},
                                ImGuiButtonFlags_MouseButtonLeft |
-                                   ImGuiButtonFlags_MouseButtonRight);
+                                   ImGuiButtonFlags_MouseButtonRight |
+                                   ImGuiButtonFlags_MouseButtonMiddle);
         ImGui::SetItemUsingMouseWheel();
         auto& io = ImGui::GetIO();
         if (ImGui::IsItemHovered() &&
-            ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            ImGui::IsMouseDragging(moveBtn_)) {
             cgmath::Vec2 delta(io.MouseDelta.x, io.MouseDelta.y);
             offset_ += delta;
         }

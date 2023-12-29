@@ -32,7 +32,9 @@ toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg) {
             continue;
         }
         auto entityNode = SaveAsPrefab(static_cast<gecs::entity>(ent), reg);
-        arr.push_back(entityNode);
+        if (!entityNode.empty()) {
+            arr.push_back(entityNode);
+        }
     }
 
     root.emplace("entities", arr);

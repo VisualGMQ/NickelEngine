@@ -148,7 +148,14 @@ void ComponentShowMethods::DefaultMethods::ShowOptional(
         }
     } else {
         if (ImGui::TreeNode(name.data())) {
-            ImGui::Text("none");
+            if (optional_type.elem_type()->is_default_constructible()) {
+                if (ImGui::Button("create")) {
+                    auto newValue = optional_type.elem_type()->default_construct();
+                    optional_type.set_inner_value(newValue, value);
+                }
+            } else {
+                ImGui::Text("none");
+            }
             ImGui::TreePop();
         }
     }

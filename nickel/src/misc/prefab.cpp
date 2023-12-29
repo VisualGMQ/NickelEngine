@@ -81,7 +81,7 @@ gecs::entity createFromPrefabNoHierarchy(const toml::table& tbl,
         auto typeinfo = mirrow::drefl::typeinfo(key);
         mirrow::drefl::any component;
         auto class_info = typeinfo->as_class();
-        if (class_info->is_default_constructbile()) {
+        if (class_info->is_default_constructible()) {
             component = class_info->default_construct();
         }
 

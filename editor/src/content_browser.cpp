@@ -83,8 +83,13 @@ std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
         }
     } else if (filetype == nickel::FileType::Font) {
         if (auto handle = assetMgr.FontMgr().GetHandle(entry); handle) {
-            // TODO: return font preview texture
-            return {FindTextureOrGen(entry.path().extension().string()), true};
+            auto& texts = ctx_->FindOrGenFontPrewview(handle).Texts();
+            if (!texts.empty()) {
+                return {*texts[0].texture, true};
+            } else {
+                return {FindTextureOrGen(entry.path().extension().string()),
+                        true};
+            }
         }
     } else if (filetype == nickel::FileType::Audio) {
         if (auto handle = assetMgr.AudioMgr().GetHandle(entry); handle) {
@@ -103,8 +108,7 @@ std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
 
 void ContentBrowserWindow::showAssetOperationPopupMenu(
     nickel::FileType filetype, bool hasImported,
-    const std::filesystem::path& path,
-    nickel::AssetManager& assetMgr) {
+    const std::filesystem::path& path, nickel::AssetManager& assetMgr) {
     auto ctx = gWorld->res<EditorContext>();
     if (filetype != nickel::FileType::Unknown) {
         if (ImGui::BeginPopupContextItem(path.string().c_str())) {
@@ -134,7 +138,8 @@ void ContentBrowserWindow::showOneIcon(
     auto extension = entry.path().extension().string();
     auto filetype = nickel::DetectFileType(entry.path());
 
-   std::filesystem::directory_entry relativeEntry{ctx_->GetRelativePath(entry.path())};
+    std::filesystem::directory_entry relativeEntry{
+        ctx_->GetRelativePath(entry.path())};
     auto&& [texture, hasImported] = getIcon(relativeEntry, filetype, assetMgr);
 
     auto ctx = gWorld->res_mut<EditorContext>();
@@ -159,7 +164,15 @@ void ContentBrowserWindow::showOneIcon(
                             assetMgr.AudioMgr().GetHandle(path));
                         break;
                     case nickel::FileType::Font:
+                        ctx->fontPropWindow.Show();
+                        ctx->fontPropWindow.ChangeFont(
+                            assetMgr.FontMgr().GetHandle(path));
+                        break;
                     case nickel::FileType::Tilesheet:
+                        ctx->tilesheetEditor.Show();
+                        ctx->tilesheetEditor.ChangeTilesheet(
+                            assetMgr.TilesheetMgr().GetHandle(path));
+                        break;
                     case nickel::FileType::Animation:
                     case nickel::FileType::Timer:
                     case nickel::FileType::FileTypeCount:
@@ -169,7 +182,8 @@ void ContentBrowserWindow::showOneIcon(
             }
         }
 
-        showAssetOperationPopupMenu(filetype, hasImported, relativeEntry.path(), assetMgr);
+        showAssetOperationPopupMenu(filetype, hasImported, relativeEntry.path(),
+                                    assetMgr);
 
         ImGui::Text("%s", relativeEntry.path().filename().string().c_str());
 

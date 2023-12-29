@@ -28,6 +28,7 @@ public:
     TilesheetAssetListWindow tilesheetAssetListWindow;
     TexturePropertyPopupWindow texturePropWindow;
     SoundPropertyPopupWindow soundPropWindow;
+    FontPropertyPopupWindow fontPropWindow;
     TilesheetEditor tilesheetEditor;
 
     bool openGameWindow = true;
@@ -52,11 +53,20 @@ public:
     }
 
     auto& EditorPath() const { return editorPath_; }
-    auto Convert2EditorRelatePath(const std::filesystem::path& p) const { return editorPath_/p; }
+
+    auto Convert2EditorRelatePath(const std::filesystem::path& p) const {
+        return editorPath_ / p;
+    }
 
     EditorContext();
     ~EditorContext();
 
+    const nickel::TextCache& FindOrGenFontPrewview(nickel::FontHandle);
+
+private:
+    std::unordered_map<nickel::FontHandle, nickel::TextCache,
+                       nickel::FontHandle::Hash, nickel::FontHandle::Eq>
+        fontPreviewTextures_;
 };
 
 inline void InitEditorContexta(gecs::commands cmds) {

@@ -11,7 +11,8 @@
  */
 class ImageViewCanva: public Widget {
 public:
-    ImageViewCanva() = default;
+    explicit ImageViewCanva(ImGuiMouseButton moveBtn = ImGuiMouseButton_Middle)
+        : moveBtn_(moveBtn) {}
 
     void Resize(const nickel::cgmath::Vec2& size) { size_ = size; }
     auto& GetSize() const { return size_; }
@@ -40,4 +41,5 @@ private:
     nickel::cgmath::Vec2 offset_;
     float scale_ = 1.0;
     nickel::TextureHandle handle_;
+    ImGuiMouseButton moveBtn_;
 };

@@ -10,7 +10,7 @@ class TilesheetViewCanva : public ImageViewCanva {
 public:
     using SelectCallbackFn = std::function<void(const nickel::Tile&)>;
 
-    explicit TilesheetViewCanva(TilesheetEditor* owner) : owner_(owner) {}
+    explicit TilesheetViewCanva(TilesheetEditor* owner) : ImageViewCanva{ImGuiMouseButton_Middle}, owner_(owner) {}
 
     void ChangeTilesheet(nickel::Tilesheet& tilesheet) {
         tilesheet_ = &tilesheet;
