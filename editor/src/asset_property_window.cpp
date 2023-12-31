@@ -91,11 +91,11 @@ void TexturePropertyPopupWindow::update() {
 }
 
 void SoundPropertyPopupWindow::update() {
-    auto& mgr = gWorld->res_mut<nickel::AssetManager>()->AudioMgr();
+    auto mgr = gWorld->res_mut<nickel::AssetManager>();
 
-    if (ImGui::BeginPopupModal(GetTitle().c_str(), nullptr,
+    if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_,
                                ImGuiWindowFlags_AlwaysAutoResize)) {
-        if (!mgr.Has(handle_)) {
+        if (!mgr->Has(handle_)) {
             ImGui::Text("invalid audio handle");
             if (ImGui::Button("close")) {
                 Hide();
@@ -105,13 +105,14 @@ void SoundPropertyPopupWindow::update() {
             return;
         }
 
-        auto& elem = mgr.Get(handle_);
+        auto ctx = gWorld->res_mut<EditorContext>();
+        auto& elem = ctx->FindOrGenSoundPlayer(handle_);
 
-        char buf[512] = {0};
-        snprintf(buf, sizeof(buf), "Res://%s",
-                 elem.RelativePath().string().c_str());
-        ImGui::InputText("filename", buf, sizeof(buf),
-                         ImGuiInputTextFlags_ReadOnly);
+        // char buf[512] = {0};
+        // snprintf(buf, sizeof(buf), "Res://%s",
+        //          elem.RelativePath().string().c_str());
+        // ImGui::InputText("filename", buf, sizeof(buf),
+        //                  ImGuiInputTextFlags_ReadOnly);
 
         if (elem.IsPlaying()) {
             if (ImGui::Button("pause")) {
@@ -153,7 +154,7 @@ void SoundPropertyPopupWindow::update() {
 void FontPropertyPopupWindow::update() {
     auto& mgr = gWorld->res_mut<nickel::AssetManager>()->FontMgr();
 
-    if (ImGui::BeginPopupModal(GetTitle().c_str(), nullptr,
+    if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_,
                                ImGuiWindowFlags_AlwaysAutoResize)) {
         if (!mgr.Has(handle_)) {
             ImGui::Text("invalid audio handle");
@@ -176,11 +177,11 @@ void FontPropertyPopupWindow::update() {
         auto ctx = gWorld->res_mut<EditorContext>();
         auto& preview = ctx->FindOrGenFontPrewview(handle_);
         for (auto& ch : preview.Texts()) {
-            ImGui::Image(ch.texture->Raw(), {ch.texture->Size().w, ch.texture->Size().h});
+            ImGui::Image(ch.texture->Raw(),
+                         {ch.texture->Size().w, ch.texture->Size().h});
             ImGui::SameLine();
         }
 
         ImGui::EndPopup();
     }
-
 }

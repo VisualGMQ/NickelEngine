@@ -153,7 +153,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Timer> LoadAssetFromToml(const toml::table& tbl);
+std::unique_ptr<Timer> LoadAssetFromMeta(const toml::table& tbl);
 
 class TimerManager : public Manager<Timer> {
 public:

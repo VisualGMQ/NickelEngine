@@ -45,8 +45,10 @@ toml::array SaveAsPrefab(gecs::entity entity, gecs::registry reg) {
     HierarchyTool tool{entity};
     tool.PreorderVisit([&](gecs::entity ent, gecs::registry reg) {
         auto newTbl = saveAsPrefabNoHierarchy(ent, reg);
-        nodeArr.push_back(newTbl);
-        entityIndexMap[ent] = index++;
+        if (!newTbl.empty()) {
+            nodeArr.push_back(newTbl);
+            entityIndexMap[ent] = index++;
+        }
     });
 
     if (tool.HasHierarchy()) {

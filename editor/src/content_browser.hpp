@@ -14,7 +14,7 @@
 struct ReleaseAssetEvent {
     using HandleContainer =
         std::variant<nickel::TextureHandle, nickel::FontHandle,
-                     nickel::AudioHandle>;
+                     nickel::SoundHandle>;
 
     explicit ReleaseAssetEvent(const HandleContainer& handle)
         : handle(handle) {}
@@ -82,7 +82,6 @@ private:
     void showIcons();
 
     void showAssetOperationPopupMenu(
-        nickel::FileType filetype, bool hasImported,
         const std::filesystem::path&,
         nickel::AssetManager& assetMgr);
 

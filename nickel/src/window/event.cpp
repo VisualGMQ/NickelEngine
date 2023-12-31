@@ -304,6 +304,28 @@ void EventPoller::Poll() const {
                 reg_->event_dispatcher<WindowResizeEvent>().enqueue(e);
             }
         }
+
+        if (event.type == SDL_DROPBEGIN) {
+            reg_->event_dispatcher<DropBeginEvent>().enqueue(DropBeginEvent{});
+        }
+
+        if (event.type == SDL_DROPCOMPLETE) {
+            reg_->event_dispatcher<DropEndEvent>().enqueue(DropEndEvent{});
+        }
+
+        if (event.type == SDL_DROPTEXT) {
+            DropTextEvent e;
+            e.text = event.drop.file;
+            SDL_free(event.drop.file);
+            reg_->event_dispatcher<DropTextEvent>().enqueue(e);
+        }
+
+        if (event.type == SDL_DROPFILE) {
+            DropFileEvent e;
+            e.path = event.drop.file;
+            SDL_free(event.drop.file);
+            reg_->event_dispatcher<DropFileEvent>().enqueue(e);
+        }
     }
 }
 

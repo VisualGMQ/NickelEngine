@@ -46,7 +46,7 @@ Font::Font(const std::filesystem::path& filename) : Asset(filename) {
 }
 
 template <>
-std::unique_ptr<Font> LoadAssetFromToml(const toml::table& tbl) {
+std::unique_ptr<Font> LoadAssetFromMeta(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
         return std::make_unique<Font>(path->as_string()->get());
     }

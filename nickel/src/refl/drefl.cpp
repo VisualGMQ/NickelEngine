@@ -228,6 +228,42 @@ void registTextureHandleSerd() {
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
+void serializeSoundPlayer(toml::node& node, const mirrow::drefl::any& elem) {
+    Assert(node.is_table(), "serialize sound-handle to table");
+    auto assetMgr = gWorld->res<AssetManager>();
+    auto& player = *mirrow::drefl::try_cast_const<SoundPlayer>(elem);
+    if (assetMgr->Has(player.Handle())) {
+        auto& sound = assetMgr->Get(player.Handle());
+        toml::table tbl;
+        tbl.emplace("path", sound.RelativePath().string());
+        node.as_table()->emplace("SoundPlayer", tbl);
+    }
+}
+
+void deserializeSoundPlayer(const toml::node& node, mirrow::drefl::any& elem) {
+    Assert(node.is_table(), "serialize sound player to table");
+    auto& tbl = *node.as_table();
+
+    auto assetMgr = gWorld->res<AssetManager>();
+    if (auto path = tbl.get("path"); path && path->is_string())  {
+        auto& audioMgr = gWorld->res_mut<AssetManager>()->AudioMgr();
+        auto filename = tbl.get("path")->as_string()->get();
+        auto& player = *mirrow::drefl::try_cast<SoundPlayer>(elem);
+
+        if (audioMgr.Has(filename)) {
+            player.ChangeSound(audioMgr.GetHandle(filename));
+        }
+    }
+}
+
+void registSoundPlayerSerd() {
+    auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
+    serd.regist_serialize(mirrow::drefl::typeinfo<SoundPlayer>(), serializeSoundPlayer);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<SoundPlayer>(), deserializeSoundPlayer);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<SoundPlayer>();
+}
+
 void serializeGlobalTransform(toml::node& node, const mirrow::drefl::any& elem) {
     Assert(elem.type_info() == mirrow::drefl::typeinfo<GlobalTransform>(),
            "elem type incorrect");
@@ -257,6 +293,10 @@ void reflectHierarchy() {
         "entities", &Child::entities);
 }
 
+void reflectAudio() {
+    mirrow::drefl::registrar<SoundPlayer>::instance().regist("SoundPlayer");
+}
+
 void InitDynamicReflect() {
     reflectVec2();
     reflectVec3();
@@ -272,8 +312,10 @@ void InitDynamicReflect() {
     reflectTilesheet();
     reflectHierarchy();
     reflectMisc();
+    reflectAudio();
 
     registTextureHandleSerd();
+    registSoundPlayerSerd();
     registGlobalTransformSerd();
 }
 

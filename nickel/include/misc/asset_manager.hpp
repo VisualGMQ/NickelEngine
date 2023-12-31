@@ -66,6 +66,15 @@ public:
         return success;
     }
 
+    void LoadFromMeta(const std::filesystem::path& path) {
+        auto filetype = DetectFileType(StripMetaExtension(path));
+        VisitTuple(mgrs_, [=, &path](auto&& mgr){
+            if (mgr.GetFileType() == filetype) {
+                mgr.LoadAssetFromMeta(path);
+            }
+        });
+    }
+
     TextureHandle LoadTexture(const std::filesystem::path& path) {
         if (auto filetype = DetectFileType(path); filetype == FileType::Image) {
             return TextureMgr().Load(path, gogl::Sampler::CreateLinearRepeat());
@@ -111,7 +120,7 @@ public:
         return {};
     }
 
-    AudioHandle LoadAudio(const std::filesystem::path& path) {
+    SoundHandle LoadAudio(const std::filesystem::path& path) {
         if (auto filetype = DetectFileType(path); filetype == FileType::Audio) {
             return AudioMgr().Load(path);
         }
@@ -217,28 +226,6 @@ public:
         }
         if (auto node = tbl.get("audio"); node && node->is_table()) {
             AudioMgr().LoadFromToml(*node->as_table());
-        }
-    }
-
-    void LoadFromTomlWithPath(const toml::table& tbl,
-                              const std::filesystem::path& configDir) {
-        if (auto node = tbl.get("texture"); node && node->is_table()) {
-            TextureMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
-        }
-        if (auto node = tbl.get("font"); node && node->is_table()) {
-            FontMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
-        }
-        if (auto node = tbl.get("anim"); node && node->is_table()) {
-            AnimationMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
-        }
-        if (auto node = tbl.get("tilesheet"); node && node->is_table()) {
-            TilesheetMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
-        }
-        if (auto node = tbl.get("timer"); node && node->is_table()) {
-            TimerMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
-        }
-        if (auto node = tbl.get("audio"); node && node->is_table()) {
-            AudioMgr().LoadFromTomlWithPath(*node->as_table(), configDir);
         }
     }
 

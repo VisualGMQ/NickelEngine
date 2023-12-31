@@ -60,7 +60,7 @@ Texture::Texture(void* pixels, int w, int h, const gogl::Sampler& sampler,
 }
 
 template <>
-std::unique_ptr<Texture> LoadAssetFromToml(const toml::table& tbl) {
+std::unique_ptr<Texture> LoadAssetFromMeta(const toml::table& tbl) {
     return std::make_unique<Texture>(tbl);
 }
 

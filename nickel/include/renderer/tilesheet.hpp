@@ -108,7 +108,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table&);
+std::unique_ptr<Tilesheet> LoadAssetFromMeta(const toml::table&);
 
 class TilesheetManager final : public Manager<Tilesheet> {
 public:

@@ -43,7 +43,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Font> LoadAssetFromToml(const toml::table&);
+std::unique_ptr<Font> LoadAssetFromMeta(const toml::table&);
 
 class FontManager final : public Manager<Font> {
 public:

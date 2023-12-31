@@ -396,6 +396,18 @@ struct WindowResizeEvent final {
     cgmath::Vec2 size;
 };
 
+
+struct DropBeginEvent final { };
+struct DropEndEvent final { };
+
+struct DropTextEvent final {
+    std::string text;
+};
+
+struct DropFileEvent final {
+    std::filesystem::path path;
+};
+
 class EventPoller final {
 public:
     using event_handler = void (*)(const SDL_Event& event);

@@ -100,7 +100,7 @@ toml::table Tilesheet::Save2Toml() const {
 }
 
 template <>
-std::unique_ptr<Tilesheet> LoadAssetFromToml(const toml::table& tbl) {
+std::unique_ptr<Tilesheet> LoadAssetFromMeta(const toml::table& tbl) {
     return std::make_unique<Tilesheet>(tbl);
 }
 

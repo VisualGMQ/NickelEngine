@@ -83,6 +83,8 @@ void RegistComponentShowMethods() {
                     ShowFontHandle);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::AnimationPlayer>(),
                     ShowAnimationPlayer);
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::SoundPlayer>(),
+                    ShowSoundPlayer);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), ShowLabel);
 }
 
@@ -118,11 +120,33 @@ void RegistSpawnMethods() {
     instance.Regist<nickel::ui::Style>(GeneralSpawnMethod<nickel::ui::Style>);
     instance.Regist<nickel::ui::Button>(GeneralSpawnMethod<nickel::ui::Button>);
     instance.Regist<nickel::ui::Label>(GeneralSpawnMethod<nickel::ui::Label>);
+    instance.Regist<nickel::SoundPlayer>(
+        GeneralSpawnMethod<nickel::SoundPlayer>);
 }
 
 void createAndSetRenderTarget(nickel::gogl::Framebuffer& fbo,
                               nickel::Camera& camera) {
     camera.SetRenderTarget(fbo);
+}
+
+void dropFileEventHandle(const nickel::DropFileEvent& event,
+                         gecs::resource<gecs::mut<EditorContext>> ctx) {
+    auto& cbBrowser = ctx->contentBrowserWindow;
+    std::filesystem::directory_entry entry(event.path);
+    if (!entry.exists()) {
+        return;
+    }
+
+    // C++ Primer
+    auto path = entry.path();
+    auto name = path.filename();
+    auto newPath = cbBrowser.CurPath() / name;
+    std::error_code err;
+    std::filesystem::copy(path, newPath, err);
+    if (err) {
+        LOGW(nickel::log_tag::Editor, "drop file ", path, " to ", newPath,
+             " failed: ", err.message());
+    }
 }
 
 void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
@@ -134,8 +158,11 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
                  gecs::resource<gecs::mut<nickel::ui::Context>> uiCtx,
                  gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
                  gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
+                 gecs::event_dispatcher<nickel::DropFileEvent> dropFileEvent,
                  gecs::commands cmds) {
     RegistEventHandler(releaseAsetEvent);
+
+    dropFileEvent.sink().add<dropFileEventHandle>();
 
     editorCtx->projectInfo =
         nickel::LoadProjectInfoFromFile(editorCtx->projectInfo.projectPath);
@@ -187,8 +214,7 @@ void EditorMenubar(EditorContext& ctx) {
         if (ImGui::BeginMenu("View")) {
             auto addMenuItem = [](const std::string& text, Window& window) {
                 bool show = window.IsVisible();
-                ImGui::MenuItem(text.c_str(), nullptr,
-                                &show);
+                ImGui::MenuItem(text.c_str(), nullptr, &show);
                 window.SetVisible(show);
             };
             // addMenuItem("game content window", ctx.openGameWindow);
@@ -227,7 +253,7 @@ void BootstrapSystem(gecs::world& world,
     InitSystem(world, initInfo, reg.commands());
 
     reg.add_state(EditorScene::ProjectManager)
-        .regist_startup_system<InitEditorContexta>()
+        .regist_startup_system<InitEditorContext>()
         .regist_startup_system<plugin::ImGuiInit>()
         .regist_shutdown_system<plugin::ImGuiShutdown>()
         // ProjectManager state

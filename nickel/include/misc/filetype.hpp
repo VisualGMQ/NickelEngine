@@ -7,6 +7,7 @@ namespace nickel {
 // NOTE: don't change order(related to misc/asset.hpp)
 enum class FileType {
     Unknown = 0,
+    Meta,
     Image,
     Font,
     Audio,

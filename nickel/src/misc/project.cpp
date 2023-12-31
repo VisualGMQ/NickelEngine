@@ -75,7 +75,7 @@ void LoadAssetsWithPath(AssetManager& assetMgr,
         return;
     }
 
-    assetMgr.LoadFromTomlWithPath(result.table(), configDir);
+    assetMgr.LoadFromToml(result.table());
 }
 
 bool LoadRegistryEntities(gecs::registry reg, const std::filesystem::path& filename) {

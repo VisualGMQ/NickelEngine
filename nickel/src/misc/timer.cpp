@@ -65,7 +65,7 @@ void Timer::Save(const std::filesystem::path& path) {
 }
 
 template <>
-std::unique_ptr<Timer> LoadAssetFromToml(const toml::table& tbl) {
+std::unique_ptr<Timer> LoadAssetFromMeta(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
         return std::make_unique<Timer>(path->as_string()->get());
     }

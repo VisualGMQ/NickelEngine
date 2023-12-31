@@ -22,6 +22,9 @@ template <>
 void ShowAsset<nickel::Font>(nickel::FontHandle handle, const nickel::Font&);
 
 template <>
+void ShowAsset<nickel::Sound>(nickel::SoundHandle, const nickel::Sound&);
+
+template <>
 void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
                                   const nickel::Tilesheet&);
 
@@ -83,3 +86,4 @@ protected:
 using TextureAssetListWindow = AssetListWindow<nickel::Texture>;
 using FontAssetListWindow = AssetListWindow<nickel::Font>;
 using TilesheetAssetListWindow = AssetListWindow<nickel::Tilesheet>;
+using SoundAssetListWindow = AssetListWindow<nickel::Sound>;

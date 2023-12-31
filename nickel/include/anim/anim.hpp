@@ -246,7 +246,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Animation> LoadAssetFromToml(const toml::table& tbl);
+std::unique_ptr<Animation> LoadAssetFromMeta(const toml::table& tbl);
 
 using AnimationHandle = Handle<Animation>;
 

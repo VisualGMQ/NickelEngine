@@ -54,13 +54,6 @@ void FileChangeEventHandler(
     gecs::resource<gecs::mut<EditorContext>> ctx) {
     auto absolutePath = event.dir / event.filename;
     auto path = ctx->GetRelativePath(absolutePath);
-    // auto relativePath = std::filesystem::relative(
-    //     absolutePath, editorCtx->projectInfo.projectPath);
-
-    if (std::filesystem::exists(path) &&
-        std::filesystem::is_directory(path)) {
-        return;
-    }
 
     if (event.action == FileChangeEvent::Action::Add) {
         assetMgr->Load(path);

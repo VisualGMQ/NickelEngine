@@ -2,7 +2,7 @@
 #include "asset_property_window.hpp"
 #include "context.hpp"
 
-ContentBrowserWindow::ContentBrowserWindow(EditorContext* ctx): ctx_(ctx) {
+ContentBrowserWindow::ContentBrowserWindow(EditorContext* ctx) : ctx_(ctx) {
     auto iconSize = nickel::cgmath::Vec2{IconSize, IconSize};
     initExtensionIconMap();
     dirIconHandle_ = textureMgr_.LoadSVG(
@@ -15,7 +15,8 @@ ContentBrowserWindow::ContentBrowserWindow(EditorContext* ctx): ctx_(ctx) {
 }
 
 void ContentBrowserWindow::initExtensionIconMap() {
-    auto result = toml::parse_file(ctx_->Convert2EditorRelatePath(iconConfigFilename_).string());
+    auto result = toml::parse_file(
+        ctx_->Convert2EditorRelatePath(iconConfigFilename_).string());
     if (!result) {
         LOGW(nickel::log_tag::Editor, "parse icon config file ",
              iconConfigFilename_, " failed!", result.error());
@@ -45,7 +46,7 @@ void ContentBrowserWindow::RescanDir() {
     files_.clear();
     for (auto content : std::filesystem::directory_iterator{path_}) {
         auto& path = content.path();
-        if (!content.is_directory() && path.extension() != ".meta") {
+        if (path.extension() != ".meta") {
             files_.emplace_back(content);
         }
     }
@@ -107,28 +108,14 @@ std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
 }
 
 void ContentBrowserWindow::showAssetOperationPopupMenu(
-    nickel::FileType filetype, bool hasImported,
     const std::filesystem::path& path, nickel::AssetManager& assetMgr) {
     auto ctx = gWorld->res<EditorContext>();
-    if (filetype != nickel::FileType::Unknown) {
-        if (ImGui::BeginPopupContextItem(path.string().c_str())) {
-            if (!hasImported) {
-                if (ImGui::Button("import")) {
-                    assetMgr.Load(path);
-                    ImGui::CloseCurrentPopup();
-                }
-            } else {
-                if (ImGui::Button("release")) {
-                    assetMgr.Destroy(path);
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-            if (ImGui::Button("delete")) {
-                std::filesystem::remove(path);
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
+    if (ImGui::BeginPopupContextItem(path.string().c_str())) {
+        if (ImGui::Button("delete")) {
+            std::filesystem::remove(path);
+            ImGui::CloseCurrentPopup();
         }
+        ImGui::EndPopup();
     }
 }
 
@@ -182,8 +169,7 @@ void ContentBrowserWindow::showOneIcon(
             }
         }
 
-        showAssetOperationPopupMenu(filetype, hasImported, relativeEntry.path(),
-                                    assetMgr);
+        showAssetOperationPopupMenu(relativeEntry.path(), assetMgr);
 
         ImGui::Text("%s", relativeEntry.path().filename().string().c_str());
 
@@ -221,6 +207,8 @@ void ContentBrowserWindow::Update() {
     if (!IsVisible()) return;
 
     if (ImGui::Begin("content browser", &show_)) {
+
+
         auto relativePath = std::filesystem::relative(path_, rootPath_);
         ImGui::Text("Res://%s", relativePath.string().c_str());
         ImGui::SameLine();
@@ -228,6 +216,23 @@ void ContentBrowserWindow::Update() {
         // import button
         if (ImGui::Button("+")) {
             selectAndLoadAsset();
+        }
+        ImGui::SameLine();
+        // create directory 
+        if (ImGui::Button("create directory")) {
+            auto ctx = gWorld->res_mut<EditorContext>();
+            auto curPath = ctx->contentBrowserWindow.CurPath();
+            ctx->inputTextWindow.SetCallback(
+                [=](const std::string& dirName) {
+                    auto dir = curPath / dirName;
+                    std::error_code err;
+                    if (!std::filesystem::create_directory(dir, err)) {
+                        LOGW(nickel::log_tag::Editor, "create directory ", dir,
+                             " failed: ", err.message());
+                    }
+                });
+            ctx->inputTextWindow.Show();
+            ImGui::CloseCurrentPopup();
         }
 
         // goto parent dir button
@@ -239,12 +244,10 @@ void ContentBrowserWindow::Update() {
         }
 
         showIcons();
+
     }
     ImGui::End();
 
-    // auto ctx = gWorld->res_mut<EditorContext>();
-    // ctx->texturePropWindow.PrepareOpen();
-    // ctx->soundPropWindow.PrepareOpen();
 }
 
 nickel::Texture& ContentBrowserWindow::FindTextureOrGen(

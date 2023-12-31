@@ -10,6 +10,7 @@
 #include "nickel.hpp"
 #include "pch.hpp"
 #include "tilesheet_editor.hpp"
+#include "input_text_window.hpp"
 
 struct EditorContext {
 private:
@@ -26,10 +27,12 @@ public:
     TextureAssetListWindow textureAssetListWindow;
     FontAssetListWindow fontAssetListWindow;
     TilesheetAssetListWindow tilesheetAssetListWindow;
+    SoundAssetListWindow soundAssetListWindow;
     TexturePropertyPopupWindow texturePropWindow;
     SoundPropertyPopupWindow soundPropWindow;
     FontPropertyPopupWindow fontPropWindow;
     TilesheetEditor tilesheetEditor;
+    InputTextWindow inputTextWindow;
 
     bool openGameWindow = true;
     bool openDemoWindow = false;
@@ -62,13 +65,17 @@ public:
     ~EditorContext();
 
     const nickel::TextCache& FindOrGenFontPrewview(nickel::FontHandle);
+    nickel::SoundPlayer& FindOrGenSoundPlayer(nickel::SoundHandle);
 
 private:
     std::unordered_map<nickel::FontHandle, nickel::TextCache,
                        nickel::FontHandle::Hash, nickel::FontHandle::Eq>
         fontPreviewTextures_;
+    std::unordered_map<nickel::SoundHandle, nickel::SoundPlayer,
+                       nickel::SoundHandle::Hash, nickel::SoundHandle::Eq>
+        soundPlayers_;
 };
 
-inline void InitEditorContexta(gecs::commands cmds) {
+inline void InitEditorContext(gecs::commands cmds) {
     cmds.emplace_resource<EditorContext>();
 }

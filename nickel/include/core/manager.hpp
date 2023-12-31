@@ -15,8 +15,6 @@ public:
     using AssetHandle = Handle<AssetType>;
     using AssetStoreType = std::unique_ptr<AssetType>;
 
-    virtual ~Manager() = default;
-
     void Destroy(AssetHandle handle) {
         if (Has(handle)) {
             pathHandleMap_.erase(Get(handle).RelativePath());
@@ -132,38 +130,44 @@ public:
         file << Save2Toml(projRootDir);
     }
 
-    void LoadFromTomlWithPath(const toml::table& tbl,
-                              const std::filesystem::path& configDir) {
-        if (auto dataPaths = tbl["datas"]; dataPaths.is_array()) {
-            for (auto& node : *dataPaths.as_array()) {
-                if (!node.is_string()) {
-                    continue;
-                }
-
-                auto& dataPath = node.as_string()->get();
-
-                auto parse = toml::parse_file(dataPath);
-                if (!parse) {
-                    LOGW(log_tag::Asset, "load asset from", dataPath,
-                         " failed!");
-                    return;
-                }
-
-                auto& elemTbl = parse.table();
-
-                if (auto asset = LoadAssetFromToml<T>(elemTbl);
-                    asset && *asset) {
-                    asset->AssociateFile(StripMetaExtension(dataPath));
-                    storeNewItem(AssetHandle::Create(), std::move(asset));
-                }
-            }
+    void LoadFromToml(const std::filesystem::path& filename) {
+        auto parse = toml::parse_file(filename.string());
+        if (!parse) {
+            LOGW(nickel::log_tag::Asset, "load manager from config file ", filename,
+                 " failed:", parse.error());
+        } else {
+            LoadFromToml(parse.table());
         }
     }
 
     /**
      * @brief load assets from config toml table
      */
-    void LoadFromToml(const toml::table& tbl) { LoadFromTomlWithPath(tbl, ""); }
+    void LoadFromToml(const toml::table& tbl) {
+        if (auto dataPaths = tbl["datas"]; dataPaths.is_array()) {
+            for (auto& node : *dataPaths.as_array()) {
+                if (!node.is_string()) {
+                    continue;
+                }
+                auto& dataPath = node.as_string()->get();
+                LoadAssetFromMeta(dataPath);
+            }
+        }
+    }
+
+    void LoadAssetFromMeta(const std::filesystem::path& filename) {
+        auto parse = toml::parse_file(filename.string());
+        if (!parse) {
+            LOGW(nickel::log_tag::Asset, "load asset from meta file ", filename,
+                 " failed:", parse.error());
+        } else {
+            if (auto asset = ::nickel::LoadAssetFromMeta<T>(parse.table());
+                asset && *asset) {
+                asset->AssociateFile(StripMetaExtension(filename));
+                storeNewItem(AssetHandle::Create(), std::move(asset));
+            }
+        }
+    }
 
     void AssociateFile(AssetHandle handle,
                        const std::filesystem::path& filename) {

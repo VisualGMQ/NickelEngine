@@ -86,6 +86,10 @@ void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
                          mirrow::drefl::any& value, gecs::registry reg,
                          const std::vector<int>&);
 
+void ShowSoundPlayer(const mirrow::drefl::type* type, std::string_view name,
+                         mirrow::drefl::any& value, gecs::registry reg,
+                         const std::vector<int>&);
+
 void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
                mirrow::drefl::any& value, gecs::registry reg,
                const std::vector<int>&);

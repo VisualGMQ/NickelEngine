@@ -37,13 +37,13 @@ class SoundPropertyPopupWindow : public PopupWindow {
 public:
     SoundPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
 
-    void ChangeAudio(nickel::AudioHandle handle) { handle_ = handle; }
+    void ChangeAudio(nickel::SoundHandle handle) { handle_ = handle; }
 
 protected:
     void update() override;
 
 private:
-    nickel::AudioHandle handle_;
+    nickel::SoundHandle handle_;
 };
 
 class FontPropertyPopupWindow : public PopupWindow {

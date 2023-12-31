@@ -46,12 +46,12 @@ private:
 };
 
 template <typename T>
-std::unique_ptr<T> LoadAssetFromToml(const toml::table&);
+std::unique_ptr<T> LoadAssetFromMeta(const toml::table&);
 
 template <typename T>
 std::unique_ptr<T> LoadAssetFromFile(const std::filesystem::path& path) {
     if (auto result = toml::parse_file(path.string()); result) {
-        return LoadAssetFromToml<T>(result.table());
+        return LoadAssetFromMeta<T>(result.table());
     } else {
         LOGW(log_tag::Asset, "load asset from ", path,
              " failed: ", result.error());

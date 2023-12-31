@@ -150,7 +150,8 @@ void ComponentShowMethods::DefaultMethods::ShowOptional(
         if (ImGui::TreeNode(name.data())) {
             if (optional_type.elem_type()->is_default_constructible()) {
                 if (ImGui::Button("create")) {
-                    auto newValue = optional_type.elem_type()->default_construct();
+                    auto newValue =
+                        optional_type.elem_type()->default_construct();
                     optional_type.set_inner_value(newValue, value);
                 }
             } else {
@@ -277,7 +278,8 @@ void changeSpriteInteractive(Sprite& sprite) {
                     tilesheetMgr.AssociateFile(handle,
                                                ctx.GetRelativePath(filename));
                     ctx.tilesheetEditor.ChangeTilesheet(handle);
-                    ctx.tilesheetEditor.SetSelectCallback([&](nickel::Tile tile) {
+                    ctx.tilesheetEditor.SetSelectCallback(
+                        [&](nickel::Tile tile) {
                             sprite.texture = tile.handle;
                             sprite.region = tile.region;
                             sprite.customSize = tile.region.size;
@@ -421,4 +423,31 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
     auto ref = mirrow::drefl::any_make_ref(fontHandle);
     ShowFontHandle(ref.type_info(), "font", ref, reg, {});
     label.ChangeFont(fontHandle);
+}
+
+void ShowSoundPlayer(const mirrow::drefl::type* type, std::string_view name,
+                     mirrow::drefl::any& value, gecs::registry reg,
+                     const std::vector<int>&) {
+    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<SoundPlayer>(),
+           "type incorrect");
+
+    SoundPlayer& player = *mirrow::drefl::try_cast<SoundPlayer>(value);
+
+    auto assetMgr = reg.res<nickel::AssetManager>();
+    auto ctx = reg.res_mut<EditorContext>();
+    if (assetMgr->Has(player.Handle())) {
+        auto& sound = assetMgr->Get(player.Handle());
+        if (ImGui::Button(sound.RelativePath().string().c_str())) {
+            ctx->soundPropWindow.ChangeAudio(player.Handle());
+            ctx->soundPropWindow.Show();
+        }
+    } else {
+        ImGui::Text("no sound");
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("load sound")) {
+        ctx->soundAssetListWindow.Show();
+        ctx->soundAssetListWindow.SetSelectCallback(
+            [&](nickel::SoundHandle handle) { player.ChangeSound(handle); });
+    }
 }

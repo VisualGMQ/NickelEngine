@@ -70,7 +70,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Texture> LoadAssetFromToml(const toml::table&);
+std::unique_ptr<Texture> LoadAssetFromMeta(const toml::table&);
 
 class TextureManager final : public Manager<Texture> {
 public:
