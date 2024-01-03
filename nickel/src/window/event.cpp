@@ -280,6 +280,8 @@ void EventPoller::Poll() const {
             MouseMotionEvent e;
             e.position.x = event.motion.x;
             e.position.y = event.motion.y;
+            e.offset.x = event.motion.xrel;
+            e.offset.y = event.motion.yrel;
             reg_->event_dispatcher<MouseMotionEvent>().enqueue(e);
         }
 

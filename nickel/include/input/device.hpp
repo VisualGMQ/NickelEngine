@@ -79,8 +79,8 @@ private:
     cgmath::Vec2 position_;
     cgmath::Vec2 offset_;
     MouseButton buttons_[3] = {MouseButton{MouseButtonType::Left},
-                               MouseButton{MouseButtonType::Right},
-                               MouseButton{MouseButtonType::Middle}};
+                               MouseButton{MouseButtonType::Middle},
+                               MouseButton{MouseButtonType::Right}};
 
     static void mouseMotionEventHandle(const MouseMotionEvent& event,
                                   gecs::resource<gecs::mut<Mouse>> mouse);

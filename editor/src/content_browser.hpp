@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset_property_window.hpp"
-#include "file_dialog.hpp"
+#include "dialog.hpp"
 #include "image_view_canva.hpp"
 #include "imgui_plugin.hpp"
 #include "nickel.hpp"

@@ -7,11 +7,12 @@
 #include "config.hpp"
 #include "content_browser.hpp"
 #include "entity_list_window.hpp"
-#include "file_dialog.hpp"
+#include "dialog.hpp"
 #include "inspector.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 #include "watch_file.hpp"
+#include "gizmos.hpp"
 
 enum class EditorScene {
     ProjectManager,
@@ -124,11 +125,6 @@ void RegistSpawnMethods() {
         GeneralSpawnMethod<nickel::SoundPlayer>);
 }
 
-void createAndSetRenderTarget(nickel::gogl::Framebuffer& fbo,
-                              nickel::Camera& camera) {
-    camera.SetRenderTarget(fbo);
-}
-
 void dropFileEventHandle(const nickel::DropFileEvent& event,
                          gecs::resource<gecs::mut<EditorContext>> ctx) {
     auto& cbBrowser = ctx->contentBrowserWindow;
@@ -154,8 +150,6 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
                  gecs::resource<gecs::mut<nickel::FontManager>> fontMgr,
                  gecs::resource<gecs::mut<nickel::Renderer2D>> renderer,
                  gecs::resource<gecs::mut<EditorContext>> editorCtx,
-                 gecs::resource<gecs::mut<nickel::Camera>> camera,
-                 gecs::resource<gecs::mut<nickel::ui::Context>> uiCtx,
                  gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
                  gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
                  gecs::event_dispatcher<nickel::DropFileEvent> dropFileEvent,

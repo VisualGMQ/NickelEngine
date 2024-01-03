@@ -2,6 +2,7 @@
 
 #include "nickel.hpp"
 #include "widget.hpp"
+#include "gizmos.hpp"
 
 class GameWindow final: public Window {
 public:
@@ -18,4 +19,6 @@ private:
     std::unique_ptr<nickel::gogl::RenderBuffer> rbo_;
     std::unique_ptr<nickel::gogl::Framebuffer> fbo_;
     std::unique_ptr<nickel::gogl::Texture> texture_;
+
+    SRTGizmos srtGizmos_;
 };

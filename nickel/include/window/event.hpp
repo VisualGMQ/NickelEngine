@@ -341,8 +341,8 @@ Key GetKeyFromName(std::string_view name);
 
 enum class MouseButtonType {
     Left = SDL_BUTTON_LEFT,
-    Right = SDL_BUTTON_RIGHT,
     Middle = SDL_BUTTON_MIDDLE,
+    Right = SDL_BUTTON_RIGHT,
 };
 
 enum class Action {
@@ -380,6 +380,7 @@ struct KeyboardEvent final {
 
 struct MouseMotionEvent final {
     cgmath::Vec2 position;
+    cgmath::Vec2 offset;
 };
 
 struct MouseButtonEvent final {

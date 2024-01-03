@@ -36,15 +36,14 @@ void Keyboard::keyboardEventHandle(const KeyboardEvent& event,
 
 void Mouse::mouseMotionEventHandle(const MouseMotionEvent& event,
                                    gecs::resource<gecs::mut<Mouse>> mouse) {
-    mouse->offset_ = event.position - mouse->offset_;
+    mouse->offset_ = event.offset;
     mouse->position_ = event.position;
 }
 
 void Mouse::mouseBtnEventHandle(const MouseButtonEvent& event,
                                 gecs::resource<gecs::mut<Mouse>> mouse) {
-    auto& btn = mouse->buttons_[static_cast<uint32_t>(event.btn)];
+    auto& btn = mouse->buttons_[static_cast<uint32_t>(event.btn) - 1];
 
-    btn.lastState = btn.isPress;
     btn.isPress = event.action != Action::Release;
 }
 
@@ -58,8 +57,8 @@ void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
 void Mouse::Update(gecs::resource<gecs::mut<Mouse>> mouse) {
     for (auto& btn : mouse->buttons_) {
         btn.lastState = btn.isPress;
-        btn.isPress = false;
     }
+    mouse->offset_.Set(0, 0);
 }
 
 }  // namespace nickel

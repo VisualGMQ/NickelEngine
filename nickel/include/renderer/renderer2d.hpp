@@ -8,7 +8,6 @@
 #include "renderer/texture.hpp"
 #include "renderer/vertex.hpp"
 
-
 namespace nickel {
 
 struct RectSampler final {
@@ -97,7 +96,10 @@ public:
     void DrawTriangles(
         Vertices vertices, const Indices& indices,
         const cgmath::Mat44& model = cgmath::Mat44::Identity(),
-        const std::optional<RectSampler>& sampler = std::nullopt);
+        const std::optional<RectSampler>& sampler = std::nullopt) {
+        Draw(gogl::PrimitiveType::Triangles, vertices, indices, model,
+             sampler ? sampler->texture : nullptr);
+    }
 
     void DrawRect(const cgmath::Rect& rect, const cgmath::Vec4& color,
                   const cgmath::Mat44& model = cgmath::Mat44::Identity());

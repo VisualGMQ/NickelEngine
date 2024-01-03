@@ -44,14 +44,6 @@ void Renderer2D::EndRender() {
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
-template <typename Vertices, typename Indices>
-void Renderer2D::DrawTriangles(Vertices vertices, const Indices& indices,
-                               const cgmath::Mat44& model,
-                               const std::optional<RectSampler>& sampler) {
-    Draw(gogl::PrimitiveType::Triangles, vertices, indices, model,
-         sampler ? sampler->texture : nullptr);
-}
-
 void Renderer2D::DrawRect(const cgmath::Rect& rect, const cgmath::Vec4& color,
                           const cgmath::Mat44& model) {
     const std::array<Vertex, 4> vertices = {

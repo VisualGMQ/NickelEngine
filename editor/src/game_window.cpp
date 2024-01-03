@@ -79,6 +79,21 @@ void GameWindow::Update() {
         ImVec2 uvMax = {windowSize.x / fbo_->Size().w,
                         (fbo_->Size().h - windowSize.y) / fbo_->Size().h};
 
+        srtGizmos_.SetGameContentOffset(nickel::cgmath::Vec2{windowPos.x, windowPos.y} + offset_);
+        srtGizmos_.SetEventHandleState(ImGui::IsWindowFocused());
+        if (ImGui::IsWindowFocused()) {
+            if (ImGui::IsKeyPressed(ImGuiKey_S)) {
+                srtGizmos_.SetMode(SRTGizmos::Mode::Scale);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) {
+                srtGizmos_.SetMode(SRTGizmos::Mode::Rotate);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_T)) {
+                srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
+            }
+        }
+        srtGizmos_.Update(*gWorld->cur_registry());
+
         ImGui::GetWindowDrawList()->AddImage(
             (ImTextureID)texture_->Id(), windowPos,
             ImVec2{windowPos.x + windowSize.x, windowPos.y + windowSize.y},
@@ -94,7 +109,7 @@ void GameWindow::Update() {
         }
         if (ImGui::IsWindowHovered() &&
             (io.MouseDelta.x != 0 || io.MouseDelta.y != 0) &&
-            io.MouseDown[ImGuiMouseButton_Left]) {
+            io.MouseDown[ImGuiMouseButton_Middle]) {
             offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
         }
 

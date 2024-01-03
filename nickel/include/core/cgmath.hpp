@@ -826,7 +826,7 @@ struct Rect {
         return Rect{center - halfSize, halfSize * 2.0};
     }
 
-    bool IsPtIn(const cgmath::Vec2& v) {
+    bool IsPtIn(const cgmath::Vec2& v) const {
         return v.x > position.x && v.x < position.x + size.w &&
                v.y > position.y && v.y < position.y + size.h;
     }

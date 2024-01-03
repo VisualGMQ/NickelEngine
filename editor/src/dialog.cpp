@@ -1,4 +1,4 @@
-#include "file_dialog.hpp"
+#include "dialog.hpp"
 
 // TODO: add file dialog under ubuntu
 
@@ -100,4 +100,9 @@ std::filesystem::path SaveFileDialog(
 #else
     return {};
 #endif
+}
+
+void ShowSimpleMessageBox(MessageBoxType type, const std::string& title, const std::string& content) {
+    SDL_ShowSimpleMessageBox(static_cast<SDL_MessageBoxFlags>(type),
+                             title.c_str(), content.c_str(), nullptr);
 }
