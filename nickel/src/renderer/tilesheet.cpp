@@ -78,8 +78,7 @@ Tilesheet::Tilesheet(const std::filesystem::path& filename) {
     }
 }
 
-void Tilesheet::parseFromToml(const toml::table& tbl) {
-}
+void Tilesheet::parseFromToml(const toml::table& tbl) {}
 
 toml::table Tilesheet::Save2Toml() const {
     toml::table tbl;
@@ -131,6 +130,74 @@ TilesheetHandle TilesheetManager::Load(const std::filesystem::path& filename) {
     } else {
         return {};
     }
+}
+
+TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
+                                     const std::filesystem::path& filename) {
+    cgmath::Vec<uint32_t, 2> tileSize;
+    if (auto n = node->first_attribute("tilewidth"); n) {
+        tileSize.w = std::atoi(n->value());
+    } else {
+        return {};
+    }
+    if (auto n = node->first_attribute("tileheight"); n) {
+        tileSize.h = std::atoi(n->value());
+    } else {
+        return {};
+    }
+
+    uint32_t tileCount = 0;
+    if (auto n = node->first_attribute("tilecount"); n) {
+        tileCount = std::atoi(node->value());
+    } else {
+        return {};
+    }
+
+    uint32_t columns = 0;
+    if (auto n = node->first_attribute("columns"); n) {
+        columns = std::atoi(node->value());
+    } else {
+        return {};
+    }
+
+    std::string name;
+    if (auto n = node->first_attribute("name"); n) {
+        name = node->value();
+    }
+
+    uint32_t spacing = 0;
+    if (auto n = node->first_attribute("spacing"); n) {
+        spacing = std::atoi(node->value());
+    }
+
+    uint32_t margin = 0;
+    if (auto n = node->first_attribute("margin"); n) {
+        margin = std::atoi(node->value());
+    }
+
+    TextureHandle texture;
+    auto assetMgr = gWorld->res_mut<AssetManager>();
+    if (auto imageNode = node->first_node("image"); imageNode) {
+        if (auto n = imageNode->first_attribute("source"); n) {
+            std::filesystem::path path = filename.parent_path() / n->value();
+            if (assetMgr->TextureMgr().Has(path)) {
+                texture = assetMgr->TextureMgr().GetHandle(path);
+            }
+        }
+    } else {
+        return {};
+    }
+
+    if (texture) {
+        auto handle = assetMgr->TilesheetMgr().Create(
+            texture, columns, tileCount / columns,
+            Margin{margin, margin, margin, margin}, Spacing{spacing, spacing});
+        assetMgr->TilesheetMgr().AssociateFile(
+            handle, filename.parent_path() / (name + ".tilesheet"));
+        return handle;
+    }
+
+    return {};
 }
 
 }  // namespace nickel

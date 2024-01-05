@@ -63,6 +63,7 @@
 #include <cstring>
 #include <type_traits>
 #include <variant>
+#include <charconv>
 
 
 #ifdef _WIN32

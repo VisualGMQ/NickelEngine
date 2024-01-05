@@ -22,6 +22,7 @@ endmacro()
 AddConsoleTest(geom)
 AddConsoleTest(cgmath)
 AddConsoleTest(tweeny)
+AddConsoleTest(csv_iterator)
 
 AddVisualableTest(gjk)
 

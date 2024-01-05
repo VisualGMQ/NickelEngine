@@ -120,4 +120,7 @@ public:
     TilesheetHandle Load(const std::filesystem::path&);
 };
 
+TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
+                                     const std::filesystem::path& filename);
+
 }  // namespace nickel

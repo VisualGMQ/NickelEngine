@@ -75,6 +75,13 @@ void FileChangeEventHandler(
                                    }
                                }
                            });
+        if (nickel::HasMetaFile(filetype)) {
+            auto metaFilename = oldPath;
+            metaFilename += nickel::GetMetaFileExtension(filetype);
+            if (std::filesystem::exists(metaFilename)) {
+                std::filesystem::remove(metaFilename);
+            }
+        }
     }
 
     if (event.action == FileChangeEvent::Action::Modified) {
@@ -87,10 +94,18 @@ void FileChangeEventHandler(
                     }
                 }
             });
+        if (nickel::HasMetaFile(filetype)) {
+            auto metaFilename = path;
+            metaFilename += nickel::GetMetaFileExtension(filetype);
+            if (std::filesystem::exists(metaFilename)) {
+                std::filesystem::remove(metaFilename);
+            }
+        }
     }
 
     auto& cbWindow = ctx->contentBrowserWindow;
-    if (std::filesystem::equivalent(cbWindow.CurPath(), event.dir)) {
+    if (std::filesystem::exists(event.dir) &&
+        std::filesystem::equivalent(cbWindow.CurPath(), event.dir)) {
         cbWindow.RescanDir();
     }
 }

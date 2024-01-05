@@ -851,6 +851,50 @@ struct Rect {
     }
 };
 
+template <typename T>
+class DynMat final {
+public:
+    DynMat() = default;
+    DynMat(uint32_t col, uint32_t row): datas_{col * row, T{}}, size_{col, row} {}
+
+    auto& Size() const { return size_; }
+    auto Col() const { return size_.w; }
+    auto Row() const { return size_.h; }
+
+    const T& Get(uint32_t col, uint32_t row) const {
+        Assert(row * col < datas_.size(), "out of range");
+        return datas_[col * size_.h + row];
+    }
+
+    T& Get(uint32_t col, uint32_t row) {
+        return const_cast<T&>(std::as_const(*this).Get(col, row));
+    }
+
+    void Set(uint32_t col, uint32_t row, const T& value) {
+        datas_[col * size_.h + row] = value;
+    }
+
+    void Set(uint32_t col, uint32_t row, T&& value) {
+        datas_[col * size_.h + row] = std::move(value);
+    }
+
+    void Resize(uint32_t col, uint32_t row) {
+        std::vector<T> newData{col * row, T{}};
+        auto minRow = std::min(row, size_.h);
+        auto minCol = std::min(col, size_.w);
+        for (int c = 0; c < minCol; c++) {
+            for (int r = 0; r < minRow; r++) {
+                newData[c * row + r] = Get(c, r);
+            }
+        }
+        datas_ = std::move(newData);
+    }
+
+private:
+    std::vector<T> datas_;
+    Vec<uint32_t, 2> size_;
+};
+
 struct SRT final {
     Vec3 position;
     Vec3 scale;

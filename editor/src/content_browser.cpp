@@ -112,7 +112,7 @@ void ContentBrowserWindow::showAssetOperationPopupMenu(
     auto ctx = gWorld->res<EditorContext>();
     if (ImGui::BeginPopupContextItem(path.string().c_str())) {
         if (ImGui::Button("delete")) {
-            std::filesystem::remove(path);
+            std::filesystem::remove_all(path);
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -132,7 +132,7 @@ void ContentBrowserWindow::showOneIcon(
     auto ctx = gWorld->res_mut<EditorContext>();
     ImGui::BeginGroup();
     {
-        if (ImGui::ImageButton((ImTextureID)texture.Raw(),
+        if (ImGui::ImageButton(entry.path().string().c_str(), (ImTextureID)texture.Raw(),
                                ImVec2{thumbnailSize_.w, thumbnailSize_.h})) {
             if (entry.is_directory()) {
                 path_ /= entry.path().filename();
