@@ -56,9 +56,13 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [x] Animation applyed on arbitary properties
 - [x] Text render with UTF8 encoding
 - [x] Prefab save/load
+- [ ] RHI covered OpenGL3/ES and Vulkan
+    - [x] abstract layer
+    - [x] Vulkan
+    - [ ] OpenGL
+    - [ ] OpenGL ES
 - [ ] UI(WIP)
 - [ ] Game physics(WIP)
-- [ ] RHI covered OpenGL3/ES and Vulkan(WIP)
 - [ ] Game sound playing(WIP)
 - [ ] 3D rendering
 - [ ] Scene change/load/save

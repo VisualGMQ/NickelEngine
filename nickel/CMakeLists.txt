@@ -9,6 +9,9 @@ aux_source_directory(src/refl nickel_src)
 aux_source_directory(src/physics nickel_src)
 aux_source_directory(src/ui nickel_src)
 aux_source_directory(src/audio nickel_src)
+aux_source_directory(src/rhi nickel_src)
+aux_source_directory(src/rhi/gl nickel_src)
+aux_source_directory(src/rhi/vulkan nickel_src)
 
 file(GLOB_RECURSE nickel_header_files ./include/*.hpp)
 file(GLOB shader_files ./shader/*.shader)
@@ -23,6 +26,12 @@ target_sources(nickel_core PRIVATE ${nickel_core_src})
 target_include_directories(nickel_core PUBLIC ./include)
 target_compile_features(nickel_core PUBLIC cxx_std_17)
 target_link_libraries(nickel_core PUBLIC SDL2 glad stb_image toml++ debugbreak mirrow gecs miniaudio nameof freetype lunasvg rapidxml)
+
+if (TARGET Vulkan)
+    target_link_libraries(nickel_core PUBLIC Vulkan)
+    target_compile_definitions(nickel_core PUBLIC NICKEL_HAS_VULKAN)
+endif()
+
 target_compile_definitions(nickel_core PUBLIC _CRT_SECURE_NO_WARNINGS)
 
 add_library(nickel STATIC)

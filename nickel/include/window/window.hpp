@@ -12,6 +12,11 @@ namespace nickel {
 
 class Window final {
 public:
+    enum class Flag {
+        OpenGL = 0x01,
+        Vulkan = 0x02,
+    };
+
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
 
@@ -28,7 +33,7 @@ public:
         return *this;
     }
 
-    Window(const std::string& title, int width, int height);
+    Window(const std::string& title, int width, int height, Flag = Window::Flag::OpenGL);
     ~Window();
 
     void SwapBuffer() const;
@@ -64,6 +69,7 @@ private:
     SDL_Window* window_;
     std::string title_;
     bool shouldClose_ = false;
+    Flag flag_;
 };
 
 class WindowBuilder final {
@@ -71,6 +77,7 @@ public:
     struct Data {
         std::string title;
         cgmath::Vec2 size;
+        Window::Flag flag;
 
         static Data Default();
     };
@@ -81,7 +88,7 @@ public:
 
     Window Build() {
         return Window(buildData_.title, static_cast<int>(buildData_.size.x),
-                      static_cast<int>(buildData_.size.y));
+                      static_cast<int>(buildData_.size.y), buildData_.flag);
     }
 
 private:

@@ -1,0 +1,101 @@
+#pragma once
+
+#include "pch.hpp"
+
+namespace nickel::rhi {
+
+struct Attribute final {
+    enum class Type { Float, Vec2, Vec3, Vec4 } type;
+    int location;
+    size_t offset;
+
+    Attribute(Type type, int location, size_t offset)
+        : type(type), location(location), offset(offset) {}
+
+    Attribute(Type type, int location)
+        : type(type), location(location), offset(0) {}
+};
+
+inline uint8_t GetAttributeTypeCount(Attribute::Type type) {
+    switch (type) {
+        case Attribute::Type::Float:
+            return 1;
+        case Attribute::Type::Vec2:
+            return 2;
+        case Attribute::Type::Vec3:
+            return 3;
+        case Attribute::Type::Vec4:
+            return 4;
+    }
+    LOGW(log_tag::GL, "Unknown attribute type");
+    return 0;
+}
+
+inline uint8_t GetAttributeTypeSize(Attribute::Type type) {
+    uint8_t typeCount = GetAttributeTypeCount(type);
+    switch (type) {
+        case Attribute::Type::Vec2:
+        case Attribute::Type::Vec3:
+        case Attribute::Type::Vec4:
+        case Attribute::Type::Float:
+            return typeCount * 4;
+            break;
+    }
+    LOGW(log_tag::GL, "Unknown attribute type");
+    return 0;
+}
+
+class VertexLayout final {
+public:
+    static auto CreateFromTypes(
+        const std::initializer_list<Attribute::Type>& types) {
+        std::vector<Attribute> attrs;
+        int i = 0;
+        size_t offset = 0;
+        for (auto type : types) {
+            size_t size = GetAttributeTypeSize(type);
+            attrs.push_back(Attribute(type, i++, offset));
+            offset += size;
+        }
+
+        return VertexLayout(std::move(attrs), offset);
+    }
+
+    static auto CreateFromUnoffsetAttrs(
+        const std::initializer_list<Attribute>& attrs) {
+        std::vector<Attribute> attributes;
+        int i = 0;
+        size_t offset = 0;
+        for (auto attr : attrs) {
+            size_t size = GetAttributeTypeSize(attr.type);
+            attributes.push_back(Attribute(attr.type, i++, offset));
+            offset += size;
+        }
+
+        return VertexLayout(std::move(attrs), offset);
+    }
+
+    static auto CreateFromAttrs(const std::initializer_list<Attribute>& attrs) {
+        size_t stride = 0;
+        for (auto& attr : attrs) {
+            stride += GetAttributeTypeSize(attr.type);
+        }
+        return VertexLayout(attrs, stride);
+    }
+
+    VertexLayout(std::vector<Attribute>&& attrs, size_t stride)
+        : attributes_(std::move(attrs)), stride_(stride) {}
+
+    VertexLayout(const std::vector<Attribute>& attrs, size_t stride)
+        : attributes_(attrs), stride_(stride) {}
+
+    auto& Attributes() const { return attributes_; }
+
+    auto Stride() const { return stride_; }
+
+private:
+    std::vector<Attribute> attributes_;
+    size_t stride_ = 0;
+};
+
+}  // namespace nickel::rhi

@@ -63,6 +63,12 @@
 #include <cstring>
 #include <type_traits>
 #include <variant>
+#include <iterator>
+
+#ifdef NICKEL_HAS_VULKAN
+#include "vulkan/vulkan.hpp"
+#include "SDL_vulkan.h"
+#endif
 
 
 #ifdef _WIN32

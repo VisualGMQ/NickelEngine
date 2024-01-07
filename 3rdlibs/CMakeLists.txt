@@ -1,6 +1,7 @@
 add_subdirectory(sdl2)
 add_subdirectory(gecs)
 add_subdirectory(glad)
+add_subdirectory(vulkan)
 add_subdirectory(imgui)
 add_subdirectory(stb_image)
 add_subdirectory(tomlplusplus)
