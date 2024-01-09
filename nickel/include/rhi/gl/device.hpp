@@ -5,7 +5,7 @@
 namespace nickel::rhi::gl {
 
 class Device: public rhi::Device {
-
+public:
 };
 
 }

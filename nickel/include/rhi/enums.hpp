@@ -91,6 +91,7 @@ enum class CompareOp {
     Equal,
     GreaterEqual,
     Greater,
+    NotEqual,
     Always,
 };
 
@@ -728,6 +729,38 @@ enum class CommandBufferUsage {
     OneTimeSubmit,
     RenderPassContinue,
     SimultaneousUse,
+};
+
+enum class Filter {
+    Nearest,
+    Linear,
+    CubicEXT,
+    CubicIMG,
+};
+
+enum class SamplerMipmapMode {
+    Nearest,
+    Linear,
+};
+
+enum class SamplerAddressMode {
+    Repeat,
+    MirroredRepeat,
+    ClampToEdge,
+    ClampToBorder,
+    MirrorClampToEdge,
+    MirrorClampToEdgeKHR,
+};
+
+enum class BorderColor {
+    FloatTransparentBlack,
+    IntTransparentBlack,
+    FloatOpaqueBlack,
+    IntOpaqueBlack,
+    FloatOpaqueWhite,
+    IntOpaqueWhite,
+    FloatCustomEXT,
+    IntCustomEXT,
 };
 
 }  // namespace nickel::rhi

@@ -18,8 +18,8 @@ std::vector<vk::VertexInputBindingDescription> CvtLayout2BindingDescription(
 inline vk::StencilOpState StencilOp2Vk(const StencilOp& op) {
     vk::StencilOpState state;
     state.setFailOp(StencilOpEnum2Vk(op.onFail))
-        .setPassOp(StencilOpEnum2Vk(op.onPass))
         .setDepthFailOp(StencilOpEnum2Vk(op.onDepthFail))
+        .setPassOp(StencilOpEnum2Vk(op.onDepthPass))
         .setCompareMask(op.compareMask)
         .setWriteMask(op.writeMask)
         .setReference(op.reference);

@@ -32,7 +32,7 @@ public:
     virtual void Draw(uint32_t vertexCount, uint32_t instanceCount,
                       uint32_t firstVertex, uint32_t firstInstance) = 0;
     virtual void BindVertexBuffer(uint32_t firstBinding,
-                                  const std::vector<Buffer*>&,
+                                  const std::vector<BufferBundle*>&,
                                   const std::vector<uint64_t>& offsets) = 0;
     virtual void EndRecord() = 0;
     virtual void Reset() = 0;

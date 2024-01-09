@@ -41,20 +41,20 @@ struct ViewportState final {
     std::vector<Sissor> sissors;
 };
 
-struct RasterizationState {
+struct RasterizationState final {
     bool depthClampEnable = false;
     bool discardEnable = false;
     PolygonMode polygonMode = PolygonMode::Fill;
     CullMode cullMode = CullMode::None;
     FrontFace frontFace = FrontFace::CCW;
-    bool depthBiasEnable = false;
-    float depthBiasConstantFactor = 0;
-    float depthBiasClamp = 0;
-    float depthBiasSlopeFactor = 0;
     float lineWidth = 1.0;
+    bool depthBiasEnable = false;           // only for vulkan
+    float depthBiasConstantFactor = 0;      // only for vulkan
+    float depthBiasClamp = 0;               // only for vulkan
+    float depthBiasSlopeFactor = 0;         // only for vulkan
 };
 
-struct MultisampleState {
+struct MultisampleState final {
     SampleCountFlag sampleCount = SampleCountFlag::e1;
     bool sampleShadingEnable = false;
     float minSampleShading = 1.0;
@@ -65,8 +65,8 @@ struct MultisampleState {
 
 struct StencilOp final {
     StencilOpEnum onFail = StencilOpEnum::Zero;
-    StencilOpEnum onPass = StencilOpEnum::Zero;
     StencilOpEnum onDepthFail = StencilOpEnum::Zero;
+    StencilOpEnum onDepthPass = StencilOpEnum::Zero;
     CompareOp compare = CompareOp::Always;
     uint32_t compareMask = 0xFFFFFFFF;
     uint32_t writeMask = 0xFFFFFFFF;
@@ -85,8 +85,8 @@ struct DepthStencilState final {
     float maxDepthBound = 0.0;
 };
 
-struct ColorBlendAttachmentState {
-    bool blendEnable = false;;
+struct ColorBlendAttachmentState final {
+    bool blendEnable = false;
     BlendFactor srcColorBlendFactor = BlendFactor::Zero;
     BlendFactor dstColorBlendFactor = BlendFactor::Zero;
     BlendOp colorBlendOp = BlendOp::Add;

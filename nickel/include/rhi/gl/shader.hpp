@@ -41,6 +41,8 @@ public:
         return {};
     }
 
+    GLuint Raw() const { return id_; }
+
 private:
     GLuint id_ = 0;
 

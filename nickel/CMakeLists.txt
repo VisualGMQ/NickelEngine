@@ -30,6 +30,9 @@ target_link_libraries(nickel_core PUBLIC SDL2 glad stb_image toml++ debugbreak m
 if (TARGET Vulkan)
     target_link_libraries(nickel_core PUBLIC Vulkan)
     target_compile_definitions(nickel_core PUBLIC NICKEL_HAS_VULKAN)
+    message("vulkan enabled")
+else()
+    message("vulkan disabled")
 endif()
 
 target_compile_definitions(nickel_core PUBLIC _CRT_SECURE_NO_WARNINGS)

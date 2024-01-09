@@ -33,11 +33,11 @@ void CommandBuffer::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t 
 }
 
 void CommandBuffer::BindVertexBuffer(uint32_t firstBinding,
-                                     const std::vector<rhi::Buffer*>& buffers,
+                                     const std::vector<rhi::BufferBundle*>& buffers,
                                      const std::vector<uint64_t>& offsets) {
     std::vector<vk::Buffer> bufs;
     for (auto& buffer : buffers) {
-        bufs.emplace_back(static_cast<const vulkan::Buffer*>(buffer)->Raw());
+        bufs.emplace_back(static_cast<const vulkan::BufferBundle*>(buffer)->Buffer().Raw());
     }
     bindBuffers_.emplace_back(bindBuffer{std::move(bufs)});
     cmd_.bindVertexBuffers(firstBinding, (uint32_t)buffers.size(),

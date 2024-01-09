@@ -26,9 +26,9 @@ inline vk::ImageSubresourceRange ImageSubresourceRange2Vk(
 }
 
 ImageView::ImageView(Device* device, const Image& image, ImageViewType viewType,
-                     Format format, const ComponentMapping& mapping,
+                     enum Format format, const ComponentMapping& mapping,
                      const ImageSubresourceRange& subresourceRange)
-    : device_{device} {
+    : rhi::ImageView{viewType, format}, device_{device} {
     vk::ImageViewCreateInfo createInfo;
     vk::ImageSubresourceRange range;
     vk::ImageAspectFlagBits flags;
@@ -52,11 +52,11 @@ ImageView::~ImageView() {
 
 Image::Image(
     Device* device, ImageType type, const cgmath::Vec3& extent,
-    const Format& format, ImageLayout initLayout, uint32_t arrayLayer,
+    enum Format format, ImageLayout initLayout, uint32_t arrayLayer,
     uint32_t mipLevel, SampleCountFlag sampleCount, ImageUsageFlags usage,
     ImageTiling tiling,
     std::optional<std::reference_wrapper<std::vector<uint32_t>>> queueIndices)
-    : device_(device) {
+    : rhi::Image{type, extent, format, usage}, device_(device) {
     vk::ImageCreateInfo createInfo;
     createInfo.setImageType(ImageType2Vk(type))
         .setArrayLayers(arrayLayer)
@@ -84,6 +84,39 @@ Image::Image(
 Image::~Image() {
     if (device_ && image_) {
         device_->Raw().destroyImage(image_);
+    }
+}
+
+Sampler::Sampler(Device* device, Filter min, Filter mag, SamplerAddressMode u,
+                 SamplerAddressMode v, SamplerAddressMode w, float mipLodBias,
+                 bool anisotropyEnable, float maxAnisotropy, bool compareEnable,
+                 CompareOp compareOp, float minLod, float maxLod,
+                 BorderColor borderColor, bool unormalizedCoordinates): device_{device} {
+    vk::SamplerCreateInfo createInfo;
+    createInfo.setMinFilter(Filter2Vk(min))
+        .setMagFilter(Filter2Vk(mag))
+        .setAddressModeU(SamplerAddressMode2Vk(u))
+        .setAddressModeV(SamplerAddressMode2Vk(v))
+        .setAddressModeW(SamplerAddressMode2Vk(w))
+        .setMipLodBias(mipLodBias)
+        .setAnisotropyEnable(anisotropyEnable)
+        .setMaxAnisotropy(maxAnisotropy)
+        .setCompareEnable(compareEnable)
+        .setCompareOp(CompareOp2Vk(compareOp))
+        .setMinLod(minLod)
+        .setMaxLod(maxLod)
+        .setBorderColor(BorderColor2Vk(borderColor))
+        .setUnnormalizedCoordinates(unormalizedCoordinates);
+
+    sampler_ = device_->Raw().createSampler(createInfo);
+    if (!sampler_) {
+        LOGE(log_tag::Vulkan, "create sampler failed");
+    }
+}
+
+Sampler::~Sampler() {
+    if (device_ && sampler_) {
+        device_->Raw().destroySampler(sampler_);
     }
 }
 

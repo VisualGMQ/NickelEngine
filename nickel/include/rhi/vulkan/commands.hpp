@@ -6,7 +6,6 @@
 #include "rhi/vulkan/framebuffer.hpp"
 #include "rhi/vulkan/renderpass.hpp"
 
-
 namespace nickel::rhi::vulkan {
 
 inline vk::RenderPassBeginInfo RenderPassBeginInfo2Vk(
@@ -37,7 +36,8 @@ public:
                       const rhi::Pipeline& pipeline) override;
     void Draw(uint32_t vertexCount, uint32_t instanceCount,
               uint32_t firstVertex, uint32_t firstInstance) override;
-    void BindVertexBuffer(uint32_t firstBinding, const std::vector<Buffer*>&,
+    void BindVertexBuffer(uint32_t firstBinding,
+                          const std::vector<BufferBundle*>&,
                           const std::vector<uint64_t>& offsets) override;
     void EndRecord() override;
     void Reset() override;
@@ -49,6 +49,7 @@ private:
     struct bindBuffer final {
         std::vector<vk::Buffer> buffers;
     };
+
     std::vector<bindBuffer> bindBuffers_;
 };
 

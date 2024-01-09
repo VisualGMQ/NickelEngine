@@ -490,6 +490,7 @@ inline vk::CompareOp CompareOp2Vk(CompareOp op) {
         CASE(CompareOp::GreaterEqual, vk::CompareOp::eGreaterOrEqual);
         CASE(CompareOp::Greater, vk::CompareOp::eGreater);
         CASE(CompareOp::Always, vk::CompareOp::eAlways);
+        CASE(CompareOp::NotEqual, vk::CompareOp::eNotEqual);
     }
 }
 
@@ -943,6 +944,53 @@ inline vk::CommandBufferUsageFlags CommandBufferUsage2Vk(
              vk::CommandBufferUsageFlagBits::eRenderPassContinue);
         CASE(CommandBufferUsage::SimultaneousUse,
              vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+    }
+}
+
+inline vk::Filter Filter2Vk(Filter filter) {
+    switch (filter) {
+        CASE(Filter::Nearest, vk::Filter::eNearest);
+        CASE(Filter::Linear, vk::Filter::eLinear);
+        CASE(Filter::CubicEXT, vk::Filter::eCubicEXT);
+        CASE(Filter::CubicIMG, vk::Filter::eCubicIMG);
+    }
+}
+
+inline vk::SamplerMipmapMode SamplerMipmapMode2Vk(SamplerMipmapMode mode) {
+    switch (mode) {
+        CASE(SamplerMipmapMode::Linear, vk::SamplerMipmapMode::eLinear);
+        CASE(SamplerMipmapMode::Nearest, vk::SamplerMipmapMode::eNearest);
+    }
+}
+
+inline vk::SamplerAddressMode SamplerAddressMode2Vk(SamplerAddressMode mode) {
+    switch (mode) {
+        CASE(SamplerAddressMode::Repeat, vk::SamplerAddressMode::eRepeat);
+        CASE(SamplerAddressMode::MirroredRepeat,
+             vk::SamplerAddressMode::eMirroredRepeat);
+        CASE(SamplerAddressMode::ClampToEdge,
+             vk::SamplerAddressMode::eClampToEdge);
+        CASE(SamplerAddressMode::ClampToBorder,
+             vk::SamplerAddressMode::eClampToBorder);
+        CASE(SamplerAddressMode::MirrorClampToEdge,
+             vk::SamplerAddressMode::eMirrorClampToEdge);
+        CASE(SamplerAddressMode::MirrorClampToEdgeKHR,
+             vk::SamplerAddressMode::eMirrorClampToEdgeKHR);
+    }
+}
+
+inline vk::BorderColor BorderColor2Vk(BorderColor c) {
+    switch (c) {
+        CASE(BorderColor::FloatTransparentBlack,
+             vk::BorderColor::eFloatTransparentBlack);
+        CASE(BorderColor::IntTransparentBlack,
+             vk::BorderColor::eIntTransparentBlack);
+        CASE(BorderColor::FloatOpaqueBlack, vk::BorderColor::eFloatOpaqueBlack);
+        CASE(BorderColor::IntOpaqueBlack, vk::BorderColor::eIntOpaqueBlack);
+        CASE(BorderColor::FloatOpaqueWhite, vk::BorderColor::eFloatOpaqueWhite);
+        CASE(BorderColor::IntOpaqueWhite, vk::BorderColor::eIntOpaqueWhite);
+        CASE(BorderColor::FloatCustomEXT, vk::BorderColor::eFloatCustomEXT);
+        CASE(BorderColor::IntCustomEXT, vk::BorderColor::eIntCustomEXT);
     }
 }
 

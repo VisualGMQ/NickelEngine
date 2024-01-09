@@ -5,11 +5,11 @@
 namespace nickel::rhi::vulkan {
 
 Buffer::Buffer(
-    Device* device, uint64_t size, BufferUsageFlags flags,
+    Device* device, uint64_t size, BufferUsageFlags usage,
     std::optional<std::reference_wrapper<std::vector<uint32_t>>> queueIndices)
-    : device_(device) {
+    : device_(device), usage_{usage}, size_{size} {
     vk::BufferCreateInfo createInfo;
-    createInfo.setSize(size).setUsage(BufferUsageFlags2Vk(flags));
+    createInfo.setSize(size).setUsage(BufferUsageFlags2Vk(usage));
     if (!queueIndices->get().empty()) {
         createInfo.setQueueFamilyIndices(queueIndices.value().get());
         createInfo.setSharingMode(vk::SharingMode::eConcurrent);
@@ -31,7 +31,7 @@ Buffer::~Buffer() {
 
 DeviceMemory::DeviceMemory(Device* device, const Buffer& buffer,
                            MemoryPropertyFlags flags)
-    : device_(device) {
+    : device_(device), prop_{flags} {
     auto requirements = device->Raw().getBufferMemoryRequirements(buffer.Raw());
     auto type = findMemoryType(requirements, MemoryPropertyFlags2Vk(flags));
 
@@ -63,35 +63,27 @@ DeviceMemory::~DeviceMemory() {
     }
 }
 
+/*
 MemoryGuard DeviceMemory::Map(uint64_t offset, uint64_t size) {
     return {*this, map(offset, size)};
 }
+*/
 
-void* DeviceMemory::map(uint64_t offset, uint64_t size) {
+void* DeviceMemory::Map(uint64_t offset, uint64_t size) {
     return device_->Raw().mapMemory(mem_, offset, size);
 }
 
-void DeviceMemory::unmap() {
+void DeviceMemory::Unmap() {
     device_->Raw().unmapMemory(mem_);
 }
 
-MemoryGuard::MemoryGuard(DeviceMemory& mem, void* memory)
-    : mem_{&mem}, memory{memory} {}
-
-MemoryGuard::MemoryGuard(DeviceMemory& mem, uint64_t offset, uint64_t size)
-    : mem_{&mem} {
-    memory = mem_->map(offset, size);
-}
-
-MemoryGuard::~MemoryGuard() {
-    Unmap();
-}
-
-void MemoryGuard::Unmap() {
-    if (memory) {
-        mem_->unmap();
-        memory = nullptr;
-    }
+BufferBundle::BufferBundle(
+    Device* device, uint64_t size, BufferUsageFlags usage,
+    MemoryPropertyFlags flags,
+    std::optional<std::reference_wrapper<std::vector<uint32_t>>> queueIndices)
+    : device_{device},
+      buffer_{device, size, usage, queueIndices},
+      memory_{device, buffer_, flags} {
 }
 
 }  // namespace nickel::rhi::vulkan

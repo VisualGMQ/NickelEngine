@@ -83,6 +83,8 @@ public:
         return VertexLayout(attrs, stride);
     }
 
+    VertexLayout() = default;
+
     VertexLayout(std::vector<Attribute>&& attrs, size_t stride)
         : attributes_(std::move(attrs)), stride_(stride) {}
 
