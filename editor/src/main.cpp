@@ -2,17 +2,17 @@
 #include "misc/transform.hpp"
 #include "nickel.hpp"
 
-
 #include "asset_property_window.hpp"
 #include "config.hpp"
 #include "content_browser.hpp"
-#include "entity_list_window.hpp"
 #include "dialog.hpp"
+#include "entity_list_window.hpp"
+#include "gizmos.hpp"
 #include "inspector.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 #include "watch_file.hpp"
-#include "gizmos.hpp"
+
 
 enum class EditorScene {
     ProjectManager,
@@ -40,7 +40,8 @@ void ProjectManagerUpdate(
 
                 LOGI(nickel::log_tag::Nickel, "Create new project to ", dir);
                 if (!ChDir(editorCtx->projectInfo.projectPath)) {
-                    LOGE(nickel::log_tag::Editor, "can't change directory to ", editorCtx->projectInfo.projectPath);
+                    LOGE(nickel::log_tag::Editor, "can't change directory to ",
+                         editorCtx->projectInfo.projectPath);
                 } else {
                     cmds.switch_state(EditorScene::Editor);
                 }
@@ -55,11 +56,12 @@ void ProjectManagerUpdate(
                     std::filesystem::path{files[0]}.parent_path().string();
 
                 if (!ChDir(editorCtx->projectInfo.projectPath)) {
-                    LOGE(nickel::log_tag::Editor, "can't change directory to ", editorCtx->projectInfo.projectPath);
+                    LOGE(nickel::log_tag::Editor, "can't change directory to ",
+                         editorCtx->projectInfo.projectPath);
                 } else {
                     cmds.switch_state(EditorScene::Editor);
                     LOGI(nickel::log_tag::Nickel, "Open project at ",
-                        editorCtx->projectInfo.projectPath);
+                         editorCtx->projectInfo.projectPath);
                 }
             }
         }
@@ -78,10 +80,7 @@ void RegistComponentShowMethods() {
                     ShowVec4);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::TextureHandle>(),
                     ShowTextureHandle);
-    instance.Regist(::mirrow::drefl::typeinfo<nickel::Sprite>(),
-                    ShowSprite);
-    instance.Regist(::mirrow::drefl::typeinfo<nickel::FontHandle>(),
-                    ShowFontHandle);
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::Sprite>(), ShowSprite);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::AnimationPlayer>(),
                     ShowAnimationPlayer);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::SoundPlayer>(),
@@ -103,10 +102,10 @@ void SpawnAnimationPlayer(gecs::commands cmds, gecs::entity ent,
                           gecs::registry reg) {
     if (reg.template has<nickel::AnimationPlayer>(ent)) {
         cmds.template replace<nickel::AnimationPlayer>(
-            ent, reg.res<gecs::mut<nickel::AnimationManager>>().get());
+            ent, reg.res<gecs::mut<nickel::AssetManager>>()->AnimationMgr());
     } else {
         cmds.template emplace<nickel::AnimationPlayer>(
-            ent, reg.res<gecs::mut<nickel::AnimationManager>>().get());
+            ent, reg.res<gecs::mut<nickel::AssetManager>>()->AnimationMgr());
     }
 }
 
@@ -194,6 +193,40 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
     RegistSpawnMethods();
 
     window->SetResizable(true);
+
+    // test animation
+    /*
+    auto transformType = mirrow::drefl::typeinfo<nickel::Transform>();
+    std::unique_ptr<nickel::BasicAnimationTrack> posTrack =
+        std::unique_ptr<nickel::AnimationTrack<nickel::cgmath::Vec2>>(
+            new nickel::AnimationTrack<nickel::cgmath::Vec2>{
+                {nickel::KeyFrame<nickel::cgmath::Vec2>(
+                     nickel::cgmath::Vec2{100.0f, 200.0f}, 0),
+                 nickel::KeyFrame<nickel::cgmath::Vec2>(
+                     nickel::cgmath::Vec2{300.0f, 500.0f}, 100)},
+                transformType,
+                {"translation"}
+    });
+
+    std::unique_ptr<nickel::BasicAnimationTrack> rotTrack =
+        std::unique_ptr<nickel::AnimationTrack<float>>(
+            new nickel::AnimationTrack<float>{
+                {nickel::KeyFrame<float>(0.0, 0),
+                 nickel::KeyFrame<float>(360, 200)},
+                transformType,
+                {"rotation"}
+    });
+
+    typename nickel::Animation::container_type tracks;
+    tracks.emplace_back(std::move(posTrack));
+    tracks.emplace_back(std::move(rotTrack));
+    nickel::Animation anim{std::move(tracks)};
+
+    auto animHandle = assetMgr->AnimationMgr().Create(
+        std::make_unique<nickel::Animation>(std::move(anim)), "test.anim");
+
+    editorCtx->animEditor.sequence->animHandle = animHandle;
+    */
 }
 
 void EditorMenubar(EditorContext& ctx) {
@@ -211,7 +244,7 @@ void EditorMenubar(EditorContext& ctx) {
                 ImGui::MenuItem(text.c_str(), nullptr, &show);
                 window.SetVisible(show);
             };
-            // addMenuItem("game content window", ctx.openGameWindow);
+            addMenuItem("game content window", ctx.gameWindow);
             addMenuItem("inspector", ctx.inspectorWindow);
             addMenuItem("entity list", ctx.entityListWindow);
             addMenuItem("content browser", ctx.contentBrowserWindow);

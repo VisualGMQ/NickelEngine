@@ -34,7 +34,6 @@ void TilesheetViewCanva::additionalDraw(ImDrawList* drawList,
                     fn_(tile);
                 }
                 owner_->Hide();
-                ImGui::CloseCurrentPopup();
             }
             drawList->AddRectFilled({tileP1.x, tileP1.y}, {tileP2.x, tileP2.y},
                                     ImGui::GetColorU32({1, 1, 0, 0.3}), 1.0f);

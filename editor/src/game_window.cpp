@@ -65,7 +65,7 @@ void GameWindow::Update() {
     newStyle.WindowPadding.y = 0;
     ImGui::GetStyle() = newStyle;
 
-    if (ImGui::Begin("game", &ctx.openGameWindow)) {
+    if (ImGui::Begin("game", &show_)) {
         auto regionMin = ImGui::GetWindowContentRegionMin();
         auto regionMax = ImGui::GetWindowContentRegionMax();
         auto windowPos = ImGui::GetWindowPos();

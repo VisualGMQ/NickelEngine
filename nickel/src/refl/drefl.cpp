@@ -264,6 +264,43 @@ void registSoundPlayerSerd() {
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<SoundPlayer>();
 }
 
+void serializeAnimationPlayer(toml::node& node, const mirrow::drefl::any& elem) {
+    Assert(node.is_table(), "serialize animation-handle to table");
+    auto assetMgr = gWorld->res<AssetManager>();
+    auto& player = *mirrow::drefl::try_cast_const<AnimationPlayer>(elem);
+    if (assetMgr->Has(player.Anim())) {
+        auto& anim = assetMgr->Get(player.Anim());
+        toml::table tbl;
+        tbl.emplace("path", anim.RelativePath().string());
+        node.as_table()->emplace("AnimationPlayer", tbl);
+    }
+}
+
+void deserializeAnimationPlayer(const toml::node& node, mirrow::drefl::any& elem) {
+    Assert(node.is_table(), "serialize sound player to table");
+    auto& tbl = *node.as_table();
+
+    auto assetMgr = gWorld->res<AssetManager>();
+    if (auto path = tbl.get("path"); path && path->is_string())  {
+        auto& animMgr = gWorld->res_mut<AssetManager>()->AnimationMgr();
+        auto filename = tbl.get("path")->as_string()->get();
+        auto& player = *mirrow::drefl::try_cast<AnimationPlayer>(elem);
+
+        if (animMgr.Has(filename)) {
+            player.ChangeAnim(animMgr.GetHandle(filename));
+        }
+    }
+}
+
+
+void registAnimationPlayerSerd() {
+    auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
+    serd.regist_serialize(mirrow::drefl::typeinfo<AnimationPlayer>(), serializeAnimationPlayer);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<AnimationPlayer>(), deserializeAnimationPlayer);
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<AnimationPlayer>();
+}
+
 void serializeGlobalTransform(toml::node& node, const mirrow::drefl::any& elem) {
     Assert(elem.type_info() == mirrow::drefl::typeinfo<GlobalTransform>(),
            "elem type incorrect");
@@ -316,6 +353,7 @@ void InitDynamicReflect() {
 
     registTextureHandleSerd();
     registSoundPlayerSerd();
+    registAnimationPlayerSerd();
     registGlobalTransformSerd();
 }
 

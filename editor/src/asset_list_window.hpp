@@ -22,6 +22,10 @@ template <>
 void ShowAsset<nickel::Font>(nickel::FontHandle handle, const nickel::Font&);
 
 template <>
+void ShowAsset<nickel::Animation>(nickel::AnimationHandle handle,
+                                  const nickel::Animation&);
+
+template <>
 void ShowAsset<nickel::Sound>(nickel::SoundHandle, const nickel::Sound&);
 
 template <>
@@ -62,7 +66,6 @@ protected:
                     }
 
                     Hide();
-                    ImGui::CloseCurrentPopup();
                 }
 
                 if (ImGui::IsItemHovered()) {
@@ -87,3 +90,4 @@ using TextureAssetListWindow = AssetListWindow<nickel::Texture>;
 using FontAssetListWindow = AssetListWindow<nickel::Font>;
 using TilesheetAssetListWindow = AssetListWindow<nickel::Tilesheet>;
 using SoundAssetListWindow = AssetListWindow<nickel::Sound>;
+using AnimationAssetListWindow = AssetListWindow<nickel::Animation>;

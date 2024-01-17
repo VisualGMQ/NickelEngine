@@ -198,7 +198,6 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     cmds.emplace_resource<Time>();
     cmds.emplace_resource<AssetManager>();
     cmds.emplace_resource<FontManager>();
-    cmds.emplace_resource<AnimationManager>();
     cmds.emplace_resource<TimerManager>();
     cmds.emplace_resource<RenderContext>();
 

@@ -11,6 +11,7 @@
 #include "pch.hpp"
 #include "tilesheet_editor.hpp"
 #include "input_text_window.hpp"
+#include "anim_editor.hpp"
 
 struct EditorContext {
 private:
@@ -22,11 +23,13 @@ public:
     EntityListWindow entityListWindow;
     InspectorWindow inspectorWindow;
     GameWindow gameWindow;
+    AnimationEditor animEditor;
 
     // popup windows
     TextureAssetListWindow textureAssetListWindow;
     FontAssetListWindow fontAssetListWindow;
     TilesheetAssetListWindow tilesheetAssetListWindow;
+    AnimationAssetListWindow animAssetListWindow;
     SoundAssetListWindow soundAssetListWindow;
     TexturePropertyPopupWindow texturePropWindow;
     SoundPropertyPopupWindow soundPropWindow;
@@ -34,7 +37,6 @@ public:
     TilesheetEditor tilesheetEditor;
     InputTextWindow inputTextWindow;
 
-    bool openGameWindow = true;
     bool openDemoWindow = false;
 
     // icon fonts

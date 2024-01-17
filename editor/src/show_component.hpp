@@ -78,10 +78,6 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
                        mirrow::drefl::any& value, gecs::registry reg,
                        const std::vector<int>&);
 
-void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
-                    mirrow::drefl::any& value, gecs::registry reg,
-                    const std::vector<int>&);
-
 void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
                          mirrow::drefl::any& value, gecs::registry reg,
                          const std::vector<int>&);

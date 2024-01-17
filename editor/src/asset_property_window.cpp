@@ -47,7 +47,6 @@ void TexturePropertyPopupWindow::update() {
             ImGui::Text("invalid texture handle");
             if (ImGui::Button("close")) {
                 Hide();
-                ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
             return;
@@ -83,7 +82,6 @@ void TexturePropertyPopupWindow::update() {
         // show cancel button
         if (ImGui::Button("cancel")) {
             Hide();
-            ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
@@ -99,7 +97,6 @@ void SoundPropertyPopupWindow::update() {
             ImGui::Text("invalid audio handle");
             if (ImGui::Button("close")) {
                 Hide();
-                ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
             return;
@@ -144,7 +141,6 @@ void SoundPropertyPopupWindow::update() {
         if (ImGui::Button("cancel")) {
             elem.Stop();
             Hide();
-            ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
@@ -160,7 +156,6 @@ void FontPropertyPopupWindow::update() {
             ImGui::Text("invalid audio handle");
             if (ImGui::Button("close")) {
                 Hide();
-                ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
             return;

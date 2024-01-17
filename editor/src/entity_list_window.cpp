@@ -1,4 +1,5 @@
 #include "entity_list_window.hpp"
+#include "context.hpp"
 
 using namespace nickel;
 
@@ -20,6 +21,14 @@ bool EntityListWindow::beginShowOneEntity(bool isLeaf, gecs::entity& selected,
     // select event
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
         selected = ent;
+        auto reg = gWorld->cur_registry();
+        auto ctx = gWorld->res_mut<EditorContext>();
+        if (reg->has<AnimationPlayer>(ent)) {
+            auto& player = reg->get<AnimationPlayer>(ent);
+            ctx->animEditor.ChangePlayer(ent, player.Anim());
+        } else {
+            ctx->animEditor.ChangePlayer(gecs::null_entity, AnimationHandle::Null());
+        }
     }
 
     // deal drag target
@@ -109,7 +118,7 @@ void EntityListWindow::showHierarchyEntities(const gecs::entity& entity,
 }
 
 void EntityListWindow::Update() {
-    if (!IsVisiable()) return;
+    if (!IsVisible()) return;
 
     auto reg = gWorld->cur_registry();
     auto cmds = reg->commands();

@@ -15,12 +15,10 @@ void InputTextWindow::update() {
                 callback_(text_);
             }
             Hide();
-            ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) {
             Hide();
-            ImGui::CloseCurrentPopup();
             callback_ = nullptr;
         }
         ImGui::EndPopup();

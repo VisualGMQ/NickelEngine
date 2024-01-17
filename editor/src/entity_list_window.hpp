@@ -40,10 +40,6 @@ class EntityListWindow final: public Window {
 public:
     void Update() override;
 
-    void Show() { show_ = true; }
-    void Hide() { show_ = false; }
-    bool IsVisiable() const { return show_; }
-
     auto GetSelected() const { return selected_; }
 
 private:

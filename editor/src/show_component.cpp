@@ -216,6 +216,14 @@ void SelectAndChangeAsset(EditorContext& ctx, MgrType& mgr,
             ctx.fontAssetListWindow.Show();
             ctx.fontAssetListWindow.SetSelectCallback(
                 [&](FontHandle h) { handle = h; });
+        } else if constexpr (std::is_same_v<AssetType, Sound>) {
+            ctx.soundAssetListWindow.Show();
+            ctx.soundAssetListWindow.SetSelectCallback(
+                [&](SoundHandle h) { handle = h; });
+        } else if constexpr (std::is_same_v<AssetType, Animation>) {
+            ctx.animAssetListWindow.Show();
+            ctx.animAssetListWindow.SetSelectCallback(
+                [&](AnimationHandle h) { handle = h; });
         }
     }
 }
@@ -339,28 +347,6 @@ void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
     }
 }
 
-void ShowFontHandle(const mirrow::drefl::type* type, std::string_view name,
-                    mirrow::drefl::any& value, gecs::registry reg,
-                    const std::vector<int>&) {
-    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<FontHandle>(),
-           "type incorrect");
-
-    auto& handle = *mirrow::drefl::try_cast<FontHandle>(value);
-    auto& mgr = reg.res<AssetManager>()->FontMgr();
-    char buf[1024] = {0};
-    if (mgr.Has(handle)) {
-        auto& font = mgr.Get(handle);
-        std::filesystem::path path = font.RelativePath();
-        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
-    } else {
-        snprintf(buf, sizeof(buf), "no font");
-    }
-
-    static std::string title = "asset font";
-    SelectAndChangeAsset(reg.res_mut<EditorContext>().get(),
-                         reg.res_mut<AssetManager>()->FontMgr(), buf, handle);
-}
-
 void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
                          mirrow::drefl::any& value, gecs::registry reg,
                          const std::vector<int>&) {
@@ -369,23 +355,32 @@ void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
            "type incorrect");
 
     AnimationPlayer& player = *mirrow::drefl::try_cast<AnimationPlayer>(value);
-    auto handle = player.GetAnim();
-    auto& mgr = reg.res<AnimationManager>().get();
+    auto handle = player.Anim();
+    auto& mgr = reg.res<AssetManager>()->AnimationMgr();
     static char buf[1024] = {0};
     if (handle && mgr.Has(handle)) {
-        // snprintf(buf, sizeof(buf), "%s", mgr.Get(handle).RelativePath());
+        snprintf(buf, sizeof(buf), "%s",
+                 mgr.Get(handle).RelativePath().string().c_str());
     } else {
         snprintf(buf, sizeof(buf), "%s", "no animation");
     }
 
     int selectedItem = -1;
-    std::array<const char*, 2> items = {"create new", "load"};
-    ImGui::Combo(buf, &selectedItem, items.data(), items.size(),
-                 ImGuiComboFlags_NoPreview);
-    if (selectedItem == 0) {
-        // TODO: create new animation and switch to animation panel
-    } else if (selectedItem == 1) {
-        // TODO: load from disk
+    if (ImGui::BeginCombo(buf, nullptr, ImGuiComboFlags_NoPreview)) {
+        if (ImGui::Selectable("create new")) {
+            // TODO: create new animation and switch to animation panel
+        }
+        if (ImGui::Selectable("load")) {
+            auto ctx = reg.res_mut<EditorContext>();
+            ctx->animAssetListWindow.Show();
+            ctx->animAssetListWindow.SetSelectCallback(
+                [&](nickel::AnimationHandle handle) {
+                    player.ChangeAnim(handle);
+                    ctx->animEditor.sequence->player.ChangeAnim(handle);
+                    // ctx->animEditor.sequence->entity = entity;
+                });
+        }
+        ImGui::EndCombo();
     }
 }
 
@@ -412,17 +407,30 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
     ImGui::ColorEdit4("pressing color", label.pressColor.data);
     ImGui::ColorEdit4("hovering color", label.hoverColor.data);
 
+    // show font
+    auto handle = label.GetFont();
+
+    auto& mgr = reg.res<AssetManager>()->FontMgr();
+    if (mgr.Has(handle)) {
+        auto& font = mgr.Get(handle);
+        std::filesystem::path path = font.RelativePath();
+        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
+    } else {
+        snprintf(buf, sizeof(buf), "no font");
+    }
+
+    if (ImGui::Button(buf)) {
+        auto ctx = gWorld->res_mut<EditorContext>();
+        ctx->fontAssetListWindow.Show();
+        ctx->fontAssetListWindow.SetSelectCallback(
+            [&](FontHandle h) { label.ChangeFont(h); });
+    }
+
     int size = label.GetPtSize();
-    ImGui::DragInt("pt", &size, 1.0, 1);
+    ImGui::DragInt("pt", &size, 1.0, 4);
     if (size != label.GetPtSize()) {
         label.SetPtSize(size);
     }
-
-    // show font
-    auto fontHandle = label.GetFont();
-    auto ref = mirrow::drefl::any_make_ref(fontHandle);
-    ShowFontHandle(ref.type_info(), "font", ref, reg, {});
-    label.ChangeFont(fontHandle);
 }
 
 void ShowSoundPlayer(const mirrow::drefl::type* type, std::string_view name,

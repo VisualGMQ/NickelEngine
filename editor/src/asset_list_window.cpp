@@ -16,8 +16,12 @@ void ShowAsset<nickel::Font>(nickel::FontHandle handle,
                              const nickel::Font& texture) {}
 
 template <>
+void ShowAsset<nickel::Animation>(nickel::AnimationHandle handle,
+                                  const nickel::Animation&) {}
+
+template <>
 void ShowAsset<nickel::Sound>(nickel::SoundHandle handle,
-                             const nickel::Sound& texture) {}
+                              const nickel::Sound& texture) {}
 
 template <>
 void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,

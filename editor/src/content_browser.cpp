@@ -161,6 +161,11 @@ void ContentBrowserWindow::showOneIcon(
                             assetMgr.TilesheetMgr().GetHandle(path));
                         break;
                     case nickel::FileType::Animation:
+                        ctx->animEditor.Show();
+                        ctx->animEditor.ChangePlayer(
+                            gecs::null_entity,
+                            assetMgr.AnimationMgr().GetHandle(path));
+                        break;
                     case nickel::FileType::Timer:
                     case nickel::FileType::FileTypeCount:
                     case nickel::FileType::Unknown:

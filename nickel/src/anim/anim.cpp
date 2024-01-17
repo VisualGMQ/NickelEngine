@@ -1,5 +1,6 @@
 #include "anim/anim.hpp"
 #include "mirrow/drefl/value_kind.hpp"
+#include "misc/asset_manager.hpp"
 
 namespace nickel {
 
@@ -46,6 +47,9 @@ bool AnimationTrack::changeApplyTarget(const mirrow::drefl::type* typeInfo) {
     return true;
 }
 */
+
+AnimationPlayer::AnimationPlayer()
+    : mgr_{&gWorld->res_mut<nickel::AssetManager>()->AnimationMgr()} {}
 
 Animation::Animation(const toml::table& tbl) {
     if (auto node = tbl.get("tracks"); node && node->is_array_of_tables()) {
@@ -151,6 +155,13 @@ void AnimationPlayer::Sync(gecs::entity entity, gecs::registry reg) {
 
             data.steal_assign(track->GetValueAt(curTime_));
         }
+    }
+
+    auto timer = reg.res<nickel::Time>();
+    curTime_ += timer->Elapse();
+
+    if (curTime_ >= Duration()) {
+        Stop();
     }
 }
 

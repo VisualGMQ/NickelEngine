@@ -28,6 +28,7 @@ void UpdateGlobalPosition(
     gecs::querier<gecs::mut<Style>, gecs::without<Child, Parent>> q,
     gecs::registry reg) {
     for (auto&& [_, style, child] : root) {
+        style.globalCenter_ = style.center;
         for (auto c : child.entities) {
             doUpdateGlobalPosition(style, c, reg);
         }
