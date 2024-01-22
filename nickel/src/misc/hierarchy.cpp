@@ -1,4 +1,5 @@
 #include "misc/hierarchy.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -28,6 +29,8 @@ void UpdateGlobalTransform(
                   gecs::without<Parent>>
         querier,
     gecs::registry reg) {
+    PROFILE_BEGIN();
+
     for (auto&& [entity, gTrans, trans] : querier) {
         gTrans.mat = trans.ToMat();
     }
@@ -37,8 +40,8 @@ void UpdateGlobalTransform(
     }
 }
 
-void HierarchyTool::MoveEntityAsChild(
-    gecs::entity other, std::optional<size_t> idx) {
+void HierarchyTool::MoveEntityAsChild(gecs::entity other,
+                                      std::optional<size_t> idx) {
     gecs::registry reg(*gWorld->cur_registry());
 
     HierarchyTool tool(other);

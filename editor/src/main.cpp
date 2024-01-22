@@ -137,11 +137,7 @@ void dropFileEventHandle(const nickel::DropFileEvent& event,
     auto name = path.filename();
     auto newPath = cbBrowser.CurPath() / name;
     std::error_code err;
-    std::filesystem::copy(path, newPath, err);
-    if (err) {
-        LOGW(nickel::log_tag::Editor, "drop file ", path, " to ", newPath,
-             " failed: ", err.message());
-    }
+    FS_CALL(std::filesystem::copy(path, newPath, err), err);
 }
 
 void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
@@ -176,11 +172,11 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
     auto& contentBrowserWindow = editorCtx->contentBrowserWindow;
     contentBrowserWindow.SetRootPath(assetDir);
     contentBrowserWindow.SetCurPath(assetDir);
-    if (!std::filesystem::exists(contentBrowserWindow.RootPath())) {
-        if (!std::filesystem::create_directory(
-                contentBrowserWindow.RootPath())) {
-            LOGF(nickel::log_tag::Editor, "create resource dir ", assetDir,
-                 " failed!");
+    std::error_code err;
+    if (!std::filesystem::exists(contentBrowserWindow.RootPath(), err)) {
+        FS_LOG_ERR(err, contentBrowserWindow.RootPath(), " not exists");
+        if (!std::filesystem::create_directory( contentBrowserWindow.RootPath(), err)) {
+            FS_LOG_ERR(err, "create resource dir ", assetDir, " failed");
         }
         // TODO: force quit editor
     }

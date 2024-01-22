@@ -3,6 +3,7 @@
 #include "renderer/renderer2d.hpp"
 #include "config/config.hpp"
 #include "core/log_tag.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -69,11 +70,15 @@ void detectAppShouldExit(const QuitEvent& event,
 
 void VideoSystemInit(gecs::event_dispatcher<QuitEvent> quit,
                      gecs::commands cmds) {
+    PROFILE_BEGIN();
+
     quit.sink().add<detectAppShouldExit>();
 }
 
 void VideoSystemUpdate(gecs::resource<EventPoller> poller,
                        gecs::resource<Window> window) {
+    PROFILE_BEGIN();
+
     poller->Poll();
     window->SwapBuffer();
 }

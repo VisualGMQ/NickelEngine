@@ -78,9 +78,11 @@ void FileChangeEventHandler(
         if (nickel::HasMetaFile(filetype)) {
             auto metaFilename = oldPath;
             metaFilename += nickel::GetMetaFileExtension(filetype);
-            if (std::filesystem::exists(metaFilename)) {
-                std::filesystem::remove(metaFilename);
+            std::error_code err;
+            if (std::filesystem::exists(metaFilename, err)) {
+                FS_CALL(std::filesystem::remove(metaFilename, err), err);
             }
+            FS_LOG_ERR(err, metaFilename, " exists call failed");
         }
     }
 
@@ -97,15 +99,19 @@ void FileChangeEventHandler(
         if (nickel::HasMetaFile(filetype)) {
             auto metaFilename = path;
             metaFilename += nickel::GetMetaFileExtension(filetype);
-            if (std::filesystem::exists(metaFilename)) {
-                std::filesystem::remove(metaFilename);
+            std::error_code err;
+            if (std::filesystem::exists(metaFilename, err)) {
+                FS_CALL(std::filesystem::remove(metaFilename, err), err);
             }
+            FS_LOG_ERR(err, metaFilename, "not exists");
         }
     }
 
     auto& cbWindow = ctx->contentBrowserWindow;
-    if (std::filesystem::exists(event.dir) &&
-        std::filesystem::equivalent(cbWindow.CurPath(), event.dir)) {
+    std::error_code err;
+    if (std::filesystem::exists(event.dir, err) &&
+        std::filesystem::equivalent(cbWindow.CurPath(), event.dir, err)) {
         cbWindow.RescanDir();
     }
+    FS_LOG_ERR(err);
 }

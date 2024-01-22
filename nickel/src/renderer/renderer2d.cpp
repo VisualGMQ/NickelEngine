@@ -1,4 +1,5 @@
 #include "renderer/renderer2d.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -272,6 +273,8 @@ void Renderer2D::SetRenderTarget(Texture* texture) {
 void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer,
                          gecs::resource<gecs::mut<Camera>> camera,
                          gecs::resource<gecs::mut<RenderContext>> ctx) {
+    PROFILE_BEGIN();
+
     GL_CALL(glEnable(GL_MULTISAMPLE));
     GL_CALL(glEnable(GL_BLEND));
     GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -281,6 +284,8 @@ void BeginRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer,
     ctx->ResetBias();
 }
 
-void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {}
+void EndRenderPipeline(gecs::resource<gecs::mut<Renderer2D>> renderer) {
+    PROFILE_BEGIN();
+}
 
 }  // namespace nickel

@@ -46,6 +46,7 @@ to enable auto copy dlls.
 |[rapidxml](https://rapidxml.sourceforge.net/)| use to parse XML|
 |[tomlplusplus](https://github.com/marzer/tomlplusplus)| use to support toml file parse|
 |[esfw](https://github.com/SpartanJ/efsw)| use to watch file change in editor|
+|[easy_profiler](https://github.com/yse/easy_profiler)|use to profile|
 
 editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-material-icon-theme)
 

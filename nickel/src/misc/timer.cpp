@@ -1,4 +1,6 @@
 #include "misc/timer.hpp"
+#include "core/profile.hpp"
+
 namespace nickel {
 
 uint64_t Time::fps_ = 60;
@@ -43,6 +45,8 @@ Timer::Timer(const std::filesystem::path& filename) : Asset(filename) {
 }
 
 void Time::Update(gecs::resource<gecs::mut<Time>> t) {
+    PROFILE_BEGIN();
+
     t->elapse_ = clock_t::now() - t->curTime_;
 
     t->curTime_ = clock_t::now();

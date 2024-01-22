@@ -1,4 +1,5 @@
 #include "input/device.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -19,6 +20,8 @@ void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent> btn,
 void HandleInputEvents(gecs::event_dispatcher<MouseButtonEvent> btn,
                        gecs::event_dispatcher<MouseMotionEvent> motion,
                        gecs::event_dispatcher<KeyboardEvent> keyboard) {
+    PROFILE_BEGIN();
+
     btn.update();
     motion.update();
     keyboard.update();
@@ -48,6 +51,8 @@ void Mouse::mouseBtnEventHandle(const MouseButtonEvent& event,
 }
 
 void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
+    PROFILE_BEGIN();
+
     for (auto& key : keyboard->buttons_) {
         key.lastState = key.isPress;
         key.isPress = false;
@@ -55,6 +60,8 @@ void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
 }
 
 void Mouse::Update(gecs::resource<gecs::mut<Mouse>> mouse) {
+    PROFILE_BEGIN();
+
     for (auto& btn : mouse->buttons_) {
         btn.lastState = btn.isPress;
     }

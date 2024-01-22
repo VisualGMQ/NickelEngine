@@ -1,3 +1,4 @@
+*.profile
 .*
 cmake-build*
 compile_commands.json

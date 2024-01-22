@@ -1,8 +1,11 @@
 #include "ui/ui.hpp"
+#include "core/profile.hpp"
 
 namespace nickel::ui {
 
 void InitSystem(gecs::commands cmds) {
+    PROFILE_BEGIN();
+
     cmds.emplace_resource<Context>();
 }
 
@@ -27,6 +30,8 @@ void UpdateGlobalPosition(
     gecs::querier<gecs::mut<Style>, Child, gecs::without<Parent>> root,
     gecs::querier<gecs::mut<Style>, gecs::without<Child, Parent>> q,
     gecs::registry reg) {
+    PROFILE_BEGIN();
+
     for (auto&& [_, style, child] : root) {
         style.globalCenter_ = style.center;
         for (auto c : child.entities) {
@@ -108,6 +113,8 @@ void renderLabel(gecs::entity ent, const Label& label,
 void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
               gecs::resource<gecs::mut<Renderer2D>> renderer,
               gecs::resource<gecs::mut<Context>> ctx, gecs::registry reg) {
+    PROFILE_BEGIN();
+
     for (auto&& [entity, style] : querier) {
         renderer->BeginRenderTexture(ctx->camera);
         renderer->DisableDepthTest();
@@ -158,6 +165,8 @@ void HandleEventSystem(gecs::resource<gecs::mut<Context>> ctx,
                        gecs::querier<Style, gecs::without<Parent>> querier,
                        gecs::querier<Style, Child, gecs::without<Parent>> roots,
                        gecs::resource<Mouse> mouse, gecs::registry reg) {
+    PROFILE_BEGIN();
+
     EventRecorder recorder;
 
     // check event trigger entity

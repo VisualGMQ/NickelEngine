@@ -5,6 +5,9 @@
 #include "core/gogl.hpp"
 #include "core/log.hpp"
 #include "core/log_tag.hpp"
+#include "core/profile.hpp"
+#include "core/utf8string.hpp"
+#include "core/util.hpp"
 #include "geom/basic_geom.hpp"
 #include "geom/geom2d.hpp"
 #include "geom/geom3d.hpp"
@@ -25,4 +28,3 @@
 #include "ui/ui.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
-

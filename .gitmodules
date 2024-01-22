@@ -16,3 +16,6 @@
 [submodule "3rdlibs/lunasvg"]
 	path = 3rdlibs/lunasvg
 	url = https://github.com/sammycage/lunasvg.git
+[submodule "3rdlibs/easy_profiler"]
+	path = 3rdlibs/easy_profiler
+	url = https://github.com/yse/easy_profiler.git

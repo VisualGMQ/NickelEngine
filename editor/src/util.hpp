@@ -28,3 +28,19 @@ inline nickel::cgmath::Mat44 ScaleByAnchorAsMat(
 }
 
 bool ChDir(const std::filesystem::path&);
+
+#define FS_LOG_ERR(err, ...)                                        \
+    do {                                                            \
+        if (err) {                                                  \
+            LOGE(nickel::log_tag::Filesystem, err.message(), " : ", \
+                 ##__VA_ARGS__);                                    \
+        }                                                           \
+    } while (0)
+
+#define FS_CALL(expr, err)                                    \
+    do {                                                      \
+        (expr);                                               \
+        if (err) {                                            \
+            LOGE(nickel::log_tag::Filesystem, err.message()); \
+        }                                                     \
+    } while (0)

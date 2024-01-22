@@ -1,4 +1,5 @@
 #include "window/event.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -332,6 +333,8 @@ void EventPoller::Poll() const {
 }
 
 void EventPollerInit(gecs::commands cmds) {
+    PROFILE_BEGIN();
+
     cmds.emplace_resource<EventPoller>(EventPoller{});
     EventPoller::AssociatePollerAndECS(*gWorld->cur_registry());
 }

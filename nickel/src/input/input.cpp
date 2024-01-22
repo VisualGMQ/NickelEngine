@@ -1,4 +1,5 @@
 #include "input/input.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -58,6 +59,8 @@ void InputSystemInit(
     gecs::event_dispatcher<MouseButtonEvent> mouseBtnDispatcher,
     gecs::event_dispatcher<MouseMotionEvent> mouseMotionDispatcher,
     gecs::event_dispatcher<KeyboardEvent> keyboardDispatcher) {
+    PROFILE_BEGIN();
+
     auto& keyboard = cmds.emplace_resource<Keyboard>();
     cmds.emplace_resource<Mouse>();
     ConnectInput2Event(mouseBtnDispatcher, mouseMotionDispatcher,
@@ -101,6 +104,5 @@ void InputSystemInit(
     cmds.emplace_resource<Input>(
         std::make_unique<KeyboardInput>(keyboard, actions));
 }
-
 
 }  // namespace nickel

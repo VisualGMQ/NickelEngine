@@ -57,9 +57,9 @@ bool HasMetaFile(FileType filetype) {
         case FileType::Image:
         case FileType::Font:
         case FileType::Audio:
+            return true;
         case FileType::Unknown:
         case FileType::FileTypeCount:
-            return true;
         case FileType::Meta:
             return false;
     }

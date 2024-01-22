@@ -1,5 +1,6 @@
 #include "renderer/sprite.hpp"
 #include "misc/asset_manager.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -87,6 +88,8 @@ void CollectSpriteRenderInfo(
         spriteInHies,
     gecs::resource<AssetManager> assetMgr,
     gecs::resource<gecs::mut<RenderContext>> renderCtx, gecs::registry reg) {
+    PROFILE_BEGIN();
+
     for (auto&& [_, sprite, transform] : sprites) {
         if (!sprite.visiable) {
             continue;
@@ -110,6 +113,8 @@ void CollectSpriteRenderInfo(
 void RenderElements(gecs::resource<gecs::mut<Renderer2D>> renderer2d,
                     gecs::resource<gecs::mut<RenderContext>> ctx,
                     gecs::resource<gecs::mut<Camera>> camera) {
+    PROFILE_BEGIN();
+
     renderer2d->BeginRenderTexture(camera.get());
 
     auto& elems = ctx->renderInfos;

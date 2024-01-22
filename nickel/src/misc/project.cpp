@@ -223,6 +223,8 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
 }
 
 void EngineShutdown() {
+    PROFILE_BEGIN();
+
     // release all entity&component
     gWorld->destroy_all_entities();
     gWorld->remove_res<AssetManager>();

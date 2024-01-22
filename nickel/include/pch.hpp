@@ -44,6 +44,10 @@
 
 #include "lunasvg.h"
 
+#ifdef NICKEL_ENABLE_PROFILE
+#include "easy/profiler.h"
+#endif
+
 #include <algorithm>
 #include <array>
 #include <chrono>

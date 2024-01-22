@@ -19,3 +19,6 @@ add_subdirectory(freetype2)
 
 add_subdirectory(lunasvg)
 add_subdirectory(efsw)
+
+set(EASY_PROFILER_NO_GUI ON)
+add_subdirectory(easy_profiler)

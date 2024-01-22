@@ -59,13 +59,13 @@ void ContentBrowserWindow::selectAndLoadAsset() {
     for (auto& filename : filenames) {
         auto type = nickel::DetectFileType(filename);
         auto copyPath = path_ / filename.filename();
+        std::error_code err;
         if (filename != copyPath) {
-            if (std::filesystem::exists(copyPath)) {
-                std::filesystem::remove(copyPath);
+            if (std::filesystem::exists(copyPath, err)) {
+                FS_CALL(std::filesystem::remove(copyPath, err), err);
             }
-            if (!std::filesystem::copy_file(filename, copyPath)) {
-                LOGW(nickel::log_tag::Editor, "copy ", filename, " to ",
-                     copyPath, " failed");
+            if (!std::filesystem::copy_file(filename, copyPath, err)) {
+                FS_LOG_ERR(err, "copy ", filename, " to ", copyPath, " failed");
                 continue;
             }
         }
@@ -112,7 +112,8 @@ void ContentBrowserWindow::showAssetOperationPopupMenu(
     auto ctx = gWorld->res<EditorContext>();
     if (ImGui::BeginPopupContextItem(path.string().c_str())) {
         if (ImGui::Button("delete")) {
-            std::filesystem::remove_all(path);
+            std::error_code err;
+            FS_CALL(std::filesystem::remove_all(path, err), err);
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -212,9 +213,9 @@ void ContentBrowserWindow::Update() {
     if (!IsVisible()) return;
 
     if (ImGui::Begin("content browser", &show_)) {
-
-
-        auto relativePath = std::filesystem::relative(path_, rootPath_);
+        std::error_code err;
+        std::filesystem::path relativePath;
+        FS_CALL(relativePath = std::filesystem::relative(path_, rootPath_, err), err);
         ImGui::Text("Res://%s", relativePath.string().c_str());
         ImGui::SameLine();
 
@@ -227,15 +228,14 @@ void ContentBrowserWindow::Update() {
         if (ImGui::Button("create directory")) {
             auto ctx = gWorld->res_mut<EditorContext>();
             auto curPath = ctx->contentBrowserWindow.CurPath();
-            ctx->inputTextWindow.SetCallback(
-                [=](const std::string& dirName) {
-                    auto dir = curPath / dirName;
-                    std::error_code err;
-                    if (!std::filesystem::create_directory(dir, err)) {
-                        LOGW(nickel::log_tag::Editor, "create directory ", dir,
-                             " failed: ", err.message());
-                    }
-                });
+            ctx->inputTextWindow.SetCallback([=](const std::string& dirName) {
+                auto dir = curPath / dirName;
+                std::error_code err;
+                if (!std::filesystem::create_directory(dir, err)) {
+                    FS_LOG_ERR(err, "create directory ", dir,
+                         " failed");
+                }
+            });
             ctx->inputTextWindow.Show();
             ImGui::CloseCurrentPopup();
         }
@@ -249,10 +249,8 @@ void ContentBrowserWindow::Update() {
         }
 
         showIcons();
-
     }
     ImGui::End();
-
 }
 
 nickel::Texture& ContentBrowserWindow::FindTextureOrGen(

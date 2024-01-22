@@ -1,6 +1,7 @@
 #include "renderer/font.hpp"
 #include "core/gogl.hpp"
 #include "misc/asset_manager.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -9,6 +10,8 @@ TextCache TextCache::Null;
 FT_Library gFtLib;
 
 void FontSystemInit() {
+    PROFILE_BEGIN();
+
     if (auto err = FT_Init_FreeType(&gFtLib); err) {
         LOGE(log_tag::Renderer, "freetype2 init failed! ",
              FT_Error_String(err));

@@ -1,6 +1,7 @@
 #include "audio/audio.hpp"
 #include "core/log_tag.hpp"
 #include "misc/asset_manager.hpp"
+#include "core/profile.hpp"
 
 namespace nickel {
 
@@ -60,6 +61,8 @@ void SoundPlayer::ChangeSound(SoundHandle handle) {
 }
 
 void InitAudioSystem() {
+    PROFILE_BEGIN();
+
     auto result = ma_engine_init(NULL, &gEngine);
     if (result != MA_SUCCESS) {
         LOGW(log_tag::Audio, "miniaudio engine init failed: ", result);
