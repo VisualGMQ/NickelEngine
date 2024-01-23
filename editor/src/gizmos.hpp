@@ -18,7 +18,8 @@ public:
     };
 
     // call this every frame in GameWindow
-    void SetGameContentOffset(const nickel::cgmath::Vec2& offset) { offset_ = offset; }
+    void SetMouseRelativePos(const nickel::cgmath::Vec2& pos) { mousePos_ = pos;}
+    void SetFBOScale(float scale) { scale_ = scale; }
     void SetEventHandleState(bool b) { shouldHandleEvent_ = b; }
 
     void SetMode(Mode mode) { mode_ = mode; }
@@ -34,10 +35,11 @@ private:
 
     Mode mode_ = Mode::Translate;
 
-    nickel::cgmath::Vec2 offset_;
     bool shouldHandleEvent_ = false;
     std::optional<nickel::cgmath::Vec2> baseAxis_; // for rotation
     float oldRotation_{};
+    nickel::cgmath::Vec2 mousePos_;
+    float scale_ = 1.0;
 
     static constexpr float AxisLen = 100;
     static constexpr float ArrowLen = 10;

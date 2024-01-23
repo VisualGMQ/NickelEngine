@@ -34,8 +34,8 @@ GameWindow::GameWindow() {
         0, fbo_->Size().w, 0, fbo_->Size().h, 1000, -1000));
 }
 
-void drawCoordLine(const nickel::cgmath::Vec2& winSize, nickel::Renderer2D& renderer,
-                   nickel::Camera& camera,
+void drawCoordLine(const nickel::cgmath::Vec2& winSize,
+                   nickel::Renderer2D& renderer, nickel::Camera& camera,
                    nickel::Camera& uiCamera) {
     renderer.BeginRenderTexture(camera);
     nickel::cgmath::Rect rect{0, 0, winSize.w, winSize.h};
@@ -68,31 +68,12 @@ void GameWindow::Update() {
     if (ImGui::Begin("game", &show_)) {
         auto regionMin = ImGui::GetWindowContentRegionMin();
         auto regionMax = ImGui::GetWindowContentRegionMax();
-        auto windowPos = ImGui::GetWindowPos();
-        windowPos.x += regionMin.x;
-        windowPos.y += regionMin.y;
-        auto windowSize = ImGui::GetWindowSize();
-        windowSize.x -= regionMin.x;
-        windowSize.y -= regionMin.y;
+        auto windowPos = ImGui::GetWindowPos() + regionMin;
+        auto windowSize = regionMax - regionMin;
 
         ImVec2 uvMin = {0, 1};
         ImVec2 uvMax = {windowSize.x / fbo_->Size().w,
                         (fbo_->Size().h - windowSize.y) / fbo_->Size().h};
-
-        srtGizmos_.SetGameContentOffset(nickel::cgmath::Vec2{windowPos.x, windowPos.y} + offset_);
-        srtGizmos_.SetEventHandleState(ImGui::IsWindowFocused());
-        if (ImGui::IsWindowFocused()) {
-            if (ImGui::IsKeyPressed(ImGuiKey_S)) {
-                srtGizmos_.SetMode(SRTGizmos::Mode::Scale);
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_R)) {
-                srtGizmos_.SetMode(SRTGizmos::Mode::Rotate);
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_T)) {
-                srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
-            }
-        }
-        srtGizmos_.Update(*gWorld->cur_registry());
 
         ImGui::GetWindowDrawList()->AddImage(
             (ImTextureID)texture_->Id(), windowPos,
@@ -113,9 +94,30 @@ void GameWindow::Update() {
             offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
         }
 
-        auto view = ScaleByAnchorAsMat(
-            {0, 0}, scale_, {windowSize.x * 0.5f, windowSize.y * 0.5f},
-            offset_);
+        auto view = ScaleByAnchorAsMat({0, 0}, scale_, halfWindowSize, offset_);
+
+        auto pos = ImGui::GetMousePos() - ImGui::GetWindowPos() -
+                   ImGui::GetWindowContentRegionMin();
+        nickel::cgmath::Vec2 translatedPos{pos.x, pos.y};
+        translatedPos = (translatedPos - halfWindowSize) *
+                            nickel::cgmath::Vec2{1.0f / scale_, 1.0f / scale_} -
+                        offset_ + halfWindowSize;
+        srtGizmos_.SetMouseRelativePos(
+            nickel::cgmath::Vec2{translatedPos.x, translatedPos.y});
+        srtGizmos_.SetFBOScale(scale_);
+        srtGizmos_.SetEventHandleState(ImGui::IsMouseHoveringRect(windowPos, windowPos + windowSize));
+        if (ImGui::IsWindowFocused()) {
+            if (ImGui::IsKeyPressed(ImGuiKey_S)) {
+                srtGizmos_.SetMode(SRTGizmos::Mode::Scale);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) {
+                srtGizmos_.SetMode(SRTGizmos::Mode::Rotate);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_T)) {
+                srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
+            }
+        }
+        srtGizmos_.Update(*gWorld->cur_registry());
 
         camera.SetView(view);
         uiCamera.SetView(view);

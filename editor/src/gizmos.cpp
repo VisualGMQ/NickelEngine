@@ -14,8 +14,6 @@ void SRTGizmos::Update(gecs::registry reg) {
 
     auto& transform = reg.get_mut<nickel::Transform>(entity);
 
-    auto mousePos = mouse->Position() - offset_;
-
     renderer2D->BeginRenderTexture(camera.get());
 
     auto xAxis = getXAxis(transform.translation);
@@ -25,9 +23,9 @@ void SRTGizmos::Update(gecs::registry reg) {
         transform.translation - rectSize * 0.5, {25, 25}
     };
 
-    bool xHoving = isHovingOnAxis(xAxis, mousePos);
-    bool yHoving = isHovingOnAxis(yAxis, mousePos);
-    bool isInRect = rect.IsPtIn(mousePos);
+    bool xHoving = isHovingOnAxis(xAxis, mousePos_);
+    bool yHoving = isHovingOnAxis(yAxis, mousePos_);
+    bool isInRect = rect.IsPtIn(mousePos_);
 
     nickel::cgmath::Color xAxisColor{1, 0, 0, normalAlpha};
     nickel::cgmath::Color yAxisColor{0, 1, 0, normalAlpha};
@@ -48,7 +46,7 @@ void SRTGizmos::Update(gecs::registry reg) {
             drawScaleAxis(yAxis, yAxisColor, renderer2D.get(), yAxisHighlight);
             break;
         case Mode::Rotate:
-            if (baseAxis_) {
+            if (baseAxis_ && shouldHandleEvent_) {
                 drawRotateLine(transform.translation, baseAxis_.value(),
                                RotateAxisLen, rotAxisColor, renderer2D.get());
             }
@@ -72,7 +70,8 @@ void SRTGizmos::Update(gecs::registry reg) {
         }
 
         if (mode_ == Mode::Rotate) {
-            baseAxis_ = nickel::cgmath::Normalize(mousePos - transform.translation);
+            baseAxis_ =
+                nickel::cgmath::Normalize(mousePos_ - transform.translation);
             oldRotation_ = transform.rotation;
         }
     }
@@ -83,38 +82,45 @@ void SRTGizmos::Update(gecs::registry reg) {
     }
 
     // handle drag
-    constexpr float ScaleFactor = 0.01;
-    switch (mode_) {
-        case Mode::Translate:
-            if (dragType_ & DragType::xAxis) {
-                transform.translation.x += mouse->Offset().x;
-            }
-            if (dragType_ & DragType::yAxis) {
-                transform.translation.y += mouse->Offset().y;
-            }
-            break;
-        case Mode::Scale:
-            if (dragType_ == DragType::Both) {
-                auto scale =
-                    std::max(mouse->Offset().x, mouse->Offset().y) * ScaleFactor;
-                transform.scale.x += scale;
-                transform.scale.y += scale;
-            } else if (dragType_ & DragType::xAxis) {
-                transform.scale.x += mouse->Offset().x * ScaleFactor;
-            } else if (dragType_ & DragType::yAxis) {
-                transform.scale.y += mouse->Offset().y * ScaleFactor;
-            }
-            break;
-        case Mode::Rotate:
-            if (baseAxis_) {
-                auto axis = nickel::cgmath::Normalize(mousePos - transform.translation);
-                drawRotateLine(transform.translation, axis,
-                               RotateAxisLen, rotAxisColor, renderer2D.get());
-                auto sign = nickel::cgmath::Sign(nickel::cgmath::Cross(baseAxis_.value(), axis));
-                auto deg = sign * nickel::cgmath::Rad2Deg(std::acos(nickel::cgmath::Dot(baseAxis_.value(), axis)));
-                transform.rotation = std::clamp(oldRotation_ + deg, 0.0f, 360.0f);
-            }
-            break;
+    if (shouldHandleEvent_) {
+        constexpr float ScaleFactor = 0.01;
+        auto mouseOffset = mouse->Offset() / scale_;
+        switch (mode_) {
+            case Mode::Translate:
+                if (dragType_ & DragType::xAxis) {
+                    transform.translation.x += mouseOffset.x;
+                }
+                if (dragType_ & DragType::yAxis) {
+                    transform.translation.y += mouseOffset.y;
+                }
+                break;
+            case Mode::Scale:
+                if (dragType_ == DragType::Both) {
+                    auto scale =
+                        std::max(mouseOffset.x, mouseOffset.y) * ScaleFactor;
+                    transform.scale.x += scale;
+                    transform.scale.y += scale;
+                } else if (dragType_ & DragType::xAxis) {
+                    transform.scale.x += mouseOffset.x * ScaleFactor;
+                } else if (dragType_ & DragType::yAxis) {
+                    transform.scale.y += mouseOffset.y * ScaleFactor;
+                }
+                break;
+            case Mode::Rotate:
+                if (baseAxis_) {
+                    auto axis = nickel::cgmath::Normalize(
+                        mousePos_ - transform.translation);
+                    drawRotateLine(transform.translation, axis, RotateAxisLen,
+                                   rotAxisColor, renderer2D.get());
+                    auto radians = nickel::cgmath::GetRadianIn180Signed(
+                        baseAxis_.value(), axis);
+                    auto deg = nickel::cgmath::Rad2Deg(std::clamp<float>(
+                        radians, -nickel::cgmath::PI, nickel::cgmath::PI));
+                    transform.rotation =
+                        nickel::cgmath::Wrap<float>(oldRotation_ + deg, 0, 360);
+                }
+                break;
+        }
     }
 
     renderer2D->EndRender();
@@ -166,8 +172,8 @@ void SRTGizmos::drawScaleAxis(const nickel::geom2d::Segment<float>& seg,
     auto end = seg.p + seg.dir * seg.len;
     renderer.DrawLine(seg.p, end, color);
     constexpr float RectLen = 15;
-    nickel::cgmath::Rect rect{end.x - RectLen * 0.5f,
-                              end.y - RectLen * 0.5f, RectLen, RectLen};
+    nickel::cgmath::Rect rect{end.x - RectLen * 0.5f, end.y - RectLen * 0.5f,
+                              RectLen, RectLen};
     renderer.FillRect(rect, color);
 }
 

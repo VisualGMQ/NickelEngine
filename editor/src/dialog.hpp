@@ -76,6 +76,7 @@ public:
         data.flags = static_cast<SDL_MessageBoxFlags>(type_);
         data.numbuttons = buttons_.size();
         data.buttons = buttons_.data();
+        data.window = nullptr;
         data.colorScheme = scheme_ ? &scheme_.value() : nullptr;
         SDL_ShowMessageBox(&data, &btnId);
         return btnId;
@@ -87,7 +88,7 @@ private:
     std::string title_;
     std::string msg_;
     std::vector<SDL_MessageBoxButtonData> buttons_;
-    std::vector<std::string> buttonTexts_;
+    std::list<std::string> buttonTexts_;
     std::optional<SDL_MessageBoxColorScheme> scheme_;
 
     void setSchemeColor(SDL_MessageBoxColorType type,

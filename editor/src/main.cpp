@@ -178,7 +178,8 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
         if (!std::filesystem::create_directory( contentBrowserWindow.RootPath(), err)) {
             FS_LOG_ERR(err, "create resource dir ", assetDir, " failed");
         }
-        // TODO: force quit editor
+        MessageBox box{"error", "can't open project", MessageBoxType::Error};
+        box.Show();
     }
     contentBrowserWindow.RescanDir();
 
@@ -265,6 +266,15 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<EditorContext>> ctx) {
 }
 
 void EditorExit() {
+    int btn =
+        MessageBox{"quit", "want to save project?", MessageBoxType::Warning}
+            .AddButton("yes", MessageBox::ButtonType::ReturnKeyDefault)
+            .AddButton("no", MessageBox::ButtonType::EscapeKeyDefault)
+            .Show();
+    if (btn == 0) {
+        SaveProjectByConfig(gWorld->res<EditorContext>()->projectInfo,
+                            gWorld->res<nickel::AssetManager>().get());
+    }
     gWorld->remove_res<EditorContext>();
 }
 

@@ -855,10 +855,14 @@ template <typename T>
 class DynMat final {
 public:
     DynMat() = default;
-    DynMat(uint32_t col, uint32_t row): datas_{col * row, T{}}, size_{col, row} {}
+
+    DynMat(uint32_t col, uint32_t row)
+        : datas_{col * row, T{}}, size_{col, row} {}
 
     auto& Size() const { return size_; }
+
     auto Col() const { return size_.w; }
+
     auto Row() const { return size_.h; }
 
     const T& Get(uint32_t col, uint32_t row) const {
@@ -919,6 +923,41 @@ int Sign(T value) {
 template <typename T>
 bool IsOverlap(T min1, T max1, T min2, T max2) {
     return !((min1 >= max2) || (min2 >= max1));
+}
+
+template <typename T>
+T Wrap(T value, T min, T max) {
+    while (value < min || value > max) {
+        if (value < min) {
+            value = max - (min - value);
+        } else if (value > max) {
+            value = min + (value - max);
+        }
+    }
+    return value;
+}
+
+/**
+ * @brief Get degree between v1 & v2 in [0, 2 * PI)
+ * @note v1 & v2 are both normalized
+ */
+template <typename T>
+T GetRadianIn360(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
+    auto cos = Dot(v1, v2);
+    auto sin = Cross(v1, v2);
+
+    return Wrap<double>(std::acos(cos) * Sign(sin), 0, 2 * PI);
+}
+
+/**
+ * @brief Get degree between v1 & v2 in [-PI, PI)
+ * @note v1 & v2 are both normalized
+ */
+template <typename T>
+T GetRadianIn180Signed(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
+    auto cos = Dot(v1, v2);
+    auto sin = Cross(v1, v2);
+    return std::acos(cos) * Sign(sin);
 }
 
 }  // namespace cgmath
