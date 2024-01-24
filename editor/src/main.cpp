@@ -73,19 +73,19 @@ void RegistComponentShowMethods() {
     auto& instance = ComponentShowMethods::Instance();
 
     instance.Regist(::mirrow::drefl::typeinfo<nickel::cgmath::Vec2>(),
-                    ShowVec2);
+                    DisplayVec2);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::cgmath::Vec3>(),
-                    ShowVec3);
+                    DisplayVec3);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::cgmath::Vec4>(),
-                    ShowVec4);
+                    DisplayVec4);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::TextureHandle>(),
-                    ShowTextureHandle);
-    instance.Regist(::mirrow::drefl::typeinfo<nickel::Sprite>(), ShowSprite);
+                    DisplayTextureHandle);
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::Sprite>(), DisplaySprite);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::AnimationPlayer>(),
-                    ShowAnimationPlayer);
+                    DisplayAnimationPlayer);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::SoundPlayer>(),
-                    ShowSoundPlayer);
-    instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), ShowLabel);
+                    DisplaySoundPlayer);
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), DisplayLabel);
 }
 
 template <typename T>

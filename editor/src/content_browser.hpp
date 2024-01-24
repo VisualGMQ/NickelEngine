@@ -32,7 +32,6 @@ class ContentBrowserWindow : public Window {
 public:
     explicit ContentBrowserWindow(EditorContext* ctx);
 
-    void Update() override;
     void RescanDir();
 
     void SetRootPath(const std::filesystem::path& root) { rootPath_ = root; }
@@ -44,6 +43,9 @@ public:
     auto& RootPath() const { return rootPath_; }
 
     nickel::Texture& FindTextureOrGen(const std::string& extension);
+
+protected:
+    void update() override;
 
 private:
     EditorContext* ctx_;

@@ -23,8 +23,21 @@ public:
 
     auto& GetTitle() const { return title_; }
 
+    void Update() {
+        if (!show_) {
+            return;
+        }
+
+        if (ImGui::Begin(GetTitle().c_str(), &show_)) {
+            update();
+        }
+        ImGui::End();
+    }
+
 protected:
     bool show_ = true;
+
+    virtual void update() = 0;
 
 private:
     std::string title_;
@@ -42,12 +55,13 @@ public:
     void Update() override final {
         if (IsVisible()) {
             ImGui::OpenPopup(GetTitle().c_str());
-            update();
+
+            if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_)) {
+                update();
+                ImGui::EndPopup();
+            }
         }
     }
-
-protected:
-    virtual void update() = 0;
 };
 
 class PopupMenu: public Window {
@@ -80,12 +94,14 @@ public:
             ImGui::OpenPopup(GetTitle().c_str());
             showed_ = false;
         }
-        update();
+
+        if (ImGui::BeginPopup(GetTitle().c_str())) {
+            update();
+            ImGui::EndPopup();
+        }
         show_ = ImGui::IsPopupOpen(GetTitle().c_str());
     }
 
-protected:
-    virtual void update() = 0;
-
+private:
     bool showed_ = false;
 };

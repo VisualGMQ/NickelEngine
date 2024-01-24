@@ -16,6 +16,7 @@ EditorContext::EditorContext()
     contentBrowserWindow.SetTitle("content browser");
     entityListWindow.SetTitle("entity list");
     inspectorWindow.SetTitle("inspector");
+    gameWindow.SetTitle("game");
 }
 
 void EditorContext::Update() {

@@ -37,7 +37,7 @@ class AssetListWindow : public PopupWindow {
 public:
     using HandleType = nickel::Handle<T>;
 
-    using SelectCallbackFn = std::function<void(HandleType handle)>;
+    using SelectCallbackFn = std::function<void(HandleType)>;
 
     explicit AssetListWindow(const std::string& title) : PopupWindow(title) {}
 
@@ -45,40 +45,34 @@ public:
 
 protected:
     void update() override {
-        if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_)) {
-            auto& datas = gWorld->res<nickel::AssetManager>()
-                              ->SwitchManager<T>()
-                              .AllDatas();
-            if (datas.empty()) {
-                ImGui::Text("no asset");
-                ImGui::EndPopup();
-                return;
-            }
+        auto& datas =
+            gWorld->res<nickel::AssetManager>()->SwitchManager<T>().AllDatas();
+        if (datas.empty()) {
+            ImGui::Text("no asset");
+            return;
+        }
 
-            HandleType selectedHandle;
-            T* selectedAsset = nullptr;
+        HandleType selectedHandle;
+        T* selectedAsset = nullptr;
 
-            for (auto&& [handle, elem] : datas) {
-                if (ImGui::Selectable(elem->RelativePath().string().c_str(),
-                                      false)) {
-                    if (fn_) {
-                        fn_(handle);
-                    }
-
-                    Hide();
+        for (auto&& [handle, elem] : datas) {
+            if (ImGui::Selectable(elem->RelativePath().string().c_str(),
+                                  false)) {
+                if (fn_) {
+                    fn_(handle);
                 }
 
-                if (ImGui::IsItemHovered()) {
-                    selectedHandle = handle;
-                    selectedAsset = elem.get();
-                }
+                Hide();
             }
 
-            if (selectedAsset) {
-                ShowAsset(selectedHandle, *selectedAsset);
+            if (ImGui::IsItemHovered()) {
+                selectedHandle = handle;
+                selectedAsset = elem.get();
             }
+        }
 
-            ImGui::EndPopup();
+        if (selectedAsset) {
+            ShowAsset(selectedHandle, *selectedAsset);
         }
     }
 

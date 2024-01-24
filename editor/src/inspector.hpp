@@ -7,10 +7,8 @@
 #include "widget.hpp"
 
 class InspectorWindow: public Window {
-public:
-    void Update() override;
-
-private:
+protected:
+    void update() override;
 };
 
 void EditorInspectorWindow(bool& show, gecs::entity entity, gecs::registry reg);

@@ -27,7 +27,8 @@ bool EntityListWindow::beginShowOneEntity(bool isLeaf, gecs::entity& selected,
             auto& player = reg->get<AnimationPlayer>(ent);
             ctx->animEditor.ChangePlayer(ent, player.Anim());
         } else {
-            ctx->animEditor.ChangePlayer(gecs::null_entity, AnimationHandle::Null());
+            ctx->animEditor.ChangePlayer(gecs::null_entity,
+                                         AnimationHandle::Null());
         }
     }
 
@@ -117,72 +118,65 @@ void EntityListWindow::showHierarchyEntities(const gecs::entity& entity,
     }
 }
 
-void EntityListWindow::Update() {
-    if (!IsVisible()) return;
-
+void EntityListWindow::update() {
     auto reg = gWorld->cur_registry();
     auto cmds = reg->commands();
-
-    if (ImGui::Begin("Entity List", &show_)) {
-        if (ImGui::Button("add")) {
-            auto ent = cmds.create();
-            cmds.emplace<nickel::Name>(
-                ent, nickel::Name{"entity-" +
-                                  std::to_string(static_cast<uint32_t>(ent))});
+    if (ImGui::Button("add")) {
+        auto ent = cmds.create();
+        cmds.emplace<nickel::Name>(
+            ent, nickel::Name{"entity-" +
+                              std::to_string(static_cast<uint32_t>(ent))});
+    }
+    if (reg->alive(selected_)) {
+        ImGui::SameLine();
+        if (ImGui::Button("delete")) {
+            cmds.destroy(selected_);
         }
-        if (reg->alive(selected_)) {
-            ImGui::SameLine();
-            if (ImGui::Button("delete")) {
-                cmds.destroy(selected_);
-            }
-        }
-
-        auto hierarchyEntities = reg->query<nickel::Child, nickel::Name,
-                                             gecs::without<nickel::Parent>>();
-
-        for (auto&& [ent, child, name] : hierarchyEntities) {
-            showHierarchyEntities(ent, selected_, name, &child, dragDropInfo_);
-        }
-
-        auto flatEntities =
-            gWorld->cur_registry()->query<Name, gecs::without<Parent, Child>>();
-        for (auto&& [ent, name] : flatEntities) {
-            if (beginShowOneEntity(true, selected_, ent, name, dragDropInfo_)) {
-                endShowOneEntity(ent, dragDropInfo_);
-            }
-        }
-
-        if (dragDropInfo_.dragging &&
-            dragDropInfo_.nearestEnt != gecs::null_entity) {
-            ImGui::GetForegroundDrawList()->AddLine(
-                dragDropInfo_.linePos,
-                {ImGui::GetWindowSize().x - dragDropInfo_.linePos.x -
-                     ImGui::GetStyle().WindowPadding.x,
-                 dragDropInfo_.linePos.y},
-                ImGui::GetColorU32({1, 1, 0, 1}), 1);
-        }
-
-        // drag and drop handle
-        auto dragEnt = dragDropInfo_.dragEnt;
-        auto targetEnt = dragDropInfo_.targetEnt;
-        auto nearestEnt = dragDropInfo_.nearestEnt;
-
-        // change hierarchy
-        if (dragDropInfo_.IsChangingHierarchy()) {
-            HierarchyTool tool(targetEnt);
-            tool.MoveEntityAsChild(dragEnt);
-        } else if (dragDropInfo_.CanBeSibling() &&
-                   ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-            HierarchyTool tool(dragDropInfo_.oldNearestEnt);
-            tool.MoveAsSibling(dragDropInfo_.oldDragEnt);
-
-            dragDropInfo_.nearestEnt = gecs::null_entity;
-        }
-
-        dragDropInfo_.Update();
     }
 
-    ImGui::End();
+    auto hierarchyEntities = reg->query<nickel::Child, nickel::Name,
+                                        gecs::without<nickel::Parent>>();
+
+    for (auto&& [ent, child, name] : hierarchyEntities) {
+        showHierarchyEntities(ent, selected_, name, &child, dragDropInfo_);
+    }
+
+    auto flatEntities =
+        gWorld->cur_registry()->query<Name, gecs::without<Parent, Child>>();
+    for (auto&& [ent, name] : flatEntities) {
+        if (beginShowOneEntity(true, selected_, ent, name, dragDropInfo_)) {
+            endShowOneEntity(ent, dragDropInfo_);
+        }
+    }
+
+    if (dragDropInfo_.dragging &&
+        dragDropInfo_.nearestEnt != gecs::null_entity) {
+        ImGui::GetForegroundDrawList()->AddLine(
+            dragDropInfo_.linePos,
+            {ImGui::GetWindowSize().x - dragDropInfo_.linePos.x -
+                 ImGui::GetStyle().WindowPadding.x,
+             dragDropInfo_.linePos.y},
+            ImGui::GetColorU32({1, 1, 0, 1}), 1);
+    }
+
+    // drag and drop handle
+    auto dragEnt = dragDropInfo_.dragEnt;
+    auto targetEnt = dragDropInfo_.targetEnt;
+    auto nearestEnt = dragDropInfo_.nearestEnt;
+
+    // change hierarchy
+    if (dragDropInfo_.IsChangingHierarchy()) {
+        HierarchyTool tool(targetEnt);
+        tool.MoveEntityAsChild(dragEnt);
+    } else if (dragDropInfo_.CanBeSibling() &&
+               ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        HierarchyTool tool(dragDropInfo_.oldNearestEnt);
+        tool.MoveAsSibling(dragDropInfo_.oldDragEnt);
+
+        dragDropInfo_.nearestEnt = gecs::null_entity;
+    }
+
+    dragDropInfo_.Update();
 
     if (!reg->alive(selected_)) {
         selected_ = gecs::null_entity;

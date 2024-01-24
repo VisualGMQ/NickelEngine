@@ -107,7 +107,8 @@ public:
         sequence->entity = ent;
     }
 
-    void Update() override;
+protected:
+    void update() override;
 
 private:
     int trackHeight_ = 20;

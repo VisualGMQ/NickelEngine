@@ -1,10 +1,7 @@
 #include "show_component.hpp"
 #include "asset_list_window.hpp"
 #include "context.hpp"
-#include "core/assert.hpp"
 #include "image_view_canva.hpp"
-
-using namespace nickel;
 
 ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
     if (auto it = methods_.find(type); it != methods_.end()) {
@@ -31,27 +28,26 @@ ComponentShowMethods::show_fn ComponentShowMethods::Find(type_info type) {
         return DefaultMethods::ShowOptional;
     }
 
+    if (type->is_string()) {
+        return DefaultMethods::ShowString;
+    }
+
     return nullptr;
 }
 
-void ComponentShowMethods::DefaultMethods::ShowClass(
-    const mirrow::drefl::type* typeInfo, std::string_view name,
-    ::mirrow::drefl::any& value, gecs::registry reg, const std::vector<int>&) {
-    Assert(typeInfo->is_class(), "type incorrect");
-
+void ComponentShowMethods::DefaultMethods::ShowClass(type_info parent,
+                                                     std::string_view name,
+                                                     ::mirrow::drefl::any& obj,
+                                                     gecs::registry reg) {
     if (ImGui::TreeNode(name.data())) {
-        auto classInfo = typeInfo->as_class();
-        auto id = 0;
+        auto classInfo = obj.type_info()->as_class();
         for (auto&& var : classInfo->properties()) {
             auto varType = var->type_info();
             auto showMethod = ComponentShowMethods::Instance().Find(varType);
-            ImGui::PushID(id);
             if (showMethod) {
-                auto ref = var->call(value);
-                showMethod(varType, var->name(), ref, reg, var->attributes());
+                auto ref = var->call(obj);
+                showMethod(varType, var->name(), ref, reg);
             }
-            ImGui::PopID();
-            id++;
         }
 
         ImGui::TreePop();
@@ -59,63 +55,70 @@ void ComponentShowMethods::DefaultMethods::ShowClass(
 }
 
 void ComponentShowMethods::DefaultMethods::ShowNumeric(
-    type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry, const std::vector<int>&) {
-    Assert(type->is_numeric(), "type incorrect");
-    auto numeric = type->as_numeric();
+    type_info parent, std::string_view name, ::mirrow::drefl::any& obj,
+    gecs::registry) {
+    auto numeric = obj.type_info()->as_numeric();
 
+    ImGui::BeginDisabled(obj.is_constref());
     if (numeric->is_integer()) {
-        int i = numeric->get_value(value);
+        int i = numeric->get_value(obj);
         ImGui::DragInt(name.data(), &i);
-        numeric->set_value(value, (long)i);
+        if (!obj.is_constref()) {
+            numeric->set_value(obj, (long)i);
+        }
     } else {
-        float f = numeric->get_value(value);
+        float f = numeric->get_value(obj);
         ImGui::DragFloat(name.data(), &f);
-        numeric->set_value(value, f);
+        if (!obj.is_constref()) {
+            numeric->set_value(obj, f);
+        }
     }
+    ImGui::EndDisabled();
 }
 
 void ComponentShowMethods::DefaultMethods::ShowBoolean(
-    type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry, const std::vector<int>&) {
-    Assert(type->is_boolean(), "type incorrect");
-    auto boolean = type->as_boolean();
+    type_info parent, std::string_view name, ::mirrow::drefl::any& obj,
+    gecs::registry) {
+    auto boolean = obj.type_info()->as_boolean();
 
-    bool b = boolean->get_value(value);
-    ImGui::Checkbox(name.data(), &b);
-    boolean->set_value(value, b);
+    ImGui::BeginDisabled(obj.is_constref());
+    ImGui::Checkbox(name.data(), mirrow::drefl::try_cast<bool>(obj));
+    ImGui::EndDisabled();
 }
 
-void ComponentShowMethods::DefaultMethods::ShowString(
-    type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry, const std::vector<int>&) {
-    Assert(type->is_string(), "type incorrect");
-
-    auto string_type = type->as_string();
-    auto str = string_type->get_str(value);
-
-    char buf[1024] = {0};
-    strcpy(buf, str.c_str());
-    ImGui::InputText(name.data(), buf, sizeof(buf));
-
-    if (buf != str) {
-        string_type->set_value(value, std::string(buf));
+void ComponentShowMethods::DefaultMethods::ShowString(type_info parent,
+                                                      std::string_view name,
+                                                      ::mirrow::drefl::any& obj,
+                                                      gecs::registry) {
+    auto string_type = obj.type_info()->as_string();
+    if (string_type->is_string()) {
+        ImGui::BeginDisabled(obj.is_constref());
+        auto str = string_type->get_str(obj);
+        char buf[1024] = {0};
+        strcpy(buf, str.c_str());
+        ImGui::InputText(name.data(), buf, sizeof(buf),
+                         obj.is_constref() ? ImGuiInputTextFlags_ReadOnly : 0);
+        if (!obj.is_constref() && buf != str) {
+            string_type->set_value(obj, std::string(buf));
+        }
+        ImGui::EndDisabled();
+    } else {
+        auto view = string_type->get_str_view(obj);
+        ImGui::InputText(name.data(), (char*)view.data(), view.size(),
+                         ImGuiInputTextFlags_ReadOnly);
     }
 }
 
-void ComponentShowMethods::DefaultMethods::ShowEnum(type_info type,
+void ComponentShowMethods::DefaultMethods::ShowEnum(type_info parent,
                                                     std::string_view name,
-                                                    ::mirrow::drefl::any& value,
-                                                    gecs::registry,
-                                                    const std::vector<int>&) {
-    Assert(type->is_enum(), "type incorrect");
-
-    auto enum_info = type->as_enum();
+                                                    ::mirrow::drefl::any& obj,
+                                                    gecs::registry) {
+    auto enum_info = obj.type_info()->as_enum();
 
     static std::vector<const char*> enumNames;
     enumNames.clear();
 
-    int curItem = enum_info->get_value(value);
+    int curItem = enum_info->get_value(obj);
     int idx = 0;
     auto& enums = enum_info->enums();
 
@@ -129,30 +132,32 @@ void ComponentShowMethods::DefaultMethods::ShowEnum(type_info type,
         }
     }
 
+    ImGui::BeginDisabled(obj.is_constref());
     ImGui::Combo(name.data(), &idx, enumNames.data(), enumNames.size());
+    ImGui::EndDisabled();
 
-    enum_info->set_value(value, enums[idx].value());
+    if (!obj.is_constref()) {
+        enum_info->set_value(obj, enums[idx].value());
+    }
 }
 
 void ComponentShowMethods::DefaultMethods::ShowOptional(
-    type_info type, std::string_view name, ::mirrow::drefl::any& value,
-    gecs::registry reg, const std::vector<int>&) {
-    Assert(type->is_optional(), "type incorrect");
-
-    auto& optional_type = *type->as_optional();
-    if (optional_type.has_value(value)) {
-        auto elem = optional_type.get_value(value);
+    type_info parent, std::string_view name, ::mirrow::drefl::any& obj,
+    gecs::registry reg) {
+    auto optional_type = obj.type_info()->as_optional();
+    if (optional_type->has_value(obj)) {
+        auto elem = optional_type->get_value(obj);
         auto show = ComponentShowMethods::Instance().Find(elem.type_info());
         if (show) {
-            show(elem.type_info(), name, elem, reg, type->attributes());
+            show(elem.type_info(), name, elem, reg);
         }
     } else {
         if (ImGui::TreeNode(name.data())) {
-            if (optional_type.elem_type()->is_default_constructible()) {
+            if (optional_type->elem_type()->is_default_constructible()) {
                 if (ImGui::Button("create")) {
                     auto newValue =
-                        optional_type.elem_type()->default_construct();
-                    optional_type.set_inner_value(newValue, value);
+                        optional_type->elem_type()->default_construct();
+                    optional_type->set_inner_value(newValue, obj);
                 }
             } else {
                 ImGui::Text("none");
@@ -162,105 +167,189 @@ void ComponentShowMethods::DefaultMethods::ShowOptional(
     }
 }
 
-void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry,
-              const std::vector<int>&) {
-    Assert(
-        type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec2>(),
-        "type incorrect");
-
-    auto vec = mirrow::drefl::try_cast<cgmath::Vec2>(value);
+void DisplayVec2(const mirrow::drefl::type* parent, std::string_view name,
+                 mirrow::drefl::any& obj, gecs::registry) {
+    auto vec = mirrow::drefl::try_cast<nickel::cgmath::Vec2>(obj);
+    ImGui::BeginDisabled(obj.is_constref());
     ImGui::DragFloat2(name.data(), vec->data);
+    ImGui::EndDisabled();
 }
 
-void ShowVec3(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry,
-              const std::vector<int>&) {
-    Assert(
-        type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec3>(),
-        "type incorrect");
-
-    auto vec = mirrow::drefl::try_cast<cgmath::Vec3>(value);
+void DisplayVec3(const mirrow::drefl::type* parent, std::string_view name,
+                 mirrow::drefl::any& obj, gecs::registry) {
+    auto vec = mirrow::drefl::try_cast<nickel::cgmath::Vec3>(obj);
+    ImGui::BeginDisabled(obj.is_constref());
     ImGui::DragFloat3(name.data(), vec->data);
+    ImGui::EndDisabled();
 }
 
-void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry,
-              const std::vector<int>& attrs) {
-    Assert(
-        type->is_class() && type == ::mirrow::drefl::typeinfo<cgmath::Vec4>(),
-        "type incorrect");
-
-    auto vec = mirrow::drefl::try_cast<cgmath::Vec4>(value);
-    if (std::find(attrs.begin(), attrs.end(), AttrRange01) != attrs.end()) {
-        ImGui::DragFloat4(name.data(), vec->data, 0.01, 0, 1);
-    } else if (std::find(attrs.begin(), attrs.end(), AttrColor) !=
+void DisplayVec4(const mirrow::drefl::type* parent, std::string_view name,
+                 mirrow::drefl::any& obj, gecs::registry) {
+    auto& attrs = parent->attributes();
+    ImGui::BeginDisabled(obj.is_constref());
+    auto vec = mirrow::drefl::try_cast<nickel::cgmath::Vec4>(obj);
+    if (std::find(attrs.begin(), attrs.end(), nickel::AttrRange01) != attrs.end()) {
+        ImGui::DragFloat4(name.data(), vec->data);
+    } else if (std::find(attrs.begin(), attrs.end(), nickel::AttrColor) !=
                attrs.end()) {
         ImGui::ColorEdit4(name.data(), vec->data);
     } else {
         ImGui::DragFloat4(name.data(), vec->data);
     }
+    ImGui::EndDisabled();
 }
 
-template <typename MgrType>
-void SelectAndChangeAsset(EditorContext& ctx, MgrType& mgr,
-                          std::string_view buttonText,
-                          typename MgrType::AssetHandle& handle) {
-    using AssetType = typename MgrType::AssetType;
-    if (ImGui::Button(buttonText.data())) {
-        if constexpr (std::is_same_v<AssetType, Texture>) {
-            ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback(
-                [&](TextureHandle h) { handle = h; });
-        } else if constexpr (std::is_same_v<AssetType, Font>) {
-            ctx.fontAssetListWindow.Show();
-            ctx.fontAssetListWindow.SetSelectCallback(
-                [&](FontHandle h) { handle = h; });
-        } else if constexpr (std::is_same_v<AssetType, Sound>) {
-            ctx.soundAssetListWindow.Show();
-            ctx.soundAssetListWindow.SetSelectCallback(
-                [&](SoundHandle h) { handle = h; });
-        } else if constexpr (std::is_same_v<AssetType, Animation>) {
-            ctx.animAssetListWindow.Show();
-            ctx.animAssetListWindow.SetSelectCallback(
-                [&](AnimationHandle h) { handle = h; });
-        }
+template <typename AssetType>
+AssetListWindow<AssetType>* GetAssetListWindow(EditorContext& ctx) {
+    if constexpr (std::is_same_v<AssetType, nickel::Texture>) {
+        return &ctx.textureAssetListWindow;
+    } else if constexpr (std::is_same_v<AssetType, nickel::Font>) {
+        return &ctx.fontAssetListWindow;
+    } else if constexpr (std::is_same_v<AssetType, nickel::Sound>) {
+        return &ctx.soundAssetListWindow;
+    } else if constexpr (std::is_same_v<AssetType, nickel::Animation>) {
+        return &ctx.animAssetListWindow;
+    } else if constexpr (std::is_same_v<AssetType, nickel::Tilesheet>) {
+        return &ctx.tilesheetAssetListWindow;
     }
+    return nullptr;
+}
+
+template <typename HandleType>
+void LoadAssetSelector(EditorContext& ctx, std::string_view buttonText,
+                       std::function<void(HandleType)> callback = nullptr) {
+    if (ImGui::Selectable(buttonText.data())) {
+        auto& window = *GetAssetListWindow<typename HandleType::ValueType>(ctx);
+        window.Show();
+        window.SetSelectCallback(callback);
+    }
+}
+
+template <typename HandleType>
+void AssetCreator(
+    EditorContext& ctx,
+    const std::string& name,
+    std::function<void(const std::filesystem::path&)> createCallback) {
+    auto filetype = nickel::DetectFileType<typename HandleType::ValueType>();
+    auto extension = nickel::GetMetaFileExtension(filetype);
+
+    auto filename = SaveFileDialog(name.c_str(), {extension.data()});
+
+    if (filename.empty()) {
+        return;
+    }
+
+    filename = filename.extension() != extension
+                    ? filename.replace_extension(extension)
+                    : filename;
+
+    if (createCallback) {
+        createCallback(filename);
+    }
+}
+
+template <typename T>
+struct show_tmpl;
+
+template <typename HandleType>
+bool BeginDisplayHandle(
+    EditorContext& ctx, std::string_view name, nickel::AssetManager& mgr,
+    HandleType handle, std::function<void(HandleType)> handleChangeCallback = nullptr,
+    std::function<void(const std::filesystem::path&)> createCallback = nullptr) {
+
+    char buf[1024] = {0};
+    if (mgr.Has(handle)) {
+        auto& asset = mgr.Get(handle);
+        std::filesystem::path path = asset.RelativePath();
+        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
+    } else {
+        snprintf(buf, sizeof(buf), "no asset");
+    }   
+
+    char id[1024] = {0};
+    snprintf(id, sizeof(id), "##%s", name.data());
+    if (ImGui::BeginCombo(id, buf)) {
+        if (createCallback) {
+            AssetCreator<HandleType>(ctx, "create", createCallback);
+        }
+        if (handleChangeCallback) {
+            LoadAssetSelector<HandleType>(ctx, "load", handleChangeCallback);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 template <>
-void SelectAndChangeAsset<TextureManager>(EditorContext& ctx,
-                                          TextureManager& mgr,
-                                          std::string_view buttonText,
-                                          TextureHandle& handle) {
-    const char* items[] = {"set texture", "set tilesheet"};
-    if (ImGui::BeginCombo("operation", nullptr, ImGuiComboFlags_NoPreview)) {
-        if (ImGui::Selectable("from texture")) {
-            ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback(
-                [&](TextureHandle h) { handle = h; });
-        }
-        if (ImGui::Selectable("from tilesheet")) {
-        }
-        ImGui::EndCombo();
+bool BeginDisplayHandle<nickel::TextureHandle>(
+    EditorContext& ctx, std::string_view name, nickel::AssetManager& mgr,
+    nickel::TextureHandle handle,
+    std::function<void(nickel::TextureHandle)> handleChangeCallback,
+    std::function<void(const std::filesystem::path&)> createCallback) {
+    char buf[1024] = {0};
+    if (mgr.Has(handle)) {
+        auto& asset = mgr.Get(handle);
+        std::filesystem::path path = asset.RelativePath();
+        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
+    } else {
+        snprintf(buf, sizeof(buf), "no asset");
     }
+
+    float size = ImGui::GetWindowContentRegionMax().x -
+                 (ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x);
+    static ImageViewCanva imageViewer;
+    if (mgr.Has(handle)) {
+        imageViewer.ChangeTexture(handle);
+        imageViewer.Resize({size, size});
+        imageViewer.Update();
+    }
+
+    char id[1024] = {0};
+    snprintf(id, sizeof(id), "##%s", name.data());
+    if (ImGui::BeginCombo(id, buf)) {
+        if (createCallback) {
+            AssetCreator<nickel::TextureHandle>(ctx, "create", createCallback);
+        }
+        if (handleChangeCallback) {
+            LoadAssetSelector(ctx, "load", handleChangeCallback);
+        }
+        return true;
+    }
+
+    return false;
 }
 
-void changeSpriteInteractive(Sprite& sprite) {
-    auto& reg = *gWorld->cur_registry();
-    auto mgr = gWorld->res_mut<AssetManager>();
-    if (ImGui::BeginCombo("operation", nullptr, ImGuiComboFlags_NoPreview)) {
-        auto& ctx = reg.res_mut<EditorContext>().get();
+void EndDisplayHandle() {
+    ImGui::EndCombo();
+}
 
-        if (ImGui::Selectable("load texture")) {
-            ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback(
-                [&](TextureHandle h) { sprite.texture = h; });
+void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
+                   mirrow::drefl::any& obj, gecs::registry reg) {
+    auto classInfo = obj.type_info()->as_class();
+    for (auto&& prop : classInfo->properties()) {
+        if (prop->type_info() == ::mirrow::drefl::typeinfo<nickel::TextureHandle>()) {
+            continue;
         }
+        if (auto fn = ComponentShowMethods::Instance().Find(prop->type_info());
+            fn) {
+            auto member = prop->call(obj);
+            fn(member.type_info(), prop->name(), member, reg);
+        }
+    }
+
+    auto& sprite = *mirrow::drefl::try_cast<nickel::Sprite>(obj);
+    auto mgr = reg.res_mut<nickel::AssetManager>();
+
+    auto changeHandle = [&](nickel::TextureHandle h) { sprite.texture = h; };
+    auto& ctx = *reg.res_mut<EditorContext>();
+
+    if (BeginDisplayHandle<nickel::TextureHandle>(*reg.res_mut<EditorContext>(), name, *mgr, sprite.texture,
+                           changeHandle)) {
         if (ImGui::Selectable("load tilesheet")) {
             ctx.tilesheetAssetListWindow.Show();
             ctx.tilesheetAssetListWindow.SetSelectCallback(
-                [&](TilesheetHandle h) {
+                [&](nickel::TilesheetHandle h) {
                     ctx.tilesheetEditor.Show();
                     ctx.tilesheetEditor.ChangeTilesheet(h);
                     ctx.tilesheetEditor.SetSelectCallback(
@@ -273,7 +362,7 @@ void changeSpriteInteractive(Sprite& sprite) {
         }
         if (ImGui::Selectable("create tilesheet")) {
             ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback([&](TextureHandle h) {
+            ctx.textureAssetListWindow.SetSelectCallback([&](nickel::TextureHandle h) {
                 auto filename =
                     SaveFileDialog("create new tilesheet", {".tilesheet"});
                 if (!filename.empty()) {
@@ -295,102 +384,45 @@ void changeSpriteInteractive(Sprite& sprite) {
                 }
             });
         }
-        ImGui::EndCombo();
+
+        EndDisplayHandle();
     }
 }
 
-void ShowSprite(const mirrow::drefl::type* type, std::string_view name,
-                mirrow::drefl::any& value, gecs::registry reg,
-                const std::vector<int>&) {
-    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<Sprite>(),
-           "type incorrect");
+void DisplayTextureHandle(const mirrow::drefl::type* parent,
+                          std::string_view name, mirrow::drefl::any& obj,
+                          gecs::registry reg) {
+    auto& handle = *mirrow::drefl::try_cast<nickel::TextureHandle>(obj);
+    auto mgr = reg.res_mut<nickel::AssetManager>();
 
-    auto classInfo = type->as_class();
-    for (auto&& prop : classInfo->properties()) {
-        if (auto fn = ComponentShowMethods::Instance().Find(prop->type_info());
-            fn) {
-            auto member = prop->call(value);
-            fn(member.type_info(), prop->name(), member, reg, {});
-        }
-    }
-
-    changeSpriteInteractive(*mirrow::drefl::try_cast<Sprite>(value));
-}
-
-void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
-                       mirrow::drefl::any& value, gecs::registry reg,
-                       const std::vector<int>&) {
-    Assert(
-        type->is_class() && type == ::mirrow::drefl::typeinfo<TextureHandle>(),
-        "type incorrect");
-
-    auto& handle = *mirrow::drefl::try_cast<TextureHandle>(value);
-    auto mgr = reg.res_mut<AssetManager>();
-    char buf[1024] = {0};
-    if (mgr->Has(handle)) {
-        auto& texture = mgr->Get(handle);
-        std::filesystem::path texturePath = texture.RelativePath();
-        snprintf(buf, sizeof(buf), "Res://%s", texturePath.string().c_str());
-    } else {
-        snprintf(buf, sizeof(buf), "no texture");
-    }
-
-    float size = ImGui::GetWindowContentRegionMax().x -
-                 (ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x);
-    static cgmath::Vec2 offset;
-    static float scale = 1.0;
-    static ImageViewCanva imageViewer;
-    if (mgr->Has(handle)) {
-        imageViewer.ChangeTexture(handle);
-        imageViewer.Resize({size, size});
-        imageViewer.Update();
+    if (BeginDisplayHandle(*reg.res_mut<EditorContext>(), name, *mgr, handle)) {
+        EndDisplayHandle();
     }
 }
 
-void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
-                         mirrow::drefl::any& value, gecs::registry reg,
-                         const std::vector<int>&) {
-    Assert(type->is_class() &&
-               type == ::mirrow::drefl::typeinfo<AnimationPlayer>(),
-           "type incorrect");
-
-    AnimationPlayer& player = *mirrow::drefl::try_cast<AnimationPlayer>(value);
+void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
+                            std::string_view name, mirrow::drefl::any& obj,
+                            gecs::registry reg) {
+    nickel::AnimationPlayer& player = *mirrow::drefl::try_cast<nickel::AnimationPlayer>(obj);
     auto handle = player.Anim();
-    auto& mgr = reg.res<AssetManager>()->AnimationMgr();
-    static char buf[1024] = {0};
-    if (handle && mgr.Has(handle)) {
-        snprintf(buf, sizeof(buf), "%s",
-                 mgr.Get(handle).RelativePath().string().c_str());
-    } else {
-        snprintf(buf, sizeof(buf), "%s", "no animation");
-    }
+    auto& mgr = *reg.res_mut<nickel::AssetManager>();
 
-    int selectedItem = -1;
-    if (ImGui::BeginCombo(buf, nullptr, ImGuiComboFlags_NoPreview)) {
-        if (ImGui::Selectable("create new")) {
-            // TODO: create new animation and switch to animation panel
-        }
-        if (ImGui::Selectable("load")) {
-            auto ctx = reg.res_mut<EditorContext>();
-            ctx->animAssetListWindow.Show();
-            ctx->animAssetListWindow.SetSelectCallback(
-                [&](nickel::AnimationHandle handle) {
-                    player.ChangeAnim(handle);
-                    ctx->animEditor.sequence->player.ChangeAnim(handle);
-                    // ctx->animEditor.sequence->entity = entity;
-                });
-        }
-        ImGui::EndCombo();
+    auto changeHandle = [&player](nickel::AnimationHandle handle) {
+        player.ChangeAnim(handle);
+        gWorld->cur_registry()
+            ->res_mut<EditorContext>()
+            ->animEditor.sequence->player.ChangeAnim(handle);
+    };
+
+    if (BeginDisplayHandle<nickel::AnimationHandle>(*reg.res_mut<EditorContext>(), name, mgr, handle,
+                           changeHandle)) {
+        EndDisplayHandle();
     }
 }
 
-void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
-               mirrow::drefl::any& value, gecs::registry reg,
-               const std::vector<int>&) {
-    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<ui::Label>(),
-           "type incorrect");
-
-    ui::Label& label = *mirrow::drefl::try_cast<ui::Label>(value);
+void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
+                  mirrow::drefl::any& value, gecs::registry reg) {
+    auto& label = *mirrow::drefl::try_cast<nickel::ui::Label>(value);
 
     static char buf[1024] = {0};
     auto text = label.GetText().to_string();
@@ -399,7 +431,7 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
     ImGui::InputTextMultiline("text", buf, sizeof(buf));
 
     if (buf != text) {
-        utf8string str{buf};
+        nickel::utf8string str{buf};
         label.SetText(str);
     }
 
@@ -409,23 +441,16 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
 
     // show font
     auto handle = label.GetFont();
+    auto& mgr = *reg.res_mut<nickel::AssetManager>();
 
-    auto& mgr = reg.res<AssetManager>()->FontMgr();
-    if (mgr.Has(handle)) {
-        auto& font = mgr.Get(handle);
-        std::filesystem::path path = font.RelativePath();
-        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
-    } else {
-        snprintf(buf, sizeof(buf), "no font");
+    auto changeHandle = [&](nickel::FontHandle h) { label.ChangeFont(h); };
+
+    if (BeginDisplayHandle<nickel::FontHandle>(*reg.res_mut<EditorContext>(), name, mgr, handle,
+                           changeHandle)) {
+        EndDisplayHandle();
     }
 
-    if (ImGui::Button(buf)) {
-        auto ctx = gWorld->res_mut<EditorContext>();
-        ctx->fontAssetListWindow.Show();
-        ctx->fontAssetListWindow.SetSelectCallback(
-            [&](FontHandle h) { label.ChangeFont(h); });
-    }
-
+    // show pt
     int size = label.GetPtSize();
     ImGui::DragInt("pt", &size, 1.0, 4);
     if (size != label.GetPtSize()) {
@@ -433,29 +458,30 @@ void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
     }
 }
 
-void ShowSoundPlayer(const mirrow::drefl::type* type, std::string_view name,
-                     mirrow::drefl::any& value, gecs::registry reg,
-                     const std::vector<int>&) {
-    Assert(type->is_class() && type == ::mirrow::drefl::typeinfo<SoundPlayer>(),
-           "type incorrect");
+void DisplaySoundPlayer(const mirrow::drefl::type* parent,
+                        std::string_view name, mirrow::drefl::any& value,
+                        gecs::registry reg) {
+    auto& player = *mirrow::drefl::try_cast<nickel::SoundPlayer>(value);
 
-    SoundPlayer& player = *mirrow::drefl::try_cast<SoundPlayer>(value);
-
-    auto assetMgr = reg.res<nickel::AssetManager>();
+    auto& mgr = *reg.res_mut<nickel::AssetManager>();
     auto ctx = reg.res_mut<EditorContext>();
-    if (assetMgr->Has(player.Handle())) {
-        auto& sound = assetMgr->Get(player.Handle());
-        if (ImGui::Button(sound.RelativePath().string().c_str())) {
+
+    auto changeHandle = [&](nickel::SoundHandle h) { player.ChangeSound(h); };
+
+    auto handle = player.Handle();
+
+    if (BeginDisplayHandle<nickel::SoundHandle>(*reg.res_mut<EditorContext>(), name, mgr,
+                           handle, changeHandle)) {
+        EndDisplayHandle();
+    }
+
+    ImGui::SameLine();
+
+    if (mgr.Has(player.Handle())) {
+        auto& sound = mgr.Get(player.Handle());
+        if (ImGui::Button("edit")) {
             ctx->soundPropWindow.ChangeAudio(player.Handle());
             ctx->soundPropWindow.Show();
         }
-    } else {
-        ImGui::Text("no sound");
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("load sound")) {
-        ctx->soundAssetListWindow.Show();
-        ctx->soundAssetListWindow.SetSelectCallback(
-            [&](nickel::SoundHandle handle) { player.ChangeSound(handle); });
     }
 }

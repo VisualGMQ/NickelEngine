@@ -1,8 +1,9 @@
 #pragma once
 
-#include "nickel.hpp"
 #include "imgui_plugin.hpp"
+#include "nickel.hpp"
 #include "widget.hpp"
+
 
 struct DragDropInfo final {
     gecs::entity targetEnt = gecs::null_entity;
@@ -27,8 +28,7 @@ struct DragDropInfo final {
 
     bool CanBeSibling() const {
         return oldNearestEnt != gecs::null_entity &&
-               oldDragEnt != gecs::null_entity &&
-               oldNearestEnt != oldDragEnt;
+               oldDragEnt != gecs::null_entity && oldNearestEnt != oldDragEnt;
     }
 
     bool IsChangingHierarchy() const {
@@ -36,11 +36,12 @@ struct DragDropInfo final {
     }
 };
 
-class EntityListWindow final: public Window {
+class EntityListWindow final : public Window {
 public:
-    void Update() override;
-
     auto GetSelected() const { return selected_; }
+
+protected:
+    void update() override;
 
 private:
     DragDropInfo dragDropInfo_;
@@ -49,7 +50,8 @@ private:
     bool beginShowOneEntity(bool isLeaf, gecs::entity& selected,
                             const gecs::entity& ent, const nickel::Name& name,
                             DragDropInfo& dragDropOutInfo);
-    void endShowOneEntity(const gecs::entity& ent, DragDropInfo& dragDropOutInfo);
+    void endShowOneEntity(const gecs::entity& ent,
+                          DragDropInfo& dragDropOutInfo);
 
     void showHierarchyEntities(const gecs::entity& entity,
                                gecs::entity& selected, const nickel::Name& name,

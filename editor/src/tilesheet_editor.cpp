@@ -46,77 +46,72 @@ void TilesheetViewCanva::additionalDraw(ImDrawList* drawList,
 
 void TilesheetEditor::update() {
     auto& assetMgr = gWorld->res_mut<nickel::AssetManager>().get();
-    if (ImGui::BeginPopupModal(GetTitle().c_str(), &show_)) {
-        if (!assetMgr.Has(handle_)) {
-            ImGui::Text("no tilesheet");
-            ImGui::EndPopup();
-            return;
-        }
-
-        auto& tilesheet = assetMgr.Get(handle_);
-        nickel::TilesheetInnerAccessor accessor(tilesheet);
-        ImGui::Text("Margin");
-        ImGui::BeginColumns("##margin_column", 4,
-                            ImGuiOldColumnFlags_NoBorder |
-                                ImGuiOldColumnFlags_NoPreserveWidths);
-        {
-            ImGui::DragScalar("##margin_left", ImGuiDataType_U32,
-                              &accessor.Margin().left, 1.0, nullptr, nullptr,
-                              "left: %d");
-            ImGui::NextColumn();
-            ImGui::DragScalar("##margin_right", ImGuiDataType_U32,
-                              &accessor.Margin().right, 1.0, nullptr, nullptr,
-                              "right: %d");
-            ImGui::NextColumn();
-            ImGui::DragScalar("##margin_top", ImGuiDataType_U32,
-                              &accessor.Margin().top, 1.0, nullptr, nullptr,
-                              "top: %d");
-            ImGui::NextColumn();
-            ImGui::DragScalar("##margin_bottom", ImGuiDataType_U32,
-                              &accessor.Margin().bottom, 1.0, nullptr, nullptr,
-                              "bottom: %d");
-        }
-        ImGui::EndColumns();
-
-        ImGui::Text("Spacing");
-        ImGui::BeginColumns("##spacing_column", 2,
-                            ImGuiOldColumnFlags_NoBorder |
-                                ImGuiOldColumnFlags_NoPreserveWidths);
-        {
-            ImGui::DragScalar("##spacing_x", ImGuiDataType_U32,
-                              &accessor.Spacing().x, 1.0, nullptr, nullptr,
-                              "x: %d");
-            ImGui::NextColumn();
-            ImGui::DragScalar("##spacing_y", ImGuiDataType_U32,
-                              &accessor.Spacing().y, 1.0, nullptr, nullptr,
-                              "y: %d");
-        }
-        ImGui::EndColumns();
-
-        uint32_t min = 1;
-        ImGui::Text("Row&Col");
-        ImGui::BeginColumns("##margin_column", 4,
-                            ImGuiOldColumnFlags_NoBorder |
-                                ImGuiOldColumnFlags_NoPreserveWidths);
-        {
-            ImGui::NextColumn();
-            ImGui::DragScalar("##row", ImGuiDataType_U32, &accessor.Row(), 1.0f,
-                              (void*)&min, nullptr, "row: %d");
-            ImGui::NextColumn();
-            ImGui::DragScalar("##col", ImGuiDataType_U32, &accessor.Col(), 1.0f,
-                              (void*)&min, nullptr, "col: %d");
-        }
-        ImGui::EndColumns();
-
-        auto newTilesheet = nickel::Tilesheet(
-            assetMgr.TextureMgr(), tilesheet.Handle(), accessor.Col(),
-            accessor.Row(), accessor.Margin(), accessor.Spacing());
-        newTilesheet.AssociateFile(tilesheet.RelativePath());
-        tilesheet = std::move(newTilesheet);
-        auto canvasSize = ImGui::GetContentRegionAvail();
-        viewCanva_.Resize({canvasSize.x, canvasSize.y});
-        viewCanva_.Update();
-
-        ImGui::EndPopup();
+    if (!assetMgr.Has(handle_)) {
+        ImGui::Text("no tilesheet");
+        return;
     }
+
+    auto& tilesheet = assetMgr.Get(handle_);
+    nickel::TilesheetInnerAccessor accessor(tilesheet);
+    ImGui::Text("Margin");
+    ImGui::BeginColumns(
+        "##margin_column", 4,
+        ImGuiOldColumnFlags_NoBorder | ImGuiOldColumnFlags_NoPreserveWidths);
+    {
+        ImGui::DragScalar("##margin_left", ImGuiDataType_U32,
+                          &accessor.Margin().left, 1.0, nullptr, nullptr,
+                          "left: %d");
+        ImGui::NextColumn();
+        ImGui::DragScalar("##margin_right", ImGuiDataType_U32,
+                          &accessor.Margin().right, 1.0, nullptr, nullptr,
+                          "right: %d");
+        ImGui::NextColumn();
+        ImGui::DragScalar("##margin_top", ImGuiDataType_U32,
+                          &accessor.Margin().top, 1.0, nullptr, nullptr,
+                          "top: %d");
+        ImGui::NextColumn();
+        ImGui::DragScalar("##margin_bottom", ImGuiDataType_U32,
+                          &accessor.Margin().bottom, 1.0, nullptr, nullptr,
+                          "bottom: %d");
+    }
+    ImGui::EndColumns();
+
+    ImGui::Text("Spacing");
+    ImGui::BeginColumns(
+        "##spacing_column", 2,
+        ImGuiOldColumnFlags_NoBorder | ImGuiOldColumnFlags_NoPreserveWidths);
+    {
+        ImGui::DragScalar("##spacing_x", ImGuiDataType_U32,
+                          &accessor.Spacing().x, 1.0, nullptr, nullptr,
+                          "x: %d");
+        ImGui::NextColumn();
+        ImGui::DragScalar("##spacing_y", ImGuiDataType_U32,
+                          &accessor.Spacing().y, 1.0, nullptr, nullptr,
+                          "y: %d");
+    }
+    ImGui::EndColumns();
+
+    uint32_t min = 1;
+    ImGui::Text("Row&Col");
+    ImGui::BeginColumns(
+        "##margin_column", 4,
+        ImGuiOldColumnFlags_NoBorder | ImGuiOldColumnFlags_NoPreserveWidths);
+    {
+        ImGui::NextColumn();
+        ImGui::DragScalar("##row", ImGuiDataType_U32, &accessor.Row(), 1.0f,
+                          (void*)&min, nullptr, "row: %d");
+        ImGui::NextColumn();
+        ImGui::DragScalar("##col", ImGuiDataType_U32, &accessor.Col(), 1.0f,
+                          (void*)&min, nullptr, "col: %d");
+    }
+    ImGui::EndColumns();
+
+    auto newTilesheet = nickel::Tilesheet(
+        assetMgr.TextureMgr(), tilesheet.Handle(), accessor.Col(),
+        accessor.Row(), accessor.Margin(), accessor.Spacing());
+    newTilesheet.AssociateFile(tilesheet.RelativePath());
+    tilesheet = std::move(newTilesheet);
+    auto canvasSize = ImGui::GetContentRegionAvail();
+    viewCanva_.Resize({canvasSize.x, canvasSize.y});
+    viewCanva_.Update();
 }

@@ -47,9 +47,7 @@ void drawCoordLine(const nickel::cgmath::Vec2& winSize,
     renderer.EndRender();
 }
 
-void GameWindow::Update() {
-    if (!IsVisible()) return;
-
+void GameWindow::update() {
     auto& ctx = gWorld->res_mut<EditorContext>().get();
     auto& renderer = gWorld->res_mut<nickel::Renderer2D>().get();
     auto& camera = gWorld->res_mut<nickel::Camera>().get();
@@ -65,64 +63,62 @@ void GameWindow::Update() {
     newStyle.WindowPadding.y = 0;
     ImGui::GetStyle() = newStyle;
 
-    if (ImGui::Begin("game", &show_)) {
-        auto regionMin = ImGui::GetWindowContentRegionMin();
-        auto regionMax = ImGui::GetWindowContentRegionMax();
-        auto windowPos = ImGui::GetWindowPos() + regionMin;
-        auto windowSize = regionMax - regionMin;
+    auto regionMin = ImGui::GetWindowContentRegionMin();
+    auto regionMax = ImGui::GetWindowContentRegionMax();
+    auto windowPos = ImGui::GetWindowPos() + regionMin;
+    auto windowSize = regionMax - regionMin;
 
-        ImVec2 uvMin = {0, 1};
-        ImVec2 uvMax = {windowSize.x / fbo_->Size().w,
-                        (fbo_->Size().h - windowSize.y) / fbo_->Size().h};
+    ImVec2 uvMin = {0, 1};
+    ImVec2 uvMax = {windowSize.x / fbo_->Size().w,
+                    (fbo_->Size().h - windowSize.y) / fbo_->Size().h};
 
-        ImGui::GetWindowDrawList()->AddImage(
-            (ImTextureID)texture_->Id(), windowPos,
-            ImVec2{windowPos.x + windowSize.x, windowPos.y + windowSize.y},
-            uvMin, uvMax);
+    ImGui::GetWindowDrawList()->AddImage(
+        (ImTextureID)texture_->Id(), windowPos,
+        ImVec2{windowPos.x + windowSize.x, windowPos.y + windowSize.y}, uvMin,
+        uvMax);
 
-        auto& io = ImGui::GetIO();
-        nickel::cgmath::Vec2 halfWindowSize{windowSize.x * 0.5f,
-                                            windowSize.y * 0.5f};
+    auto& io = ImGui::GetIO();
+    nickel::cgmath::Vec2 halfWindowSize{windowSize.x * 0.5f,
+                                        windowSize.y * 0.5f};
 
-        if (io.MouseWheel && ImGui::IsWindowHovered()) {
-            scale_ += ScaleFactor * io.MouseWheel;
-            scale_ = scale_ < minScaleFactor ? minScaleFactor : scale_;
-        }
-        if (ImGui::IsWindowHovered() &&
-            (io.MouseDelta.x != 0 || io.MouseDelta.y != 0) &&
-            io.MouseDown[ImGuiMouseButton_Middle]) {
-            offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
-        }
-
-        auto view = ScaleByAnchorAsMat({0, 0}, scale_, halfWindowSize, offset_);
-
-        auto pos = ImGui::GetMousePos() - ImGui::GetWindowPos() -
-                   ImGui::GetWindowContentRegionMin();
-        nickel::cgmath::Vec2 translatedPos{pos.x, pos.y};
-        translatedPos = (translatedPos - halfWindowSize) *
-                            nickel::cgmath::Vec2{1.0f / scale_, 1.0f / scale_} -
-                        offset_ + halfWindowSize;
-        srtGizmos_.SetMouseRelativePos(
-            nickel::cgmath::Vec2{translatedPos.x, translatedPos.y});
-        srtGizmos_.SetFBOScale(scale_);
-        srtGizmos_.SetEventHandleState(ImGui::IsMouseHoveringRect(windowPos, windowPos + windowSize));
-        if (ImGui::IsWindowFocused()) {
-            if (ImGui::IsKeyPressed(ImGuiKey_S)) {
-                srtGizmos_.SetMode(SRTGizmos::Mode::Scale);
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_R)) {
-                srtGizmos_.SetMode(SRTGizmos::Mode::Rotate);
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_T)) {
-                srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
-            }
-        }
-        srtGizmos_.Update(*gWorld->cur_registry());
-
-        camera.SetView(view);
-        uiCamera.SetView(view);
+    if (io.MouseWheel && ImGui::IsWindowHovered()) {
+        scale_ += ScaleFactor * io.MouseWheel;
+        scale_ = scale_ < minScaleFactor ? minScaleFactor : scale_;
     }
-    ImGui::End();
+    if (ImGui::IsWindowHovered() &&
+        (io.MouseDelta.x != 0 || io.MouseDelta.y != 0) &&
+        io.MouseDown[ImGuiMouseButton_Middle]) {
+        offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
+    }
+
+    auto view = ScaleByAnchorAsMat({0, 0}, scale_, halfWindowSize, offset_);
+
+    auto pos = ImGui::GetMousePos() - ImGui::GetWindowPos() -
+               ImGui::GetWindowContentRegionMin();
+    nickel::cgmath::Vec2 translatedPos{pos.x, pos.y};
+    translatedPos = (translatedPos - halfWindowSize) *
+                        nickel::cgmath::Vec2{1.0f / scale_, 1.0f / scale_} -
+                    offset_ + halfWindowSize;
+    srtGizmos_.SetMouseRelativePos(
+        nickel::cgmath::Vec2{translatedPos.x, translatedPos.y});
+    srtGizmos_.SetFBOScale(scale_);
+    srtGizmos_.SetEventHandleState(
+        ImGui::IsMouseHoveringRect(windowPos, windowPos + windowSize));
+    if (ImGui::IsWindowFocused()) {
+        if (ImGui::IsKeyPressed(ImGuiKey_S)) {
+            srtGizmos_.SetMode(SRTGizmos::Mode::Scale);
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_R)) {
+            srtGizmos_.SetMode(SRTGizmos::Mode::Rotate);
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_T)) {
+            srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
+        }
+    }
+    srtGizmos_.Update(*gWorld->cur_registry());
+
+    camera.SetView(view);
+    uiCamera.SetView(view);
 
     ImGui::GetStyle() = oldStyle;
 }

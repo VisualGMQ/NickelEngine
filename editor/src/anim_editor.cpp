@@ -2,140 +2,128 @@
 #include "show_component.hpp"
 
 void TrackNameMenu::update() {
-    if (ImGui::BeginPopup(GetTitle().c_str())) {
-        if (ImGui::Button("delete")) {
-            auto& seq = owner_->sequence;
-            if (!seq->animMgr.Has(seq->player.Anim())) {
-                ImGui::EndPopup();
-                return;
-            }
-            auto& anim = seq->animMgr.Get(seq->player.Anim());
-            anim.RemoveTrack(trackIndex);
-            Hide();
+    if (ImGui::Button("delete")) {
+        auto& seq = owner_->sequence;
+        if (!seq->animMgr.Has(seq->player.Anim())) {
+            return;
         }
-        ImGui::EndPopup();
+        auto& anim = seq->animMgr.Get(seq->player.Anim());
+        anim.RemoveTrack(trackIndex);
+        Hide();
     }
 }
 
 void TrackMenu::update() {
-    if (ImGui::BeginPopup(GetTitle().c_str())) {
-        auto& seq = owner_->sequence;
-        if (!seq->animMgr.Has(seq->player.Anim())) {
-            Hide();
-            ImGui::EndPopup();
-            return ;
-        }
-        auto& anim = seq->animMgr.Get(seq->player.Anim());
-        auto& track = anim.Tracks()[trackIndex_];
-        switch (type) {
-            case Type::OnTrack:
-                if (ImGui::Button("add keyframe")) {
-                    auto& newFrame = track->AppendKeyFrame();
-                    newFrame.timePoint = clickedFrame_;
-                    Hide();
-                }
-                break;
-            case Type::OnBlock:
-                if (ImGui::Button("delete")) {
-                    track->RemoveKeyFrame(keyframeIndex_);
-                    Hide();
-                }
-                break;
-        }
-        ImGui::EndPopup();
+    auto& seq = owner_->sequence;
+    if (!seq->animMgr.Has(seq->player.Anim())) {
+        Hide();
+        return;
+    }
+    auto& anim = seq->animMgr.Get(seq->player.Anim());
+    auto& track = anim.Tracks()[trackIndex_];
+    switch (type) {
+        case Type::OnTrack:
+            if (ImGui::Button("add keyframe")) {
+                auto& newFrame = track->AppendKeyFrame();
+                newFrame.timePoint = clickedFrame_;
+                Hide();
+            }
+            break;
+        case Type::OnBlock:
+            if (ImGui::Button("delete")) {
+                track->RemoveKeyFrame(keyframeIndex_);
+                Hide();
+            }
+            break;
     }
 }
 
-void AnimationEditor::Update() {
-    if (ImGui::Begin(GetTitle().c_str(), &show_)) {
-        ImGuiIO& io = ImGui::GetIO();
-        nickel::cgmath::Vec2 mousePos(io.MousePos.x, io.MousePos.y);
+void AnimationEditor::update() {
+    ImGuiIO& io = ImGui::GetIO();
+    nickel::cgmath::Vec2 mousePos(io.MousePos.x, io.MousePos.y);
 
-        int sequenceCount = sequence->GetItemCount();
-        if (sequenceCount == 0) {
-            ImGui::End();
-            return;
-        }
-
-        ImVec2 contentSize = ImGui::GetContentRegionAvail();
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
-        if (ImGui::BeginChild("track names", ImVec2(w1_, contentSize.y))) {
-            ImVec2 canvasPos = ImGui::GetCursorScreenPos();
-            ImVec2 canvasSize = ImGui::GetContentRegionAvail();
-            renderTrackNameAndTool(canvasPos, canvasSize, ImGui::GetWindowDrawList());
-        }
-        ImGui::EndChild();
-        ImGui::SameLine();
-
-        // splitter
-        constexpr float hsplitterW = 10;
-        ImGui::InvisibleButton("hsplitter1",
-                               ImVec2(hsplitterW, timelineBarHeight_));
-        if (ImGui::IsItemActive()) w1_ += ImGui::GetIO().MouseDelta.x;
-
-        auto splitLineTopPoint = ImGui::GetWindowPos() +
-                                 ImGui::GetWindowContentRegionMin() +
-                                 ImVec2(w1_, 0);
-        ImGui::GetWindowDrawList()->AddLine(
-            splitLineTopPoint, splitLineTopPoint + ImVec2(0, contentSize.y),
-            0xFFFFFFFF);
-
-        ImGui::SameLine();
-
-        if (ImGui::BeginChild("tracks", ImVec2(w2_, contentSize.y), false,
-                              ImGuiWindowFlags_HorizontalScrollbar)) {
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            ImVec2 canvasPos = ImGui::GetCursorScreenPos();
-            ImVec2 canvasSize = ImGui::GetContentRegionAvail();
-
-            renderTimelineTopBar(canvasPos, canvasSize, drawList);
-            auto contentMinPoint = canvasPos + ImVec2(0, timelineBarHeight_ + 2);
-            ImGui::SetCursorScreenPos(contentMinPoint);
-            for (int i = 0; i < sequenceCount; i++) {
-                renderOneTrack(i, contentMinPoint, canvasSize, drawList);
-            }
-            ImGui::SetNextItemWidth(timelineScaleBarWidth_);
-            renderTimeCursor(contentMinPoint, canvasSize.y, drawList);
-        }
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        // splitter
-        ImGui::InvisibleButton("hsplitter2",
-                               ImVec2(hsplitterW, ImGui::GetWindowSize().y));
-        if (ImGui::IsItemActive()) w2_ += ImGui::GetIO().MouseDelta.x;
-
-        ImGui::SameLine();
-
-        if (ImGui::BeginChild(
-                "inspector",
-                ImVec2(contentSize.x - w1_ - w2_ - 2 * hsplitterW, contentSize.y),
-                false, ImGuiWindowFlags_HorizontalScrollbar)) {
-            renderInspector(ImGui::GetCursorScreenPos(),
-                            ImGui::GetContentRegionAvail(),
-                            ImGui::GetWindowDrawList());
-        }
-        ImGui::EndChild();
-
-        ImGui::PopStyleVar();
-
-        trackMenu_.Update();
-        trackNameMenu_.Update();
-
-        auto reg = gWorld->cur_registry();
-        if (reg->alive(sequence->entity) && sequence->player.IsPlaying()) {
-            sequence->player.Sync(sequence->entity, *reg);
-        }
+    int sequenceCount = sequence->GetItemCount();
+    if (sequenceCount == 0) {
+        return;
     }
 
-    ImGui::End();
+    ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
+    if (ImGui::BeginChild("track names", ImVec2(w1_, contentSize.y))) {
+        ImVec2 canvasPos = ImGui::GetCursorScreenPos();
+        ImVec2 canvasSize = ImGui::GetContentRegionAvail();
+        renderTrackNameAndTool(canvasPos, canvasSize,
+                               ImGui::GetWindowDrawList());
+    }
+    ImGui::EndChild();
+    ImGui::SameLine();
+
+    // splitter
+    constexpr float hsplitterW = 10;
+    ImGui::InvisibleButton("hsplitter1",
+                           ImVec2(hsplitterW, timelineBarHeight_));
+    if (ImGui::IsItemActive()) w1_ += ImGui::GetIO().MouseDelta.x;
+
+    auto splitLineTopPoint = ImGui::GetWindowPos() +
+                             ImGui::GetWindowContentRegionMin() +
+                             ImVec2(w1_, 0);
+    ImGui::GetWindowDrawList()->AddLine(
+        splitLineTopPoint, splitLineTopPoint + ImVec2(0, contentSize.y),
+        0xFFFFFFFF);
+
+    ImGui::SameLine();
+
+    if (ImGui::BeginChild("tracks", ImVec2(w2_, contentSize.y), false,
+                          ImGuiWindowFlags_HorizontalScrollbar)) {
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 canvasPos = ImGui::GetCursorScreenPos();
+        ImVec2 canvasSize = ImGui::GetContentRegionAvail();
+
+        renderTimelineTopBar(canvasPos, canvasSize, drawList);
+        auto contentMinPoint = canvasPos + ImVec2(0, timelineBarHeight_ + 2);
+        ImGui::SetCursorScreenPos(contentMinPoint);
+        for (int i = 0; i < sequenceCount; i++) {
+            renderOneTrack(i, contentMinPoint, canvasSize, drawList);
+        }
+        ImGui::SetNextItemWidth(timelineScaleBarWidth_);
+        renderTimeCursor(contentMinPoint, canvasSize.y, drawList);
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // splitter
+    ImGui::InvisibleButton("hsplitter2",
+                           ImVec2(hsplitterW, ImGui::GetWindowSize().y));
+    if (ImGui::IsItemActive()) w2_ += ImGui::GetIO().MouseDelta.x;
+
+    ImGui::SameLine();
+
+    if (ImGui::BeginChild(
+            "inspector",
+            ImVec2(contentSize.x - w1_ - w2_ - 2 * hsplitterW, contentSize.y),
+            false, ImGuiWindowFlags_HorizontalScrollbar)) {
+        renderInspector(ImGui::GetCursorScreenPos(),
+                        ImGui::GetContentRegionAvail(),
+                        ImGui::GetWindowDrawList());
+    }
+    ImGui::EndChild();
+
+    ImGui::PopStyleVar();
+
+    trackMenu_.Update();
+    trackNameMenu_.Update();
+
+    auto reg = gWorld->cur_registry();
+    if (reg->alive(sequence->entity) && sequence->player.IsPlaying()) {
+        sequence->player.Sync(sequence->entity, *reg);
+    }
 }
 
 void AnimationEditor::renderTrackNameAndTool(const ImVec2& canvasPos,
-                                      const ImVec2& canvasSize,
-                                      ImDrawList* drawList) {
+                                             const ImVec2& canvasSize,
+                                             ImDrawList* drawList) {
     ImGui::SetCursorScreenPos(canvasPos);
     if (gWorld->cur_registry()->alive(sequence->entity)) {
         if (ImGui::Button("Play", ImVec2(w1_ / 3.0, timelineBarHeight_))) {
@@ -158,10 +146,9 @@ void AnimationEditor::renderTrackNameAndTool(const ImVec2& canvasPos,
 void AnimationEditor::renderTimeCursor(const ImVec2& minPoint, float canvasH,
                                        ImDrawList* drawList) {
     auto currentFrame = sequence->player.GetTick();
-    float x =  currentFrame / timelineTimeStep_ * getColWidth();
-    drawList->AddLine(minPoint + ImVec2(x, 0),
-                      minPoint + ImVec2(x, canvasH), 0xFF0000FF,
-                      3.0f);
+    float x = currentFrame / timelineTimeStep_ * getColWidth();
+    drawList->AddLine(minPoint + ImVec2(x, 0), minPoint + ImVec2(x, canvasH),
+                      0xFF0000FF, 3.0f);
 }
 
 void AnimationEditor::renderTrackNames(const ImVec2& canvasPos,
@@ -183,8 +170,8 @@ void AnimationEditor::renderTrackNames(const ImVec2& canvasPos,
 
         drawList->AddLine(
             canvasPos + ImVec2(0, timelineBarHeight_ + (i + 1) * trackHeight_),
-            canvasPos +
-                ImVec2(canvasSize.x, timelineBarHeight_ + (i + 1) * trackHeight_),
+            canvasPos + ImVec2(canvasSize.x,
+                               timelineBarHeight_ + (i + 1) * trackHeight_),
             0xFFFFFFFF);
     }
 }
@@ -204,7 +191,7 @@ void AnimationEditor::renderTimelineTopBar(const ImVec2& canvasPos,
     if (ImGui::IsItemActive() &&
         ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         auto currentFrame = (ImGui::GetMousePos().x - canvasPos.x) / colWidth *
-                       timelineTimeStep_;
+                            timelineTimeStep_;
         currentFrame = std::clamp<float>(
             currentFrame, 0, getColNum() * getColWidth() * timelineTimeStep_);
         if (ImGui::BeginTooltip()) {
@@ -254,8 +241,9 @@ void AnimationEditor::renderOneTrack(int index, const ImVec2& minPoint,
     // track background event handle
     if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
         trackMenu_.TrackMode(
-            index, ((ImGui::GetMousePos().x - trackMinPoint.x) + ImGui::GetScrollX()) /
-                       getColWidth() * timelineTimeStep_);
+            index,
+            ((ImGui::GetMousePos().x - trackMinPoint.x) + ImGui::GetScrollX()) /
+                getColWidth() * timelineTimeStep_);
         trackMenu_.Show();
     }
 
@@ -289,7 +277,7 @@ void AnimationEditor::renderOneTrack(int index, const ImVec2& minPoint,
         ImGui::GetIO().MouseDragThreshold = 0.1;
 
         if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-            trackMenu_.KeyframeMode( index, i);
+            trackMenu_.KeyframeMode(index, i);
             trackMenu_.Show();
         }
 
@@ -344,13 +332,13 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
             if (auto fn =
                     ComponentShowMethods::Instance().Find(value.type_info());
                 fn) {
-                fn(value.type_info(), value.type_info()->name(), value, *reg,
-                   {});
+                fn(value.type_info(), value.type_info()->name(), value, *reg);
             } else {
                 ImGui::Text("don't know how to show this component");
             }
 
-            // TODO: check type whether can do arithmetic to determine which func can apply
+            // TODO: check type whether can do arithmetic to determine which
+            // func can apply
             if (ImGui::BeginCombo("interpolate",
                                   keyframe->GetInterpolateType() ==
                                           nickel::InterpolateType::Linear
@@ -358,11 +346,13 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
                                       : "discrete")) {
                 if (value.type_info()->is_numeric()) {
                     if (ImGui::Selectable("linear")) {
-                        keyframe->SetInterpolateType(nickel::InterpolateType::Linear);
+                        keyframe->SetInterpolateType(
+                            nickel::InterpolateType::Linear);
                     }
                 }
                 if (ImGui::Selectable("discrete")) {
-                        keyframe->SetInterpolateType(nickel::InterpolateType::Discrete);
+                    keyframe->SetInterpolateType(
+                        nickel::InterpolateType::Discrete);
                 }
             }
             ImGui::EndCombo();

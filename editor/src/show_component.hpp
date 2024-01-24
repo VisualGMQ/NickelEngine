@@ -6,11 +6,9 @@ class ComponentShowMethods final
     : public ::nickel::Singlton<ComponentShowMethods, false> {
 public:
     using type_info = const ::mirrow::drefl::type*;
-    using show_fn = void (*)(type_info, std::string_view name,
-                             ::mirrow::drefl::any&, gecs::registry,
-                             const std::vector<int>&);
-
-    ComponentShowMethods() { registDefaultMethods(); }
+    using show_fn =
+        std::function<void(type_info, std::string_view name,
+                           ::mirrow::drefl::any&, gecs::registry)>;
 
     void Regist(type_info type, show_fn show) { methods_[type] = show; }
 
@@ -20,72 +18,53 @@ private:
     std::unordered_map<type_info, show_fn> methods_;
 
     struct DefaultMethods {
-        static void ShowClass(type_info, std::string_view,
-                              ::mirrow::drefl::any&, gecs::registry,
-                              const std::vector<int>&);
-        static void ShowNumeric(type_info, std::string_view,
-                                ::mirrow::drefl::any&, gecs::registry,
-                                const std::vector<int>&);
-        static void ShowBoolean(type_info, std::string_view,
-                                ::mirrow::drefl::any&, gecs::registry,
-                                const std::vector<int>&);
-        static void ShowString(type_info, std::string_view,
-                               ::mirrow::drefl::any&, gecs::registry,
-                               const std::vector<int>&);
-        static void ShowEnum(type_info, std::string_view, ::mirrow::drefl::any&,
-                             gecs::registry, const std::vector<int>&);
-        static void ShowOptional(type_info, std::string_view,
-                                 ::mirrow::drefl::any&, gecs::registry,
-                                 const std::vector<int>&);
+        static void ShowClass(type_info parent, std::string_view,
+                              ::mirrow::drefl::any&, gecs::registry);
+        static void ShowNumeric(type_info parent, std::string_view,
+                                ::mirrow::drefl::any&, gecs::registry);
+        static void ShowBoolean(type_info parent, std::string_view,
+                                ::mirrow::drefl::any&, gecs::registry);
+        static void ShowString(type_info parent, std::string_view,
+                               ::mirrow::drefl::any&, gecs::registry);
+        static void ShowEnum(type_info parent, std::string_view,
+                             ::mirrow::drefl::any&, gecs::registry);
+        static void ShowOptional(type_info parent, std::string_view,
+                                 ::mirrow::drefl::any&, gecs::registry);
     };
-
-    void registDefaultMethods() {
-        methods_[::mirrow::drefl::typeinfo<std::string>()] =
-            DefaultMethods::ShowString;
-    }
 };
 
 template <typename T>
-bool ShowComponentDefault(std::string_view name, T& component) {
-    auto filterTypeInfo = mirrow::drefl::typeinfo<T>();
-    if (auto f = ComponentShowMethods::Instance().Find(filterTypeInfo); f) {
+bool DisplayComponent(std::string_view name, T& component) {
+    auto type = mirrow::drefl::typeinfo<T>();
+    if (auto f = ComponentShowMethods::Instance().Find(type); f) {
         auto ref = mirrow::drefl::any_make_ref(component);
-        f(filterTypeInfo, name, ref, *gWorld->cur_registry(), {});
+        f(type, name, ref, *gWorld->cur_registry());
         return true;
     }
 
     return false;
 }
 
-void ShowVec2(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry,
-              const std::vector<int>&);
+void DisplayVec2(const mirrow::drefl::type* parent, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry);
 
+void DisplayVec3(const mirrow::drefl::type* parent, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry);
 
-void ShowVec3(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry,
-              const std::vector<int>&);
+void DisplayVec4(const mirrow::drefl::type* parent, std::string_view name,
+              mirrow::drefl::any& value, gecs::registry);
 
-void ShowVec4(const mirrow::drefl::type* type, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry,
-              const std::vector<int>&);
+void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
+                mirrow::drefl::any& value, gecs::registry reg);
 
-void ShowSprite(const mirrow::drefl::type* type, std::string_view name,
-                       mirrow::drefl::any& value, gecs::registry reg,
-                       const std::vector<int>&);
+void DisplayTextureHandle(const mirrow::drefl::type* parent, std::string_view name,
+                       mirrow::drefl::any& value, gecs::registry reg);
 
-void ShowTextureHandle(const mirrow::drefl::type* type, std::string_view name,
-                       mirrow::drefl::any& value, gecs::registry reg,
-                       const std::vector<int>&);
+void DisplayAnimationPlayer(const mirrow::drefl::type* parent, std::string_view name,
+                         mirrow::drefl::any& value, gecs::registry reg);
 
-void ShowAnimationPlayer(const mirrow::drefl::type* type, std::string_view name,
-                         mirrow::drefl::any& value, gecs::registry reg,
-                         const std::vector<int>&);
+void DisplaySoundPlayer(const mirrow::drefl::type* parent, std::string_view name,
+                     mirrow::drefl::any& value, gecs::registry reg);
 
-void ShowSoundPlayer(const mirrow::drefl::type* type, std::string_view name,
-                         mirrow::drefl::any& value, gecs::registry reg,
-                         const std::vector<int>&);
-
-void ShowLabel(const mirrow::drefl::type* type, std::string_view name,
-               mirrow::drefl::any& value, gecs::registry reg,
-               const std::vector<int>&);
+void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
+               mirrow::drefl::any& value, gecs::registry reg);

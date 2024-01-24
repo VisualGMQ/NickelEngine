@@ -116,7 +116,6 @@ void ContentBrowserWindow::showAssetOperationPopupMenu(
             FS_CALL(std::filesystem::remove_all(path, err), err);
             ImGui::CloseCurrentPopup();
         }
-        ImGui::EndPopup();
     }
 }
 
@@ -209,48 +208,43 @@ void ContentBrowserWindow::showIcons() {
     }
 }
 
-void ContentBrowserWindow::Update() {
-    if (!IsVisible()) return;
+void ContentBrowserWindow::update() {
+    std::error_code err;
+    std::filesystem::path relativePath;
+    FS_CALL(relativePath = std::filesystem::relative(path_, rootPath_, err),
+            err);
+    ImGui::Text("Res://%s", relativePath.string().c_str());
+    ImGui::SameLine();
 
-    if (ImGui::Begin("content browser", &show_)) {
-        std::error_code err;
-        std::filesystem::path relativePath;
-        FS_CALL(relativePath = std::filesystem::relative(path_, rootPath_, err), err);
-        ImGui::Text("Res://%s", relativePath.string().c_str());
-        ImGui::SameLine();
-
-        // import button
-        if (ImGui::Button("+")) {
-            selectAndLoadAsset();
-        }
-        ImGui::SameLine();
-        // create directory 
-        if (ImGui::Button("create directory")) {
-            auto ctx = gWorld->res_mut<EditorContext>();
-            auto curPath = ctx->contentBrowserWindow.CurPath();
-            ctx->inputTextWindow.SetCallback([=](const std::string& dirName) {
-                auto dir = curPath / dirName;
-                std::error_code err;
-                if (!std::filesystem::create_directory(dir, err)) {
-                    FS_LOG_ERR(err, "create directory ", dir,
-                         " failed");
-                }
-            });
-            ctx->inputTextWindow.Show();
-            ImGui::CloseCurrentPopup();
-        }
-
-        // goto parent dir button
-        if (path_ != rootPath_) {
-            if (ImGui::Button("..")) {
-                path_ = path_.parent_path();
-                RescanDir();
-            }
-        }
-
-        showIcons();
+    // import button
+    if (ImGui::Button("+")) {
+        selectAndLoadAsset();
     }
-    ImGui::End();
+    ImGui::SameLine();
+    // create directory
+    if (ImGui::Button("create directory")) {
+        auto ctx = gWorld->res_mut<EditorContext>();
+        auto curPath = ctx->contentBrowserWindow.CurPath();
+        ctx->inputTextWindow.SetCallback([=](const std::string& dirName) {
+            auto dir = curPath / dirName;
+            std::error_code err;
+            if (!std::filesystem::create_directory(dir, err)) {
+                FS_LOG_ERR(err, "create directory ", dir, " failed");
+            }
+        });
+        ctx->inputTextWindow.Show();
+        ImGui::CloseCurrentPopup();
+    }
+
+    // goto parent dir button
+    if (path_ != rootPath_) {
+        if (ImGui::Button("..")) {
+            path_ = path_.parent_path();
+            RescanDir();
+        }
+    }
+
+    showIcons();
 }
 
 nickel::Texture& ContentBrowserWindow::FindTextureOrGen(

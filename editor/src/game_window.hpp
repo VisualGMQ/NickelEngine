@@ -7,7 +7,9 @@
 class GameWindow final: public Window {
 public:
     GameWindow();
-    void Update() override;
+
+protected:
+    void update() override;
 
 private:
     static constexpr float ScaleFactor = 0.05;
