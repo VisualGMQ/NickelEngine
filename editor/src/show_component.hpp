@@ -33,6 +33,16 @@ private:
     };
 };
 
+inline bool DisplayComponent(const mirrow::drefl::type* parent,
+                             std::string_view name, ::mirrow::drefl::any& obj,
+                             gecs::registry reg) {
+    if (auto fn = ComponentShowMethods::Instance().Find(obj.type_info()); fn) {
+        fn(parent, name, obj, reg);
+        return true;
+    }
+    return false;
+}
+
 template <typename T>
 bool DisplayComponent(std::string_view name, T& component) {
     auto type = mirrow::drefl::typeinfo<T>();
@@ -46,25 +56,28 @@ bool DisplayComponent(std::string_view name, T& component) {
 }
 
 void DisplayVec2(const mirrow::drefl::type* parent, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry);
+                 mirrow::drefl::any& value, gecs::registry);
 
 void DisplayVec3(const mirrow::drefl::type* parent, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry);
+                 mirrow::drefl::any& value, gecs::registry);
 
 void DisplayVec4(const mirrow::drefl::type* parent, std::string_view name,
-              mirrow::drefl::any& value, gecs::registry);
+                 mirrow::drefl::any& value, gecs::registry);
 
 void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
-                mirrow::drefl::any& value, gecs::registry reg);
+                   mirrow::drefl::any& value, gecs::registry reg);
 
-void DisplayTextureHandle(const mirrow::drefl::type* parent, std::string_view name,
-                       mirrow::drefl::any& value, gecs::registry reg);
+void DisplayTextureHandle(const mirrow::drefl::type* parent,
+                          std::string_view name, mirrow::drefl::any& value,
+                          gecs::registry reg);
 
-void DisplayAnimationPlayer(const mirrow::drefl::type* parent, std::string_view name,
-                         mirrow::drefl::any& value, gecs::registry reg);
+void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
+                            std::string_view name, mirrow::drefl::any& value,
+                            gecs::registry reg);
 
-void DisplaySoundPlayer(const mirrow::drefl::type* parent, std::string_view name,
-                     mirrow::drefl::any& value, gecs::registry reg);
+void DisplaySoundPlayer(const mirrow::drefl::type* parent,
+                        std::string_view name, mirrow::drefl::any& value,
+                        gecs::registry reg);
 
 void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
-               mirrow::drefl::any& value, gecs::registry reg);
+                  mirrow::drefl::any& value, gecs::registry reg);

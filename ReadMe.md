@@ -87,7 +87,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
             - [x] font asset property window
             - [x] audio asset property window
             - [ ] script asset property window
-    - [ ] Animation editor
+    - [x] Animation editor
     - [x] Project Save/Load
         - [x] asset save/load
         - [x] scene(entities) save/load

@@ -93,11 +93,36 @@ protected:
     void update() override;
 };
 
+
+class PropertyTreePopupWindow final : public PopupWindow {
+public:
+    PropertyTreePopupWindow(const std::string& title, AnimationEditor* owner)
+        : PopupWindow(title), owner_{owner} {}
+
+    void ChangeEntity(gecs::entity entity) { entity_ = entity; }
+
+protected:
+    void update() override final;
+
+private:
+    gecs::entity entity_ = gecs::null_entity;
+    AnimationEditor* owner_{};
+
+    void showProperty(const std::string& name, const std::string& typeName,
+                      const mirrow::drefl::type* type,
+                      const mirrow::drefl::type* rootType,
+                      std::vector<std::string> propertyLink);
+};
+
 class AnimationEditor final : public Window {
 public:
     std::unique_ptr<Sequence> sequence;
+    PropertyTreePopupWindow propertyTreeWindow;
 
-    AnimationEditor() : trackMenu_(*this), trackNameMenu_(*this) {
+    AnimationEditor()
+        : trackMenu_(*this),
+          trackNameMenu_(*this),
+          propertyTreeWindow("components", this) {
         SetTitle("animation editor");
         sequence = std::make_unique<Sequence>();
     }
@@ -125,8 +150,8 @@ private:
     std::optional<int> trackIdx_;
     std::optional<int> keyframeIdx_;
 
-    void renderTrackNameAndTool(const ImVec2& canvasPos, const ImVec2& canvasSize,
-                         ImDrawList*);
+    void renderTrackNameAndTool(const ImVec2& canvasPos,
+                                const ImVec2& canvasSize, ImDrawList*);
     void renderTimelineTopBar(const ImVec2& canvasPos, const ImVec2& canvasSize,
                               ImDrawList* drawList);
     void renderTrackNames(const ImVec2& canvasPos, const ImVec2& canvasSize,

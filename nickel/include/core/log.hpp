@@ -131,6 +131,32 @@ class LoggerMgr final {
     }
 };
 
+template <typename T>
+inline std::ostream& operator<<(std::ostream& stream, const std::vector<T>& container) {
+    stream << "[";
+    for (int i = 0; i < container.size(); i++) {
+        stream << container[i];
+        if (i < container.size() - 1) {
+            stream << ", ";
+        }
+    }
+    stream << "]";
+    return stream;
+}
+
+template <typename T, size_t N>
+inline std::ostream& operator<<(std::ostream& stream, const std::array<T, N>& container) {
+    stream << "[";
+    for (int i = 0; i < container.size(); i++) {
+        stream << container[i];
+        if (i < container.size() - 1) {
+            stream << ", ";
+        }
+    }
+    stream << "]";
+    return stream;
+}
+
 #define LOGT(tag, ...) logger::LoggerMgr::Instance().GetDefault().Trace(__FUNCTION__, __FILE__, __LINE__, "[", tag, "]:", ## __VA_ARGS__)
 #define LOGD(tag, ...) logger::LoggerMgr::Instance().GetDefault().Debug(__FUNCTION__, __FILE__, __LINE__, "[", tag, "]:", ## __VA_ARGS__)
 #define LOGI(tag, ...) logger::LoggerMgr::Instance().GetDefault().Info(__FUNCTION__, __FILE__, __LINE__, "[", tag, "]:", ## __VA_ARGS__)

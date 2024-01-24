@@ -68,6 +68,12 @@ public:
     AnimationTrack() : BasicAnimationTrack(nullptr, {}) {}
 
     AnimationTrack(
+        const mirrow::drefl::type* applyTarget,
+        typename BasicAnimationTrack::PropertyLinkContainer&& propList)
+        : BasicAnimationTrack(applyTarget, std::move(propList)) {
+    }
+
+    AnimationTrack(
         std::vector<keyframe_type>&& keyFrames,
         const mirrow::drefl::type* applyTarget,
         typename BasicAnimationTrack::PropertyLinkContainer&& propList)
@@ -82,7 +88,8 @@ public:
             keyframes_.emplace_back(std::make_unique<keyframe_type>());
         } else {
             auto& last = static_cast<keyframe_type&>(*keyframes_.back());
-            keyframes_.emplace_back(std::make_unique<keyframe_type>(last.value, last.timePoint + 10, last.interpolate_));
+            keyframes_.emplace_back(std::make_unique<keyframe_type>(
+                last.value, last.timePoint + 10, last.interpolate_));
         }
         return *keyframes_.back();
     }
@@ -109,9 +116,10 @@ public:
             auto& end = static_cast<keyframe_type&>(*keyFrames[i + 1]);
 
             if (begin.timePoint <= t && t < end.timePoint) {
-                return mirrow::drefl::any_make_copy(begin.interpolate_(
-                    static_cast<float>(t - begin.timePoint) / (end.timePoint - begin.timePoint),
-                    begin.value, end.value));
+                return mirrow::drefl::any_make_copy(
+                    begin.interpolate_(static_cast<float>(t - begin.timePoint) /
+                                           (end.timePoint - begin.timePoint),
+                                       begin.value, end.value));
             }
         }
 
@@ -137,7 +145,6 @@ public:
         tbl.emplace("value_type", mirrow::drefl::typeinfo<T>()->name());
 
         return tbl;
-        return {};
     }
 
     static std::unique_ptr<AnimationTrack> LoadFromToml(
@@ -205,23 +212,38 @@ public:
     using deserialize_fn_type =
         std::unique_ptr<BasicAnimationTrack> (*)(const toml::table&);
     using type_info_type = const mirrow::drefl::type*;
+    using create_fn_type = std::unique_ptr<BasicAnimationTrack> (*)(
+        const mirrow::drefl::type*,
+        typename BasicAnimationTrack::PropertyLinkContainer&&);
+
+    struct Method {
+        create_fn_type create;
+        deserialize_fn_type deserialize;
+    };
 
     bool Contain(type_info_type type);
-    deserialize_fn_type Find(type_info_type type);
+    Method Find(type_info_type type) const;
 
     template <typename T>
     auto& RegistMethod() {
         auto type_info = mirrow::drefl::typeinfo<T>();
         methods_.emplace(
             type_info,
-            [](const toml::table& tbl) -> std::unique_ptr<BasicAnimationTrack> {
-                return AnimationTrack<T>::LoadFromToml(tbl);
-            });
+            Method{[](const mirrow::drefl::type* applyTarget,
+                      typename BasicAnimationTrack::PropertyLinkContainer&&
+                          propList) -> std::unique_ptr<BasicAnimationTrack> {
+                       return std::make_unique<AnimationTrack<T>>(
+                           applyTarget, std::move(propList));
+                   },
+                   [](const toml::table& tbl)
+                       -> std::unique_ptr<BasicAnimationTrack> {
+                       return AnimationTrack<T>::LoadFromToml(tbl);
+                   }});
         return *this;
     }
 
 private:
-    std::unordered_map<type_info_type, deserialize_fn_type> methods_;
+    std::unordered_map<type_info_type, Method> methods_;
 };
 
 class Animation final : public Asset {
@@ -236,15 +258,17 @@ public:
 
     Animation() = default;
 
-    Animation(container_type&& tracks) : tracks_(std::move(tracks)) {
-    }
+    Animation(container_type&& tracks) : tracks_(std::move(tracks)) {}
 
     explicit Animation(const toml::table&);
     explicit Animation(const std::filesystem::path&);
 
     auto& Tracks() const { return tracks_; }
-    void RemoveTrack(size_t index) {
-        tracks_.erase(tracks_.begin() + index);
+
+    void RemoveTrack(size_t index) { tracks_.erase(tracks_.begin() + index); }
+
+    void AddTrack(std::unique_ptr<BasicAnimationTrack>&& track) {
+        tracks_.emplace_back(std::move(track));
     }
 
     TimeType Duration() const {
@@ -303,6 +327,7 @@ public:
     explicit AnimationPlayer(AnimationManager& mgr) : mgr_(&mgr) {}
 
     AnimationPlayer(const AnimationPlayer&) = delete;
+
     AnimationPlayer(AnimationPlayer&& o) { swap(o, *this); }
 
     AnimationPlayer& operator=(AnimationPlayer&& o) {
@@ -341,9 +366,7 @@ public:
         curTime_ = std::clamp<int>(t, 0, static_cast<int>(Duration()));
     }
 
-    auto GetTick() const {
-        return curTime_;
-    }
+    auto GetTick() const { return curTime_; }
 
     bool Empty() const { return !handle_; }
 
@@ -373,6 +396,10 @@ private:
     int curTime_ = 0;
     AnimationHandle handle_;
     bool isPlaying_ = false;
+
+    void getTarget(const mirrow::drefl::type* type,
+                   const std::vector<std::string>& propertyLink, size_t idx,
+                   mirrow::drefl::any& obj);
 
     friend void swap(AnimationPlayer& o1, AnimationPlayer& o2) {
         using std::swap;

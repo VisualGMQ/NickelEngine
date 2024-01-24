@@ -23,12 +23,15 @@ public:
 
     auto& GetTitle() const { return title_; }
 
+    bool IsFocused() const { return focused_; }
+
     void Update() {
         if (!show_) {
             return;
         }
 
         if (ImGui::Begin(GetTitle().c_str(), &show_)) {
+            focused_ = ImGui::IsWindowFocused();
             update();
         }
         ImGui::End();
@@ -41,6 +44,7 @@ protected:
 
 private:
     std::string title_;
+    bool focused_ = false;
 };
 
 class PopupWindow : public Window {

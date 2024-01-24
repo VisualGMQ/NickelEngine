@@ -189,40 +189,6 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
     RegistSpawnMethods();
 
     window->SetResizable(true);
-
-    // test animation
-    /*
-    auto transformType = mirrow::drefl::typeinfo<nickel::Transform>();
-    std::unique_ptr<nickel::BasicAnimationTrack> posTrack =
-        std::unique_ptr<nickel::AnimationTrack<nickel::cgmath::Vec2>>(
-            new nickel::AnimationTrack<nickel::cgmath::Vec2>{
-                {nickel::KeyFrame<nickel::cgmath::Vec2>(
-                     nickel::cgmath::Vec2{100.0f, 200.0f}, 0),
-                 nickel::KeyFrame<nickel::cgmath::Vec2>(
-                     nickel::cgmath::Vec2{300.0f, 500.0f}, 100)},
-                transformType,
-                {"translation"}
-    });
-
-    std::unique_ptr<nickel::BasicAnimationTrack> rotTrack =
-        std::unique_ptr<nickel::AnimationTrack<float>>(
-            new nickel::AnimationTrack<float>{
-                {nickel::KeyFrame<float>(0.0, 0),
-                 nickel::KeyFrame<float>(360, 200)},
-                transformType,
-                {"rotation"}
-    });
-
-    typename nickel::Animation::container_type tracks;
-    tracks.emplace_back(std::move(posTrack));
-    tracks.emplace_back(std::move(rotTrack));
-    nickel::Animation anim{std::move(tracks)};
-
-    auto animHandle = assetMgr->AnimationMgr().Create(
-        std::make_unique<nickel::Animation>(std::move(anim)), "test.anim");
-
-    editorCtx->animEditor.sequence->animHandle = animHandle;
-    */
 }
 
 void EditorMenubar(EditorContext& ctx) {

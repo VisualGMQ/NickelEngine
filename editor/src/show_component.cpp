@@ -43,11 +43,8 @@ void ComponentShowMethods::DefaultMethods::ShowClass(type_info parent,
         auto classInfo = obj.type_info()->as_class();
         for (auto&& var : classInfo->properties()) {
             auto varType = var->type_info();
-            auto showMethod = ComponentShowMethods::Instance().Find(varType);
-            if (showMethod) {
-                auto ref = var->call(obj);
-                showMethod(varType, var->name(), ref, reg);
-            }
+            auto ref = var->call(obj);
+            DisplayComponent(varType, var->name(), ref, reg);
         }
 
         ImGui::TreePop();
@@ -147,10 +144,8 @@ void ComponentShowMethods::DefaultMethods::ShowOptional(
     auto optional_type = obj.type_info()->as_optional();
     if (optional_type->has_value(obj)) {
         auto elem = optional_type->get_value(obj);
-        auto show = ComponentShowMethods::Instance().Find(elem.type_info());
-        if (show) {
-            show(elem.type_info(), name, elem, reg);
-        }
+
+        DisplayComponent(elem.type_info(), name, elem, reg);
     } else {
         if (ImGui::TreeNode(name.data())) {
             if (optional_type->elem_type()->is_default_constructible()) {
@@ -188,7 +183,8 @@ void DisplayVec4(const mirrow::drefl::type* parent, std::string_view name,
     auto& attrs = parent->attributes();
     ImGui::BeginDisabled(obj.is_constref());
     auto vec = mirrow::drefl::try_cast<nickel::cgmath::Vec4>(obj);
-    if (std::find(attrs.begin(), attrs.end(), nickel::AttrRange01) != attrs.end()) {
+    if (std::find(attrs.begin(), attrs.end(), nickel::AttrRange01) !=
+        attrs.end()) {
         ImGui::DragFloat4(name.data(), vec->data);
     } else if (std::find(attrs.begin(), attrs.end(), nickel::AttrColor) !=
                attrs.end()) {
@@ -227,24 +223,26 @@ void LoadAssetSelector(EditorContext& ctx, std::string_view buttonText,
 
 template <typename HandleType>
 void AssetCreator(
-    EditorContext& ctx,
-    const std::string& name,
+    EditorContext& ctx, const std::string& name,
     std::function<void(const std::filesystem::path&)> createCallback) {
-    auto filetype = nickel::DetectFileType<typename HandleType::ValueType>();
-    auto extension = nickel::GetMetaFileExtension(filetype);
+    if (ImGui::Selectable("create")) {
+        auto filetype =
+            nickel::DetectFileType<typename HandleType::ValueType>();
+        auto extension = nickel::GetMetaFileExtension(filetype);
 
-    auto filename = SaveFileDialog(name.c_str(), {extension.data()});
+        auto filename = SaveFileDialog(name.c_str(), {extension.data()});
 
-    if (filename.empty()) {
-        return;
-    }
+        if (filename.empty()) {
+            return;
+        }
 
-    filename = filename.extension() != extension
-                    ? filename.replace_extension(extension)
-                    : filename;
+        filename = filename.extension() != extension
+                       ? filename.replace_extension(extension)
+                       : filename;
 
-    if (createCallback) {
-        createCallback(filename);
+        if (createCallback) {
+            createCallback(filename);
+        }
     }
 }
 
@@ -254,9 +252,10 @@ struct show_tmpl;
 template <typename HandleType>
 bool BeginDisplayHandle(
     EditorContext& ctx, std::string_view name, nickel::AssetManager& mgr,
-    HandleType handle, std::function<void(HandleType)> handleChangeCallback = nullptr,
-    std::function<void(const std::filesystem::path&)> createCallback = nullptr) {
-
+    HandleType handle,
+    std::function<void(HandleType)> handleChangeCallback = nullptr,
+    std::function<void(const std::filesystem::path&)> createCallback =
+        nullptr) {
     char buf[1024] = {0};
     if (mgr.Has(handle)) {
         auto& asset = mgr.Get(handle);
@@ -264,7 +263,7 @@ bool BeginDisplayHandle(
         snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
     } else {
         snprintf(buf, sizeof(buf), "no asset");
-    }   
+    }
 
     char id[1024] = {0};
     snprintf(id, sizeof(id), "##%s", name.data());
@@ -328,14 +327,13 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
                    mirrow::drefl::any& obj, gecs::registry reg) {
     auto classInfo = obj.type_info()->as_class();
     for (auto&& prop : classInfo->properties()) {
-        if (prop->type_info() == ::mirrow::drefl::typeinfo<nickel::TextureHandle>()) {
+        if (prop->type_info() ==
+            ::mirrow::drefl::typeinfo<nickel::TextureHandle>()) {
             continue;
         }
-        if (auto fn = ComponentShowMethods::Instance().Find(prop->type_info());
-            fn) {
-            auto member = prop->call(obj);
-            fn(member.type_info(), prop->name(), member, reg);
-        }
+
+        auto member = prop->call(obj);
+        DisplayComponent(member.type_info(), prop->name(), member, reg);
     }
 
     auto& sprite = *mirrow::drefl::try_cast<nickel::Sprite>(obj);
@@ -344,8 +342,9 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
     auto changeHandle = [&](nickel::TextureHandle h) { sprite.texture = h; };
     auto& ctx = *reg.res_mut<EditorContext>();
 
-    if (BeginDisplayHandle<nickel::TextureHandle>(*reg.res_mut<EditorContext>(), name, *mgr, sprite.texture,
-                           changeHandle)) {
+    if (BeginDisplayHandle<nickel::TextureHandle>(*reg.res_mut<EditorContext>(),
+                                                  name, *mgr, sprite.texture,
+                                                  changeHandle)) {
         if (ImGui::Selectable("load tilesheet")) {
             ctx.tilesheetAssetListWindow.Show();
             ctx.tilesheetAssetListWindow.SetSelectCallback(
@@ -362,27 +361,29 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
         }
         if (ImGui::Selectable("create tilesheet")) {
             ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback([&](nickel::TextureHandle h) {
-                auto filename =
-                    SaveFileDialog("create new tilesheet", {".tilesheet"});
-                if (!filename.empty()) {
-                    filename = filename.extension() != ".tilesheet"
-                                   ? filename.replace_extension(".tilesheet")
-                                   : filename;
-                    ctx.tilesheetEditor.Show();
-                    auto& tilesheetMgr = mgr->TilesheetMgr();
-                    auto handle = tilesheetMgr.Create(h, 1, 1);
-                    tilesheetMgr.AssociateFile(handle,
-                                               ctx.GetRelativePath(filename));
-                    ctx.tilesheetEditor.ChangeTilesheet(handle);
-                    ctx.tilesheetEditor.SetSelectCallback(
-                        [&](nickel::Tile tile) {
-                            sprite.texture = tile.handle;
-                            sprite.region = tile.region;
-                            sprite.customSize = tile.region.size;
-                        });
-                }
-            });
+            ctx.textureAssetListWindow.SetSelectCallback(
+                [&](nickel::TextureHandle h) {
+                    auto filename =
+                        SaveFileDialog("create new tilesheet", {".tilesheet"});
+                    if (!filename.empty()) {
+                        filename =
+                            filename.extension() != ".tilesheet"
+                                ? filename.replace_extension(".tilesheet")
+                                : filename;
+                        ctx.tilesheetEditor.Show();
+                        auto& tilesheetMgr = mgr->TilesheetMgr();
+                        auto handle = tilesheetMgr.Create(h, 1, 1);
+                        tilesheetMgr.AssociateFile(
+                            handle, ctx.GetRelativePath(filename));
+                        ctx.tilesheetEditor.ChangeTilesheet(handle);
+                        ctx.tilesheetEditor.SetSelectCallback(
+                            [&](nickel::Tile tile) {
+                                sprite.texture = tile.handle;
+                                sprite.region = tile.region;
+                                sprite.customSize = tile.region.size;
+                            });
+                    }
+                });
         }
 
         EndDisplayHandle();
@@ -403,9 +404,18 @@ void DisplayTextureHandle(const mirrow::drefl::type* parent,
 void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
                             std::string_view name, mirrow::drefl::any& obj,
                             gecs::registry reg) {
-    nickel::AnimationPlayer& player = *mirrow::drefl::try_cast<nickel::AnimationPlayer>(obj);
+    nickel::AnimationPlayer& player =
+        *mirrow::drefl::try_cast<nickel::AnimationPlayer>(obj);
     auto handle = player.Anim();
     auto& mgr = *reg.res_mut<nickel::AssetManager>();
+
+    auto create = [&](const std::filesystem::path& path) {
+        auto ctx = gWorld->cur_registry()->res_mut<EditorContext>();
+        auto handle = mgr.AnimationMgr().Create(
+            std::make_unique<nickel::Animation>(), ctx->GetRelativePath(path));
+        ctx->animEditor.sequence->player.ChangeAnim(handle);
+        ctx->animEditor.sequence->entity = ctx->entityListWindow.GetSelected();
+    };
 
     auto changeHandle = [&player](nickel::AnimationHandle handle) {
         player.ChangeAnim(handle);
@@ -414,8 +424,9 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
             ->animEditor.sequence->player.ChangeAnim(handle);
     };
 
-    if (BeginDisplayHandle<nickel::AnimationHandle>(*reg.res_mut<EditorContext>(), name, mgr, handle,
-                           changeHandle)) {
+    if (BeginDisplayHandle<nickel::AnimationHandle>(
+            *reg.res_mut<EditorContext>(), name, mgr, handle, changeHandle,
+            create)) {
         EndDisplayHandle();
     }
 }
@@ -445,8 +456,8 @@ void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
 
     auto changeHandle = [&](nickel::FontHandle h) { label.ChangeFont(h); };
 
-    if (BeginDisplayHandle<nickel::FontHandle>(*reg.res_mut<EditorContext>(), name, mgr, handle,
-                           changeHandle)) {
+    if (BeginDisplayHandle<nickel::FontHandle>(
+            *reg.res_mut<EditorContext>(), name, mgr, handle, changeHandle)) {
         EndDisplayHandle();
     }
 
@@ -470,8 +481,8 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
 
     auto handle = player.Handle();
 
-    if (BeginDisplayHandle<nickel::SoundHandle>(*reg.res_mut<EditorContext>(), name, mgr,
-                           handle, changeHandle)) {
+    if (BeginDisplayHandle<nickel::SoundHandle>(
+            *reg.res_mut<EditorContext>(), name, mgr, handle, changeHandle)) {
         EndDisplayHandle();
     }
 

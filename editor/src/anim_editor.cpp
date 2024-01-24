@@ -2,6 +2,11 @@
 #include "show_component.hpp"
 
 void TrackNameMenu::update() {
+    if (ImGui::Button("add track")) {
+        owner_->propertyTreeWindow.ChangeEntity(owner_->sequence->entity);
+        owner_->propertyTreeWindow.Show();
+        Hide();
+    }
     if (ImGui::Button("delete")) {
         auto& seq = owner_->sequence;
         if (!seq->animMgr.Has(seq->player.Anim())) {
@@ -38,12 +43,73 @@ void TrackMenu::update() {
     }
 }
 
+void PropertyTreePopupWindow::update() {
+    auto& types = mirrow::drefl::all_typeinfo();
+
+    auto reg = gWorld->cur_registry();
+
+    if (!reg->alive(entity_)) {
+        return;
+    }
+
+    for (auto [name, typeInfo] : types) {
+        if (reg->has(entity_, typeInfo)) {
+            showProperty(std::string{name}, typeInfo->name(), typeInfo,
+                         typeInfo, {});
+        }
+    }
+}
+
+void PropertyTreePopupWindow::showProperty(
+    const std::string& name, const std::string& typeName,
+    const mirrow::drefl::type* type, const mirrow::drefl::type* rootType,
+    std::vector<std::string> propertyLink) {
+    propertyLink.push_back(name);
+
+    static char buf[1024] = {0};
+    snprintf(buf, sizeof(buf), "%s [%s]", name.data(), typeName.data());
+
+    if (!type->is_class()) {
+        if (ImGui::Button(buf)) {
+            auto [create, _] =
+                nickel::AnimTrackLoadMethods::Instance().Find(type);
+            auto handle = owner_->sequence->player.Anim();
+            auto mgr = gWorld->res_mut<nickel::AssetManager>();
+            if (mgr->Has(handle)) {
+                auto& anim = mgr->Get(handle);
+                propertyLink.erase(propertyLink.begin());
+                anim.AddTrack(create(rootType, std::move(propertyLink)));
+            }
+            Hide();
+        }
+    } else {
+        auto clazz = type->as_class();
+
+        if (ImGui::TreeNode(buf)) {
+            for (auto&& var : clazz->properties()) {
+                auto varType = var->type_info();
+                showProperty(var->name(), varType->name(), varType, rootType,
+                             propertyLink);
+            }
+
+            ImGui::TreePop();
+        }
+    }
+}
+
 void AnimationEditor::update() {
     ImGuiIO& io = ImGui::GetIO();
     nickel::cgmath::Vec2 mousePos(io.MousePos.x, io.MousePos.y);
 
     int sequenceCount = sequence->GetItemCount();
-    if (sequenceCount == 0) {
+    if (sequenceCount == 0 &&
+        sequence->player.Anim() != nickel::AnimationHandle::Null()) {
+        if (ImGui::Button("create track", ImGui::GetContentRegionAvail())) {
+            propertyTreeWindow.ChangeEntity(sequence->entity);
+            propertyTreeWindow.Show();
+        }
+
+        propertyTreeWindow.Update();
         return;
     }
 
@@ -112,13 +178,14 @@ void AnimationEditor::update() {
 
     ImGui::PopStyleVar();
 
-    trackMenu_.Update();
-    trackNameMenu_.Update();
-
     auto reg = gWorld->cur_registry();
     if (reg->alive(sequence->entity) && sequence->player.IsPlaying()) {
         sequence->player.Sync(sequence->entity, *reg);
     }
+
+    trackMenu_.Update();
+    trackNameMenu_.Update();
+    propertyTreeWindow.Update();
 }
 
 void AnimationEditor::renderTrackNameAndTool(const ImVec2& canvasPos,
@@ -329,11 +396,8 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
         if (auto track = sequence->Get(trackIdx_.value()); track) {
             auto& keyframe = track->KeyFrames()[keyframeIdx_.value()];
             auto value = keyframe->GetValue();
-            if (auto fn =
-                    ComponentShowMethods::Instance().Find(value.type_info());
-                fn) {
-                fn(value.type_info(), value.type_info()->name(), value, *reg);
-            } else {
+            if (!DisplayComponent(value.type_info(), value.type_info()->name(),
+                                  value, *reg)) {
                 ImGui::Text("don't know how to show this component");
             }
 
@@ -354,8 +418,8 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
                     keyframe->SetInterpolateType(
                         nickel::InterpolateType::Discrete);
                 }
+                ImGui::EndCombo();
             }
-            ImGui::EndCombo();
         }
     } else {
         ImGui::Text("no component");

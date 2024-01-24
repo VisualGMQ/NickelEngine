@@ -6,48 +6,6 @@ namespace nickel {
 
 Animation Animation::Null = Animation{};
 
-/*
-bool AnimationTrack::changeApplyTarget(const mirrow::drefl::type* typeInfo) {
-    if (propLink_.empty()) {
-        applyTypeInfo_ = typeInfo;
-        return true;
-    }
-
-    Assert(typeInfo->is_class(),
-           "must apply class target when has property link");
-
-    int i = 0;
-    const mirrow::drefl::type* type = typeInfo;
-    while (i < propLink_.size() - 1) {
-        if (!type->is_class()) {
-            LOGW(log_tag::Asset, type->name(), " isn't class");
-            return false;
-        }
-
-        auto clazz = type->as_class();
-        for (auto& prop : clazz->properties()) {
-            if (prop->name() == propLink_[i] && prop->type_info()->is_class()) {
-                type = prop->type_info()->as_class();
-                i++;
-                break;
-            }
-
-            LOGW(log_tag::Asset, "type ", typeInfo->name(),
-                 " don't has property link ", propLink_);
-            return false;
-        }
-    }
-
-    if (type != valueType_) {
-        LOGW(log_tag::Asset, "can't apply ", type->name(), " to ",
-             valueType_->name());
-        return false;
-    }
-
-    return true;
-}
-*/
-
 AnimationPlayer::AnimationPlayer()
     : mgr_{&gWorld->res_mut<nickel::AssetManager>()->AnimationMgr()} {}
 
@@ -60,10 +18,11 @@ Animation::Animation(const toml::table& tbl) {
 
             if (auto valueNode = elemTbl.get("value_type");
                 valueNode->is_string()) {
-                auto f = AnimTrackLoadMethods::Instance().Find(
-                    mirrow::drefl::typeinfo(valueNode->as_string()->get()));
-                if (f) {
-                    tracks_.emplace_back(f(elemTbl));
+                auto [create, serialize] =
+                    AnimTrackLoadMethods::Instance().Find(
+                        mirrow::drefl::typeinfo(valueNode->as_string()->get()));
+                if (serialize) {
+                    tracks_.emplace_back(serialize(elemTbl));
                 }
             }
         }
@@ -126,12 +85,12 @@ bool AnimTrackLoadMethods::Contain(type_info_type type) {
     return methods_.count(type) != 0;
 }
 
-AnimTrackLoadMethods::deserialize_fn_type AnimTrackLoadMethods::Find(
-    type_info_type type) {
+AnimTrackLoadMethods::Method AnimTrackLoadMethods::Find(
+    type_info_type type) const {
     if (auto it = methods_.find(type); it != methods_.end()) {
         return it->second;
     }
-    return nullptr;
+    return {nullptr, nullptr};
 }
 
 void AnimationPlayer::Sync(gecs::entity entity, gecs::registry reg) {
@@ -142,18 +101,12 @@ void AnimationPlayer::Sync(gecs::entity entity, gecs::registry reg) {
     auto& anim = mgr_->Get(handle_);
     for (auto& track : anim.Tracks()) {
         if (reg.has(entity, track->GetApplyTarget())) {
-            auto data = reg.get_mut(entity, track->GetApplyTarget());
-            auto type = data.type_info();
-            for (auto& prop : track->PropertyLink()) {
-                for (auto& classProp :
-                     track->GetApplyTarget()->as_class()->properties()) {
-                    if (classProp->name() == prop) {
-                        data = classProp->call(data);
-                    }
-                }
-            }
+            auto obj = reg.get_mut(entity, track->GetApplyTarget());
+            auto type = obj.type_info();
 
-            data.steal_assign(track->GetValueAt(curTime_));
+            getTarget(type, track->PropertyLink(), 0, obj);
+
+            obj.steal_assign(track->GetValueAt(curTime_));
         }
     }
 
@@ -162,6 +115,29 @@ void AnimationPlayer::Sync(gecs::entity entity, gecs::registry reg) {
 
     if (curTime_ >= Duration()) {
         Stop();
+    }
+}
+
+void AnimationPlayer::getTarget(const mirrow::drefl::type* type,
+                                const std::vector<std::string>& propertyLink,
+                                size_t idx, mirrow::drefl::any& obj) {
+    if (idx >= propertyLink.size()) {
+        LOGE(nickel::log_tag::Editor,
+             "can't find correspond type in animation");
+        return;
+    }
+
+    if (type->is_class()) {
+        auto clazz = type->as_class();
+
+        for (auto& prop : clazz->properties()) {
+            auto& property = propertyLink[idx];
+            if (prop->name() == property) {
+                obj = prop->call(obj);
+                getTarget(prop->type_info(), propertyLink, idx + 1, obj);
+                return;
+            }
+        }
     }
 }
 
