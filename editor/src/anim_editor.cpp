@@ -339,7 +339,8 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
         trackIdx_.value() < sequence->GetItemCount() &&
         keyframeIdx_.value() < sequence->Get(trackIdx_.value())->Size()) {
         if (auto track = sequence->Get(trackIdx_.value()); track) {
-            auto value = track->KeyFrames()[keyframeIdx_.value()]->GetValue();
+            auto& keyframe = track->KeyFrames()[keyframeIdx_.value()];
+            auto value = keyframe->GetValue();
             if (auto fn =
                     ComponentShowMethods::Instance().Find(value.type_info());
                 fn) {
@@ -348,6 +349,23 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
             } else {
                 ImGui::Text("don't know how to show this component");
             }
+
+            // TODO: check type whether can do arithmetic to determine which func can apply
+            if (ImGui::BeginCombo("interpolate",
+                                  keyframe->GetInterpolateType() ==
+                                          nickel::InterpolateType::Linear
+                                      ? "linear"
+                                      : "discrete")) {
+                if (value.type_info()->is_numeric()) {
+                    if (ImGui::Selectable("linear")) {
+                        keyframe->SetInterpolateType(nickel::InterpolateType::Linear);
+                    }
+                }
+                if (ImGui::Selectable("discrete")) {
+                        keyframe->SetInterpolateType(nickel::InterpolateType::Discrete);
+                }
+            }
+            ImGui::EndCombo();
         }
     } else {
         ImGui::Text("no component");

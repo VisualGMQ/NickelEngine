@@ -82,7 +82,7 @@ public:
             keyframes_.emplace_back(std::make_unique<keyframe_type>());
         } else {
             auto& last = static_cast<keyframe_type&>(*keyframes_.back());
-            keyframes_.emplace_back(std::make_unique<keyframe_type>(last.value, last.timePoint + 10, last.interpolate));
+            keyframes_.emplace_back(std::make_unique<keyframe_type>(last.value, last.timePoint + 10, last.interpolate_));
         }
         return *keyframes_.back();
     }
@@ -109,7 +109,7 @@ public:
             auto& end = static_cast<keyframe_type&>(*keyFrames[i + 1]);
 
             if (begin.timePoint <= t && t < end.timePoint) {
-                return mirrow::drefl::any_make_copy(begin.interpolate(
+                return mirrow::drefl::any_make_copy(begin.interpolate_(
                     static_cast<float>(t - begin.timePoint) / (end.timePoint - begin.timePoint),
                     begin.value, end.value));
             }

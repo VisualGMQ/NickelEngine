@@ -132,7 +132,6 @@ void dropFileEventHandle(const nickel::DropFileEvent& event,
         return;
     }
 
-    // C++ Primer
     auto path = entry.path();
     auto name = path.filename();
     auto newPath = cbBrowser.CurPath() / name;
