@@ -11,7 +11,7 @@ class Asset {
 public:
     virtual ~Asset() = default;
 
-    template <typename T>
+    template <typename, typename>
     friend class Manager;
 
     Asset(const std::filesystem::path& relativePath)

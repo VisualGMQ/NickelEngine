@@ -7,7 +7,98 @@
 namespace nickel {
 
 template <typename T>
+struct ResResult final {
+    Handle<T> handle;
+    T* value = nullptr;
+
+    ResResult() = default;
+
+    ResResult(Handle<T> h, T* v) : handle{h}, value{v} {}
+};
+
+// resource manager
+template <typename T, typename = void>
 class Manager {
+public:
+    Manager() = default;
+
+    using AssetType = T;
+    using AssetHandle = Handle<AssetType>;
+    using AssetStoreType = std::unique_ptr<AssetType>;
+
+    template <typename... Args>
+    ResResult<AssetType> Create(Args&&... args) {
+        auto asset = std::make_unique<AssetType>(std::forward<Args>(args)...);
+        if (asset) {
+            AssetHandle handle = AssetHandle::Create();
+            auto assetPtr = asset.get();
+            storeNewItem(handle, std::move(asset));
+            return {handle, assetPtr};
+        }
+        return {AssetHandle::Null(), nullptr};
+    }
+
+    ResResult<AssetType> Emplace(AssetStoreType&& asset) {
+        if (asset) {
+            AssetHandle handle = AssetHandle::Create();
+            auto assetPtr = asset.get();
+            storeNewItem(handle, std::move(asset));
+            return {handle, assetPtr};
+        }
+        return {AssetHandle::Null(), nullptr};
+    }
+
+    void Destroy(AssetHandle handle) {
+        if (Has(handle)) {
+            datas_.erase(handle);
+        }
+    }
+
+    const AssetType* Get(AssetHandle handle) const {
+        if (auto it = datas_.find(handle); it != datas_.end()) {
+            return it->second.get();
+        } else {
+            return nullptr;
+        }
+    }
+
+    AssetType* Get(AssetHandle handle) {
+        return const_cast<AssetType*>(std::as_const(*this).Get(handle));
+    }
+
+    bool Has(AssetHandle handle) const {
+        return datas_.find(handle) != datas_.end();
+    }
+
+    void ReleaseAll() {
+        datas_.clear();
+    }
+
+    auto& AllDatas() const { return datas_; }
+
+protected:
+    void storeNewItem(AssetHandle handle, AssetStoreType&& item) {
+        if (handle) {
+            datas_.emplace(handle, std::move(item));
+        }
+    }
+
+    std::unordered_map<AssetHandle, AssetStoreType, typename AssetHandle::Hash,
+                       typename AssetHandle::Eq>
+        datas_;
+};
+
+
+template <typename T, typename = void>
+struct CanBeSerialize: std::false_type { };
+
+template <typename T>
+struct CanBeSerialize<T, std::enable_if_t<std::is_base_of_v<Asset, T>>>: std::true_type { };
+
+
+// resource manager which hold Asset
+template <typename T>
+class Manager<T, std::void_t<std::enable_if_t<CanBeSerialize<T>::value>>> {
 public:
     Manager() = default;
 
@@ -202,5 +293,6 @@ protected:
         datas_;
     std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
 };
+
 
 }  // namespace nickel

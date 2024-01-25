@@ -58,11 +58,12 @@ jobs:
     - name: pull submodules
       run: git submodule update --init --recursive
 
-    - name: Install SDL2(Ubuntu Only)
+    - name: Install SDL2&Vulkan(Ubuntu Only)
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev
+        sudo apt install libsdl2-dev
+        sudo apt install libvulkan1 mesa-vulkan-drivers
 
     - name: Download SDL2(Windows MSVC Only)
       if: ${{ (matrix.os == 'windows-latest') && ((matrix.cpp_compiler == 'cl') || ( matrix.cpp_compiler == 'clang' )) }}
