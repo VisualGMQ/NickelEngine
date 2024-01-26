@@ -9,6 +9,7 @@ aux_source_directory(src/refl nickel_src)
 aux_source_directory(src/physics nickel_src)
 aux_source_directory(src/ui nickel_src)
 aux_source_directory(src/audio nickel_src)
+aux_source_directory(src/script nickel_src)
 
 file(GLOB_RECURSE nickel_header_files ./include/*.hpp)
 file(GLOB shader_files ./shader/*.shader)

@@ -14,6 +14,7 @@ enum class FileType {
     Tilesheet,
     Animation,
     Timer,
+    Script,
 
     FileTypeCount,
 };

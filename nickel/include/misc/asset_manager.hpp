@@ -7,6 +7,7 @@
 #include "renderer/texture.hpp"
 #include "renderer/tilesheet.hpp"
 #include "audio/audio.hpp"
+#include "script/script.hpp"
 
 namespace nickel {
 
@@ -45,6 +46,7 @@ public:
     auto& AnimationMgr() {return std::get<AnimationManager>(mgrs_); }
     auto& TimerMgr() {return std::get<TimerManager>(mgrs_); }
     auto& AudioMgr() {return std::get<AudioManager>(mgrs_); }
+    auto& ScriptMgr() {return std::get<ScriptManager>(mgrs_); }
 
     auto& TextureMgr() const { return std::get<TextureManager>(mgrs_); }
     auto& FontMgr() const { return std::get<FontManager>(mgrs_); }
@@ -52,6 +54,7 @@ public:
     auto& AnimationMgr() const {return std::get<AnimationManager>(mgrs_); }
     auto& TimerMgr() const {return std::get<TimerManager>(mgrs_); }
     auto& AudioMgr() const {return std::get<AudioManager>(mgrs_); }
+    auto& ScriptMgr() const {return std::get<ScriptManager>(mgrs_); }
 
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
@@ -127,6 +130,13 @@ public:
         return {};
     }
 
+    ScriptHandle LoadScript(const std::filesystem::path& path) {
+        if (auto filetype = DetectFileType(path); filetype == FileType::Script) {
+            return ScriptMgr().Load(path);
+        }
+        return {};
+    }
+
     template <typename T>
     void Destroy(Handle<T> handle) {
         return SwitchManager<T>().Destroy(handle);
@@ -193,6 +203,7 @@ public:
         TilesheetMgr().SaveAssets2File();
         TimerMgr().SaveAssets2File();
         AudioMgr().SaveAssets2File();
+        ScriptMgr().SaveAssets2File();
     }
 
     toml::table Save2Toml(const std::filesystem::path& rootDir) const {
@@ -204,6 +215,7 @@ public:
         tbl.emplace("tilesheet", TilesheetMgr().Save2Toml(rootDir));
         tbl.emplace("timer", TimerMgr().Save2Toml(rootDir));
         tbl.emplace("audio", AudioMgr().Save2Toml(rootDir));
+        tbl.emplace("script", ScriptMgr().Save2Toml(rootDir));
 
         return tbl;
     }
@@ -227,6 +239,9 @@ public:
         if (auto node = tbl.get("audio"); node && node->is_table()) {
             AudioMgr().LoadFromToml(*node->as_table());
         }
+        if (auto node = tbl.get("script"); node && node->is_table()) {
+            ScriptMgr().LoadFromToml(*node->as_table());
+        }
     }
 
     auto& Managers() const { return mgrs_; }
@@ -246,6 +261,8 @@ public:
             return std::get<AnimationManager>(mgrs_);
         } else if constexpr (std::is_same_v<T, Sound>) {
             return std::get<AudioManager>(mgrs_);
+        } else if constexpr (std::is_same_v<T, typename ScriptManager::AssetType>) {
+            return std::get<ScriptManager>(mgrs_);
         }
     }
 
@@ -263,7 +280,7 @@ public:
 
 private:
     std::tuple<TextureManager, FontManager, TimerManager, TilesheetManager,
-               AnimationManager, AudioManager>
+               AnimationManager, AudioManager, ScriptManager>
         mgrs_;
 };
 

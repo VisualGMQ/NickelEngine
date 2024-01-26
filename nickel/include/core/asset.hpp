@@ -16,7 +16,17 @@ public:
 
     Asset(const std::filesystem::path& relativePath)
         : relativePath_(relativePath) {}
+
     Asset() = default;
+
+    Asset(Asset&& o) { swap(o, *this); }
+
+    Asset& operator=(Asset&& o) {
+        if (&o != this) {
+            swap(o, *this);
+        }
+        return *this;
+    }
 
     /**
      * @brief save asset content to toml
@@ -39,6 +49,13 @@ public:
 
     void AssociateFile(const std::filesystem::path& path) {
         relativePath_ = path;
+    }
+
+protected:
+    friend void swap(Asset& o1, Asset& o2) {
+        using std::swap;
+
+        swap(o1.relativePath_, o2.relativePath_);
     }
 
 private:

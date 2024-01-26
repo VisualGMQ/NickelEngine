@@ -17,6 +17,7 @@ constexpr std::string_view Misc = "Misc";
 constexpr std::string_view Editor = "Editor";
 constexpr std::string_view Audio = "Audio";
 constexpr std::string_view Filesystem = "Filesystem";
+constexpr std::string_view Script = "Script";
 
 }
 

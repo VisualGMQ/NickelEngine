@@ -28,3 +28,4 @@
 #include "ui/ui.hpp"
 #include "window/event.hpp"
 #include "window/window.hpp"
+#include "script/script.hpp"
