@@ -3,98 +3,15 @@
 #include "vulkan/util.hpp"
 
 struct Context {
-    // nickel::vulkan::Pipeline* pipeline{};
-    nickel::vulkan::RenderPass* renderPass{};
     nickel::vulkan::CommandPool* cmdPool{};
     std::vector<nickel::vulkan::Framebuffer*> fbos;
     nickel::vulkan::Fence* fence{};
 };
 
-auto createPipelineLayout(nickel::vulkan::Device& device) {
-    return device.CreatePipelineLayout({}, {});
-}
-
-auto createRenderPass(nickel::vulkan::Device& device) {
-    auto& swapchain = device.GetSwapchain();
-
-    vk::AttachmentDescription attach;
-    attach.setFinalLayout(vk::ImageLayout::ePresentSrcKHR)
-        .setInitialLayout(vk::ImageLayout::eUndefined)
-        .setFormat(swapchain.ImageInfo().format.format)
-        .setLoadOp(vk::AttachmentLoadOp::eClear)
-        .setStoreOp(vk::AttachmentStoreOp::eStore)
-        .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-        .setStencilStoreOp(vk::AttachmentStoreOp::eNone)
-        .setSamples(vk::SampleCountFlagBits::e1);
-
-    vk::SubpassDescription subpass;
-    vk::AttachmentReference ref;
-    ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0);
-    subpass.setColorAttachments(ref).setPipelineBindPoint(
-        vk::PipelineBindPoint::eGraphics);
-
-    vk::SubpassDependency dep;
-    dep.setSrcSubpass(VK_SUBPASS_EXTERNAL)
-        .setDstSubpass(0)
-        .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-        .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-        .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-
-    return device.CreateRenderPass({attach}, {subpass}, {dep});
-}
-
-auto createPipeline(nickel::vulkan::Device& device,
-                    const nickel::vulkan::PipelineLayout& layout,
-                    const nickel::vulkan::RenderPass& renderPass) {
-    vk::PipelineInputAssemblyStateCreateInfo inputAsm;
-    inputAsm.setTopology(vk::PrimitiveTopology::eTriangleList);
-
-    auto& swapchain = device.GetSwapchain();
-    auto extent = swapchain.ImageInfo().extent;
-    vk::PipelineViewportStateCreateInfo viewportState;
-    vk::Viewport viewport;
-    viewport.setX(0)
-        .setY(0)
-        .setWidth(extent.width)
-        .setHeight(extent.height)
-        .setMinDepth(0)
-        .setMaxDepth(1);
-    vk::Rect2D scissor;
-    scissor.setOffset({0, 0}).setExtent(extent);
-    viewportState.setViewports(viewport).setScissors(scissor);
-
-    std::vector<nickel::vulkan::ShaderModule*> modules;
-    auto vertShader =
-        device
-            .CreateShaderModule(vk::ShaderStageFlagBits::eVertex,
-                                "test/testbed/vulkan/01clearscreen/vert.spv")
-            .value;
-    auto fragShader =
-        device
-            .CreateShaderModule(vk::ShaderStageFlagBits::eFragment,
-                                "test/testbed/vulkan/01clearscreen/frag.spv")
-            .value;
-
-    vk::PipelineRasterizationStateCreateInfo raster;
-    raster.setLineWidth(1).setRasterizerDiscardEnable(false);
-
-    vk::PipelineColorBlendStateCreateInfo colorBlend;
-    vk::PipelineColorBlendAttachmentState blendAttach;
-    blendAttach.setBlendEnable(false);
-    colorBlend.setLogicOpEnable(false).setAttachments(blendAttach);
-
-    return device.CreateGraphicsPipeline({}, inputAsm, {vertShader, fragShader},
-                                         viewportState, raster, {}, {},
-                                         colorBlend, layout, renderPass);
-}
-
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
     auto& ctx = cmds.emplace_resource<Context>();
     auto& device = cmds.emplace_resource<nickel::vulkan::Device>(window.get());
-    auto layout = createPipelineLayout(device);
-    ctx.renderPass = createRenderPass(device).value;
-    // ctx.pipeline = createPipeline(device, *layout.value, *ctx.renderPass).value;
     ctx.cmdPool = device
                       .CreateCommandPool(
                           vk::CommandPoolCreateFlagBits::eTransient,
@@ -102,15 +19,6 @@ void StartupSystem(gecs::commands cmds,
                       .value;
 
     auto& swapchain = device.GetSwapchain();
-    for (auto view : swapchain.ImageViews()) {
-        auto fbo =
-            device
-                .CreateFramebuffer({view}, swapchain.ImageInfo().extent.width,
-                                   swapchain.ImageInfo().extent.height, 1,
-                                   *ctx.renderPass)
-                .value;
-        ctx.fbos.emplace_back(fbo);
-    }
 
     ctx.fence = device.CreateFence().value;
 }
