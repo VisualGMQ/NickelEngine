@@ -58,4 +58,10 @@ PipelineLayout::PipelineLayout(
     VK_CALL(layout_, device->GetDevice().createPipelineLayout(info));
 }
 
+PipelineLayout::~PipelineLayout() {
+    if (device_) {
+        device_->GetDevice().destroyPipelineLayout(layout_);
+    }
+}
+
 }  // namespace nickel::vulkan

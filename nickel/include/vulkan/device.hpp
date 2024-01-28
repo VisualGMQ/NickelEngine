@@ -46,14 +46,14 @@ public:
 
     auto& GetQueueFamilyIndices() const { return queueIndices_; }
 
-    Device(Window& window);
+    explicit Device(Window& window);
     ~Device();
 
     vk::Queue GetGraphicsQueue() const { return graphicsQueue_; }
 
     vk::Queue GetPresentQueue() const { return presentQueue_; }
 
-    vk::SwapchainKHR GetSwapchain() const { return *swapchain_; }
+    Swapchain& GetSwapchain() const { return *swapchain_; }
 
     ResResult<ShaderModule> CreateShaderModule(
         vk::ShaderStageFlagBits type, const std::filesystem::path& filename,
@@ -85,7 +85,7 @@ public:
     ResResult<CommandPool> CreateCommandPool(vk::CommandPoolCreateFlags flag,
                                              uint32_t queueIndex);
     ResResult<Semaphore> CreateSemaphore();
-    ResResult<Fence> CreateFence(bool signaled);
+    ResResult<Fence> CreateFence(bool signaled = false);
     ResResult<Event> CreateEvent(bool deviceOnly);
     ResResult<DescriptorSetLayout> CreateDescriptorSetLayout(
         const std::vector<vk::DescriptorSetLayoutBinding>& bindings);
@@ -119,6 +119,7 @@ private:
     vk::Device device_;
     vk::Queue graphicsQueue_;
     vk::Queue presentQueue_;
+    vk::SurfaceKHR surface_;
     std::unique_ptr<Swapchain> swapchain_;
     QueueFamilyIndices queueIndices_;
 
@@ -138,7 +139,7 @@ private:
     Manager<PipelineLayout> pipelineLayouts;
 
     void createInstance(Window&);
-    size_t choosePhysicalDevice(const std::vector<vk::PhysicalDevice>&);
+    void choosePhysicalDevice(const std::vector<vk::PhysicalDevice>&);
     void createDevice(vk::Instance&, vk::SurfaceKHR);
     QueueFamilyIndices chooseQueue(
         vk::PhysicalDevice phyDevice, vk::SurfaceKHR surface,

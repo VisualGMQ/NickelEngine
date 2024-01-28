@@ -100,7 +100,6 @@ private:
     size_t stride_ = 0;
 };
 
-
 inline vk::Format CvtAttribFormat(Attribute::Type type) {
     switch (type) {
         case Attribute::Type::Float:
@@ -114,17 +113,18 @@ inline vk::Format CvtAttribFormat(Attribute::Type type) {
     }
 }
 
-inline std::vector<vk::VertexInputAttributeDescription> CvtLayout2AttribDescription(
-    const VertexLayout& layout) {
+inline std::vector<vk::VertexInputAttributeDescription>
+CvtLayout2AttribDescription(const VertexLayout& layout) {
     std::vector<vk::VertexInputAttributeDescription> descs;
 
     auto& attrs = layout.Attributes();
     for (int i = 0; i < attrs.size(); i++) {
         auto& attr = attrs[i];
         vk::VertexInputAttributeDescription desc;
-        desc.setBinding(attr.location)
+        desc.setBinding(0)
             .setFormat(CvtAttribFormat(attr.type))
-            .setBinding(0);
+            .setLocation(attr.location)
+            .setOffset(attr.offset);
 
         descs.push_back(desc);
     }
@@ -132,19 +132,15 @@ inline std::vector<vk::VertexInputAttributeDescription> CvtLayout2AttribDescript
     return descs;
 }
 
-inline std::vector<vk::VertexInputBindingDescription> CvtLayout2BindingDescription(
-    const VertexLayout& layout) {
+inline vk::VertexInputBindingDescription
+CvtLayout2BindingDescription(const VertexLayout& layout) {
     auto& attrs = layout.Attributes();
 
-    std::vector<vk::VertexInputBindingDescription> descs;
-    for (auto& attr : attrs) {
-        vk::VertexInputBindingDescription desc;
-        desc.setInputRate(vk::VertexInputRate::eVertex)
-            .setBinding(0)
-            .setStride(layout.Stride());
-        descs.push_back(desc);
-    }
-    return descs;
+    vk::VertexInputBindingDescription desc;
+    desc.setInputRate(vk::VertexInputRate::eVertex)
+        .setBinding(0)
+        .setStride(layout.Stride());
+    return desc;
 }
 
 }  // namespace nickel::vulkan

@@ -249,6 +249,7 @@ void BootstrapSystem(gecs::world& world,
     initInfo.windowData.title = "Project Manager";
     initInfo.windowData.size.Set(ProjectMgrWindowWidth, ProjectMgrWindowHeight);
     InitSystem(world, initInfo, reg.commands());
+    nickel::RegistEngineSystem(*world.cur_registry());
 
     reg.add_state(EditorScene::ProjectManager)
         .regist_startup_system<InitEditorContext>()

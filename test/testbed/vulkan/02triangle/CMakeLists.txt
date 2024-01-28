@@ -1,0 +1,1 @@
+AddVulkanTest(02triangle)

@@ -10,6 +10,7 @@ Buffer::Buffer(Device* device, uint64_t size, vk::BufferUsageFlags usage,
     : device_{device}, size_{size}, usage_{usage}, prop_{flags} {
     createBuffer(size, usage, queueIndices);
     allocateMem(buffer_, flags);
+    VK_CALL_NO_VALUE(device->GetDevice().bindBufferMemory(buffer_, mem_, 0));
 }
 
 Buffer::~Buffer() {
@@ -37,7 +38,7 @@ void Buffer::createBuffer(uint64_t size, vk::BufferUsageFlags usage,
                           const std::vector<uint32_t>& queueIndices) {
     vk::BufferCreateInfo createInfo;
     createInfo.setSize(size).setUsage(usage);
-    if (!queueIndices.empty()) {
+    if (queueIndices.size() > 1) {
         createInfo.setQueueFamilyIndices(queueIndices);
         createInfo.setSharingMode(vk::SharingMode::eConcurrent);
     } else {

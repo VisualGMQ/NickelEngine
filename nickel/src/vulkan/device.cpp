@@ -13,13 +13,14 @@ Device::Device(Window& window) {
 
     VkSurfaceKHR surface;
     SDL_Vulkan_CreateSurface((SDL_Window*)window.Raw(), instance_, &surface);
-
+    
     if (!surface) {
         LOGW(nickel::log_tag::Vulkan, "create surface failed");
     }
+    surface_ = surface;
 
+    createDevice(instance_, surface);
     chooseQueue(phyDevice_, surface, phyDevice_.getQueueFamilyProperties());
-
     swapchain_ = std::make_unique<Swapchain>(*this, surface, window);
 }
 
@@ -42,6 +43,7 @@ Device::~Device() {
 
     swapchain_.reset();
     device_.destroy();
+    instance_.destroySurfaceKHR(surface_);
     instance_.destroy();
 }
 
@@ -81,11 +83,10 @@ void Device::createDevice(vk::Instance& instance, vk::SurfaceKHR surface) {
     std::vector<vk::PhysicalDevice> phyDevices;
     VK_CALL(phyDevices, instance.enumeratePhysicalDevices());
 
-    size_t chooseDevice = choosePhysicalDevice(phyDevices);
-    phyDevice_ = phyDevices[chooseDevice];
+    choosePhysicalDevice(phyDevices);
 
     LOGW(nickel::log_tag::Vulkan, "choose GPU ",
-         phyDevice_.getProperties().deviceName);
+         phyDevice_.getProperties().deviceName.data());
 
     queueIndices_ =
         chooseQueue(phyDevice_, surface, phyDevice_.getQueueFamilyProperties());
@@ -149,7 +150,7 @@ int getDeviceTypeScore(vk::PhysicalDeviceType type) {
     }
 }
 
-size_t Device::choosePhysicalDevice(
+void Device::choosePhysicalDevice(
     const std::vector<vk::PhysicalDevice>& phyDevices) {
     int chooseDevice = 0;
     int score = 0;
@@ -165,7 +166,7 @@ size_t Device::choosePhysicalDevice(
         }
     }
 
-    return chooseDevice;
+    phyDevice_ = phyDevices[chooseDevice];
 }
 
 Device::QueueFamilyIndices Device::chooseQueue(
@@ -197,7 +198,8 @@ Device::QueueFamilyIndices Device::chooseQueue(
 ResResult<ShaderModule> Device::CreateShaderModule(
     vk::ShaderStageFlagBits type, const std::filesystem::path& filename,
     const std::string& entry) {
-    auto content = nickel::ReadWholeFile<std::vector<char>>(filename);
+    auto content = nickel::ReadWholeFile<std::vector<char>>(
+        filename, std::ios_base::in | std::ios_base::binary);
     if (content) {
         return shaderModules.Emplace(
             std::make_unique<ShaderModule>(this, type, content.value(), entry));

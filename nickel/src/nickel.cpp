@@ -30,7 +30,6 @@ int main(int argc, char** argv) {
     auto& main_reg = gWorld->regist_registry("MainReg");
 
     main_reg.regist_startup_system<BootstrapCallSystem>();
-    RegistEngineSystem(main_reg);
 
     gWorld->start_with("MainReg");
 

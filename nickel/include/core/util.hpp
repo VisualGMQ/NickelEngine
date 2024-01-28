@@ -20,14 +20,16 @@ namespace nickel {
  * @return file content. Read file failed will return `std::nullopt`
  */
 template <typename T = std::string, typename PathT>
-inline std::optional<T> ReadWholeFile(const PathT& filename) {
-    std::ifstream file(filename);
+inline std::optional<T> ReadWholeFile(
+    const PathT& filename,
+    std::ios_base::openmode openmode = std::ios_base::in) {
+    std::ifstream file(filename, openmode);
     if (file.fail()) {
         LOGE("file %s open failed", filename);
         return std::nullopt;
     }
     T content(std::istreambuf_iterator<char>(file),
-                        (std::istreambuf_iterator<char>()));
+              (std::istreambuf_iterator<char>()));
     return content;
 }
 
@@ -68,9 +70,8 @@ inline bool IsWhiteSpace(char c) {
 template <typename CharList>
 class CSVIterator final {
 public:
-    explicit CSVIterator(const CharList& data): data_{&data} {
-        nextToken();
-    }
+    explicit CSVIterator(const CharList& data) : data_{&data} { nextToken(); }
+
     CSVIterator() = default;
 
     bool operator==(const CSVIterator& o) const {
@@ -89,9 +90,7 @@ public:
         }
     }
 
-    bool operator!=(const CSVIterator& o) const {
-        return !(*this == o);
-    }
+    bool operator!=(const CSVIterator& o) const { return !(*this == o); }
 
     auto& operator++() {
         nextToken();
@@ -117,17 +116,16 @@ private:
             return;
         }
 
-        begin_ = end_ + 1;        
+        begin_ = end_ + 1;
         while (begin_ < data_->size() && IsWhiteSpace((*data_)[begin_])) {
-            begin_ ++;
+            begin_++;
         }
         end_ = begin_ + 1;
         while (end_ < data_->size() && (*data_)[end_] != ',') {
-            end_ ++;
+            end_++;
         }
     }
 };
-
 
 /**
  * @}

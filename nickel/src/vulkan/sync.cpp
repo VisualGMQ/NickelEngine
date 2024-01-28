@@ -29,6 +29,15 @@ Fence::~Fence() {
     }
 }
 
+void Fence::Wait(std::optional<uint64_t> timeout) {
+    VK_CALL_NO_VALUE(device_->GetDevice().waitForFences(
+        {fence_}, true, timeout ? timeout.value() : UINT64_MAX));
+}
+
+void Fence::Reset() {
+    device_->GetDevice().resetFences({fence_});
+}
+
 Event::Event(Device* device, bool deviceOnly) : device_{device} {
     vk::EventCreateInfo info;
     if (deviceOnly) {

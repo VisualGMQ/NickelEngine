@@ -5,16 +5,16 @@
 namespace nickel::vulkan {
 
 Swapchain::Swapchain(Device& dev, vk::SurfaceKHR surface, const Window& window)
-    : device_(dev), surface_(surface), window_{window} {
+    : device_(&dev), window_{&window} {
     vk::SurfaceCapabilitiesKHR capacities;
     VK_CALL(capacities,
-            device_.GetPhyDevice().getSurfaceCapabilitiesKHR(surface_));
+            device_->GetPhyDevice().getSurfaceCapabilitiesKHR(surface));
 
-    imageInfo_ = queryImageInfo(window);
+    imageInfo_ = queryImageInfo(window, surface);
     auto [extent, imageCount, format] = imageInfo_;
-    auto presentMode = queryPresentMode();
+    auto presentMode = queryPresentMode(surface);
 
-    auto& queueIndices = device_.GetQueueFamilyIndices();
+    auto& queueIndices = device_->GetQueueFamilyIndices();
 
     std::set<uint32_t> uniqueIndices{queueIndices.graphicsIndex.value(),
                                      queueIndices.presentIndex.value()};
@@ -25,7 +25,7 @@ Swapchain::Swapchain(Device& dev, vk::SurfaceKHR surface, const Window& window)
     }
 
     vk::SwapchainCreateInfoKHR createInfo;
-    createInfo.setSurface(surface_)
+    createInfo.setSurface(surface)
         .setClipped(true)
         .setPresentMode(presentMode)
         .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment |
@@ -42,17 +42,17 @@ Swapchain::Swapchain(Device& dev, vk::SurfaceKHR surface, const Window& window)
                                  ? vk::SharingMode::eExclusive
                                  : vk::SharingMode::eConcurrent)
         .setQueueFamilyIndices(indices);
-    VK_CALL(swapchain_, device_.GetDevice().createSwapchainKHR(createInfo));
+    VK_CALL(swapchain_, device_->GetDevice().createSwapchainKHR(createInfo));
 
     if (swapchain_) {
         getAndCreateImageViews();
     }
 }
 
-struct Swapchain::ImageInfo Swapchain::queryImageInfo(const Window& window) {
+struct Swapchain::ImageInfo Swapchain::queryImageInfo(const Window& window, vk::SurfaceKHR surface) {
     vk::SurfaceCapabilitiesKHR capacities;
     VK_CALL(capacities,
-            device_.GetPhyDevice().getSurfaceCapabilitiesKHR(surface_));
+            device_->GetPhyDevice().getSurfaceCapabilitiesKHR(surface));
 
     auto winSize = window.Size();
     vk::Extent2D extent(winSize.x, winSize.y);
@@ -65,7 +65,7 @@ struct Swapchain::ImageInfo Swapchain::queryImageInfo(const Window& window) {
                                            capacities.maxImageCount);
 
     std::vector<vk::SurfaceFormatKHR> formats;
-    VK_CALL(formats, device_.GetPhyDevice().getSurfaceFormatsKHR(surface_));
+    VK_CALL(formats, device_->GetPhyDevice().getSurfaceFormatsKHR(surface));
     vk::SurfaceFormatKHR* chooseFormat = &formats[0];
     for (auto& format : formats) {
         if (format.format == vk::Format::eR8G8B8A8Srgb &&
@@ -78,10 +78,10 @@ struct Swapchain::ImageInfo Swapchain::queryImageInfo(const Window& window) {
     return {extent, imageCount, *chooseFormat};
 }
 
-vk::PresentModeKHR Swapchain::queryPresentMode() {
+vk::PresentModeKHR Swapchain::queryPresentMode(vk::SurfaceKHR surface) {
     std::vector<vk::PresentModeKHR> presentModes;
     VK_CALL(presentModes,
-            device_.GetPhyDevice().getSurfacePresentModesKHR(surface_));
+            device_->GetPhyDevice().getSurfacePresentModesKHR(surface));
     vk::PresentModeKHR choose = vk::PresentModeKHR::eFifo;
     for (auto mode : presentModes) {
         if (mode == vk::PresentModeKHR::eMailbox) {
@@ -96,18 +96,15 @@ vk::PresentModeKHR Swapchain::queryPresentMode() {
 Swapchain::~Swapchain() {
     if (swapchain_) {
         for (auto& view : imageViews_) {
-            device_.GetDevice().destroyImageView(view);
+            device_->GetDevice().destroyImageView(view);
         }
-        for (auto& img : images_) {
-            device_.GetDevice().destroyImage(img);
-        }
-        device_.GetDevice().destroySwapchainKHR(swapchain_);
+        device_->GetDevice().destroySwapchainKHR(swapchain_);
     }
 }
 
 void Swapchain::getAndCreateImageViews() {
     std::vector<vk::Image> images;
-    VK_CALL(images, device_.GetDevice().getSwapchainImagesKHR(swapchain_));
+    VK_CALL(images, device_->GetDevice().getSwapchainImagesKHR(swapchain_));
     for (auto& image : images) {
         vk::ComponentMapping mapping;
         vk::ImageSubresourceRange range;
@@ -124,12 +121,22 @@ void Swapchain::getAndCreateImageViews() {
             .setSubresourceRange(range);
 
         vk::ImageView view;
-        VK_CALL(view, device_.GetDevice().createImageView(createInfo));
+        VK_CALL(view, device_->GetDevice().createImageView(createInfo));
         if (view) {
             imageViews_.emplace_back(view);
         }
         images_.emplace_back(image);
     }
+}
+
+uint32_t Swapchain::AcquireNextImage(std::optional<uint64_t> timeout,
+                                     const Semaphore* sem, const Fence* fence) {
+    uint32_t index = 0;
+    VK_CALL(index,
+            device_->GetDevice().acquireNextImageKHR(
+                swapchain_, timeout ? timeout.value() : UINT64_MAX,
+                sem ? *sem : vk::Semaphore{}, fence ? *fence : vk::Fence{}));
+    return index;
 }
 
 }  // namespace nickel::vulkan

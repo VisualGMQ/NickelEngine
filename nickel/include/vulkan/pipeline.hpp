@@ -12,6 +12,11 @@ class Device;
 class Pipeline {
 public:
     virtual ~Pipeline() = default;
+
+    vk::Pipeline Raw() { return pipeline_; }
+
+protected:
+    vk::Pipeline pipeline_;
 };
 
 class GraphicsPipeline : public Pipeline {
@@ -47,7 +52,6 @@ public:
 
 private:
     Device* device_{};
-    vk::Pipeline pipeline_;
 
     friend void swap(GraphicsPipeline& o1, GraphicsPipeline& o2) noexcept {
         using std::swap;

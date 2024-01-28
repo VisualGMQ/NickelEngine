@@ -60,6 +60,9 @@ public:
 
     operator vk::Fence() { return fence_; }
 
+    void Wait(std::optional<uint64_t> timeout);
+    void Reset();
+
 private:
     Device* device_{};
     vk::Fence fence_;

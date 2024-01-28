@@ -26,6 +26,9 @@ public:
 
     ~RenderPass();
 
+    operator vk::RenderPass() const { return renderPass_; }
+    operator vk::RenderPass() { return renderPass_; }
+
 private:
     Device* device_{};
     vk::RenderPass renderPass_;
