@@ -27,8 +27,8 @@ void HandleInputEvents(gecs::event_dispatcher<MouseButtonEvent> btn,
     keyboard.update();
 }
 
-void Keyboard::keyboardEventHandle(const KeyboardEvent& event,
-                              gecs::resource<gecs::mut<Keyboard>> keyboard) {
+void Keyboard::keyboardEventHandle(
+    const KeyboardEvent& event, gecs::resource<gecs::mut<Keyboard>> keyboard) {
     auto newKey = static_cast<uint32_t>(event.key);
     if (newKey < static_cast<uint32_t>(Key::KEY_LAST)) {
         auto& key = keyboard->buttons_[newKey];
