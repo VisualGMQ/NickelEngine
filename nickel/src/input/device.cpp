@@ -32,7 +32,6 @@ void Keyboard::keyboardEventHandle(const KeyboardEvent& event,
     auto newKey = static_cast<uint32_t>(event.key);
     if (newKey < static_cast<uint32_t>(Key::KEY_LAST)) {
         auto& key = keyboard->buttons_[newKey];
-        key.lastState = key.isPress;
         key.isPress = event.action != Action::Release;
     }
 }
@@ -55,7 +54,6 @@ void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
 
     for (auto& key : keyboard->buttons_) {
         key.lastState = key.isPress;
-        key.isPress = false;
     }
 }
 
