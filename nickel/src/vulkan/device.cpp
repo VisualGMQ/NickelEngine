@@ -27,19 +27,19 @@ Device::Device(Window& window) {
 Device::~Device() {
     VK_CALL_NO_VALUE(device_.waitIdle());
 
-    shaderModules.ReleaseAll();
-    buffers.ReleaseAll();
-    images.ReleaseAll();
-    framebuffers.ReleaseAll();
-    cmdPools.ReleaseAll();
-    semaphores.ReleaseAll();
-    fences.ReleaseAll();
-    events.ReleaseAll();
-    descriptorPools.ReleaseAll();
-    descriptorSetLayouts.ReleaseAll();
-    pipelineLayouts.ReleaseAll();
-    pipelines.ReleaseAll();
-    renderPasses.ReleaseAll();
+    shaderModules_.ReleaseAll();
+    buffers_.ReleaseAll();
+    images_.ReleaseAll();
+    framebuffers_.ReleaseAll();
+    cmdPools_.ReleaseAll();
+    semaphores_.ReleaseAll();
+    fences_.ReleaseAll();
+    events_.ReleaseAll();
+    descriptorPools_.ReleaseAll();
+    descriptorSetLayouts_.ReleaseAll();
+    pipelineLayouts_.ReleaseAll();
+    pipelines_.ReleaseAll();
+    renderPasses_.ReleaseAll();
 
     swapchain_.reset();
     device_.destroy();
@@ -201,7 +201,7 @@ ResResult<ShaderModule> Device::CreateShaderModule(
     auto content = nickel::ReadWholeFile<std::vector<char>>(
         filename, std::ios_base::in | std::ios_base::binary);
     if (content) {
-        return shaderModules.Emplace(
+        return shaderModules_.Emplace(
             std::make_unique<ShaderModule>(this, type, content.value(), entry));
     }
     return {};
@@ -211,7 +211,7 @@ ResResult<Buffer> Device::CreateBuffer(uint64_t size,
                                        vk::BufferUsageFlags usage,
                                        vk::MemoryPropertyFlags flags,
                                        std::vector<uint32_t> queueIndices) {
-    return buffers.Emplace(
+    return buffers_.Emplace(
         std::make_unique<Buffer>(this, size, usage, flags, queueIndices));
 }
 
@@ -223,7 +223,7 @@ ResResult<Image> Device::CreateImage(
     const vk::ComponentMapping& components,
     const vk::ImageSubresourceRange& subresourceRange,
     std::vector<uint32_t> queueIndices) {
-    return images.Emplace(std::make_unique<Image>(
+    return images_.Emplace(std::make_unique<Image>(
         this, type, viewType, extent, format, viewFormat, initLayout,
         arrayLayer, mipLevel, sampleCount, usage, tiling, components,
         subresourceRange, queueIndices));
@@ -239,7 +239,7 @@ ResResult<Pipeline> Device::CreateGraphicsPipeline(
     const vk::PipelineMultisampleStateCreateInfo& multisample,
     const vk::PipelineColorBlendStateCreateInfo& colorBlend,
     vk::PipelineLayout layout, vk::RenderPass renderPass) {
-    return pipelines.Emplace(std::make_unique<GraphicsPipeline>(
+    return pipelines_.Emplace(std::make_unique<GraphicsPipeline>(
         this, vertexLayout, inputAsm, shaders, viewport, raster, depthStencil,
         multisample, colorBlend, layout, renderPass));
 }
@@ -248,52 +248,65 @@ ResResult<RenderPass> Device::CreateRenderPass(
     const std::vector<vk::AttachmentDescription>& attachmentDescs,
     const std::vector<vk::SubpassDescription>& subpasses,
     const std::vector<vk::SubpassDependency>& subpassDeps) {
-    return renderPasses.Emplace(std::make_unique<RenderPass>(
+    return renderPasses_.Emplace(std::make_unique<RenderPass>(
         this, attachmentDescs, subpasses, subpassDeps));
 }
 
 ResResult<CommandPool> Device::CreateCommandPool(
     vk::CommandPoolCreateFlags flag, uint32_t queueIndex) {
-    return cmdPools.Emplace(
+    return cmdPools_.Emplace(
         std::make_unique<CommandPool>(this, flag, queueIndex));
 }
 
 ResResult<Semaphore> Device::CreateSemaphore() {
-    return semaphores.Emplace(std::make_unique<Semaphore>(this));
+    return semaphores_.Emplace(std::make_unique<Semaphore>(this));
 }
 
 ResResult<Fence> Device::CreateFence(bool signaled) {
-    return fences.Emplace(std::make_unique<Fence>(this, signaled));
+    return fences_.Emplace(std::make_unique<Fence>(this, signaled));
 }
 
 ResResult<Event> Device::CreateEvent(bool deviceOnly) {
-    return events.Emplace(std::make_unique<Event>(this, deviceOnly));
+    return events_.Emplace(std::make_unique<Event>(this, deviceOnly));
 }
 
 ResResult<DescriptorSetLayout> Device::CreateDescriptorSetLayout(
     const std::vector<vk::DescriptorSetLayoutBinding>& bindings) {
-    return descriptorSetLayouts.Emplace(
+    return descriptorSetLayouts_.Emplace(
         std::make_unique<DescriptorSetLayout>(this, bindings));
 }
 
 ResResult<DescriptorPool> Device::CreateDescriptorPool(
     const std::vector<vk::DescriptorPoolSize>& sizes, uint32_t maxSetCount) {
-    return descriptorPools.Emplace(
+    return descriptorPools_.Emplace(
         std::make_unique<DescriptorPool>(this, sizes, maxSetCount));
 }
 
 ResResult<PipelineLayout> Device::CreatePipelineLayout(
     const std::vector<vk::DescriptorSetLayout>& layouts,
     const std::vector<vk::PushConstantRange>& pushConstantRanges) {
-    return pipelineLayouts.Emplace(
+    return pipelineLayouts_.Emplace(
         std::make_unique<PipelineLayout>(this, layouts, pushConstantRanges));
 }
 
 ResResult<Framebuffer> Device::CreateFramebuffer(
         const std::vector<vk::ImageView>& views, uint32_t width,
         uint32_t height, uint32_t layers, vk::RenderPass renderPass) {
-    return framebuffers.Emplace(std::make_unique<Framebuffer>(
+    return framebuffers_.Emplace(std::make_unique<Framebuffer>(
         this, views, width, height, layers, renderPass));
+}
+
+ResResult<Sampler> Device::CreateSampler(
+        vk::Filter min, vk::Filter mag, vk::SamplerMipmapMode mipmap,
+        vk::SamplerAddressMode u, vk::SamplerAddressMode v,
+        vk::SamplerAddressMode w, float mipLodBias, bool anisotropyEnable,
+        float maxAnisotropy, bool compareEnable, vk::CompareOp compare,
+        float minLod, float maxLod, vk::BorderColor borderColor,
+        bool unnormalizedCoordinates) {
+    return samplers_.Emplace(std::make_unique<Sampler>(
+        this, min, mag, mipmap, u, v, w, mipLodBias, anisotropyEnable,
+        maxAnisotropy, compareEnable, compare, minLod, maxLod, borderColor,
+        unnormalizedCoordinates));
 }
 
 }  // namespace nickel::vulkan

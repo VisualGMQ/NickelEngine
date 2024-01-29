@@ -78,4 +78,42 @@ private:
     }
 };
 
+class Sampler final {
+public:
+    Sampler(Device* device, vk::Filter min, vk::Filter mag,
+            vk::SamplerMipmapMode mipmap, vk::SamplerAddressMode u,
+            vk::SamplerAddressMode v, vk::SamplerAddressMode w,
+            float mipLodBias, bool anisotropyEnable, float maxAnisotropy,
+            bool compareEnable, vk::CompareOp compare, float minLod,
+            float maxLod, vk::BorderColor borderColor,
+            bool unnormalizedCoordinates);
+    Sampler(const Sampler&) = delete;
+    Sampler& operator=(const Sampler&) = delete;
+
+    Sampler(Sampler&& o) { swap(o, *this); }
+
+    Sampler& operator=(Sampler&& o) {
+        if (&o != this) {
+            swap(o, *this);
+        }
+        return *this;
+    }
+
+    ~Sampler();
+
+    operator vk::Sampler() const { return sampler_; }
+    operator vk::Sampler() { return sampler_; }
+
+private:
+    Device* device_{};
+    vk::Sampler sampler_;
+
+    friend void swap(Sampler& o1, Sampler& o2) noexcept {
+        using std::swap;
+
+        swap(o1.device_, o2.device_);
+        swap(o1.sampler_, o2.sampler_);
+    }
+};
+
 }  // namespace nickel::vulkan

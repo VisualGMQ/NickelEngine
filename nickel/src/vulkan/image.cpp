@@ -73,4 +73,37 @@ Framebuffer::~Framebuffer() {
     }
 }
 
+Sampler::Sampler(Device *device, vk::Filter min, vk::Filter mag,
+                 vk::SamplerMipmapMode mipmap, vk::SamplerAddressMode u,
+                 vk::SamplerAddressMode v, vk::SamplerAddressMode w,
+                 float mipLodBias, bool anisotropyEnable, float maxAnisotropy,
+                 bool compareEnable, vk::CompareOp compare, float minLod,
+                 float maxLod, vk::BorderColor borderColor,
+                 bool unnormalizedCoordinates)
+    : device_{device} {
+    vk::SamplerCreateInfo info;
+    info.setMinFilter(min)
+        .setMagFilter(mag)
+        .setMipmapMode(mipmap)
+        .setAddressModeU(u)
+        .setAddressModeV(v)
+        .setAddressModeW(w)
+        .setMipLodBias(mipLodBias)
+        .setAnisotropyEnable(anisotropyEnable)
+        .setMaxAnisotropy(maxAnisotropy)
+        .setCompareEnable(compareEnable)
+        .setCompareOp(compare)
+        .setMinLod(minLod)
+        .setMaxLod(maxLod)
+        .setBorderColor(borderColor)
+        .setUnnormalizedCoordinates(unnormalizedCoordinates);
+    VK_CALL(sampler_, device->GetDevice().createSampler(info));
+}
+
+Sampler::~Sampler() {
+    if (device_) {
+        device_->GetDevice().destroySampler(sampler_);
+    }
+}
+
 }  // namespace nickel::vulkan

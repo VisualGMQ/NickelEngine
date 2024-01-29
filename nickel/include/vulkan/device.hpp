@@ -14,7 +14,6 @@
 #include "vulkan/sync.hpp"
 #include "window/window.hpp"
 
-
 namespace nickel::vulkan {
 
 using ShaderModuleHandle = Handle<ShaderModule>;
@@ -30,6 +29,7 @@ using FramebufferHandle = Handle<Framebuffer>;
 using DescriptorPoolHandle = Handle<DescriptorPool>;
 using DescriptorSetLayoutHandle = Handle<DescriptorSetLayout>;
 using PipelineLayoutHandle = Handle<PipelineLayout>;
+using SamplerHandle = Handle<Sampler>;
 
 class Device {
 public:
@@ -97,6 +97,13 @@ public:
     ResResult<PipelineLayout> CreatePipelineLayout(
         const std::vector<vk::DescriptorSetLayout>& layouts,
         const std::vector<vk::PushConstantRange>& pushConstantRange);
+    ResResult<Sampler> CreateSampler(
+        vk::Filter min, vk::Filter mag, vk::SamplerMipmapMode mipmap,
+        vk::SamplerAddressMode u, vk::SamplerAddressMode v,
+        vk::SamplerAddressMode w, float mipLodBias, bool anisotropyEnable,
+        float maxAnisotropy, bool compareEnable, vk::CompareOp compare,
+        float minLod, float maxLod, vk::BorderColor borderColor,
+        bool unnormalizedCoordinates);
 
     template <typename HandleType>
     auto Get(HandleType handle) {
@@ -124,19 +131,20 @@ private:
     QueueFamilyIndices queueIndices_;
 
     // managers
-    Manager<ShaderModule> shaderModules;
-    Manager<Buffer> buffers;
-    Manager<Image> images;
-    Manager<Pipeline> pipelines;
-    Manager<RenderPass> renderPasses;
-    Manager<CommandPool> cmdPools;
-    Manager<Semaphore> semaphores;
-    Manager<Fence> fences;
-    Manager<Event> events;
-    Manager<Framebuffer> framebuffers;
-    Manager<DescriptorPool> descriptorPools;
-    Manager<DescriptorSetLayout> descriptorSetLayouts;
-    Manager<PipelineLayout> pipelineLayouts;
+    Manager<ShaderModule> shaderModules_;
+    Manager<Buffer> buffers_;
+    Manager<Image> images_;
+    Manager<Pipeline> pipelines_;
+    Manager<RenderPass> renderPasses_;
+    Manager<CommandPool> cmdPools_;
+    Manager<Semaphore> semaphores_;
+    Manager<Fence> fences_;
+    Manager<Event> events_;
+    Manager<Framebuffer> framebuffers_;
+    Manager<DescriptorPool> descriptorPools_;
+    Manager<DescriptorSetLayout> descriptorSetLayouts_;
+    Manager<PipelineLayout> pipelineLayouts_;
+    Manager<Sampler> samplers_;
 
     void createInstance(Window&);
     void choosePhysicalDevice(const std::vector<vk::PhysicalDevice>&);
@@ -149,31 +157,33 @@ private:
     auto& switchManager() {
         using AssetType = typename HandleType::ValueType;
         if constexpr (std::is_same_v<AssetType, ShaderModule>) {
-            return shaderModules;
+            return shaderModules_;
         } else if constexpr (std::is_same_v<AssetType, Buffer>) {
-            return buffers;
+            return buffers_;
         } else if constexpr (std::is_same_v<AssetType, Image>) {
-            return images;
+            return images_;
         } else if constexpr (std::is_same_v<AssetType, Pipeline>) {
-            return pipelines;
+            return pipelines_;
         } else if constexpr (std::is_same_v<AssetType, RenderPass>) {
-            return renderPasses;
+            return renderPasses_;
         } else if constexpr (std::is_same_v<AssetType, CommandPool>) {
-            return cmdPools;
+            return cmdPools_;
         } else if constexpr (std::is_same_v<AssetType, Semaphore>) {
-            return semaphores;
+            return semaphores_;
         } else if constexpr (std::is_same_v<AssetType, Fence>) {
-            return fences;
+            return fences_;
         } else if constexpr (std::is_same_v<AssetType, Event>) {
-            return events;
+            return events_;
         } else if constexpr (std::is_same_v<AssetType, Framebuffer>) {
-            return framebuffers;
+            return framebuffers_;
         } else if constexpr (std::is_same_v<AssetType, DescriptorPool>) {
-            return descriptorPools;
+            return descriptorPools_;
         } else if constexpr (std::is_same_v<AssetType, DescriptorSetLayout>) {
-            return descriptorSetLayouts;
+            return descriptorSetLayouts_;
         } else if constexpr (std::is_same_v<AssetType, PipelineLayout>) {
-            return pipelineLayouts;
+            return pipelineLayouts_;
+        } else if constexpr (std::is_same_v<AssetType, Sampler>) {
+            return samplers_;
         }
     }
 };

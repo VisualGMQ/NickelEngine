@@ -81,8 +81,8 @@ auto createPipeline(nickel::vulkan::Device& device,
                     const nickel::vulkan::PipelineLayout& layout,
                     const nickel::vulkan::RenderPass& renderPass) {
     auto vertexLayout = nickel::vulkan::VertexLayout::CreateFromTypes(
-        {nickel::vulkan::Attribute::Type::Vec2,
-         nickel::vulkan::Attribute::Type::Vec3});
+        {nickel::vulkan::ShaderDataType::Vec2,
+         nickel::vulkan::ShaderDataType::Vec3});
 
     vk::PipelineInputAssemblyStateCreateInfo inputAsm;
     inputAsm.setTopology(vk::PrimitiveTopology::eTriangleList);
