@@ -29,6 +29,7 @@ Device::~Device() {
 
     shaderModules_.ReleaseAll();
     buffers_.ReleaseAll();
+    samplers_.ReleaseAll();
     images_.ReleaseAll();
     framebuffers_.ReleaseAll();
     cmdPools_.ReleaseAll();
@@ -210,7 +211,7 @@ ResResult<ShaderModule> Device::CreateShaderModule(
 ResResult<Buffer> Device::CreateBuffer(uint64_t size,
                                        vk::BufferUsageFlags usage,
                                        vk::MemoryPropertyFlags flags,
-                                       std::vector<uint32_t> queueIndices) {
+                                       const std::set<uint32_t>& queueIndices) {
     return buffers_.Emplace(
         std::make_unique<Buffer>(this, size, usage, flags, queueIndices));
 }
@@ -219,10 +220,10 @@ ResResult<Image> Device::CreateImage(
     vk::ImageType type, vk::ImageViewType viewType, const vk::Extent3D& extent,
     vk::Format format, vk::Format viewFormat, vk::ImageLayout initLayout,
     uint32_t arrayLayer, uint32_t mipLevel, vk::SampleCountFlagBits sampleCount,
-    vk::ImageUsageFlagBits usage, vk::ImageTiling tiling,
+    vk::Flags<vk::ImageUsageFlagBits> usage, vk::ImageTiling tiling,
     const vk::ComponentMapping& components,
     const vk::ImageSubresourceRange& subresourceRange,
-    std::vector<uint32_t> queueIndices) {
+    const std::set<uint32_t>& queueIndices) {
     return images_.Emplace(std::make_unique<Image>(
         this, type, viewType, extent, format, viewFormat, initLayout,
         arrayLayer, mipLevel, sampleCount, usage, tiling, components,

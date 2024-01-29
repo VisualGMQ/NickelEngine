@@ -6,9 +6,13 @@ namespace nickel::vulkan {
 
 Buffer::Buffer(Device* device, uint64_t size, vk::BufferUsageFlags usage,
                vk::MemoryPropertyFlags flags,
-               std::vector<uint32_t> queueIndices)
+               const std::set<uint32_t>& queueIndices)
     : device_{device}, size_{size}, usage_{usage}, prop_{flags} {
-    createBuffer(size, usage, queueIndices);
+    std::vector<uint32_t> indices;
+    for (auto index : queueIndices) {
+        indices.emplace_back(index);
+    }
+    createBuffer(size, usage, indices);
     allocateMem(buffer_, flags);
     VK_CALL_NO_VALUE(device->GetDevice().bindBufferMemory(buffer_, mem_, 0));
 }
@@ -48,22 +52,10 @@ void Buffer::createBuffer(uint64_t size, vk::BufferUsageFlags usage,
     VK_CALL(buffer_, device_->GetDevice().createBuffer(createInfo));
 }
 
-std::optional<uint32_t> Buffer::findMemoryType(
-    const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags prop) {
-    auto properties = device_->GetPhyDevice().getMemoryProperties();
-    for (uint32_t i = 0; i < properties.memoryTypeCount; i++) {
-        if (((1 << i) & requirements.memoryTypeBits) &&
-            (properties.memoryTypes[i].propertyFlags & prop) == prop) {
-            return i;
-        }
-    }
-    return {};
-}
-
 void Buffer::allocateMem(vk::Buffer buffer, vk::MemoryPropertyFlags flags) {
     auto requirements =
         device_->GetDevice().getBufferMemoryRequirements(buffer);
-    auto type = findMemoryType(requirements, flags);
+    auto type = FindMemoryType(device_->GetPhyDevice(), requirements, flags);
 
     if (!type) {
         LOGE(log_tag::Vulkan, "find corresponding memory type failed");

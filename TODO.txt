@@ -1,0 +1,1 @@
+* use macro and template to make `VertexLayout` auto detect field's offset in struct

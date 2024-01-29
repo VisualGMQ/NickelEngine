@@ -38,6 +38,10 @@ public:
         std::optional<uint32_t> presentIndex;
 
         explicit operator bool() const { return graphicsIndex && presentIndex; }
+
+        std::set<uint32_t> GetUniqueIndices() const {
+            return {graphicsIndex.value(), presentIndex.value()};
+        }
     };
 
     vk::PhysicalDevice GetPhyDevice() const { return phyDevice_; }
@@ -60,15 +64,16 @@ public:
         const std::string& entry = "main");
     ResResult<Buffer> CreateBuffer(uint64_t size, vk::BufferUsageFlags usage,
                                    vk::MemoryPropertyFlags flags,
-                                   std::vector<uint32_t> queueIndices);
+                                   const std::set<uint32_t>& queueIndices);
     ResResult<Image> CreateImage(
         vk::ImageType type, vk::ImageViewType viewType,
         const vk::Extent3D& extent, vk::Format format, vk::Format viewFormat,
         vk::ImageLayout initLayout, uint32_t arrayLayer, uint32_t mipLevel,
-        vk::SampleCountFlagBits sampleCount, vk::ImageUsageFlagBits usage,
-        vk::ImageTiling tiling, const vk::ComponentMapping& components,
+        vk::SampleCountFlagBits sampleCount,
+        vk::Flags<vk::ImageUsageFlagBits> usage, vk::ImageTiling tiling,
+        const vk::ComponentMapping& components,
         const vk::ImageSubresourceRange& subresourceRange,
-        std::vector<uint32_t> queueIndices);
+        const std::set<uint32_t>& queueIndices);
     ResResult<Pipeline> CreateGraphicsPipeline(
         const VertexLayout&, const vk::PipelineInputAssemblyStateCreateInfo&,
         const std::vector<ShaderModule*>&,

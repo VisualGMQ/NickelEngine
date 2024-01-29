@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pch.hpp"
+#include "vulkan/memory.hpp"
 
 namespace nickel::vulkan {
 
@@ -10,7 +11,7 @@ class Buffer final {
 public:
     Buffer(Device*, uint64_t size, vk::BufferUsageFlags usage,
            vk::MemoryPropertyFlags flags,
-           std::vector<uint32_t> queueIndices);
+           const std::set<uint32_t>& queueIndices);
     ~Buffer();
 
     Buffer(Buffer&& o) { swap(o, *this); }
@@ -45,10 +46,6 @@ private:
                       const std::vector<uint32_t>& queueIndices);
 
     void allocateMem(vk::Buffer buffer, vk::MemoryPropertyFlags flags);
-
-    std::optional<uint32_t> findMemoryType(
-        const vk::MemoryRequirements& requirements,
-        vk::MemoryPropertyFlags prop);
 
     friend void swap(Buffer& o1, Buffer& o2) noexcept {
         using std::swap;

@@ -20,10 +20,13 @@ struct Context {
 
     nickel::vulkan::Buffer* buffer{};
     nickel::vulkan::Buffer* uniformBuf{};
+    nickel::vulkan::Image* image{};
+    nickel::vulkan::Sampler* sampler{};
 };
 
 struct Vertex {
     nickel::cgmath::Vec2 position;
+    nickel::cgmath::Vec2 texcoord;
     nickel::cgmath::Vec3 color;
 };
 
@@ -33,15 +36,19 @@ struct MVP {
 } mvp;
 
 std::array<Vertex, 3> vertices = {
-    Vertex{nickel::cgmath::Vec2{0.0f, -0.5f},
-           nickel::cgmath::Vec3{1.0f, 0.0f, 0.0f}},
-    Vertex{ nickel::cgmath::Vec2{0.5f, 0.5f},
+    Vertex{
+           nickel::cgmath::Vec2{0.0f, -0.5f},
+           nickel::cgmath::Vec2{0, 0},
+           nickel::cgmath::Vec3{1.0f, 0.0f,0.0f},
+           },
+    Vertex{nickel::cgmath::Vec2{0.5f, 0.5f}, nickel::cgmath::Vec2{0.1, 1},
            nickel::cgmath::Vec3{0.0f, 1.0f, 0.0f}},
-    Vertex{nickel::cgmath::Vec2{-0.5f, 0.5f},
+    Vertex{nickel::cgmath::Vec2{-0.5f, 0.5f}, nickel::cgmath::Vec2{1, 0},
            nickel::cgmath::Vec3{0.0f, 0.0f, 1.0f}}
 };
 
-auto createPipelineLayout(const nickel::vulkan::PipelineLayoutDescription& desc, nickel::vulkan::Device& device, Context& ctx) {
+auto createPipelineLayout(const nickel::vulkan::PipelineLayoutDescription& desc,
+                          nickel::vulkan::Device& device, Context& ctx) {
     return device.CreatePipelineLayout({*ctx.setLayout},
                                        {desc.GetPushConstsRange()});
 }
@@ -80,6 +87,7 @@ auto createPipeline(nickel::vulkan::Device& device,
                     const nickel::vulkan::RenderPass& renderPass) {
     auto vertexLayout = nickel::vulkan::VertexLayout::CreateFromTypes(
         {nickel::vulkan::ShaderDataType::Vec2,
+         nickel::vulkan::ShaderDataType::Vec2,
          nickel::vulkan::ShaderDataType::Vec3});
 
     vk::PipelineInputAssemblyStateCreateInfo inputAsm;
@@ -103,12 +111,12 @@ auto createPipeline(nickel::vulkan::Device& device,
     auto vertShader =
         device
             .CreateShaderModule(vk::ShaderStageFlagBits::eVertex,
-                                "test/testbed/vulkan/04uniform/vert.spv")
+                                "test/testbed/vulkan/05image/vert.spv")
             .value;
     auto fragShader =
         device
             .CreateShaderModule(vk::ShaderStageFlagBits::eFragment,
-                                "test/testbed/vulkan/04uniform/frag.spv")
+                                "test/testbed/vulkan/05image/frag.spv")
             .value;
 
     vk::PipelineRasterizationStateCreateInfo raster;
@@ -138,6 +146,111 @@ auto createBuffer(nickel::vulkan::Device& device) {
         .value;
 }
 
+nickel::vulkan::Image* createImage(nickel::vulkan::Device& device,
+                                   nickel::vulkan::CommandPool& cmdPool) {
+    int w, h;
+    auto imgData = stbi_load("test/testbed/vulkan/05image/texture.jpg", &w, &h,
+                             nullptr, STBI_rgb_alpha);
+
+    auto image =
+        device
+            .CreateImage(vk::ImageType::e2D, vk::ImageViewType::e2D,
+                         {(uint32_t)w, (uint32_t)h, 1},
+                         vk::Format::eR8G8B8A8Srgb, vk::Format::eR8G8B8A8Srgb,
+                         vk::ImageLayout::eUndefined, 1, 1,
+                         vk::SampleCountFlagBits::e1,
+                         vk::ImageUsageFlagBits::eSampled |
+                             vk::ImageUsageFlagBits::eTransferDst,
+                         vk::ImageTiling::eLinear, {},
+                         vk::ImageSubresourceRange{
+                             vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1},
+                         {device.GetQueueFamilyIndices().graphicsIndex.value()})
+            .value;
+
+    if (!image) {
+        return {};
+    }
+
+    auto buffer =
+        device
+            .CreateBuffer(
+                4 * w * h, vk::BufferUsageFlagBits::eTransferSrc,
+                vk::MemoryPropertyFlagBits::eHostCoherent |
+                    vk::MemoryPropertyFlagBits::eHostVisible,
+                {device.GetQueueFamilyIndices().graphicsIndex.value()})
+            .value;
+
+    void* map = buffer->Map(0, buffer->Size());
+    memcpy(map, imgData, buffer->Size());
+    buffer->Unmap();
+
+    auto cmd = cmdPool.Allocate(vk::CommandBufferLevel::ePrimary, 1)[0];
+    vk::CommandBufferBeginInfo beginInfo;
+    beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    VK_CALL_NO_VALUE(cmd.begin(beginInfo));
+    {
+        vk::ImageSubresourceRange range;
+        range.setAspectMask(vk::ImageAspectFlagBits::eColor)
+            .setBaseArrayLayer(0)
+            .setLevelCount(1)
+            .setLayerCount(1)
+            .setBaseMipLevel(0);
+        vk::ImageMemoryBarrier barrier;
+        barrier.setImage(image->GetImage())
+            .setOldLayout(vk::ImageLayout::eUndefined)
+            .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
+            .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
+            .setSrcQueueFamilyIndex(
+                device.GetQueueFamilyIndices().graphicsIndex.value())
+            .setSubresourceRange(range);
+        cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+                            vk::PipelineStageFlagBits::eTransfer,
+                            vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+
+        vk::ImageSubresourceLayers layers;
+        layers.setAspectMask(vk::ImageAspectFlagBits::eColor)
+            .setBaseArrayLayer(0)
+            .setLayerCount(1)
+            .setMipLevel(0);
+        vk::BufferImageCopy copyInfo;
+        copyInfo.setBufferOffset(0)
+            .setImageOffset(0)
+            .setBufferImageHeight(0)
+            .setBufferRowLength(0)
+            .setImageExtent(vk::Extent3D(w, h, 1))
+            .setImageSubresource(layers);
+        cmd.copyBufferToImage(buffer->GetBuffer(), image->GetImage(),
+                              vk::ImageLayout::eTransferDstOptimal, copyInfo);
+
+        barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
+            .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+            .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+            .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+        cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                            vk::PipelineStageFlagBits::eFragmentShader,
+                            vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+    }
+    VK_CALL_NO_VALUE(cmd.end());
+
+    vk::SubmitInfo submitInfo;
+    submitInfo.setCommandBuffers(cmd);
+    VK_CALL_NO_VALUE(device.GetGraphicsQueue().submit(submitInfo));
+    VK_CALL_NO_VALUE(device.GetDevice().waitIdle());
+
+    return image;
+}
+
+nickel::vulkan::Sampler* createSampler(nickel::vulkan::Device& device) {
+    return device
+        .CreateSampler(
+            vk::Filter::eLinear, vk::Filter::eLinear,
+            vk::SamplerMipmapMode::eLinear, vk::SamplerAddressMode::eRepeat,
+            vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat,
+            1.0, false, 1.0, false, vk::CompareOp::eAlways, 1.0, 1.0,
+            vk::BorderColor::eIntOpaqueWhite, false)
+        .value;
+}
+
 auto createUniformBuffer(nickel::vulkan::Device& device) {
     return device
         .CreateBuffer(4 * 4 * 4 * 2, vk::BufferUsageFlagBits::eUniformBuffer,
@@ -147,7 +260,8 @@ auto createUniformBuffer(nickel::vulkan::Device& device) {
         .value;
 }
 
-void createDescriptors(const nickel::vulkan::PipelineLayoutDescription& desc, nickel::vulkan::Device& device, Context& ctx) {
+void createDescriptors(const nickel::vulkan::PipelineLayoutDescription& desc,
+                       nickel::vulkan::Device& device, Context& ctx) {
     ctx.setLayout =
         device.CreateDescriptorSetLayout(desc.GetLayoutBindings()).value;
 
@@ -162,20 +276,35 @@ void createDescriptors(const nickel::vulkan::PipelineLayoutDescription& desc, ni
 
 void bindDescriptorSetAndBuffer(nickel::vulkan::Device& device,
                                 nickel::vulkan::Buffer& buffer,
+                                const nickel::vulkan::Image& image,
+                                const nickel::vulkan::Sampler& sampler,
                                 const std::vector<vk::DescriptorSet>& sets) {
     for (auto set : sets) {
-        vk::WriteDescriptorSet writeInfo;
         vk::DescriptorBufferInfo bufferInfo;
         bufferInfo.setBuffer(buffer.GetBuffer())
             .setOffset(0)
             .setRange(buffer.Size());
-        writeInfo.setBufferInfo(bufferInfo)
+        vk::WriteDescriptorSet bufferSet;
+        bufferSet.setBufferInfo(bufferInfo)
             .setDescriptorCount(1)
             .setDescriptorType(vk::DescriptorType::eUniformBuffer)
             .setDstBinding(0)
             .setDstArrayElement(0)
             .setDstSet(set);
-        device.GetDevice().updateDescriptorSets(writeInfo, {});
+
+        vk::DescriptorImageInfo imageInfo;
+        imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+            .setImageView(image.GetView())
+            .setSampler(sampler);
+        vk::WriteDescriptorSet imageSet;
+        imageSet.setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+            .setDstBinding(1)
+            .setDstArrayElement(0)
+            .setDstSet(set)
+            .setImageInfo(imageInfo);
+
+        device.GetDevice().updateDescriptorSets({bufferSet, imageSet}, {});
     }
 }
 
@@ -188,6 +317,9 @@ void RenderInitSystem(gecs::commands cmds,
                            {nickel::vulkan::ShaderDataType::Mat4,
                                                            nickel::vulkan::ShaderDataType::Mat4}
     });
+    desc.AddBinding(1, {vk::DescriptorType::eCombinedImageSampler,
+                        vk::ShaderStageFlagBits::eFragment,
+                        {}});
     desc.SetPushConstant(0, 4 * 4 * 4, vk::ShaderStageFlagBits::eVertex);
 
     auto& ctx = cmds.emplace_resource<Context>();
@@ -225,7 +357,11 @@ void RenderInitSystem(gecs::commands cmds,
     ctx.buffer = createBuffer(device);
     ctx.uniformBuf = createUniformBuffer(device);
 
-    bindDescriptorSetAndBuffer(device, *ctx.uniformBuf, ctx.descriptorSets);
+    ctx.image = createImage(device, *ctx.cmdPool);
+    ctx.sampler = createSampler(device);
+
+    bindDescriptorSetAndBuffer(device, *ctx.uniformBuf, *ctx.image,
+                               *ctx.sampler, ctx.descriptorSets);
 
     void* map = ctx.buffer->Map(0, ctx.buffer->Size());
     memcpy(map, vertices.data(), sizeof(vertices));

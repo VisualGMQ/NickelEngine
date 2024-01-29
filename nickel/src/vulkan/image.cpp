@@ -1,6 +1,9 @@
 #include "vulkan/image.hpp"
+#include "vulkan/buffer.hpp"
 #include "vulkan/device.hpp"
+#include "vulkan/memory.hpp"
 #include "vulkan/util.hpp"
+
 
 namespace nickel::vulkan {
 
@@ -8,14 +11,18 @@ Image::Image(Device *device, vk::ImageType type, vk::ImageViewType viewType,
              const vk::Extent3D &extent, vk::Format format,
              vk::Format viewFormat, vk::ImageLayout initLayout,
              uint32_t arrayLayer, uint32_t mipLevel,
-             vk::SampleCountFlagBits sampleCount, vk::ImageUsageFlagBits usage,
-             vk::ImageTiling tiling, const vk::ComponentMapping &components,
+             vk::SampleCountFlagBits sampleCount,
+             vk::Flags<vk::ImageUsageFlagBits> usage, vk::ImageTiling tiling,
+             const vk::ComponentMapping &components,
              const vk::ImageSubresourceRange &subresourceRange,
-             std::vector<uint32_t> queueIndices)
+             const std::set<uint32_t> &queueIndices)
     : device_{device} {
     vk::ImageCreateInfo imgCreateInfo;
-    imgCreateInfo.setQueueFamilyIndices(queueIndices)
-        .setImageType(type)
+    std::vector<uint32_t> indices;
+    for (auto index : queueIndices) {
+        indices.push_back(index);
+    }
+    imgCreateInfo.setImageType(type)
         .setExtent(extent)
         .setFormat(format)
         .setInitialLayout(initLayout)
@@ -24,8 +31,16 @@ Image::Image(Device *device, vk::ImageType type, vk::ImageViewType viewType,
         .setSamples(sampleCount)
         .setUsage(usage)
         .setTiling(tiling);
-    VK_CALL(image_, device->GetDevice().createImage(imgCreateInfo));
 
+    if (queueIndices.size() > 1) {
+        imgCreateInfo.setQueueFamilyIndices(indices).setSharingMode(
+            vk::SharingMode::eConcurrent);
+    } else {
+        imgCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
+    }
+    VK_CALL(image_, device->GetDevice().createImage(imgCreateInfo));
+    allocateMem(format, extent);
+    VK_CALL_NO_VALUE(device->GetDevice().bindImageMemory(image_, mem_, 0));
     ChangeView(viewType, viewFormat, components, subresourceRange);
 }
 
@@ -41,10 +56,31 @@ void Image::ChangeView(vk::ImageViewType type, vk::Format format,
     VK_CALL(view_, device_->GetDevice().createImageView(viewCreateInfo));
 }
 
+void Image::allocateMem(vk::Format format, const vk::Extent3D &extent) {
+    auto requirements = device_->GetDevice().getImageMemoryRequirements(image_);
+
+    auto index = FindMemoryType(device_->GetPhyDevice(), requirements,
+                                vk::MemoryPropertyFlagBits::eDeviceLocal);
+    if (!index) {
+        LOGE(log_tag::Vulkan, "allocate image memory failed: no satisfied "
+                              "memory type (DeviceLocal)");
+    }
+
+    vk::MemoryAllocateInfo allocInfo;
+    allocInfo
+        .setAllocationSize(GetFormatSize(format) * extent.width *
+                           extent.height * extent.depth)
+        .setMemoryTypeIndex(index.value());
+    VK_CALL(mem_, device_->GetDevice().allocateMemory(allocInfo));
+}
+
 Image::~Image() {
     if (device_) {
         if (view_) {
             device_->GetDevice().destroyImageView(view_);
+        }
+        if (mem_) {
+            device_->GetDevice().freeMemory(mem_);
         }
         if (image_) {
             device_->GetDevice().destroyImage(image_);
