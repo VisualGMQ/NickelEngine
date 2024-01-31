@@ -1,6 +1,11 @@
 #pragma once
 
 #include "nickel.hpp"
+#include "video/window.hpp"
+#include "video/event.hpp"
+#include "graphics/renderer2d.hpp"
+
+#include "SDL.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 #include "imgui_internal.h"

@@ -45,7 +45,7 @@ void TilesheetViewCanva::additionalDraw(ImDrawList* drawList,
 }
 
 void TilesheetEditor::update() {
-    auto& assetMgr = gWorld->res_mut<nickel::AssetManager>().get();
+    auto& assetMgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>().get();
     if (!assetMgr.Has(handle_)) {
         ImGui::Text("no tilesheet");
         return;

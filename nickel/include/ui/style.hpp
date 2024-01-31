@@ -1,10 +1,9 @@
 #pragma once
 
-#include "pch.hpp"
-#include "core/cgmath.hpp"
-#include "renderer/renderer2d.hpp"
+#include "common/cgmath.hpp"
+#include "graphics/renderer2d.hpp"
 #include "ui/context.hpp"
-#include "misc/hierarchy.hpp"
+#include "common/hierarchy.hpp"
 
 namespace nickel::ui {
 

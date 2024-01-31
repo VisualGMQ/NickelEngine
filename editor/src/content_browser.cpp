@@ -53,7 +53,7 @@ void ContentBrowserWindow::RescanDir() {
 }
 
 void ContentBrowserWindow::selectAndLoadAsset() {
-    auto& reg = *gWorld->cur_registry();
+    auto& reg = *nickel::ECS::Instance().World().cur_registry();
     auto filenames = OpenFileDialog("load assets", {".*"});
 
     for (auto& filename : filenames) {
@@ -109,7 +109,7 @@ std::pair<const nickel::Texture&, bool> ContentBrowserWindow::getIcon(
 
 void ContentBrowserWindow::showAssetOperationPopupMenu(
     const std::filesystem::path& path, nickel::AssetManager& assetMgr) {
-    auto ctx = gWorld->res<EditorContext>();
+    auto ctx = nickel::ECS::Instance().World().res<EditorContext>();
     if (ImGui::BeginPopupContextItem(path.string().c_str())) {
         if (ImGui::Button("delete")) {
             std::error_code err;
@@ -129,7 +129,7 @@ void ContentBrowserWindow::showOneIcon(
         ctx_->GetRelativePath(entry.path())};
     auto&& [texture, hasImported] = getIcon(relativeEntry, filetype, assetMgr);
 
-    auto ctx = gWorld->res_mut<EditorContext>();
+    auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
     ImGui::BeginGroup();
     {
         if (ImGui::ImageButton(entry.path().string().c_str(), (ImTextureID)texture.Raw(),
@@ -188,8 +188,8 @@ void ContentBrowserWindow::showIcons() {
         float groupX =
             ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 
-        auto& assetMgr = gWorld->res_mut<nickel::AssetManager>().get();
-        auto& fontMgr = gWorld->res_mut<nickel::FontManager>().get();
+        auto& assetMgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>().get();
+        auto& fontMgr = nickel::ECS::Instance().World().res_mut<nickel::FontManager>().get();
         static std::optional<int> clickedIdx;
 
         // please ensure all files are exists
@@ -223,7 +223,7 @@ void ContentBrowserWindow::update() {
     ImGui::SameLine();
     // create directory
     if (ImGui::Button("create directory")) {
-        auto ctx = gWorld->res_mut<EditorContext>();
+        auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
         auto curPath = ctx->contentBrowserWindow.CurPath();
         ctx->inputTextWindow.SetCallback([=](const std::string& dirName) {
             auto dir = curPath / dirName;

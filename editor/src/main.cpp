@@ -1,5 +1,5 @@
 #include "imgui_plugin.hpp"
-#include "misc/transform.hpp"
+#include "common/transform.hpp"
 #include "nickel.hpp"
 
 #include "asset_property_window.hpp"
@@ -164,7 +164,7 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
     auto assetDir =
         nickel::GenAssetsDefaultStoreDir(editorCtx->projectInfo.projectPath);
 
-    cmds.emplace_resource<FileWatcher>(assetDir, *gWorld->cur_registry());
+    cmds.emplace_resource<FileWatcher>(assetDir, *nickel::ECS::Instance().World().cur_registry());
     RegistFileChangeEventHandler(fileChangeEvent);
 
     // init content browser info
@@ -195,8 +195,8 @@ void EditorMenubar(EditorContext& ctx) {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("save")) {
-                SaveProjectByConfig(gWorld->res<EditorContext>()->projectInfo,
-                                    gWorld->res<nickel::AssetManager>().get());
+                SaveProjectByConfig(nickel::ECS::Instance().World().res<EditorContext>()->projectInfo,
+                                    nickel::ECS::Instance().World().res<nickel::AssetManager>().get());
             }
             ImGui::EndMenu();
         }
@@ -237,10 +237,10 @@ void EditorExit() {
             .AddButton("no", MessageBox::ButtonType::EscapeKeyDefault)
             .Show();
     if (btn == 0) {
-        SaveProjectByConfig(gWorld->res<EditorContext>()->projectInfo,
-                            gWorld->res<nickel::AssetManager>().get());
+        SaveProjectByConfig(nickel::ECS::Instance().World().res<EditorContext>()->projectInfo,
+                            nickel::ECS::Instance().World().res<nickel::AssetManager>().get());
     }
-    gWorld->remove_res<EditorContext>();
+    nickel::ECS::Instance().World().remove_res<EditorContext>();
 }
 
 void BootstrapSystem(gecs::world& world,

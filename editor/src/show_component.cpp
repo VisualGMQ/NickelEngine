@@ -410,7 +410,7 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
     auto& mgr = *reg.res_mut<nickel::AssetManager>();
 
     auto create = [&](const std::filesystem::path& path) {
-        auto ctx = gWorld->cur_registry()->res_mut<EditorContext>();
+        auto ctx = nickel::ECS::Instance().World().cur_registry()->res_mut<EditorContext>();
         auto handle = mgr.AnimationMgr().Create(
             std::make_unique<nickel::Animation>(), ctx->GetRelativePath(path));
         ctx->animEditor.sequence->player.ChangeAnim(handle);
@@ -419,7 +419,7 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
 
     auto changeHandle = [&player](nickel::AnimationHandle handle) {
         player.ChangeAnim(handle);
-        gWorld->cur_registry()
+        nickel::ECS::Instance().World().cur_registry()
             ->res_mut<EditorContext>()
             ->animEditor.sequence->player.ChangeAnim(handle);
     };
@@ -434,6 +434,7 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
 void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
                   mirrow::drefl::any& value, gecs::registry reg) {
     auto& label = *mirrow::drefl::try_cast<nickel::ui::Label>(value);
+    auto& fontMgr = reg.res_mut<nickel::AssetManager>()->FontMgr();
 
     static char buf[1024] = {0};
     auto text = label.GetText().to_string();
@@ -477,7 +478,7 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
     auto& mgr = *reg.res_mut<nickel::AssetManager>();
     auto ctx = reg.res_mut<EditorContext>();
 
-    auto changeHandle = [&](nickel::SoundHandle h) { player.ChangeSound(h); };
+    auto changeHandle = [&](nickel::SoundHandle h) { player.ChangeSound(h, reg.res_mut<nickel::AssetManager>()->AudioMgr()); };
 
     auto handle = player.Handle();
 

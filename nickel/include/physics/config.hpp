@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config/config.hpp"
-#include "core/cgmath.hpp"
+#include "common/cgmath.hpp"
 
 namespace nickel {
 

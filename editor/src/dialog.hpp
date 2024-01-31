@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <filesystem>
+#include "SDL.h"
 
 std::filesystem::path OpenDirDialog(const std::string& title);
 std::vector<std::filesystem::path> OpenFileDialog(

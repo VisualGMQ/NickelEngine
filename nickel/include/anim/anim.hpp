@@ -1,11 +1,11 @@
 #pragma once
 
 #include "anim/keyframe.hpp"
-#include "core/handle.hpp"
-#include "core/manager.hpp"
-#include "core/singlton.hpp"
-#include "misc/filetype.hpp"
-#include "misc/timer.hpp"
+#include "common/handle.hpp"
+#include "common/manager.hpp"
+#include "common/singlton.hpp"
+#include "common/filetype.hpp"
+#include "common/timer.hpp"
 
 namespace nickel {
 
@@ -322,7 +322,7 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer();
+    AnimationPlayer() = default;
 
     explicit AnimationPlayer(AnimationManager& mgr) : mgr_(&mgr) {}
 
@@ -391,7 +391,7 @@ public:
     void Sync(gecs::entity, gecs::registry);
 
 private:
-    AnimationManager* mgr_ = {};
+    AnimationManager* mgr_{};
     Direction dir_ = Direction::Forward;
     int curTime_ = 0;
     AnimationHandle handle_;

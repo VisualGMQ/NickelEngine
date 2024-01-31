@@ -1,57 +1,36 @@
 #pragma once
 
 #include "anim/anim.hpp"
-#include "misc/filetype.hpp"
-#include "misc/timer.hpp"
-#include "renderer/font.hpp"
-#include "renderer/texture.hpp"
-#include "renderer/tilesheet.hpp"
+#include "common/filetype.hpp"
+#include "common/timer.hpp"
+#include "graphics/font.hpp"
+#include "graphics/texture.hpp"
+#include "graphics/tilesheet.hpp"
 #include "audio/audio.hpp"
+#include "common/util.hpp"
 
 namespace nickel {
 
-template <typename F, typename... Args, size_t... Indices>
-void doVisitTuple(std::tuple<Args...>& t, std::index_sequence<Indices...>, F f) {
-    (f(std::get<Indices>(t)), ...);
-}
-
-template <typename F, typename... Args>
-void VisitTuple(std::tuple<Args...>& t, F f) {
-    doVisitTuple(t, std::make_index_sequence<sizeof...(Args)>(), f);
-}
-
-template <typename F, typename... Args, size_t... Indices>
-void doVisitTuple(const std::tuple<Args...>& t, std::index_sequence<Indices...>, F f) {
-    (f(std::get<Indices>(t)), ...);
-}
-
-template <typename F, typename... Args>
-void VisitTuple(const std::tuple<Args...>& t, F f) {
-    doVisitTuple(t, std::make_index_sequence<sizeof...(Args)>(), f);
-}
-
 class AssetManager final {
 public:
-    AssetManager() = default;
+    AssetManager(TextureManager& texture, FontManager& font,
+                 TimerManager& timer, TilesheetManager& tilesheet,
+                 AnimationManager& anim, AudioManager& audio)
+        : mgrs_{texture, font, timer, tilesheet, anim, audio} {}
 
-    AssetManager(const AssetManager&) = delete;
-    AssetManager(AssetManager&&) = delete;
-    AssetManager& operator=(const AssetManager&) = default;
-    AssetManager& operator=(AssetManager&&) = default;
+    auto& TextureMgr() { return std::get<TextureManager&>(mgrs_); }
+    auto& FontMgr() { return std::get<FontManager&>(mgrs_); }
+    auto& TilesheetMgr() { return std::get<TilesheetManager&>(mgrs_); }
+    auto& AnimationMgr() {return std::get<AnimationManager&>(mgrs_); }
+    auto& TimerMgr() {return std::get<TimerManager&>(mgrs_); }
+    auto& AudioMgr() {return std::get<AudioManager&>(mgrs_); }
 
-    auto& TextureMgr() { return std::get<TextureManager>(mgrs_); }
-    auto& FontMgr() { return std::get<FontManager>(mgrs_); }
-    auto& TilesheetMgr() { return std::get<TilesheetManager>(mgrs_); }
-    auto& AnimationMgr() {return std::get<AnimationManager>(mgrs_); }
-    auto& TimerMgr() {return std::get<TimerManager>(mgrs_); }
-    auto& AudioMgr() {return std::get<AudioManager>(mgrs_); }
-
-    auto& TextureMgr() const { return std::get<TextureManager>(mgrs_); }
-    auto& FontMgr() const { return std::get<FontManager>(mgrs_); }
-    auto& TilesheetMgr() const { return std::get<TilesheetManager>(mgrs_); }
-    auto& AnimationMgr() const {return std::get<AnimationManager>(mgrs_); }
-    auto& TimerMgr() const {return std::get<TimerManager>(mgrs_); }
-    auto& AudioMgr() const {return std::get<AudioManager>(mgrs_); }
+    auto& TextureMgr() const { return std::get<TextureManager&>(mgrs_); }
+    auto& FontMgr() const { return std::get<FontManager&>(mgrs_); }
+    auto& TilesheetMgr() const { return std::get<TilesheetManager&>(mgrs_); }
+    auto& AnimationMgr() const {return std::get<AnimationManager&>(mgrs_); }
+    auto& TimerMgr() const {return std::get<TimerManager&>(mgrs_); }
+    auto& AudioMgr() const {return std::get<AudioManager&>(mgrs_); }
 
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
@@ -235,17 +214,17 @@ public:
     template <typename T>
     auto& SwitchManager() const {
         if constexpr (std::is_same_v<T, Texture>) {
-            return std::get<TextureManager>(mgrs_);
+            return std::get<TextureManager&>(mgrs_);
         } else if constexpr (std::is_same_v<T, Font>) {
-            return std::get<FontManager>(mgrs_);
+            return std::get<FontManager&>(mgrs_);
         } else if constexpr (std::is_same_v<T, Timer>) {
-            return std::get<TimerManager>(mgrs_);
+            return std::get<TimerManager&>(mgrs_);
         } else if constexpr (std::is_same_v<T, Tilesheet>) {
-            return std::get<TilesheetManager>(mgrs_);
+            return std::get<TilesheetManager&>(mgrs_);
         } else if constexpr (std::is_same_v<T, Animation>) {
-            return std::get<AnimationManager>(mgrs_);
+            return std::get<AnimationManager&>(mgrs_);
         } else if constexpr (std::is_same_v<T, Sound>) {
-            return std::get<AudioManager>(mgrs_);
+            return std::get<AudioManager&>(mgrs_);
         }
     }
 
@@ -259,11 +238,9 @@ public:
             std::as_const(*this).template SwitchManager<T>());
     }
 
-
-
 private:
-    std::tuple<TextureManager, FontManager, TimerManager, TilesheetManager,
-               AnimationManager, AudioManager>
+    std::tuple<TextureManager&, FontManager&, TimerManager&, TilesheetManager&,
+               AnimationManager&, AudioManager&>
         mgrs_;
 };
 

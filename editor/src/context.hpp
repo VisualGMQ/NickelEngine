@@ -2,13 +2,11 @@
 
 #include "asset_list_window.hpp"
 #include "content_browser.hpp"
-#include "core/gogl.hpp"
 #include "entity_list_window.hpp"
 #include "game_window.hpp"
 #include "imgui_plugin.hpp"
 #include "inspector.hpp"
 #include "nickel.hpp"
-#include "pch.hpp"
 #include "tilesheet_editor.hpp"
 #include "input_text_window.hpp"
 #include "anim_editor.hpp"

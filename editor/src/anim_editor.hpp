@@ -5,7 +5,7 @@
 class Sequence {
 public:
     Sequence()
-        : animMgr{gWorld->res_mut<nickel::AssetManager>()->AnimationMgr()} {}
+        : animMgr{*nickel::ECS::Instance().World().res_mut<nickel::AnimationManager>()} {}
 
     int GetItemCount() const {
         if (!animMgr.Has(player.Anim())) {

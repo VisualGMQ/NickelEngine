@@ -1,17 +1,16 @@
 #pragma once
 
 #include "anim/anim.hpp"
-#include "misc/asset_manager.hpp"
-#include "misc/filetype.hpp"
+#include "common/filetype.hpp"
 #include "misc/prefab.hpp"
-#include "misc/timer.hpp"
-#include "pch.hpp"
-#include "renderer/camera.hpp"
-#include "renderer/font.hpp"
-#include "renderer/renderer2d.hpp"
-#include "renderer/texture.hpp"
-#include "window/event.hpp"
-#include "window/window.hpp"
+#include "common/timer.hpp"
+#include "graphics/camera.hpp"
+#include "graphics/font.hpp"
+#include "graphics/renderer2d.hpp"
+#include "graphics/texture.hpp"
+#include "video/event.hpp"
+#include "video/window.hpp"
+#include "misc/asset_manager.hpp"
 
 namespace nickel {
 

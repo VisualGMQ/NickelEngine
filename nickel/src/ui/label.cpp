@@ -1,5 +1,4 @@
 #include "ui/label.hpp"
-#include "misc/asset_manager.hpp"
 
 namespace nickel::ui {
 
@@ -21,12 +20,12 @@ void Label::ChangeFont(FontHandle handle) {
 }
 
 void Label::regenerateTextCache() {
-    auto& fontMgr = gWorld->res_mut<nickel::AssetManager>()->FontMgr();
-    if (!fontMgr.Has(font_)) {
+    auto fontMgr = ECS::Instance().World().res_mut<FontManager>();
+    if (!fontMgr->Has(font_)) {
         return;
     }
 
-    auto& font = fontMgr.Get(font_);
+    auto& font = fontMgr->Get(font_);
     textSize_.Set(0, 0);
     cache_.Clear();
     rects_.clear();

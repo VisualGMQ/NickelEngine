@@ -13,7 +13,7 @@ public:
     void ChangeTexture(nickel::TextureHandle handle) {
         handle_ = handle;
         imageViewer_.ChangeTexture(handle);
-        auto assetMgr = gWorld->res<nickel::AssetManager>();
+        auto assetMgr = nickel::ECS::Instance().World().res<nickel::AssetManager>();
         if (assetMgr->Has(handle_)) {
             sampler_ = assetMgr->Get(handle_).Sampler();
         }
