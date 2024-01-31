@@ -19,3 +19,9 @@
 [submodule "3rdlibs/easy_profiler"]
 	path = 3rdlibs/easy_profiler
 	url = https://github.com/yse/easy_profiler.git
+[submodule "3rdlibs/luau"]
+	path = 3rdlibs/luau
+	url = https://github.com/luau-lang/luau.git
+[submodule "3rdlibs/LuaBridge3"]
+	path = 3rdlibs/LuaBridge3
+	url = https://github.com/kunitoki/LuaBridge3.git

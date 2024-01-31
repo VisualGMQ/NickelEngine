@@ -496,3 +496,16 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
         }
     }
 }
+
+void DisplayScript(const mirrow::drefl::type* parent, std::string_view name,
+                  mirrow::drefl::any& value, gecs::registry reg) {
+    nickel::ScriptHandle& handle = *mirrow::drefl::try_cast<nickel::ScriptHandle>(value);
+    auto& mgr = *reg.res_mut<nickel::AssetManager>();
+    auto ctx = reg.res_mut<EditorContext>();
+
+    auto changeHandle = [&](nickel::ScriptHandle h) { handle = h; };
+
+    if (BeginDisplayHandle<nickel::ScriptHandle>(ctx.get(), name, mgr, handle, changeHandle)) {
+        EndDisplayHandle();
+    }
+}

@@ -183,6 +183,13 @@ void reflectTilesheet() {
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<Tilesheet>();
 }
 
+void reflectScript() {
+    mirrow::drefl::registrar<LuaScript>::instance()
+        .regist("LuaScript");
+
+    PrefabEmplaceMethods::Instance().RegistEmplaceFn<LuaScript>();
+}
+
 void reflectMisc() {
     mirrow::drefl::registrar<Name>::instance().regist("Name").property(
         "name", &Name::name);
@@ -350,6 +357,7 @@ void InitDynamicReflect() {
     reflectHierarchy();
     reflectMisc();
     reflectAudio();
+    reflectScript();
 
     registTextureHandleSerd();
     registSoundPlayerSerd();

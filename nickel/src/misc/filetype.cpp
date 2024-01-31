@@ -3,7 +3,7 @@
 namespace nickel {
 
 std::unordered_map<std::string, FileType> gFileTypeMap = {
- // image
+  // image
     {      ".png",     FileType::Image},
     {      ".bmp",     FileType::Image},
     {      ".jpg",     FileType::Image},
@@ -18,7 +18,8 @@ std::unordered_map<std::string, FileType> gFileTypeMap = {
     {    ".timer",     FileType::Timer},
     {     ".anim", FileType::Animation},
     {".tilesheet", FileType::Tilesheet},
-    {".meta", FileType::Meta},
+    {     ".luau",    FileType::Script},
+    {     ".meta",      FileType::Meta},
 };
 
 FileType DetectFileType(const std::filesystem::path& path) {
@@ -45,6 +46,8 @@ std::string_view GetMetaFileExtension(FileType filetype) {
             return ".meta";
         case FileType::Meta:
             return "";
+        case FileType::Script:
+            return ".meta";
     }
 }
 
@@ -57,6 +60,7 @@ bool HasMetaFile(FileType filetype) {
         case FileType::Image:
         case FileType::Font:
         case FileType::Audio:
+        case FileType::Script:
             return true;
         case FileType::Unknown:
         case FileType::FileTypeCount:

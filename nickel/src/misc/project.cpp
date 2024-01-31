@@ -242,6 +242,7 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_startup_system<ui::InitSystem>()
         .regist_startup_system<InitAudioSystem>()
         // shutdown systems
+        .regist_shutdown_system<ScriptShutdownSystem>()
         .regist_shutdown_system<EngineShutdown>()
         .regist_shutdown_system<InitAudioSystem>()
         // update systems
@@ -262,7 +263,8 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_update_system<ui::RenderUI>()
         .regist_update_system<EndRenderPipeline>()
         // time update
-        .regist_update_system<Time::Update>();
+        .regist_update_system<Time::Update>()
+        .regist_update_system<ScriptUpdateSystem>();
 }
 
 }  // namespace nickel

@@ -47,6 +47,8 @@ to enable auto copy dlls.
 |[tomlplusplus](https://github.com/marzer/tomlplusplus)| use to support toml file parse|
 |[esfw](https://github.com/SpartanJ/efsw)| use to watch file change in editor|
 |[easy_profiler](https://github.com/yse/easy_profiler)|use to profile|
+|[luau](https://luau-lang.org/)|use to as script|
+|[LuaBridge3](https://kunitoki.github.io/LuaBridge3/Manual)|use to bind cpp to lua/luau|
 
 editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-material-icon-theme)
 
@@ -67,8 +69,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
     - [ ] multiple scene
     - [ ] scene change
 - [ ] script
-    - [ ] cpp(dynamic library)
-    - [ ] lua/quickJs/C#mono (don't determine currently)
+    - [ ] luau (WIP)
 
 ## Editor
 

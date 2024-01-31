@@ -24,6 +24,10 @@ void ShowAsset<nickel::Sound>(nickel::SoundHandle handle,
                               const nickel::Sound& texture) {}
 
 template <>
+void ShowAsset<nickel::LuaScript>(nickel::ScriptHandle handle,
+                                  const nickel::LuaScript&) {}
+
+template <>
 void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
                                   const nickel::Tilesheet& tilesheet) {
     auto& mgr = gWorld->res<nickel::AssetManager>().get();

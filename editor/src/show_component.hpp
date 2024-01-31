@@ -81,3 +81,6 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
 
 void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
                   mirrow::drefl::any& value, gecs::registry reg);
+
+void DisplayScript(const mirrow::drefl::type* parent, std::string_view name,
+                  mirrow::drefl::any& value, gecs::registry reg);

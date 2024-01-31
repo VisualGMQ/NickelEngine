@@ -4,26 +4,21 @@
 #include "core/manager.hpp"
 #include "pch.hpp"
 
-
 namespace nickel {
 
-class CppScript : public Asset {
+class LuaScript : public Asset {
 public:
-    using OnInitFunc = void (*)(gecs::entity);
-    using OnDestroyFunc = void (*)(gecs::entity);
-    using OnUpdateFunc = void (*)(gecs::entity);
+    friend void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>>);
 
-    static constexpr std::string_view InitFuncName = "OnInit";
-    static constexpr std::string_view DestroyFuncName = "OnDestroy";
-    static constexpr std::string_view UpdateFuncName = "OnUpdate";
+    static LuaScript Null;
 
-    CppScript() = default;
-    CppScript(const CppScript&) = delete;
-    CppScript& operator=(const CppScript&) = delete;
+    LuaScript() = default;
+    LuaScript(const LuaScript&) = delete;
+    LuaScript& operator=(const LuaScript&) = delete;
 
-    CppScript(CppScript&& o) : Asset(std::move(o)) { swap(o, *this); }
+    LuaScript(LuaScript&& o) : Asset(std::move(o)) { swap(o, *this); }
 
-    CppScript& operator=(CppScript&& o) {
+    LuaScript& operator=(LuaScript&& o) {
         Asset::operator=(std::move(o));
         if (&o != this) {
             swap(o, *this);
@@ -31,42 +26,48 @@ public:
         return *this;
     }
 
-    explicit CppScript(const std::filesystem::path& libname);
-    ~CppScript();
+    explicit LuaScript(const std::filesystem::path& libname);
+    ~LuaScript();
 
-    void Reload();
+    void OnInit(gecs::entity) const;
+    void OnUpdate(gecs::entity) const;
+    void OnDestroy(gecs::entity) const;
 
-    void OnInit(gecs::entity);
-    void OnUpdate(gecs::entity);
-    void OnDestroy(gecs::entity);
+    bool IsInited() const { return isInited_; }
 
     toml::table Save2Toml() const override;
 
+    operator bool() const {
+        return state_;
+    }
+
 private:
-    OnInitFunc onInit_{};
-    OnDestroyFunc onDestroy_{};
-    OnUpdateFunc onUpdate_{};
-    void* lib_{};
+    lua_State* state_{};
+    bool isInited_ = false;
 
     void load(const std::filesystem::path& path);
 
-    friend void swap(CppScript& o1, CppScript& o2) {
+    friend void swap(LuaScript& o1, LuaScript& o2) {
         using std::swap;
 
-        swap(o1.onDestroy_, o2.onDestroy_);
-        swap(o1.onInit_, o2.onInit_);
-        swap(o1.onUpdate_, o2.onUpdate_);
-        swap(o1.lib_, o2.lib_);
+        swap(o1.state_, o2.state_);
+        swap(o1.isInited_, o2.isInited_);
     }
 };
 
-using ScriptHandle = Handle<CppScript>;
+using ScriptHandle = Handle<LuaScript>;
 
-class ScriptManager: public Manager<CppScript> {
+template <>
+std::unique_ptr<LuaScript> LoadAssetFromMeta(const toml::table&);
+
+class ScriptManager: public Manager<LuaScript> {
 public:
     ScriptHandle Load(const std::filesystem::path& path);
 
     auto GetFileType() const { return FileType::Script; }
 };
+
+void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>>);
+void ScriptShutdownSystem(gecs::querier<LuaScript>);
 
 }  // namespace nickel

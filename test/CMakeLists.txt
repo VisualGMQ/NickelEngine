@@ -25,5 +25,6 @@ AddConsoleTest(tweeny)
 AddConsoleTest(csv_iterator)
 
 AddVisualableTest(gjk)
+AddVisualableTest(script)
 
 add_subdirectory(testbed)

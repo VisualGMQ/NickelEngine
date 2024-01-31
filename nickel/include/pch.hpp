@@ -48,6 +48,12 @@
 #include "easy/profiler.h"
 #endif
 
+#include "lua.h"
+#include "luacode.h"
+#include "lualib.h"
+
+#include "LuaBridge/LuaBridge.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>

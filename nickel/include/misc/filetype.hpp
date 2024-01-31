@@ -28,6 +28,7 @@ class Font;
 class Tilesheet;
 class Animation;
 class Timer;
+class LuaScript;
 
 template <typename T>
 FileType DetectFileType() {
@@ -43,6 +44,8 @@ FileType DetectFileType() {
         return FileType::Animation;
     } else if constexpr (std::is_same_v<T, Timer>) {
         return FileType::Timer;
+    } else if constexpr (std::is_same_v<T, LuaScript>) {
+        return FileType::Script;
     }
     return FileType::Unknown;
 }

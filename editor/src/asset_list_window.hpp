@@ -32,6 +32,10 @@ template <>
 void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
                                   const nickel::Tilesheet&);
 
+template <>
+void ShowAsset<nickel::LuaScript>(nickel::ScriptHandle handle,
+                                  const nickel::LuaScript&);
+
 template <typename T>
 class AssetListWindow : public PopupWindow {
 public:

@@ -40,15 +40,14 @@ public:
 
     void Reload(AssetHandle handle, const std::filesystem::path& filename) {
         if (Has(handle)) {
-            auto& elem = Get(handle);
             auto parse = toml::parse_file(filename.string());
             if (!parse) {
                 LOGW(log_tag::Asset, "load asset from ", filename, " failed");
                 return;
             }
-            AssetType newElem(parse.table());
-            newElem.AssociateFile(filename);
-            elem = std::move(newElem);
+            auto newElem = ::nickel::LoadAssetFromMeta<AssetType>(parse.table());
+            newElem->AssociateFile(filename);
+            datas_[handle] = std::move(newElem);
         }
     }
 
