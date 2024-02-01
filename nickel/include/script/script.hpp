@@ -1,8 +1,9 @@
 #pragma once
 
-#include "core/asset.hpp"
-#include "core/manager.hpp"
-#include "pch.hpp"
+#include "common/asset.hpp"
+#include "common/manager.hpp"
+
+struct lua_State;
 
 namespace nickel {
 

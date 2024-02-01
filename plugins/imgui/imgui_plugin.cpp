@@ -1,5 +1,6 @@
 #include "imgui_plugin.hpp"
 
+
 namespace plugin {
 
 using namespace nickel;

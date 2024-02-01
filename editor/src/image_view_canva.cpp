@@ -42,7 +42,7 @@ void ImageViewCanva::Update() {
 
         // begin draw
         auto drawList = ImGui::GetWindowDrawList();
-        auto assetMgr = gWorld->res<AssetManager>();
+        auto assetMgr = nickel::ECS::Instance().World().res<AssetManager>();
 
         if (assetMgr->Has(handle_)) {
             auto& texture = assetMgr->Get(handle_);

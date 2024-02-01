@@ -21,8 +21,8 @@ bool EntityListWindow::beginShowOneEntity(bool isLeaf, gecs::entity& selected,
     // select event
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
         selected = ent;
-        auto reg = gWorld->cur_registry();
-        auto ctx = gWorld->res_mut<EditorContext>();
+        auto reg = nickel::ECS::Instance().World().cur_registry();
+        auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
         if (reg->has<AnimationPlayer>(ent)) {
             auto& player = reg->get<AnimationPlayer>(ent);
             ctx->animEditor.ChangePlayer(ent, player.Anim());
@@ -102,12 +102,12 @@ void EntityListWindow::showHierarchyEntities(const gecs::entity& entity,
 
         if (beginShowOneEntity(false, selected, entity, name, dragDropInfo)) {
             for (auto ent : children->entities) {
-                if (gWorld->cur_registry()->has<nickel::Name>(ent)) {
+                if (nickel::ECS::Instance().World().cur_registry()->has<nickel::Name>(ent)) {
                     const nickel::Child* children = nullptr;
                     auto& childName =
-                        gWorld->cur_registry()->get<nickel::Name>(ent);
-                    if (gWorld->cur_registry()->has<Child>(ent)) {
-                        children = &gWorld->cur_registry()->get<Child>(ent);
+                        nickel::ECS::Instance().World().cur_registry()->get<nickel::Name>(ent);
+                    if (nickel::ECS::Instance().World().cur_registry()->has<Child>(ent)) {
+                        children = &nickel::ECS::Instance().World().cur_registry()->get<Child>(ent);
                     }
                     showHierarchyEntities(ent, selected, childName, children,
                                           dragDropInfo);
@@ -119,7 +119,7 @@ void EntityListWindow::showHierarchyEntities(const gecs::entity& entity,
 }
 
 void EntityListWindow::update() {
-    auto reg = gWorld->cur_registry();
+    auto reg = nickel::ECS::Instance().World().cur_registry();
     auto cmds = reg->commands();
     if (ImGui::Button("add")) {
         auto ent = cmds.create();
@@ -142,7 +142,7 @@ void EntityListWindow::update() {
     }
 
     auto flatEntities =
-        gWorld->cur_registry()->query<Name, gecs::without<Parent, Child>>();
+        nickel::ECS::Instance().World().cur_registry()->query<Name, gecs::without<Parent, Child>>();
     for (auto&& [ent, name] : flatEntities) {
         if (beginShowOneEntity(true, selected_, ent, name, dragDropInfo_)) {
             endShowOneEntity(ent, dragDropInfo_);
@@ -166,11 +166,11 @@ void EntityListWindow::update() {
 
     // change hierarchy
     if (dragDropInfo_.IsChangingHierarchy()) {
-        HierarchyTool tool(targetEnt);
+        HierarchyTool tool(*reg, targetEnt);
         tool.MoveEntityAsChild(dragEnt);
     } else if (dragDropInfo_.CanBeSibling() &&
                ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-        HierarchyTool tool(dragDropInfo_.oldNearestEnt);
+        HierarchyTool tool(*reg, dragDropInfo_.oldNearestEnt);
         tool.MoveAsSibling(dragDropInfo_.oldDragEnt);
 
         dragDropInfo_.nearestEnt = gecs::null_entity;

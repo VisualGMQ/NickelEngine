@@ -1,9 +1,9 @@
 #include "misc/prefab.hpp"
-#include "core/log_tag.hpp"
+#include "common/log_tag.hpp"
 #include "mirrow/drefl/any.hpp"
 #include "mirrow/drefl/drefl.hpp"
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
-#include "misc/hierarchy.hpp"
+#include "common/hierarchy.hpp"
 
 namespace nickel {
 
@@ -42,7 +42,7 @@ toml::array SaveAsPrefab(gecs::entity entity, gecs::registry reg) {
 
     std::unordered_map<gecs::entity, int> entityIndexMap;
 
-    HierarchyTool tool{entity};
+    HierarchyTool tool{reg, entity};
     tool.PreorderVisit([&](gecs::entity ent, gecs::registry reg) {
         auto newTbl = saveAsPrefabNoHierarchy(ent, reg);
         if (!newTbl.empty()) {
@@ -127,7 +127,7 @@ gecs::entity CreateFromPrefab(const toml::array& arr, gecs::registry reg) {
             childNode && childNode->is_array()) {
             Assert(childNode->is_array(), "child is not array");
             auto& childArr = *childNode->as_array();
-            HierarchyTool tool{entities[i]};
+            HierarchyTool tool{reg, entities[i]};
             for (int j = 0; j < childArr.size(); j++) {
                 auto childEnt = entities[childArr[j].as_integer()->get()];
                 tool.MoveEntityAsChild(childEnt);

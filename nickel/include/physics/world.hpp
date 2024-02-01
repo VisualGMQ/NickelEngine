@@ -1,14 +1,13 @@
 #pragma once
 
-#include "pch.hpp"
-#include "core/assert.hpp"
+#include "common/assert.hpp"
 #include "physics/manifold_solver.hpp"
 #include "physics/physic_solver.hpp"
 #include "physics/circle_shape.hpp"
 #include "physics/capsule_shape.hpp"
 #include "physics/polygon_shape.hpp"
 #include "physics/obb_shape.hpp"
-#include "renderer/renderer2d.hpp"
+#include "common/ecs.hpp"
 
 
 namespace nickel {
@@ -19,7 +18,7 @@ class World final {
 public:
     using ForceGenerator = std::function<void(Body&)>;
 
-    void Step(Real interval, gecs::querier<gecs::mut<Body>, CollideShape>, gecs::resource<gecs::mut<Renderer2D>> renderer);
+    void Step(Real interval, gecs::querier<gecs::mut<Body>, CollideShape>);
     std::vector<ForceGenerator> forceGenerators;
 
     Real MaxSpeed() const { return physicSolver_.MaxSpeed(); }
@@ -29,15 +28,9 @@ private:
     PhysicSolver physicSolver_;
     ManifoldSolver manifoldSolver_;
 
-    void collide(Real interval, gecs::querier<gecs::mut<Body>, CollideShape> bodies, Renderer2D&);
+    void collide(Real interval, gecs::querier<gecs::mut<Body>, CollideShape> bodies);
     void dealContact(const Manifold&, Body& b1, Body& b2, bool = true);
 };
-
-void PhysicsInit(gecs::commands cmds);
-
-void PhysicsUpdate(gecs::resource<gecs::mut<World>> world,
-                   gecs::querier<gecs::mut<Body>, CollideShape> querier,
-                   gecs::resource<gecs::mut<Renderer2D>> renderer);
 
 template <typename T>
 T shape_cast(const Shape& s) {

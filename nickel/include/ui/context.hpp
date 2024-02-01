@@ -1,7 +1,6 @@
 #pragma once
 
-#include "pch.hpp"
-#include "renderer/camera.hpp"
+#include "graphics/camera.hpp"
 #include "ui/event.hpp"
 
 namespace nickel::ui {
@@ -11,9 +10,8 @@ public:
     Camera camera;
     EventRecorder eventRecorder;
 
-    Context()
-        : camera{Camera::CreateOrthoByWindow(
-              gWorld->cur_registry()->res<Window>().get())} {}
+    Context(const cgmath::Vec2& size)
+        : camera{Camera::CreateOrthoByWindowRegion(size)} {}
 };
 
 }  // namespace nickel::ui

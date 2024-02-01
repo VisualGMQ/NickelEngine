@@ -6,8 +6,7 @@ namespace nickel {
 namespace physics {
 
 void World::collide(Real interval,
-                    gecs::querier<gecs::mut<Body>, CollideShape> bodies,
-                    Renderer2D& renderer) {
+                    gecs::querier<gecs::mut<Body>, CollideShape> bodies) {
     std::vector<std::vector<std::unique_ptr<Contact>>> contacts;
 
     for (auto it1 = bodies.begin(); it1 != bodies.end(); it1++) {
@@ -37,12 +36,6 @@ void World::collide(Real interval,
             auto b2 = contact->GetBody2();
             Vec2 mtv;
             dealContact(manifold, *b1, *b2);
-
-            renderer.DrawCircle(manifold.points[0], 5, {1, 0, 1, 1}, 10);
-            renderer.DrawLine(
-                manifold.points[0],
-                manifold.points[0] + manifold.normal * manifold.depth,
-                {0, 1, 1, 1});
         }
     }
 }
@@ -85,33 +78,14 @@ void World::dealContact(const Manifold& manifold, Body& b1, Body& b2,
 }
 
 void World::Step(Real interval,
-                 gecs::querier<gecs::mut<Body>, CollideShape> querier,
-                 gecs::resource<gecs::mut<Renderer2D>> renderer) {
+                 gecs::querier<gecs::mut<Body>, CollideShape> querier) {
     for (auto&& [_, body, shape] : querier) {
         physicSolver_.Step(interval, body);
     }
-    collide(interval, querier, renderer.get());
+    collide(interval, querier);
     for (auto&& [_, body, shape] : querier) {
         physicSolver_.Step(interval, body);
     }
-}
-
-void PhysicsInit(gecs::commands cmds) {
-    cmds.emplace_resource<World>();
-}
-
-void PhysicsUpdate(gecs::resource<gecs::mut<World>> world,
-                   gecs::querier<gecs::mut<Body>, CollideShape> querier,
-                   gecs::resource<gecs::mut<Renderer2D>> renderer) {
-    for (auto&& [_, body, shape] : querier) {
-        for (auto& forceGen : world->forceGenerators) {
-            if (body.type == Body::Type::Dynamic) {
-                forceGen(body);
-            }
-        }
-    }
-
-    world->Step(0.3, querier, renderer);
 }
 
 }  // namespace physics

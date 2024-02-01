@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/utf8string.hpp"
-#include "renderer/font.hpp"
+#include "common/utf8string.hpp"
+#include "graphics/font.hpp"
 
 namespace nickel::ui {
 

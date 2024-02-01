@@ -2,7 +2,7 @@
 #include "context.hpp"
 
 void InspectorWindow::update() {
-    auto& reg = *gWorld->cur_registry();
+    auto& reg = *nickel::ECS::Instance().World().cur_registry();
     auto entity = reg.res<EditorContext>()->entityListWindow.GetSelected();
     auto cmds = reg.commands();
 

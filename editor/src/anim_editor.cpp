@@ -46,7 +46,7 @@ void TrackMenu::update() {
 void PropertyTreePopupWindow::update() {
     auto& types = mirrow::drefl::all_typeinfo();
 
-    auto reg = gWorld->cur_registry();
+    auto reg = nickel::ECS::Instance().World().cur_registry();
 
     if (!reg->alive(entity_)) {
         return;
@@ -74,7 +74,7 @@ void PropertyTreePopupWindow::showProperty(
             auto [create, _] =
                 nickel::AnimTrackLoadMethods::Instance().Find(type);
             auto handle = owner_->sequence->player.Anim();
-            auto mgr = gWorld->res_mut<nickel::AssetManager>();
+            auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AnimationManager>();
             if (mgr->Has(handle)) {
                 auto& anim = mgr->Get(handle);
                 propertyLink.erase(propertyLink.begin());
@@ -178,7 +178,7 @@ void AnimationEditor::update() {
 
     ImGui::PopStyleVar();
 
-    auto reg = gWorld->cur_registry();
+    auto reg = nickel::ECS::Instance().World().cur_registry();
     if (reg->alive(sequence->entity) && sequence->player.IsPlaying()) {
         sequence->player.Sync(sequence->entity, *reg);
     }
@@ -192,7 +192,7 @@ void AnimationEditor::renderTrackNameAndTool(const ImVec2& canvasPos,
                                              const ImVec2& canvasSize,
                                              ImDrawList* drawList) {
     ImGui::SetCursorScreenPos(canvasPos);
-    if (gWorld->cur_registry()->alive(sequence->entity)) {
+    if (nickel::ECS::Instance().World().cur_registry()->alive(sequence->entity)) {
         if (ImGui::Button("Play", ImVec2(w1_ / 3.0, timelineBarHeight_))) {
             sequence->player.Play();
         }
@@ -268,7 +268,7 @@ void AnimationEditor::renderTimelineTopBar(const ImVec2& canvasPos,
         }
         ImGui::EndTooltip();
         sequence->player.SetTick(currentFrame);
-        auto reg = gWorld->cur_registry();
+        auto reg = nickel::ECS::Instance().World().cur_registry();
         if (reg->alive(sequence->entity)) {
             sequence->player.Sync(sequence->entity, *reg);
         }
@@ -389,7 +389,7 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
         ImVec2(canvasPos.x, canvasPos.y),
         ImVec2(canvasPos.x, canvasPos.y + canvasSize.y), 0xFFFFFFFF);
 
-    auto reg = gWorld->cur_registry();
+    auto reg = nickel::ECS::Instance().World().cur_registry();
     if (trackIdx_ && keyframeIdx_ &&
         trackIdx_.value() < sequence->GetItemCount() &&
         keyframeIdx_.value() < sequence->Get(trackIdx_.value())->Size()) {

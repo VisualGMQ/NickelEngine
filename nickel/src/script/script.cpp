@@ -1,5 +1,11 @@
 #include "script/script.hpp"
-#include "core/util.hpp"
+#include "common/util.hpp"
+
+#include "lua.h"
+#include "luacode.h"
+#include "lualib.h"
+
+#include "LuaBridge/LuaBridge.h"
 
 namespace nickel {
 

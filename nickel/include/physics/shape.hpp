@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config/config.hpp"
-#include "core/assert.hpp"
+#include "common/assert.hpp"
 #include "geom/geom2d.hpp"
 
 namespace nickel {

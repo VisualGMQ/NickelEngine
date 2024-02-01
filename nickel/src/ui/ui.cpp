@@ -1,12 +1,13 @@
 #include "ui/ui.hpp"
-#include "core/profile.hpp"
+#include "common/profile.hpp"
+#include "video/window.hpp"
 
 namespace nickel::ui {
 
-void InitSystem(gecs::commands cmds) {
+void InitSystem(gecs::commands cmds, gecs::resource<Window> window) {
     PROFILE_BEGIN();
 
-    cmds.emplace_resource<Context>();
+    cmds.emplace_resource<Context>(window->Size());
 }
 
 void doUpdateGlobalPosition(const Style& parentStyle, gecs::entity entity,
