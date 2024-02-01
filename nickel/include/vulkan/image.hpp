@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/cgmath.hpp"
-#include "pch.hpp"
+#include "common/cgmath.hpp"
+#include "vulkan/pch.hpp"
 
 
 namespace nickel::vulkan {

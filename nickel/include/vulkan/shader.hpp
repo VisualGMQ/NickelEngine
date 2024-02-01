@@ -1,7 +1,8 @@
 #pragma once
 
-#include "core/manager.hpp"
-#include "pch.hpp"
+#include "common/manager.hpp"
+#include "vulkan/pch.hpp"
+#include "stdpch.hpp"
 
 namespace nickel::vulkan {
 

@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "core/util.hpp"
+#include "common/util.hpp"
 
 TEST_CASE("csv iterator") {
     std::string csv = "12,32,44,99,10,5,\n8";

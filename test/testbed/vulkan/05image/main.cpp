@@ -1,6 +1,7 @@
 #include "nickel.hpp"
 #include "vulkan/device.hpp"
 #include "vulkan/util.hpp"
+#include "stb_image.h"
 
 struct Context {
     nickel::vulkan::Pipeline* pipeline{};

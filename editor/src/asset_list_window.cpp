@@ -26,7 +26,7 @@ void ShowAsset<nickel::Sound>(nickel::SoundHandle handle,
 template <>
 void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
                                   const nickel::Tilesheet& tilesheet) {
-    auto& mgr = gWorld->res<nickel::AssetManager>().get();
+    auto& mgr = nickel::ECS::Instance().World().res<nickel::AssetManager>().get();
     if (ImGui::BeginTooltip()) {
         if (mgr.Has(tilesheet.Handle())) {
             auto& texture = mgr.Get(tilesheet.Handle());

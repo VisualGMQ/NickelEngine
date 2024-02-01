@@ -46,7 +46,7 @@ public:
 protected:
     void update() override {
         auto& datas =
-            gWorld->res<nickel::AssetManager>()->SwitchManager<T>().AllDatas();
+            nickel::ECS::Instance().World().res<nickel::AssetManager>()->SwitchManager<T>().AllDatas();
         if (datas.empty()) {
             ImGui::Text("no asset");
             return;

@@ -23,8 +23,8 @@ GameWindow::GameWindow() {
              "create game content framebuffer failed! ", err);
     }
 
-    auto& camera = gWorld->res_mut<nickel::Camera>().get();
-    auto& uiCamera = gWorld->res_mut<nickel::ui::Context>()->camera;
+    auto& camera = nickel::ECS::Instance().World().res_mut<nickel::Camera>().get();
+    auto& uiCamera = nickel::ECS::Instance().World().res_mut<nickel::ui::Context>()->camera;
 
     camera.SetRenderTarget(*fbo_);
     uiCamera.SetRenderTarget(*fbo_);
@@ -48,10 +48,10 @@ void drawCoordLine(const nickel::cgmath::Vec2& winSize,
 }
 
 void GameWindow::update() {
-    auto& ctx = gWorld->res_mut<EditorContext>().get();
-    auto& renderer = gWorld->res_mut<nickel::Renderer2D>().get();
-    auto& camera = gWorld->res_mut<nickel::Camera>().get();
-    auto& uiCamera = gWorld->res_mut<nickel::ui::Context>()->camera;
+    auto& ctx = nickel::ECS::Instance().World().res_mut<EditorContext>().get();
+    auto& renderer = nickel::ECS::Instance().World().res_mut<nickel::Renderer2D>().get();
+    auto& camera = nickel::ECS::Instance().World().res_mut<nickel::Camera>().get();
+    auto& uiCamera = nickel::ECS::Instance().World().res_mut<nickel::ui::Context>()->camera;
 
     auto gameWindownSize = ctx.projectInfo.windowData.size;
 
@@ -115,7 +115,7 @@ void GameWindow::update() {
             srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
         }
     }
-    srtGizmos_.Update(*gWorld->cur_registry());
+    srtGizmos_.Update(*nickel::ECS::Instance().World().cur_registry());
 
     camera.SetView(view);
     uiCamera.SetView(view);

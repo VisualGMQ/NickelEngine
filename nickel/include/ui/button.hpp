@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/cgmath.hpp"
-#include "core/utf8string.hpp"
+#include "common/cgmath.hpp"
+#include "common/utf8string.hpp"
 #include "gecs/entity/resource.hpp"
-#include "renderer/texture.hpp"
+#include "graphics/texture.hpp"
 #include "ui/style.hpp"
 
 

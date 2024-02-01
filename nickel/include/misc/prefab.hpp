@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pch.hpp"
-#include "core/singlton.hpp"
+#include "common/singlton.hpp"
+#include "common/ecs.hpp"
 
 namespace nickel {
 

@@ -1,6 +1,6 @@
 #include "vulkan/device.hpp"
-#include "core/log_tag.hpp"
-#include "core/util.hpp"
+#include "common/log_tag.hpp"
+#include "common/util.hpp"
 #include "vulkan/util.hpp"
 
 namespace nickel::vulkan {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "input/device.hpp"
-#include "misc/hierarchy.hpp"
+#include "video/device.hpp"
+#include "common/hierarchy.hpp"
 #include "ui/button.hpp"
 #include "ui/context.hpp"
 #include "ui/event.hpp"
@@ -11,7 +11,7 @@
 
 namespace nickel::ui {
 
-void InitSystem(gecs::commands cmds);
+void InitSystem(gecs::commands cmds, gecs::resource<Window> window);
 void RenderStyle(gecs::querier<Style>, gecs::resource<gecs::mut<Renderer2D>>,
                  gecs::resource<gecs::mut<Context>>);
 

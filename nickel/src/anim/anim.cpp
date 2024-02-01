@@ -1,13 +1,9 @@
 #include "anim/anim.hpp"
-#include "mirrow/drefl/value_kind.hpp"
-#include "misc/asset_manager.hpp"
+#include "common/ecs.hpp"
 
 namespace nickel {
 
 Animation Animation::Null = Animation{};
-
-AnimationPlayer::AnimationPlayer()
-    : mgr_{&gWorld->res_mut<nickel::AssetManager>()->AnimationMgr()} {}
 
 Animation::Animation(const toml::table& tbl) {
     if (auto node = tbl.get("tracks"); node && node->is_array_of_tables()) {

@@ -48,7 +48,7 @@ bool DisplayComponent(std::string_view name, T& component) {
     auto type = mirrow::drefl::typeinfo<T>();
     if (auto f = ComponentShowMethods::Instance().Find(type); f) {
         auto ref = mirrow::drefl::any_make_ref(component);
-        f(type, name, ref, *gWorld->cur_registry());
+        f(type, name, ref, *nickel::ECS::Instance().World().cur_registry());
         return true;
     }
 

@@ -46,12 +46,12 @@ const nickel::TextCache& EditorContext::FindOrGenFontPrewview(
         return it->second;
     }
 
-    auto assetMgr = gWorld->res<nickel::AssetManager>();
-    if (!assetMgr->Has(handle)) {
+    auto fontMgr = nickel::ECS::Instance().World().res<nickel::FontManager>();
+    if (!fontMgr->Has(handle)) {
         return nickel::TextCache::Null;
     }
 
-    auto& font = assetMgr->Get(handle);
+    auto& font = fontMgr->Get(handle);
     nickel::TextCache cache;
     constexpr std::string_view text = "the brown fox jumps over the lazy dog";
     constexpr int ptSize = 40;
@@ -67,11 +67,11 @@ nickel::SoundPlayer& EditorContext::FindOrGenSoundPlayer(
         return it->second;
     }
 
-    auto assetMgr = gWorld->res<nickel::AssetManager>();
-    if (!assetMgr->Has(handle)) {
+    auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AudioManager>();
+    if (!mgr->Has(handle)) {
         return nickel::SoundPlayer::Null;
     }
 
-    return soundPlayers_.emplace(handle, nickel::SoundPlayer(handle))
+    return soundPlayers_.emplace(handle, nickel::SoundPlayer(handle, mgr.get()))
         .first->second;
 }

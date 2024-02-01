@@ -1,6 +1,6 @@
 #pragma once
 
-#include "misc/timer.hpp"
+#include "common/timer.hpp"
 
 namespace nickel {
 

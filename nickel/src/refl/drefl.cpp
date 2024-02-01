@@ -1,9 +1,15 @@
 #include "refl/drefl.hpp"
 #include "mirrow/drefl/cast_any.hpp"
 #include "mirrow/drefl/factory.hpp"
-#include "misc/transform.hpp"
-#include "nickel.hpp"
+#include "common/transform.hpp"
 #include "misc/prefab.hpp"
+#include "graphics/sprite.hpp"
+#include "anim/anim.hpp"
+#include "graphics/tilesheet.hpp"
+#include "graphics/tilesheet.hpp"
+#include "misc/name.hpp"
+#include "audio/audio.hpp"
+#include "ui/ui.hpp"
 
 namespace nickel {
 
@@ -194,10 +200,10 @@ void reflectMisc() {
 
 void serializeTextureHandle(toml::node& node, const mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize texture-handle to table");
-    auto assetMgr = gWorld->res<AssetManager>();
+    auto mgr = ECS::Instance().World().res<TextureManager>();
     auto handle =  mirrow::drefl::try_cast_const<TextureHandle>(elem);
-    if (assetMgr->Has(*handle)) {
-        auto& texture = assetMgr->Get(*handle);
+    if (mgr->Has(*handle)) {
+        auto& texture = mgr->Get(*handle);
         node.as_table()->emplace("path", texture.RelativePath().string());
     }
 }
@@ -206,16 +212,15 @@ void deserializeTextureHandle(const toml::node& node, mirrow::drefl::any& elem) 
     Assert(node.is_table(), "serialize texture-handle to table");
     auto& tbl = *node.as_table();
 
-    auto assetMgr = gWorld->res<AssetManager>();
     if (auto path = tbl.get("path"); path && path->is_string())  {
-        auto& textureMgr = gWorld->res_mut<AssetManager>()->TextureMgr();
         auto filename = path->as_string()->get();
         auto& handle = *mirrow::drefl::try_cast<TextureHandle>(elem);
 
-        if (textureMgr.Has(filename)) {
-            handle = textureMgr.GetHandle(filename);
+        auto mgr = ECS::Instance().World().res_mut<TextureManager>();
+        if (mgr->Has(filename)) {
+            handle = mgr->GetHandle(filename);
         } else {
-            handle = textureMgr.Load(filename, gogl::Sampler::CreateLinearRepeat());
+            handle = mgr->Load(filename, gogl::Sampler::CreateLinearRepeat());
         }
     }
 }
@@ -230,10 +235,10 @@ void registTextureHandleSerd() {
 
 void serializeSoundPlayer(toml::node& node, const mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize sound-handle to table");
-    auto assetMgr = gWorld->res<AssetManager>();
+    auto mgr = ECS::Instance().World().res<AudioManager>();
     auto& player = *mirrow::drefl::try_cast_const<SoundPlayer>(elem);
-    if (assetMgr->Has(player.Handle())) {
-        auto& sound = assetMgr->Get(player.Handle());
+    if (mgr->Has(player.Handle())) {
+        auto& sound = mgr->Get(player.Handle());
         toml::table tbl;
         tbl.emplace("path", sound.RelativePath().string());
         node.as_table()->emplace("SoundPlayer", tbl);
@@ -244,14 +249,13 @@ void deserializeSoundPlayer(const toml::node& node, mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize sound player to table");
     auto& tbl = *node.as_table();
 
-    auto assetMgr = gWorld->res<AssetManager>();
     if (auto path = tbl.get("path"); path && path->is_string())  {
-        auto& audioMgr = gWorld->res_mut<AssetManager>()->AudioMgr();
         auto filename = tbl.get("path")->as_string()->get();
         auto& player = *mirrow::drefl::try_cast<SoundPlayer>(elem);
 
-        if (audioMgr.Has(filename)) {
-            player.ChangeSound(audioMgr.GetHandle(filename));
+        auto mgr = ECS::Instance().World().res_mut<AudioManager>();
+        if (mgr->Has(filename)) {
+            player.ChangeSound(mgr->GetHandle(filename), mgr.get());
         }
     }
 }
@@ -266,10 +270,10 @@ void registSoundPlayerSerd() {
 
 void serializeAnimationPlayer(toml::node& node, const mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize animation-handle to table");
-    auto assetMgr = gWorld->res<AssetManager>();
     auto& player = *mirrow::drefl::try_cast_const<AnimationPlayer>(elem);
-    if (assetMgr->Has(player.Anim())) {
-        auto& anim = assetMgr->Get(player.Anim());
+    auto mgr = ECS::Instance().World().res<AnimationManager>();
+    if (mgr->Has(player.Anim())) {
+        auto& anim = mgr->Get(player.Anim());
         toml::table tbl;
         tbl.emplace("path", anim.RelativePath().string());
         node.as_table()->emplace("AnimationPlayer", tbl);
@@ -280,14 +284,13 @@ void deserializeAnimationPlayer(const toml::node& node, mirrow::drefl::any& elem
     Assert(node.is_table(), "serialize sound player to table");
     auto& tbl = *node.as_table();
 
-    auto assetMgr = gWorld->res<AssetManager>();
+    auto mgr = ECS::Instance().World().res<AnimationManager>();
     if (auto path = tbl.get("path"); path && path->is_string())  {
-        auto& animMgr = gWorld->res_mut<AssetManager>()->AnimationMgr();
         auto filename = tbl.get("path")->as_string()->get();
         auto& player = *mirrow::drefl::try_cast<AnimationPlayer>(elem);
 
-        if (animMgr.Has(filename)) {
-            player.ChangeAnim(animMgr.GetHandle(filename));
+        if (mgr->Has(filename)) {
+            player.ChangeAnim(mgr->GetHandle(filename));
         }
     }
 }

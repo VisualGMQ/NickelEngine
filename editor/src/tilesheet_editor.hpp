@@ -15,7 +15,7 @@ public:
     void ChangeTilesheet(nickel::Tilesheet& tilesheet) {
         tilesheet_ = &tilesheet;
         ChangeTexture(tilesheet.Handle());
-        Resize(gWorld->res<nickel::AssetManager>()
+        Resize(nickel::ECS::Instance().World().res<nickel::AssetManager>()
                    ->Get(tilesheet.Handle())
                    .Size());
     }
@@ -41,7 +41,7 @@ public:
 
     void ChangeTilesheet(nickel::TilesheetHandle handle) {
         handle_ = handle;
-        auto assetMgr = gWorld->res_mut<nickel::AssetManager>();
+        auto assetMgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>();
         auto& tilesheet = assetMgr->Get(handle);
         viewCanva_.ChangeTilesheet(tilesheet);
     }

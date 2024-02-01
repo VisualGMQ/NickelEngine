@@ -1,7 +1,8 @@
 #pragma once
 
-#include "core/manager.hpp"
-#include "pch.hpp"
+#include "common/manager.hpp"
+#include "vulkan/pch.hpp"
+#include "stdpch.hpp"
 #include "vertex_layout.hpp"
 #include "vulkan/buffer.hpp"
 #include "vulkan/command.hpp"
@@ -12,7 +13,7 @@
 #include "vulkan/shader.hpp"
 #include "vulkan/swapchain.hpp"
 #include "vulkan/sync.hpp"
-#include "window/window.hpp"
+#include "video/window.hpp"
 
 namespace nickel::vulkan {
 

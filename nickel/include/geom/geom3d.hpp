@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/cgmath.hpp"
+#include "common/cgmath.hpp"
 #include "geom/basic_geom.hpp"
 
 namespace nickel {

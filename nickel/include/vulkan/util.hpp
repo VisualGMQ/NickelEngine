@@ -1,6 +1,7 @@
 #pragma once
 
-#include "pch.hpp"
+#include "stdpch.hpp"
+#include "vulkan/pch.hpp"
 
 namespace nickel::vulkan {
 
@@ -28,53 +29,51 @@ namespace nickel::vulkan {
 
 inline std::string_view VkError2String(vk::Result err) {
     switch (err) {
-        RETURN_ENUM_NAME(vk::Result::eSuccess);
-        RETURN_ENUM_NAME(vk::Result::eNotReady);
-        RETURN_ENUM_NAME(vk::Result::eTimeout);
-        RETURN_ENUM_NAME(vk::Result::eEventSet);
-        RETURN_ENUM_NAME(vk::Result::eEventReset);
-        RETURN_ENUM_NAME(vk::Result::eIncomplete);
-        RETURN_ENUM_NAME(vk::Result::eErrorOutOfHostMemory);
-        RETURN_ENUM_NAME(vk::Result::eErrorOutOfDeviceMemory);
-        RETURN_ENUM_NAME(vk::Result::eErrorInitializationFailed);
-        RETURN_ENUM_NAME(vk::Result::eErrorDeviceLost);
-        RETURN_ENUM_NAME(vk::Result::eErrorMemoryMapFailed);
-        RETURN_ENUM_NAME(vk::Result::eErrorLayerNotPresent);
-        RETURN_ENUM_NAME(vk::Result::eErrorExtensionNotPresent);
-        RETURN_ENUM_NAME(vk::Result::eErrorFeatureNotPresent);
-        RETURN_ENUM_NAME(vk::Result::eErrorIncompatibleDriver);
-        RETURN_ENUM_NAME(vk::Result::eErrorTooManyObjects);
-        RETURN_ENUM_NAME(vk::Result::eErrorFormatNotSupported);
-        RETURN_ENUM_NAME(vk::Result::eErrorFragmentedPool);
-        RETURN_ENUM_NAME(vk::Result::eErrorUnknown);
-        RETURN_ENUM_NAME(vk::Result::eErrorOutOfPoolMemory);
-        RETURN_ENUM_NAME(vk::Result::eErrorInvalidExternalHandle);
-        RETURN_ENUM_NAME(vk::Result::eErrorFragmentation);
-        RETURN_ENUM_NAME(vk::Result::eErrorInvalidOpaqueCaptureAddress);
-        RETURN_ENUM_NAME(vk::Result::ePipelineCompileRequired);
-        RETURN_ENUM_NAME(vk::Result::eErrorSurfaceLostKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorNativeWindowInUseKHR);
-        RETURN_ENUM_NAME(vk::Result::eSuboptimalKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorOutOfDateKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorIncompatibleDisplayKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorValidationFailedEXT);
-        RETURN_ENUM_NAME(vk::Result::eErrorInvalidShaderNV);
-        RETURN_ENUM_NAME(vk::Result::eErrorImageUsageNotSupportedKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorVideoPictureLayoutNotSupportedKHR);
-        RETURN_ENUM_NAME(
-            vk::Result::eErrorVideoProfileOperationNotSupportedKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorVideoProfileFormatNotSupportedKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorVideoProfileCodecNotSupportedKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorVideoStdVersionNotSupportedKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorIncompatibleShaderBinaryEXT);
-        RETURN_ENUM_NAME(
-            vk::Result::eErrorInvalidDrmFormatModifierPlaneLayoutEXT);
-        RETURN_ENUM_NAME(vk::Result::eErrorNotPermittedEXT);
-        RETURN_ENUM_NAME(vk::Result::eThreadIdleKHR);
-        RETURN_ENUM_NAME(vk::Result::eThreadDoneKHR);
-        RETURN_ENUM_NAME(vk::Result::eOperationDeferredKHR);
-        RETURN_ENUM_NAME(vk::Result::eOperationNotDeferredKHR);
-        RETURN_ENUM_NAME(vk::Result::eErrorCompressionExhaustedEXT);
+        case vk::Result::eSuccess: return "Success";
+        case vk::Result::eNotReady: return "NotReady";
+        case vk::Result::eTimeout: return "Timeout";
+        case vk::Result::eEventSet: return "EventSet";
+        case vk::Result::eEventReset: return "EventReset";
+        case vk::Result::eIncomplete: return "Incomplete";
+        case vk::Result::eErrorOutOfHostMemory: return "ErrorOutOfHostMemory";
+        case vk::Result::eErrorOutOfDeviceMemory: return "ErrorOutOfDeviceMemory";
+        case vk::Result::eErrorInitializationFailed: return "ErrorInitializationFailed";
+        case vk::Result::eErrorDeviceLost: return "ErrorDeviceLost";
+        case vk::Result::eErrorMemoryMapFailed: return "ErrorMemoryMapFailed";
+        case vk::Result::eErrorLayerNotPresent: return "ErrorLayerNotPresent";
+        case vk::Result::eErrorExtensionNotPresent: return "ErrorExtensionNotPresent";
+        case vk::Result::eErrorFeatureNotPresent: return "ErrorFeatureNotPresent";
+        case vk::Result::eErrorIncompatibleDriver: return "ErrorIncompatibleDriver";
+        case vk::Result::eErrorTooManyObjects: return "ErrorTooManyObjects";
+        case vk::Result::eErrorFormatNotSupported: return "ErrorFormatNotSupported";
+        case vk::Result::eErrorFragmentedPool: return "ErrorFragmentedPool";
+        case vk::Result::eErrorUnknown: return "ErrorUnknown";
+        case vk::Result::eErrorOutOfPoolMemory: return "ErrorOutOfPoolMemory";
+        case vk::Result::eErrorInvalidExternalHandle: return "ErrorInvalidExternalHandle";
+        case vk::Result::eErrorFragmentation: return "ErrorFragmentation";
+        case vk::Result::eErrorInvalidOpaqueCaptureAddress: return "ErrorInvalidOpaqueCaptureAddress";
+        case vk::Result::ePipelineCompileRequired: return "PipelineCompileRequired";
+        case vk::Result::eErrorSurfaceLostKHR: return "ErrorSurfaceLostKHR";
+        case vk::Result::eErrorNativeWindowInUseKHR: return "ErrorNativeWindowInUseKHR";
+        case vk::Result::eSuboptimalKHR: return "SuboptimalKHR";
+        case vk::Result::eErrorOutOfDateKHR: return "ErrorOutOfDateKHR";
+        case vk::Result::eErrorIncompatibleDisplayKHR: return "ErrorIncompatibleDisplayKHR";
+        case vk::Result::eErrorValidationFailedEXT: return "ErrorValidationFailedEXT";
+        case vk::Result::eErrorInvalidShaderNV: return "ErrorInvalidShaderNV";
+        case vk::Result::eErrorImageUsageNotSupportedKHR: return "ErrorImageUsageNotSupportedKHR";
+        case vk::Result::eErrorVideoPictureLayoutNotSupportedKHR: return "ErrorVideoPictureLayoutNotSupportedKHR";
+        case  vk::Result::eErrorVideoProfileOperationNotSupportedKHR: return "ErrorVideoProfileOperationNotSupportedKHR";
+        case vk::Result::eErrorVideoProfileFormatNotSupportedKHR: return "ErrorVideoProfileFormatNotSupportedKHR";
+        case vk::Result::eErrorVideoProfileCodecNotSupportedKHR: return "ErrorVideoProfileCodecNotSupportedKHR";
+        case vk::Result::eErrorVideoStdVersionNotSupportedKHR: return "ErrorVideoStdVersionNotSupportedKHR";
+        case vk::Result::eErrorIncompatibleShaderBinaryEXT: return "ErrorIncompatibleShaderBinaryEXT";
+        case  vk::Result::eErrorInvalidDrmFormatModifierPlaneLayoutEXT: return "ErrorInvalidDrmFormatModifierPlaneLayoutEXT";
+        case vk::Result::eErrorNotPermittedEXT: return "ErrorNotPermittedEXT";
+        case vk::Result::eThreadIdleKHR: return "ThreadIdleKHR";
+        case vk::Result::eThreadDoneKHR: return "ThreadDoneKHR";
+        case vk::Result::eOperationDeferredKHR: return "OperationDeferredKHR";
+        case vk::Result::eOperationNotDeferredKHR: return "OperationNotDeferredKHR";
+        case vk::Result::eErrorCompressionExhaustedEXT: return "ErrorCompressionExhaustedEXT";
     }
 }
 

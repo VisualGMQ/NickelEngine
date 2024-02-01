@@ -1,6 +1,6 @@
 macro(AddVulkanTest test_name)
     add_executable(${test_name} main.cpp)
-    target_link_libraries(${test_name} PRIVATE nickel)
+    target_link_libraries(${test_name} PRIVATE Nickel.Runtime Nickel.Vulkan)
     CopyDLL(${test_name})
 endmacro(AddVulkanTest)
 

@@ -9,9 +9,9 @@
 #include "physics/shape.hpp"
 #include "physics/world.hpp"
 
-#include "input/device.hpp"
+#include "video/device.hpp"
 #include "misc/project.hpp"
-#include "renderer/renderer2d.hpp"
+#include "graphics/renderer2d.hpp"
 
 #include <type_traits>
 #include <unordered_map>

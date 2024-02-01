@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/cgmath.hpp"
+#include "common/cgmath.hpp"
 #include "geom/basic_geom.hpp"
-#include "misc/transform.hpp"
+#include "common/transform.hpp"
 #include <optional>
 
 namespace nickel {

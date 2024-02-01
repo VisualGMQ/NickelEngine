@@ -1,6 +1,7 @@
 #pragma once
 
-#include "pch.hpp"
+#include "stdpch.hpp"
+#include "common/log_tag.hpp"
 
 namespace nickel::vulkan {
 

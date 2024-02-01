@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pch.hpp"
-#include "core/cgmath.hpp"
+#include "common/cgmath.hpp"
+#include "common/ecs.hpp"
 
 namespace nickel::ui {
 

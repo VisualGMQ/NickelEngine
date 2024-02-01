@@ -4,7 +4,7 @@
 #include <limits>
 
 #define CGMATH_NUMERIC_TYPE double
-#include "core/cgmath.hpp"
+#include "common/cgmath.hpp"
 
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"

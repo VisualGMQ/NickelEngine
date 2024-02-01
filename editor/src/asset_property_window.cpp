@@ -39,8 +39,8 @@ void TexturePropertyPopupWindow::showSampler(nickel::gogl::Sampler& sampler,
 }
 
 void TexturePropertyPopupWindow::update() {
-    auto& reg = *gWorld->cur_registry();
-    auto& textureMgr = gWorld->res_mut<nickel::AssetManager>()->TextureMgr();
+    auto& reg = *nickel::ECS::Instance().World().cur_registry();
+    auto& textureMgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>()->TextureMgr();
 
     if (!textureMgr.Has(handle_)) {
         ImGui::Text("invalid texture handle");
@@ -84,7 +84,7 @@ void TexturePropertyPopupWindow::update() {
 }
 
 void SoundPropertyPopupWindow::update() {
-    auto mgr = gWorld->res_mut<nickel::AssetManager>();
+    auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>();
 
     if (!mgr->Has(handle_)) {
         ImGui::Text("invalid audio handle");
@@ -94,7 +94,7 @@ void SoundPropertyPopupWindow::update() {
         return;
     }
 
-    auto ctx = gWorld->res_mut<EditorContext>();
+    auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
     auto& elem = ctx->FindOrGenSoundPlayer(handle_);
 
     // char buf[512] = {0};
@@ -137,7 +137,7 @@ void SoundPropertyPopupWindow::update() {
 }
 
 void FontPropertyPopupWindow::update() {
-    auto& mgr = gWorld->res_mut<nickel::AssetManager>()->FontMgr();
+    auto& mgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>()->FontMgr();
 
     if (!mgr.Has(handle_)) {
         ImGui::Text("invalid audio handle");
@@ -155,7 +155,7 @@ void FontPropertyPopupWindow::update() {
     ImGui::InputText("filename", buf, sizeof(buf),
                      ImGuiInputTextFlags_ReadOnly);
 
-    auto ctx = gWorld->res_mut<EditorContext>();
+    auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
     auto& preview = ctx->FindOrGenFontPrewview(handle_);
     for (auto& ch : preview.Texts()) {
         ImGui::Image(ch.texture->Raw(),
