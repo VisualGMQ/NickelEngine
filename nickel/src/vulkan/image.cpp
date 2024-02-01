@@ -68,8 +68,7 @@ void Image::allocateMem(vk::Format format, const vk::Extent3D &extent) {
 
     vk::MemoryAllocateInfo allocInfo;
     allocInfo
-        .setAllocationSize(GetFormatSize(format) * extent.width *
-                           extent.height * extent.depth)
+        .setAllocationSize(requirements.size)
         .setMemoryTypeIndex(index.value());
     VK_CALL(mem_, device_->GetDevice().allocateMemory(allocInfo));
 }

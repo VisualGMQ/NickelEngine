@@ -721,6 +721,31 @@ using Mat22 = Mat<CGMATH_NUMERIC_TYPE, 2, 2>;
 using Mat33 = Mat<CGMATH_NUMERIC_TYPE, 3, 3>;
 using Mat44 = Mat<CGMATH_NUMERIC_TYPE, 4, 4>;
 
+inline Mat44 CreatePersp(float left, float right, float top, float bottom,
+                         float near, float far) {
+    // clang-format off
+    return Mat44::FromRow({
+        2 * near / (right - left), 0, (right + left) / (right - left), 0,
+        0, 2 * near / (bottom - top), (bottom + top) / (bottom - top), 0,
+        0, 0, (far + near) / (far - near), 2 * far * near / (far - near),
+        0, 0, -1, 0,
+    });
+    // clang-format on
+}
+
+inline Mat44 CreatePersp(float fov, float aspect, float near, float far) {
+    float focal = 1.0 / std::tan(fov * 0.5);
+
+    // clang-format off
+    return Mat44::FromRow({
+        focal / aspect, 0, 0, 0,
+        0, -focal, 0, 0,
+        0, 0, near / (far - near), near * far / (far - near),
+        0, 0, -1, 0,
+    });
+    // clang-format on
+}
+
 inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
                          float near, float far) {
     // clang-format off
@@ -777,7 +802,7 @@ inline Mat44 CreateYRotation(float radians) {
     return Mat44::FromRow({
          cos, 0.0f,  sin, 0.0f,
         0.0f, 1.0f,  0.0, 0.0f,
-        -sin, -sin,  cos, 0.0f,
+        -sin, 0.0f,  cos, 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f,
     });
     // clang-format on
