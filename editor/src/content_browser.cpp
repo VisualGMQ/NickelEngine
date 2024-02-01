@@ -116,6 +116,7 @@ void ContentBrowserWindow::showAssetOperationPopupMenu(
             FS_CALL(std::filesystem::remove_all(path, err), err);
             ImGui::CloseCurrentPopup();
         }
+        ImGui::EndPopup();
     }
 }
 
