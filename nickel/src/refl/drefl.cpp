@@ -192,6 +192,9 @@ void reflectTilesheet() {
 
 void reflectScript() {
     mirrow::drefl::registrar<LuaScript>::instance().regist("LuaScript");
+    mirrow::drefl::registrar<Script>::instance()
+        .regist("Script")
+        .property("handle", &Script::handle);
 
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<LuaScript>();
 }

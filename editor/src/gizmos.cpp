@@ -112,7 +112,7 @@ void SRTGizmos::Update(gecs::registry reg) {
                         mousePos_ - transform.translation);
                     drawRotateLine(transform.translation, axis, RotateAxisLen,
                                    rotAxisColor, renderer2D.get());
-                    auto radians = nickel::cgmath::GetRadianIn180Signed(
+                    auto radians = nickel::cgmath::GetRadianInPISigned(
                         baseAxis_.value(), axis);
                     auto deg = nickel::cgmath::Rad2Deg(std::clamp<float>(
                         radians, -nickel::cgmath::PI, nickel::cgmath::PI));

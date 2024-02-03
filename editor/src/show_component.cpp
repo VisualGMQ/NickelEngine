@@ -207,6 +207,8 @@ AssetListWindow<AssetType>* GetAssetListWindow(EditorContext& ctx) {
         return &ctx.animAssetListWindow;
     } else if constexpr (std::is_same_v<AssetType, nickel::Tilesheet>) {
         return &ctx.tilesheetAssetListWindow;
+    } else if constexpr (std::is_same_v<AssetType, nickel::LuaScript>) {
+        return &ctx.scriptAssetListWindow;
     }
     return nullptr;
 }
@@ -410,7 +412,10 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
     auto& mgr = *reg.res_mut<nickel::AssetManager>();
 
     auto create = [&](const std::filesystem::path& path) {
-        auto ctx = nickel::ECS::Instance().World().cur_registry()->res_mut<EditorContext>();
+        auto ctx = nickel::ECS::Instance()
+                       .World()
+                       .cur_registry()
+                       ->res_mut<EditorContext>();
         auto handle = mgr.AnimationMgr().Create(
             std::make_unique<nickel::Animation>(), ctx->GetRelativePath(path));
         ctx->animEditor.sequence->player.ChangeAnim(handle);
@@ -419,7 +424,9 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
 
     auto changeHandle = [&player](nickel::AnimationHandle handle) {
         player.ChangeAnim(handle);
-        nickel::ECS::Instance().World().cur_registry()
+        nickel::ECS::Instance()
+            .World()
+            .cur_registry()
             ->res_mut<EditorContext>()
             ->animEditor.sequence->player.ChangeAnim(handle);
     };
@@ -478,7 +485,9 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
     auto& mgr = *reg.res_mut<nickel::AssetManager>();
     auto ctx = reg.res_mut<EditorContext>();
 
-    auto changeHandle = [&](nickel::SoundHandle h) { player.ChangeSound(h, reg.res_mut<nickel::AssetManager>()->AudioMgr()); };
+    auto changeHandle = [&](nickel::SoundHandle h) {
+        player.ChangeSound(h, reg.res_mut<nickel::AssetManager>()->AudioMgr());
+    };
 
     auto handle = player.Handle();
 
@@ -499,14 +508,15 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
 }
 
 void DisplayScript(const mirrow::drefl::type* parent, std::string_view name,
-                  mirrow::drefl::any& value, gecs::registry reg) {
-    nickel::ScriptHandle& handle = *mirrow::drefl::try_cast<nickel::ScriptHandle>(value);
+                   mirrow::drefl::any& value, gecs::registry reg) {
+    nickel::Script& script = *mirrow::drefl::try_cast<nickel::Script>(value);
     auto& mgr = *reg.res_mut<nickel::AssetManager>();
     auto ctx = reg.res_mut<EditorContext>();
 
-    auto changeHandle = [&](nickel::ScriptHandle h) { handle = h; };
+    auto changeHandle = [&](nickel::ScriptHandle h) { script.handle = h; };
 
-    if (BeginDisplayHandle<nickel::ScriptHandle>(ctx.get(), name, mgr, handle, changeHandle)) {
+    if (BeginDisplayHandle<nickel::ScriptHandle>(ctx.get(), name, mgr,
+                                                 script.handle, changeHandle)) {
         EndDisplayHandle();
     }
 }

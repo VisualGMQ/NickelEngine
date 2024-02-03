@@ -68,6 +68,11 @@ public:
     auto GetFileType() const { return FileType::Script; }
 };
 
+class Script final {
+public:
+    ScriptHandle handle;
+};
+
 void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>>);
 void ScriptShutdownSystem(gecs::querier<LuaScript>);
 

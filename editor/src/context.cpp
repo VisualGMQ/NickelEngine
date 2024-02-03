@@ -6,6 +6,7 @@ EditorContext::EditorContext()
       tilesheetAssetListWindow("tilesheets"),
       soundAssetListWindow("sounds"),
       animAssetListWindow("animations"),
+      scriptAssetListWindow("scripts"),
       texturePropWindow("texture property"),
       soundPropWindow("sound property"),
       fontPropWindow("font property"),
@@ -30,6 +31,7 @@ void EditorContext::Update() {
     tilesheetAssetListWindow.Update();
     soundAssetListWindow.Update();
     animAssetListWindow.Update();
+    scriptAssetListWindow.Update();
     fontPropWindow.Update();
     texturePropWindow.Update();
     soundPropWindow.Update();

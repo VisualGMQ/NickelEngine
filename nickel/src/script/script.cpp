@@ -1,17 +1,26 @@
 #include "script/script.hpp"
-#include "common/util.hpp"
+#include "script/luabind.hpp"
+#include "nickel.hpp"
 
 #include "lua.h"
 #include "luacode.h"
 #include "lualib.h"
 
+#include "LuaBridge/Array.h"
 #include "LuaBridge/LuaBridge.h"
+#include "LuaBridge/Vector.h"
 
 namespace nickel {
 
-LuaScript LuaScript::Null;
+#define LUAU_CALL(expr)                                   \
+    do {                                                  \
+        auto result = (expr);                             \
+        if (!result) {                                    \
+            LOGE(log_tag::Script, result.errorMessage()); \
+        }                                                 \
+    } while (0)
 
-void bindEngine2Lua(lua_State* L);
+LuaScript LuaScript::Null;
 
 template <>
 std::unique_ptr<LuaScript> LoadAssetFromMeta(const toml::table& path) {
@@ -25,7 +34,7 @@ LuaScript::LuaScript(const std::filesystem::path& libname) : Asset(libname) {
     state_ = luaL_newstate();
     luaL_openlibs(state_);
     load(libname);
-    bindEngine2Lua(state_);
+    BindLua(state_);
 }
 
 LuaScript::~LuaScript() {
@@ -40,7 +49,7 @@ void LuaScript::OnInit(gecs::entity) const {
     }
 
     if (auto ref = luabridge::getGlobal(state_, "on_init"); ref) {
-        ref();
+        LUAU_CALL(ref());
     }
 }
 
@@ -49,7 +58,7 @@ void LuaScript::OnUpdate(gecs::entity) const {
         return;
     }
     if (auto ref = luabridge::getGlobal(state_, "on_update"); ref) {
-        ref();
+        LUAU_CALL(ref());
     }
 }
 
@@ -58,7 +67,7 @@ void LuaScript::OnDestroy(gecs::entity) const {
         return;
     }
     if (auto ref = luabridge::getGlobal(state_, "on_quit"); ref) {
-        ref();
+        LUAU_CALL(ref());
     }
 }
 
@@ -95,14 +104,6 @@ ScriptHandle ScriptManager::Load(const std::filesystem::path& path) {
         return handle;
     }
     return ScriptHandle::Null();
-}
-
-void bindEngine2Lua(lua_State* L) {
-    luabridge::getGlobalNamespace(L)
-        .beginNamespace("nickel")
-        .addFunction("hello_nickel",
-                     []() { std::cout << "hello nickel" << std::endl; })
-        .endNamespace();
 }
 
 void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>> scripts) {

@@ -85,7 +85,7 @@ void RegistComponentShowMethods() {
                     DisplayAnimationPlayer);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::SoundPlayer>(),
                     DisplaySoundPlayer);
-    instance.Regist(::mirrow::drefl::typeinfo<nickel::LuaScript>(),
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::Script>(),
                     DisplayScript);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), DisplayLabel);
 }
@@ -124,7 +124,7 @@ void RegistSpawnMethods() {
     instance.Regist<nickel::ui::Label>(GeneralSpawnMethod<nickel::ui::Label>);
     instance.Regist<nickel::SoundPlayer>(
         GeneralSpawnMethod<nickel::SoundPlayer>);
-    instance.Regist<nickel::LuaScript>(GeneralSpawnMethod<nickel::LuaScript>);
+    instance.Regist<nickel::Script>(GeneralSpawnMethod<nickel::Script>);
 }
 
 void dropFileEventHandle(const nickel::DropFileEvent& event,

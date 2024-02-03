@@ -103,21 +103,6 @@ set_target_properties(Nickel.Animation
 target_compile_features(Nickel.Animation PUBLIC cxx_std_17)
 target_link_libraries(Nickel.Animation PUBLIC Nickel.Common)
 
-# Nickel.Script
-aux_source_directory(src/script nickel_script_src)
-file(GLOB_RECURSE nickel_script_headers ./include/script/*.hpp)
-
-add_library(Nickel.Script STATIC)
-target_sources(Nickel.Script PRIVATE ${nickel_script_src})
-target_sources(Nickel.Script PUBLIC ${nickel_script_headers})
-target_include_directories(Nickel.Script PUBLIC ./include)
-set_target_properties(Nickel.Script
-    PROPERTIES
-    PUBLIC_HEADER "${nickel_scripg_headers}")
-target_compile_features(Nickel.Script PUBLIC cxx_std_17)
-target_link_libraries(Nickel.Script PUBLIC Nickel.Common)
-target_link_libraries(Nickel.Script PRIVATE Luau.Compiler Luau.VM LuaBridge)
-
 # Nickel.UI
 aux_source_directory(src/ui nickel_ui_src)
 file(GLOB_RECURSE nickel_ui_headers ./include/ui/*.hpp)
@@ -131,6 +116,21 @@ set_target_properties(Nickel.UI
     PUBLIC_HEADER "${nickel_ui_headers}")
 target_compile_features(Nickel.UI PUBLIC cxx_std_17)
 target_link_libraries(Nickel.UI PUBLIC Nickel.Common Nickel.Graphics)
+
+# Nickel.Script
+aux_source_directory(src/script nickel_script_src)
+file(GLOB_RECURSE nickel_script_headers ./include/script/*.hpp)
+
+add_library(Nickel.Script STATIC)
+target_sources(Nickel.Script PRIVATE ${nickel_script_src})
+target_sources(Nickel.Script PUBLIC ${nickel_script_headers})
+target_include_directories(Nickel.Script PUBLIC ./include)
+set_target_properties(Nickel.Script
+    PROPERTIES
+    PUBLIC_HEADER "${nickel_scripg_headers}")
+target_compile_features(Nickel.Script PUBLIC cxx_std_17)
+target_link_libraries(Nickel.Script PUBLIC Nickel.Common Nickel.Graphics Nickel.Geometry Nickel.UI Nickel.Animation)
+target_link_libraries(Nickel.Script PRIVATE Luau.Compiler Luau.VM LuaBridge)
 
 # Nickel.Refl
 aux_source_directory(src/refl nickel_refl_src)

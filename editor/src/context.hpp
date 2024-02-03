@@ -29,6 +29,7 @@ public:
     TilesheetAssetListWindow tilesheetAssetListWindow;
     AnimationAssetListWindow animAssetListWindow;
     SoundAssetListWindow soundAssetListWindow;
+    ScriptAssetListWindow scriptAssetListWindow;
     TexturePropertyPopupWindow texturePropWindow;
     SoundPropertyPopupWindow soundPropWindow;
     FontPropertyPopupWindow fontPropWindow;

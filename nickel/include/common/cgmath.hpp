@@ -80,13 +80,13 @@ template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator-(const Vec<T, N>&, const Vec<T, N>&);
 template <typename T, typename U, CGMATH_LEN_TYPE N,
           typename = MustArithmetic<U>>
-Vec<T, N> operator*(T, const Vec<T, N>&);
+Vec<T, N> operator*(U, const Vec<T, N>&);
 template <typename T, typename U, CGMATH_LEN_TYPE N,
           typename = MustArithmetic<U>>
-Vec<T, N> operator*(const Vec<T, N>&, T);
+Vec<T, N> operator*(const Vec<T, N>&, U);
 template <typename T, typename U, CGMATH_LEN_TYPE N,
           typename = MustArithmetic<U>>
-Vec<T, N> operator/(const Vec<T, N>&, T);
+Vec<T, N> operator/(const Vec<T, N>&, U);
 template <typename T, CGMATH_LEN_TYPE N>
 Vec<T, N> operator*(const Vec<T, N>&, const Vec<T, N>&);
 template <typename T, CGMATH_LEN_TYPE N>
@@ -128,8 +128,7 @@ Vec<T, N> operator-(const Vec<T, N>& v1, const Vec<T, N>& v2) {
     return result;
 }
 
-template <typename T, typename U, CGMATH_LEN_TYPE N,
-          typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename>
 Vec<T, N> operator*(U value, const Vec<T, N>& v) {
     Vec<T, N> result;
     for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
@@ -138,14 +137,12 @@ Vec<T, N> operator*(U value, const Vec<T, N>& v) {
     return result;
 }
 
-template <typename T, typename U, CGMATH_LEN_TYPE N,
-          typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename>
 Vec<T, N> operator*(const Vec<T, N>& v, U value) {
     return value * v;
 }
 
-template <typename T, typename U, CGMATH_LEN_TYPE N,
-          typename = MustArithmetic<U>>
+template <typename T, typename U, CGMATH_LEN_TYPE N, typename>
 Vec<T, N> operator/(const Vec<T, N>& v, U value) {
     Vec<T, N> result;
     for (CGMATH_LEN_TYPE i = 0; i < N; i++) {
@@ -942,7 +939,7 @@ T Wrap(T value, T min, T max) {
  * @note v1 & v2 are both normalized
  */
 template <typename T>
-T GetRadianIn360(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
+T GetRadianIn2PI(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
     auto cos = Dot(v1, v2);
     auto sin = Cross(v1, v2);
 
@@ -954,7 +951,7 @@ T GetRadianIn360(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
  * @note v1 & v2 are both normalized
  */
 template <typename T>
-T GetRadianIn180Signed(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
+T GetRadianInPISigned(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
     auto cos = Dot(v1, v2);
     auto sin = Cross(v1, v2);
     return std::acos(cos) * Sign(sin);

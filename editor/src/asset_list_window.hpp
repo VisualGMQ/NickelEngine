@@ -89,3 +89,4 @@ using FontAssetListWindow = AssetListWindow<nickel::Font>;
 using TilesheetAssetListWindow = AssetListWindow<nickel::Tilesheet>;
 using SoundAssetListWindow = AssetListWindow<nickel::Sound>;
 using AnimationAssetListWindow = AssetListWindow<nickel::Animation>;
+using ScriptAssetListWindow = AssetListWindow<nickel::LuaScript>;
