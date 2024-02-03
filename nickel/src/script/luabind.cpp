@@ -17,6 +17,10 @@ struct Stack<nickel::Flip>
                       nickel::Flip::Horizontal, nickel::Flip::Both> {};
 
 template <>
+struct Stack<gecs::entity>
+    : luabridge::Enum<gecs::entity, gecs::null_entity> {};
+
+template <>
 struct Stack<nickel::FileType>
     : luabridge::Enum<nickel::FileType, nickel::FileType::Animation,
                       nickel::FileType::Audio, nickel::FileType::Font,
@@ -356,7 +360,6 @@ void bindHandle(luabridge::Namespace& scope, const std::string& name) {
                 return name + "(Null)";
             }
         })
-
     .endClass();
 }
 
@@ -738,6 +741,36 @@ void bindInput(luabridge::Namespace& scope) {
     .endClass();
 }
 
+template <typename T>
+bool hasComponent(lua_State* L) {
+    gecs::entity ent;
+    auto reg = ECS::Instance().World().cur_registry();
+    if (reg) {
+        return  reg->has<T>(ent);
+    }
+    return false;
+}
+
+template <typename T>
+T* getComponent(lua_State* L) {
+    gecs::entity ent;
+    auto reg = ECS::Instance().World().cur_registry();
+    if (reg) {
+        return  &reg->get_mut<T>(ent);
+    }
+    return nullptr;
+}
+
+void bindECS(luabridge::Namespace& scope) {
+    scope = 
+    scope.beginNamespace("ecs")
+        .addFunction("HasSprite", hasComponent<Sprite>)
+        .addFunction("GetSprite", getComponent<Sprite>)
+        .addFunction("HasTransform", hasComponent<Transform>)
+        .addFunction("GetTransform", getComponent<Transform>)
+    .endNamespace();
+}
+
 // clang-format on
 
 void BindLua(lua_State* L) {
@@ -748,6 +781,7 @@ void BindLua(lua_State* L) {
     bindTransform(scope);
     bindGraphics(scope);
     bindInput(scope);
+    bindECS(scope);
     scope.endNamespace();
 }
 
