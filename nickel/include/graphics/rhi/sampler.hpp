@@ -1,0 +1,36 @@
+#pragma once
+
+#include "graphics/rhi/common.hpp"
+#include <optional>
+
+namespace nickel::rhi {
+
+class SamplerImpl;
+class DeviceImpl;
+
+class Sampler {
+public:
+    struct Descriptor final {
+        SamplerAddressMode u = SamplerAddressMode::ClampToEdge;
+        SamplerAddressMode v = SamplerAddressMode::ClampToEdge;
+        SamplerAddressMode w = SamplerAddressMode::ClampToEdge;
+        std::optional<CompareOp> compare;
+        uint32_t lodMinClamp = 0;
+        uint32_t lodMaxClamp = 32;
+        std::optional<float> maxAnisotropy = 1.0;
+        Filter min = Filter::Nearest;
+        Filter mag = Filter::Nearest;
+        Filter mipmapFilter = Filter::Nearest;
+    };
+
+    explicit Sampler(APIPreference api, DeviceImpl& dev, const Descriptor& desc);
+    void Destroy();
+
+    auto Impl() const { return impl_; }
+    auto Impl() { return impl_; }
+
+private:
+    SamplerImpl* impl_{};
+};
+
+}

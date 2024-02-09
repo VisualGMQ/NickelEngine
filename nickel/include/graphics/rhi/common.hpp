@@ -1,0 +1,371 @@
+#pragma once
+
+#include <cstdint>
+
+namespace nickel::rhi {
+
+enum class APIPreference {
+    Undefine,
+    GL,
+    Vulkan,
+};
+
+enum class BufferUsage {
+    MapRead = 0x0001,
+    MapWrite = 0x0002,
+    CopySrc = 0x0004,
+    CopyDst = 0x0008,
+    Index = 0x0010,
+    Vertex = 0x0020,
+    Uniform = 0x0040,
+    Storage = 0x0080,
+    Indirect = 0x0100,
+    QueryResolve = 0x0200,
+};
+
+enum class SamplerAddressMode {
+    ClampToEdge,
+    Repeat,
+    MirrorRepeat,
+};
+
+enum class Filter {
+    Nearest,
+    Linear,
+};
+
+enum class CompareOp {
+    Never,
+    Less,
+    Equal,
+    LessEqual,
+    Greater,
+    NotEqual,
+    GreaterEqual,
+    Always,
+};
+
+enum class TextureType {
+    Dim1,
+    Dim2,
+    Dim3,
+};
+
+enum class TextureViewType {
+    Dim1,
+    Dim2,
+    Dim3,
+    Dim2Array,
+    Cube,
+    CubeArray,
+};
+
+enum class TextureUsage {
+    CopySrc = 0x01,
+    CopyDst = 0x02,
+    TextureBinding = 0x04,
+    StorageBinding = 0x08,
+    RenderAttachment = 0x10,
+};
+
+enum class SampleCount {
+    Count1,
+    Count2,
+    Count4,
+    Count8,
+    Count16,
+    Count32,
+    Count64,
+};
+
+enum class Format {
+    Undefined,
+    Presentation,
+
+    // 8_bit formats
+    R8_UNORM,
+    R8_SNORM,
+    R8_UINT,
+    R8_SINT,
+
+    // 16_bit formats
+    R16_UINT,
+    R16_SINT,
+    R16_FLOAT,
+    RG8_UNORM,
+    RG8_SNORM,
+    RG8_UINT,
+    RG8_SINT,
+
+    // 32_bit formats
+    R32_UINT,
+    R32_SINT,
+    R32_FLOAT,
+    RG16_UINT,
+    RG16_SINT,
+    RG16_FLOAT,
+    RGBA8_UNORM,
+    RGBA8_UNORM_SRGB,
+    RGBA8_SNORM,
+    RGBA8_UINT,
+    RGBA8_SINT,
+    BGRA8_UNORM,
+    BGRA8_UNORM_SRGB,
+    // Packed 32_bit formats
+    RGB9E5_UFLOAT,
+    RGB10A2_UINT,
+    RGB10A2_UNORM,
+    RG11B10_UFLOAT,
+
+    // 64_bit formats
+    RG32_UINT,
+    RG32_SINT,
+    RG32_FLOAT,
+    RGBA16_UINT,
+    RGBA16_SINT,
+    RGBA16_FLOAT,
+
+    // 128_bit formats
+    RGBA32_UINT,
+    RGBA32_SINT,
+    RGBA32_FLOAT,
+
+    // Depth/stencil formats
+    STENCIL8,
+    DEPTH16_UNORM,
+    DEPTH24_PLUS,
+    DEPTH24_PLUS_STENCIL8,
+    DEPTH32_FLOAT,
+
+    // "depth32float_stencil8" feature
+    DEPTH32_FLOAT_STENCIL8,
+
+    // BC compressed formats usable if "texture_compression_bc" is both
+    // supported by the device/user agent and enabled in requestDevice.
+    BC1_RGBA_UNORM,
+    BC1_RGBA_UNORM_SRGB,
+    BC2_RGBA_UNORM,
+    BC2_RGBA_UNORM_SRGB,
+    BC3_RGBA_UNORM,
+    BC3_RGBA_UNORM_SRGB,
+    BC4_R_UNORM,
+    BC4_R_SNORM,
+    BC5_RG_UNORM,
+    BC5_RG_SNORM,
+    BC6H_RGB_UFLOAT,
+    BC6H_RGB_FLOAT,
+    BC7_RGBA_UNORM,
+    BC7_RGBA_UNORM_SRGB,
+
+    // ETC2 compressed formats usable if "texture_compression_etc2" is both
+    // supported by the device/user agent and enabled in requestDevice.
+    ETC2_RGB8_UNORM,
+    ETC2_RGB8_UNORM_SRGB,
+    ETC2_RGB8A1_UNORM,
+    ETC2_RGB8A1_UNORM_SRGB,
+    ETC2_RGBA8_UNORM,
+    ETC2_RGBA8_UNORM_SRGB,
+    EAC_R11_UNORM,
+    EAC_R11_SNORM,
+    EAC_RG11_UNORM,
+    EAC_RG11_SNORM,
+
+    // ASTC compressed formats usable if "texture_compression_astc" is both
+    // supported by the device/user agent and enabled in requestDevice.
+    ASTC_4X4_UNORM,
+    ASTC_4X4_UNORM_SRGB,
+    ASTC_5X4_UNORM,
+    ASTC_5X4_UNORM_SRGB,
+    ASTC_5X5_UNORM,
+    ASTC_5X5_UNORM_SRGB,
+    ASTC_6X5_UNORM,
+    ASTC_6X5_UNORM_SRGB,
+    ASTC_6X6_UNORM,
+    ASTC_6X6_UNORM_SRGB,
+    ASTC_8X5_UNORM,
+    ASTC_8X5_UNORM_SRGB,
+    ASTC_8X6_UNORM,
+    ASTC_8X6_UNORM_SRGB,
+    ASTC_8X8_UNORM,
+    ASTC_8X8_UNORM_SRGB,
+    ASTC_10X5_UNORM,
+    ASTC_10X5_UNORM_SRGB,
+    ASTC_10X6_UNORM,
+    ASTC_10X6_UNORM_SRGB,
+    ASTC_10X8_UNORM,
+    ASTC_10X8_UNORM_SRGB,
+    ASTC_10X10_UNORM,
+    ASTC_10X10_UNORM_SRGB,
+    ASTC_12X10_UNORM,
+    ASTC_12X10_UNORM_SRGB,
+    ASTC_12X12_UNORM,
+    ASTC_12X12_UNORM_SRGB,
+};
+
+struct Extent2D {
+    uint32_t width, height;
+
+    bool operator==(const Extent2D& o) const {
+        return o.width == width && o.height == height;
+    }
+
+    bool operator!=(const Extent2D& o) const { return !(*this == o); }
+};
+
+struct Extent3D {
+    uint32_t width, height, depthOrArrayLayers;
+
+    bool operator==(const Extent3D& e) const {
+        return width == e.width && height == e.height &&
+               depthOrArrayLayers == e.depthOrArrayLayers;
+    }
+
+    bool operator!=(const Extent3D& e) const {
+        return !(*this == e);
+    }
+};
+
+enum class TextureAspect {
+    All,
+    DepthOnly,
+    StencilOnly,
+};
+
+enum class ShaderStage {
+    Vertex,
+    Compute,
+    Fragment,
+};
+
+enum class DepthCompare {
+    DecrementClamp,
+    DecrementWrap,
+    Invert,
+    IncrementClamp,
+    IncrementWrap,
+    Keep,
+    Replace,
+    Zero,
+};
+
+enum class StencilOp {
+    Keep,
+    Zero,
+    Replace,
+    IncrementAndClamp,
+    DecrementAndClamp,
+    Invert,
+    IncrementAndWrap,
+    DecrementAndWrap,
+};
+
+enum class CullMode {
+    Back,
+    Front,
+    None,
+};
+
+enum class FrontFace {
+    CCW,
+    CW,
+};
+
+enum class StripIndexFormat {
+    Uint16,
+    Uint32,
+};
+
+enum class Topology {
+    LineList,
+    LineStrip,
+    PointList,
+    TriangleList,
+    TriangleStrip,
+    TriangleFan,
+};
+
+enum class FlagsConstant {
+    Red = 0x01,
+    Green = 0x02,
+    Blue = 0x04,
+    Alpha = 0x08,
+    All = Red | Green | Blue | Alpha,
+};
+
+enum class BlendFactor {
+    eZero,
+    eOne,
+    eSrcColor,
+    eOneMinusSrcColor,
+    eDstColor,
+    eOneMinusDstColor,
+    eSrcAlpha,
+    eOneMinusSrcAlpha,
+    eDstAlpha,
+    eOneMinusDstAlpha,
+    eConstantColor,
+    eOneMinusConstantColor,
+    eConstantAlpha,
+    eOneMinusConstantAlpha,
+    eSrcAlphaSaturate,
+};
+
+enum class BlendOp {
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max,
+};
+
+struct Offset final {
+    int32_t x, y;
+
+    bool operator==(const Offset& lhs) const {
+        return x == lhs.x && y == lhs.y;
+    }
+
+    bool operator!=(const Offset& lhs) const { return !(*this == lhs); }
+};
+
+struct Rect2D final {
+    Offset offset;
+    Extent2D extent;
+
+    bool operator==(const Rect2D& o) const {
+        return o.offset == offset && o.extent == extent;
+    }
+
+    bool operator!=(const Rect2D& o) const { return !(*this == o); }
+};
+
+enum class PolygonMode {
+    Line,
+    Fill,
+    Point,
+};
+
+enum class AttachmentLoadOp {
+    Clear,
+    Load,
+};
+
+enum class AttachmentStoreOp {
+    Store,
+    Discard,
+};
+
+enum class IndexType {
+    Uint16,
+    Uint32,
+};
+
+enum class ColorWriteMask {
+    Red = 0x01,
+    Green = 0x02,
+    Blue = 0x04,
+    Alpha = 0x08,
+    All = 0,
+};
+
+}  // namespace nickel::rhi

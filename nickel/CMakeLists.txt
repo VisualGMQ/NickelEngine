@@ -17,6 +17,9 @@ target_compile_definitions(Nickel.Common PUBLIC "$<$<CONFIG:Debug>:NICKEL_ENABLE
 
 # Nickel.Graphics
 aux_source_directory(src/graphics nickel_graphics_src)
+aux_source_directory(src/graphics/rhi nickel_graphics_src)
+aux_source_directory(src/graphics/rhi/vk nickel_graphics_src)
+aux_source_directory(src/graphics/rhi/impl nickel_graphics_src)
 file(GLOB_RECURSE nickel_graphics_headers ./include/graphics/*.hpp)
 
 add_library(Nickel.Graphics STATIC)
@@ -30,6 +33,10 @@ target_compile_features(Nickel.Graphics PUBLIC cxx_std_17)
 # move glad to PRIVATE
 target_link_libraries(Nickel.Graphics PUBLIC Nickel.Common glad)
 target_link_libraries(Nickel.Graphics PRIVATE stb_image rapidxml freetype lunasvg)
+if (TARGET Vulkan)
+    target_link_libraries(Nickel.Graphics PRIVATE Vulkan SDL2)
+    target_compile_definitions(Nickel.Graphics PUBLIC NICKEL_HAS_VULKAN)
+endif()
 
 # Nickel.Geometry
 aux_source_directory(src/geom nickel_geom_src)
