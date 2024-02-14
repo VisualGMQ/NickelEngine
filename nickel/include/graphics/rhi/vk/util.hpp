@@ -147,15 +147,15 @@ void RemoveUnexistsElems(std::vector<T>& requires,
     }
 }
 
-inline vk::ImageLayout GetLayoutByFormat(Format fmt,
+inline vk::ImageLayout GetLayoutByFormat(TextureFormat fmt,
                                            bool stencilReadOnly = false,
                                            bool depthReadOnly = false) {
-    if (fmt == Format::Presentation) {
+    if (fmt == TextureFormat::Presentation) {
         return vk::ImageLayout::ePresentSrcKHR;
     }
 
-    if (fmt == Format::DEPTH24_PLUS_STENCIL8 ||
-        fmt == Format::DEPTH32_FLOAT_STENCIL8) {
+    if (fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+        fmt == TextureFormat::DEPTH32_FLOAT_STENCIL8) {
         if (depthReadOnly) {
             return vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal;
         }
@@ -165,11 +165,12 @@ inline vk::ImageLayout GetLayoutByFormat(Format fmt,
         if (depthReadOnly && stencilReadOnly) {
             return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
         }
-    } else if (fmt == Format::DEPTH32_FLOAT || fmt == Format::DEPTH16_UNORM ||
-               fmt == Format::DEPTH24_PLUS) {
+        return vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    } else if (fmt == TextureFormat::DEPTH32_FLOAT || fmt == TextureFormat::DEPTH16_UNORM ||
+               fmt == TextureFormat::DEPTH24_PLUS) {
         return depthReadOnly ? vk::ImageLayout::eDepthReadOnlyOptimal
                              : vk::ImageLayout::eDepthAttachmentOptimal;
-    } else if (fmt == Format::STENCIL8) {
+    } else if (fmt == TextureFormat::STENCIL8) {
         return stencilReadOnly ? vk::ImageLayout::eStencilReadOnlyOptimal
                                : vk::ImageLayout::eStencilAttachmentOptimal;
     }

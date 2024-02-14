@@ -21,6 +21,7 @@ public:
         const BindGroupLayout::Descriptor& desc) = 0;
     virtual ShaderModule CreateShaderModule(
         const ShaderModule::Descriptor&) = 0;
+    virtual Buffer CreateBuffer(const Buffer::Descriptor&) = 0;
     virtual Queue GetQueue() = 0;
 
     virtual void SwapContext() = 0;

@@ -23,7 +23,7 @@ TextureView::TextureView(APIPreference api, DeviceImpl& dev,
 
 TextureView::TextureView(TextureViewImpl* impl) : impl_{impl} {}
 
-enum Format TextureView::Format() const {
+enum TextureFormat TextureView::Format() const {
     return impl_->Format();
 }
 

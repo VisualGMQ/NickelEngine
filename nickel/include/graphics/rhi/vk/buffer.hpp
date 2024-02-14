@@ -17,7 +17,7 @@ public:
     enum Buffer::MapState MapState() const override;
     uint64_t Size() const override;
     void Unmap() override;
-    void MapAsync(Buffer::Mode, uint64_t offset, uint64_t size) override;
+    void MapAsync(Flags<Buffer::Mode>, uint64_t offset, uint64_t size) override;
     void* GetMappedRange() override;
     void* GetMappedRange(uint64_t offset) override;
     void* GetMappedRange(uint64_t offset, uint64_t size) override;
@@ -27,13 +27,13 @@ public:
 
 private:
     uint64_t size_{};
-    enum Buffer::MapState mapState_;
+    enum Buffer::MapState mapState_ = Buffer::MapState::Unmapped;
     vk::Device device_;
     void* map_{};
 
     vk::MemoryPropertyFlags getMemoryProperty(const Buffer::Descriptor&) const;
     void createBuffer(uint64_t size, vk::BufferUsageFlags usage,
-                      const std::vector<uint32_t>& indices);
+                      const std::vector<uint32_t>& indices, bool hostVisible);
     void allocateMem(vk::PhysicalDevice phyDevice,
                      vk::MemoryPropertyFlags flags);
 };

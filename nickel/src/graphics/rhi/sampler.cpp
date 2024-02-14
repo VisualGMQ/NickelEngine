@@ -21,8 +21,10 @@ Sampler::Sampler(APIPreference api, rhi::DeviceImpl& dev,
 }
 
 void Sampler::Destroy() {
-    delete impl_;
-    impl_ = nullptr;
+    if (impl_) {
+        delete impl_;
+        impl_ = nullptr;
+    }
 }
 
 }  // namespace nickel::rhi

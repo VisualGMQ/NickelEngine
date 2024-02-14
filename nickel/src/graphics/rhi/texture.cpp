@@ -38,7 +38,7 @@ Extent3D Texture::Extent() const {
     return impl_->Extent();
 }
 
-enum Format Texture::Format() const {
+enum TextureFormat Texture::Format() const {
     return impl_->Format();
 }
 

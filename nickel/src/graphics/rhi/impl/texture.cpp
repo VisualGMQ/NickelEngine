@@ -8,7 +8,7 @@ Extent3D TextureImpl::Extent() const {
     return desc_.size;
 }
 
-enum Format TextureImpl::Format() const {
+enum TextureFormat TextureImpl::Format() const {
     return desc_.format;
 }
 

@@ -9,16 +9,16 @@ class TextureImpl;
 
 class TextureViewImpl {
 public:
-    TextureViewImpl(Format, TextureImpl&);
+    TextureViewImpl(TextureFormat, TextureImpl&);
 
     virtual ~TextureViewImpl() = default;
 
-    enum Format Format() const;
+    enum TextureFormat Format() const;
     class Texture Texture() const;
     const Texture::Descriptor& TextureDescriptor() const;
 
 private:
-    enum Format format_;
+    enum TextureFormat format_;
     TextureImpl& texture_;
 };
 

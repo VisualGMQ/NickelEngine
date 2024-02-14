@@ -27,7 +27,7 @@ void RenderPipelineImpl::createRenderPipeline(
             vk::VertexInputAttributeDescription attrDesc;
             attrDesc.setBinding(0)
                 .setLocation(attr.shaderLocation)
-                .setFormat(Format2Vk(attr.format))
+                .setFormat(VertexFormat2Vk(attr.format))
                 .setOffset(attr.offset);
             attrDescs.emplace_back(attrDesc);
         }
@@ -68,8 +68,12 @@ void RenderPipelineImpl::createRenderPipeline(
 
     // viewport
     vk::PipelineViewportStateCreateInfo viewportState;
-    vk::Viewport viewport{desc.viewport.viewport.x, desc.viewport.viewport.y,
-                          desc.viewport.viewport.w, desc.viewport.viewport.h};
+    vk::Viewport viewport{desc.viewport.viewport.x,
+                          desc.viewport.viewport.y,
+                          desc.viewport.viewport.w,
+                          desc.viewport.viewport.h,
+                          0,
+                          1};
     vk::Rect2D scissor{
         {    desc.viewport.scissor.offset.x,desc.viewport.scissor.offset.y             },
         {desc.viewport.scissor.extent.width,
@@ -155,6 +159,7 @@ void RenderPipelineImpl::createRenderPipeline(
 
         vk::PipelineDepthStencilStateCreateInfo depthStencilState;
         depthStencilState.setDepthBoundsTestEnable(false)
+            .setDepthTestEnable(true)
             .setStencilTestEnable(true)
             .setDepthWriteEnable(desc.depthStencil->depthWriteEnabled)
             .setDepthCompareOp(CompareOp2Vk(desc.depthStencil->depthCompare))
@@ -165,7 +170,6 @@ void RenderPipelineImpl::createRenderPipeline(
     }
 
     // create render pipeline
-
     info.setPVertexInputState(&vertexInput)
         .setPInputAssemblyState(&inputAsm)
         .setStages(shaderStages)
@@ -188,8 +192,8 @@ void RenderPipelineImpl::createRenderPass(
     size_t attCount =
         desc.fragment.targets.size() + (desc.depthStencil.has_value() ? 1 : 0);
     attachments.reserve(attCount);
-    std::vector<vk::AttachmentReference> attRefs;
-    attRefs.reserve(attCount);
+    std::vector<vk::AttachmentReference> colorAttRefs;
+    colorAttRefs.reserve(desc.fragment.targets.size());
 
     for (int i = 0; i < desc.fragment.targets.size(); i++) {
         auto& target = desc.fragment.targets[i];
@@ -197,9 +201,9 @@ void RenderPipelineImpl::createRenderPass(
         vk::AttachmentDescription attDesc;
         attDesc.setInitialLayout(vk::ImageLayout::eUndefined)
             .setFinalLayout(GetLayoutByFormat(target.format))
-            .setFormat(target.format == Format::Presentation
+            .setFormat(target.format == TextureFormat::Presentation
                            ? dev.swapchain.imageInfo.format.format
-                           : Format2Vk(target.format))
+                           : TextureFormat2Vk(target.format))
             .setLoadOp(AttachmentLoadOp2Vk(AttachmentLoadOp::Clear))
             .setStoreOp(AttachmentStoreOp2Vk(AttachmentStoreOp::Store))
             .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
@@ -211,15 +215,16 @@ void RenderPipelineImpl::createRenderPass(
         vk::AttachmentReference ref;
         ref.setAttachment(i).setLayout(
             vk::ImageLayout::eColorAttachmentOptimal);
-        attRefs.emplace_back(ref);
+        colorAttRefs.emplace_back(ref);
     }
 
+    vk::AttachmentReference depthAttRef;
     if (desc.depthStencil) {
         vk::AttachmentDescription depthAttach;
 
         depthAttach.setInitialLayout(vk::ImageLayout::eUndefined)
             .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-            .setFormat(Format2Vk(desc.depthStencil->depthFormat))
+            .setFormat(TextureFormat2Vk(desc.depthStencil->depthFormat))
             .setLoadOp(AttachmentLoadOp2Vk(AttachmentLoadOp::Clear))
             .setStoreOp(AttachmentStoreOp2Vk(AttachmentStoreOp::Discard))
             .setStencilLoadOp(AttachmentLoadOp2Vk(AttachmentLoadOp::Clear))
@@ -228,23 +233,21 @@ void RenderPipelineImpl::createRenderPass(
 
         attachments.push_back(depthAttach);
 
-        vk::AttachmentReference ref;
         vk::ImageLayout layout =
             vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
         auto viewFmt = desc.depthStencil->depthFormat;
-        ref.setAttachment(desc.fragment.targets.size())
+        depthAttRef.setAttachment(desc.fragment.targets.size())
             .setLayout(GetLayoutByFormat(
                 viewFmt, desc.depthStencil->stencilReadMask == 0,
                 !desc.depthStencil->depthWriteEnabled));
-        attRefs.emplace_back(ref);
     }
 
     vk::SubpassDescription subpass;
-    subpass.setColorAttachments(attRefs).setPipelineBindPoint(
-        vk::PipelineBindPoint::eGraphics);
-    if (desc.depthStencil && !attRefs.empty()) {
-        subpass.setPDepthStencilAttachment(&attRefs.back());
+    subpass.setColorAttachments(colorAttRefs)
+        .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+    if (desc.depthStencil && !colorAttRefs.empty()) {
+        subpass.setPDepthStencilAttachment(&depthAttRef);
     }
 
     vk::SubpassDependency dep;

@@ -11,7 +11,7 @@ TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
                          const Texture::Descriptor& desc,
                          const std::vector<uint32_t>& queueIndices)
     : rhi::TextureImpl{desc}, dev_{dev} {
-    if (desc.format != Format::Presentation) {
+    if (desc.format != TextureFormat::Presentation) {
         createImage(desc, queueIndices);
         allocMem(adapter.phyDevice,
                 desc.viewFormat ? desc.viewFormat.value() : desc.format,
@@ -32,13 +32,14 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
                               const std::vector<uint32_t>& queueIndices) {
     vk::ImageCreateInfo info;
     info.setImageType(TextureType2Vk(desc.dimension))
-        .setFormat(Format2Vk(desc.format))
+        .setFormat(TextureFormat2Vk(desc.format))
         .setInitialLayout(vk::ImageLayout::eUndefined)
         .setMipLevels(desc.mipmapLevelCount)
         .setSamples(SampleCount2Vk(desc.sampleCount))
         .setExtent(
             {desc.size.width, desc.size.height, desc.size.depthOrArrayLayers})
-        .setArrayLayers(desc.size.depthOrArrayLayers);
+        .setArrayLayers(desc.size.depthOrArrayLayers)
+        .setUsage(TextureUsage2Vk(desc.usage, true));
 
     if (queueIndices.size() > 1) {
         info.setQueueFamilyIndices(queueIndices)
@@ -50,7 +51,7 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
     VK_CALL(image_, dev_.device.createImage(info));
 }
 
-void TextureImpl::allocMem(vk::PhysicalDevice phyDevice, enum Format,
+void TextureImpl::allocMem(vk::PhysicalDevice phyDevice, TextureFormat,
                            const Extent3D&) {
     auto requirements = dev_.device.getImageMemoryRequirements(image_);
     auto index = FindMemoryType(phyDevice, requirements,
@@ -81,7 +82,7 @@ TextureView TextureImpl::CreateView(const TextureView::Descriptor& desc) {
 }
 
 vk::Image TextureImpl::GetImage() const {
-    if (Descriptor().format == Format::Presentation) {
+    if (Descriptor().format == TextureFormat::Presentation) {
         return dev_.swapchain.Images()[dev_.curImageIndex];
     } else {
         return image_;

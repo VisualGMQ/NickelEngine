@@ -68,7 +68,7 @@ public:
                                    const std::set<uint32_t>& queueIndices);
     ResResult<Image> CreateImage(
         vk::ImageType type, vk::ImageViewType viewType,
-        const vk::Extent3D& extent, vk::Format format, vk::Format viewFormat,
+        const vk::Extent3D& extent, vk::TextureFormat format, vk::TextureFormat viewFormat,
         vk::ImageLayout initLayout, uint32_t arrayLayer, uint32_t mipLevel,
         vk::SampleCountFlagBits sampleCount,
         vk::Flags<vk::ImageUsageFlagBits> usage, vk::ImageTiling tiling,

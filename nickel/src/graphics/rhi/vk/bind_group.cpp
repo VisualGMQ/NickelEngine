@@ -81,9 +81,10 @@ BindGroupLayoutImpl::~BindGroupLayoutImpl() {
 }
 
 BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
-    : device_{dev.device}, layout_{desc.layout} {
+    : device_{dev}, layout_{desc.layout} {
     createPool(dev.device, dev.swapchain.ImageInfo().imagCount, desc);
     allocSets(dev.device, dev.swapchain.Images().size(), desc);
+    writeDescriptors(dev.device, desc);
 }
 
 void BindGroupImpl::createPool(vk::Device dev, uint32_t imageCount,
@@ -127,7 +128,8 @@ struct WriteDescriptorHelper final {
         auto buffer = static_cast<BufferImpl*>(binding.buffer.Impl());
         bufferInfo.setBuffer(buffer->buffer)
             .setOffset(0)
-            .setRange(binding.minBindingSize);
+            .setRange(binding.minBindingSize ? binding.minBindingSize.value()
+                                             : buffer->Size());
         writeInfo.setBufferInfo(bufferInfo)
             .setDescriptorCount(1)
             .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -200,18 +202,19 @@ void BindGroupImpl::writeDescriptors(vk::Device dev,
                                      const BindGroup::Descriptor& desc) {
     for (int i = 0; i < desc.entries.size(); i++) {
         auto& entry = desc.entries[i];
-        vk::DescriptorSet set = sets[i];
+        uint32_t imgCount = device_.swapchain.ImageInfo().imagCount;
+        for (int j = 0; j < imgCount; j++) {
+            auto type = getDescriptorType(entry.resourceLayout);
 
-        auto type = getDescriptorType(entry.resourceLayout);
-
-        WriteDescriptorHelper helper(set, dev, entry);
-        std::visit(helper, entry.resourceLayout);
+            WriteDescriptorHelper helper(sets[i * imgCount + j], dev, entry);
+            std::visit(helper, entry.resourceLayout);
+        }
     }
 }
 
 BindGroupImpl::~BindGroupImpl() {
-    device_.freeDescriptorSets(pool, sets);
-    device_.destroyDescriptorPool(pool);
+    device_.device.resetDescriptorPool(pool);
+    device_.device.destroyDescriptorPool(pool);
 }
 
 }  // namespace nickel::rhi::vulkan

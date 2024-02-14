@@ -21,6 +21,7 @@ BindGroupLayout::BindGroupLayout(APIPreference api, DeviceImpl& dev,
 void BindGroupLayout::Destroy() {
     if (impl_) {
         delete impl_;
+        impl_ = nullptr;
     }
 }
 

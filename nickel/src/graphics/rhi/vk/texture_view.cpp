@@ -5,16 +5,16 @@
 namespace nickel::rhi::vulkan {
 
 vk::Flags<vk::ImageAspectFlagBits> DetermineTextureAspect(TextureAspect aspect,
-                                                          Format format) {
+                                                          TextureFormat format) {
     if (aspect == TextureAspect::All) {
-        if (format == Format::DEPTH16_UNORM || format == Format::DEPTH24_PLUS ||
-            format == Format::DEPTH32_FLOAT) {
+        if (format ==TextureFormat::DEPTH16_UNORM || format ==TextureFormat::DEPTH24_PLUS ||
+            format ==TextureFormat::DEPTH32_FLOAT) {
             return vk::ImageAspectFlagBits::eDepth;
-        } else if (format == Format::DEPTH32_FLOAT_STENCIL8 ||
-                   format == Format::DEPTH24_PLUS_STENCIL8) {
+        } else if (format ==TextureFormat::DEPTH32_FLOAT_STENCIL8 ||
+                   format ==TextureFormat::DEPTH24_PLUS_STENCIL8) {
             return vk::ImageAspectFlagBits::eDepth |
                    vk::ImageAspectFlagBits::eStencil;
-        } else if (format == Format::STENCIL8) {
+        } else if (format ==TextureFormat::STENCIL8) {
             return vk::ImageAspectFlagBits::eStencil;
         } else {
             return vk::ImageAspectFlagBits::eColor;
@@ -32,10 +32,10 @@ TextureViewImpl::TextureViewImpl(DeviceImpl& dev, TextureImpl& texture,
     : rhi::TextureViewImpl(desc.format ? desc.format.value() : texture.Format(),
                            texture),
       dev_{dev} {
-    if (texture.Format() != Format::Presentation) {
+    if (texture.Format() != TextureFormat::Presentation) {
         vk::ImageViewCreateInfo info;
         vk::ImageSubresourceRange range;
-        enum Format format =
+        enum TextureFormat format =
             desc.format ? desc.format.value() : texture.Format();
         vk::Flags<vk::ImageAspectFlagBits> aspect =
             DetermineTextureAspect(desc.aspect, format);
@@ -77,7 +77,7 @@ TextureViewImpl::TextureViewImpl(DeviceImpl& dev, TextureImpl& texture,
                                               : texture.MipLevelCount());
         info.setImage(texture.GetImage())
             .setViewType(TextureViewType2Vk(dimension))
-            .setFormat(Format2Vk(format))
+            .setFormat(TextureFormat2Vk(format))
             .setComponents({})
             .setSubresourceRange(range);
 
@@ -96,7 +96,7 @@ TextureViewImpl::~TextureViewImpl() {
 }
 
 vk::ImageView TextureViewImpl::GetView() const {
-    if (Format() == Format::Presentation) {
+    if (Format() ==TextureFormat::Presentation) {
         return dev_.swapchain.imageViews[dev_.curImageIndex];
     } else {
         return view_;

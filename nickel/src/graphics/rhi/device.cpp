@@ -58,6 +58,10 @@ ShaderModule Device::CreateShaderModule(const ShaderModule::Descriptor& desc) {
     return impl_->CreateShaderModule(desc);
 }
 
+Buffer Device::CreateBuffer(const Buffer::Descriptor& desc) {
+    return impl_->CreateBuffer(desc);
+}
+
 void Device::SwapContext() {
     return impl_->SwapContext();
 }

@@ -23,6 +23,7 @@ public:
     BindGroup CreateBindGroup(const BindGroup::Descriptor&);
     BindGroupLayout CreateBindGroupLayout(const BindGroupLayout::Descriptor&);
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor& desc);
+    Buffer CreateBuffer(const Buffer::Descriptor&);
 
     void SwapContext();
     void WaitIdle();

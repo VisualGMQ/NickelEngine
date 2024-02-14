@@ -46,6 +46,7 @@ public:
     BindGroupLayout CreateBindGroupLayout(
         const BindGroupLayout::Descriptor& desc) override;
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor&) override;
+    Buffer CreateBuffer(const Buffer::Descriptor&) override;
 
     void SwapContext() override;
     void WaitIdle() override;

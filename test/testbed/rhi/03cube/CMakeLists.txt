@@ -1,0 +1,1 @@
+AddRHITest(rhi_03cube)

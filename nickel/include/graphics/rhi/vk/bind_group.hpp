@@ -33,7 +33,7 @@ public:
     std::vector<vk::DescriptorSet> sets;
 
 private:
-    vk::Device device_;
+    DeviceImpl& device_;
     BindGroupLayout layout_;
 
     void createPool(vk::Device dev, uint32_t imageCount,

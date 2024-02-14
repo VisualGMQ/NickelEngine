@@ -5,3 +5,5 @@ macro(AddRHITest test_name)
 endmacro(AddRHITest)
 
 add_subdirectory(01triangle)
+add_subdirectory(02vertex_buffer)
+add_subdirectory(03cube)

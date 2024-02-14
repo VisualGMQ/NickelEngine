@@ -27,9 +27,9 @@ public:
         std::optional<float> depthBias;
         std::optional<float> depthBiasClamp;
         float depthBiasSlopeScale = 0;
-        CompareOp depthCompare;
+        CompareOp depthCompare = CompareOp::Greater;
         bool depthWriteEnabled = false;
-        Format depthFormat;
+        TextureFormat depthFormat;
         StencilOpState stencilBack;
         StencilOpState stencilFront;
         uint32_t stencilReadMask = 0xFFFFFFFF;
@@ -48,7 +48,7 @@ public:
     };
 
     struct FragmentTarget final {
-        Format format;
+        TextureFormat format;
         BlendState blend;
         ColorWriteMask writeMask = ColorWriteMask::All;
     };
@@ -57,13 +57,13 @@ public:
         std::string entryPoint = "main";
         ShaderModule module;
         std::vector<FragmentTarget> targets;
-        Format format;
+        TextureFormat format;
         FlagsConstant writeMask;
     };
 
     struct BufferState final {
         struct Attribute {
-            Format format;
+            VertexFormat format;
             uint64_t offset;
             uint32_t shaderLocation;
         };

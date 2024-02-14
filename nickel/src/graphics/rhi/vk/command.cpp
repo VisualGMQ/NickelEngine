@@ -8,8 +8,9 @@
 
 namespace nickel::rhi::vulkan {
 
-RenderPassEncoderImpl::RenderPassEncoderImpl(vk::CommandBuffer cmd)
-    : cmd_{cmd} {}
+RenderPassEncoderImpl::RenderPassEncoderImpl(DeviceImpl& dev,
+                                             vk::CommandBuffer cmd)
+    : dev_{dev}, cmd_{cmd} {}
 
 void RenderPassEncoderImpl::Draw(uint32_t vertexCount, uint32_t instanceCount,
                                  uint32_t firstVertex, uint32_t firstInstance) {
@@ -44,7 +45,7 @@ void RenderPassEncoderImpl::SetBindGroup(uint32_t index, BindGroup group) {
         vk::PipelineBindPoint::eGraphics,
         static_cast<const PipelineLayoutImpl*>(pipeline_.GetLayout().Impl())
             ->layout,
-        index, bindGroup->sets, {});
+        index, bindGroup->sets[dev_.curImageIndex], {});
 }
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
@@ -190,7 +191,7 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         .setFramebuffer(fbo);
     buf_.beginRenderPass(info, vk::SubpassContents::eInline);
 
-    return RenderPassEncoder{new RenderPassEncoderImpl{buf_}};
+    return RenderPassEncoder{new RenderPassEncoderImpl{dev_, buf_}};
 }
 
 CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
@@ -202,6 +203,8 @@ CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
     VK_CALL(cmds, dev.device.allocateCommandBuffers(info));
     buf_ = cmds[0];
 
+    cmdBuf_ = new CommandBuffer(new CommandBufferImpl(buf_));
+
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     VK_CALL_NO_VALUE(buf_.begin(beginInfo));
@@ -209,6 +212,9 @@ CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
 
 CommandEncoderImpl::~CommandEncoderImpl() {
     if (pool_) {
+        cmdBuf_->Destroy();
+        delete cmdBuf_;
+        dev_.device.freeCommandBuffers(pool_, buf_);
         dev_.device.resetCommandPool(pool_);
     }
 }
@@ -285,7 +291,11 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
 CommandBuffer CommandEncoderImpl::Finish() {
     VK_CALL_NO_VALUE(buf_.end());
-    return CommandBuffer{new CommandBufferImpl{buf_}};
+    return *cmdBuf_;
+}
+
+void CommandEncoderImpl::Reset() {
+    dev_.device.resetCommandPool(pool_);
 }
 
 }  // namespace nickel::rhi::vulkan

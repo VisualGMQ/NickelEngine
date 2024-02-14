@@ -21,8 +21,10 @@ Buffer::Buffer(AdapterImpl& adapter, DeviceImpl& device,
 }
 
 void Buffer::Destroy() {
-    delete impl_;
-    impl_ = nullptr;
+    if (impl_) {
+        delete impl_;
+        impl_ = nullptr;
+    }
 }
 
 enum Buffer::MapState Buffer::MapState() const {
@@ -37,8 +39,8 @@ void Buffer::Unmap() {
     return impl_->Unmap();
 }
 
-void Buffer::MapAsync(Mode mode, uint64_t offset, uint64_t size) {
-    return impl_->MapAsync(mode, offset, size);
+void Buffer::MapAsync(Flags<Mode> mode, uint64_t offset, uint64_t size) {
+    impl_->MapAsync(mode, offset, size);
 }
 
 void* Buffer::GetMappedRange() {

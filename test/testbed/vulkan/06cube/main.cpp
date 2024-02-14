@@ -493,7 +493,7 @@ void RenderInitSystem(gecs::commands cmds,
         nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 3});
 
     map = ctx.uniformBuf->Map(0, ctx.uniformBuf->Size());
-    memcpy(map, &mvp, ctx.uniformBuf->Size());
+    memcpy(map, &mvp, sizeof(mvp));
     ctx.uniformBuf->Unmap();
 }
 

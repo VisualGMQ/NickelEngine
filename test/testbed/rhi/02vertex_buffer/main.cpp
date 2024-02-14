@@ -6,20 +6,33 @@ using namespace nickel::rhi;
 struct Context {
     PipelineLayout layout;
     RenderPipeline pipeline;
+    Buffer vertexBuffer;
 };
 
-void initShaders(Device device,
-                 RenderPipeline::Descriptor& desc) {
+struct Vertex {
+    nickel::cgmath::Vec2 position;
+    nickel::cgmath::Vec3 color;
+};
+
+std::array<Vertex, 3> gVertices = {
+    Vertex{nickel::cgmath::Vec2{0.0, -0.5},
+           nickel::cgmath::Vec3{1.0, 0.0, 0.0}                                 },
+    Vertex{ nickel::cgmath::Vec2{0.5, 0.5}, nickel::cgmath::Vec3{0.0, 1.0, 0.0}},
+    Vertex{nickel::cgmath::Vec2{-0.5, 0.5},
+           nickel::cgmath::Vec3{0.0, 0.0, 1.0}                                 }
+};
+
+void initShaders(Device device, RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
     shaderDesc.code =
         nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/01triangle/vert.spv", std::ios::binary)
+            "test/testbed/rhi/02vertex_buffer/vert.spv", std::ios::binary)
             .value();
     desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
     shaderDesc.code =
         nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/01triangle/frag.spv", std::ios::binary)
+            "test/testbed/rhi/02vertex_buffer/frag.spv", std::ios::binary)
             .value();
     desc.fragment.module = device.CreateShaderModule(shaderDesc);
 }
@@ -32,6 +45,15 @@ void StartupSystem(gecs::commands cmds,
     auto& ctx = cmds.emplace_resource<Context>();
 
     RenderPipeline::Descriptor desc;
+
+    RenderPipeline::VertexState vertexState;
+    RenderPipeline::BufferState bufferState;
+
+    bufferState.attributes.push_back({VertexFormat::Float32x2, 0, 0});
+    bufferState.attributes.push_back({VertexFormat::Float32x3, 8, 1});
+    bufferState.arrayStride = 5 * 4;
+    desc.vertex.buffers.emplace_back(bufferState);
+
     desc.viewport.viewport.x = 0;
     desc.viewport.viewport.y = 0;
     desc.viewport.viewport.w = window->Size().w;
@@ -49,12 +71,20 @@ void StartupSystem(gecs::commands cmds,
     target.format = TextureFormat::Presentation;
     desc.fragment.targets.emplace_back(target);
 
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.size = sizeof(gVertices);
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.usage = BufferUsage::Vertex;
+    ctx.vertexBuffer = device.CreateBuffer(bufferDesc);
+    void* data = ctx.vertexBuffer.GetMappedRange();
+    memcpy(data, gVertices.data(), sizeof(gVertices));
+    ctx.vertexBuffer.Unmap();
+
     ctx.pipeline = device.CreateRenderPipeline(desc);
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
                   gecs::resource<gecs::mut<Context>> ctx) {
-    auto encoder = device->CreateCommandEncoder();
     RenderPass::Descriptor desc;
     RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = AttachmentLoadOp::Clear;
@@ -68,8 +98,12 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto view = texture.CreateView();
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
+
+    auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->pipeline);
+    renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
+                               ctx->vertexBuffer.Size());
     renderPass.Draw(3, 1, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -85,6 +119,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
+    ctx->vertexBuffer.Destroy();
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
     cmds.remove_resource<Device>();
@@ -93,8 +128,8 @@ void ShutdownSystem(gecs::commands cmds,
 
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
-    nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "01 triangle", 1024, 720);
+    nickel::Window& window =
+        reg.commands().emplace_resource<nickel::Window>("02 cube", 1024, 720);
 
     reg
         // startup systems

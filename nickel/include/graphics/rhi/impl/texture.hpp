@@ -12,7 +12,7 @@ public:
     virtual ~TextureImpl() = default;
 
     Extent3D Extent() const;
-    enum Format Format() const;
+    enum TextureFormat Format() const;
     uint32_t MipLevelCount() const;
     SampleCount SampleCount() const;
     TextureUsage Usage() const;

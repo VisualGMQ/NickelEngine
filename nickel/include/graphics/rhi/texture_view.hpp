@@ -17,14 +17,14 @@ public:
         TextureAspect aspect = TextureAspect::All;
         uint32_t baseArrayLayer = 0;
         uint32_t baseMipLevel = 0;
-        std::optional<Format> format;
+        std::optional<TextureFormat> format;
         std::optional<uint32_t> mipLevelCount;
     };
 
     TextureView() = default;
     TextureView(APIPreference api, DeviceImpl&, TextureImpl&, const TextureView::Descriptor&);
     explicit TextureView(TextureViewImpl*);
-    enum Format Format() const;
+    enum TextureFormat Format() const;
     class Texture Texture() const;
 
     bool operator==(const TextureView& o) const {

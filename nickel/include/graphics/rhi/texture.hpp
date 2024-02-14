@@ -13,23 +13,26 @@ class AdapterImpl;
 class Texture {
 public:
     struct Descriptor final {
-        Format format;
+        TextureFormat format;
         Extent3D size;
         TextureType dimension = TextureType::Dim2;
         uint32_t mipmapLevelCount = 1;
         SampleCount sampleCount = SampleCount::Count1;
         TextureUsage usage;
-        std::optional<Format> viewFormat;
+        std::optional<TextureFormat> viewFormat;
     };
 
+    Texture() = default;
     Texture(AdapterImpl&, DeviceImpl&, const Descriptor&,
             const std::vector<uint32_t>& queueIndices);
     explicit Texture(TextureImpl*);
     void Destroy();
 
+    operator bool() const { return impl_; }
+
     TextureType Dimension() const;
     Extent3D Extent() const;
-    enum Format Format() const;
+    enum TextureFormat Format() const;
     uint32_t MipLevelCount() const;
     SampleCount SampleCount() const;
     TextureUsage Usage() const;

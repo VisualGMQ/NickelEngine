@@ -220,6 +220,10 @@ void DeviceImpl::WaitIdle() {
     VK_CALL_NO_VALUE(device.waitIdle());
 }
 
+Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
+    return Buffer{adapter, *this, desc};
+}
+
 Queue DeviceImpl::GetQueue() {
     return *graphicsQueue;
 }

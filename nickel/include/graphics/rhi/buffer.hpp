@@ -20,7 +20,7 @@ public:
     struct Descriptor final {
         bool mappedAtCreation = false;
         uint64_t size = 0;
-        BufferUsage usage;
+        Flags<BufferUsage> usage;
     };
 
     enum class Mode {
@@ -28,15 +28,18 @@ public:
         Write = 0x02,
     };
     
+    Buffer() = default;
     Buffer(AdapterImpl&, DeviceImpl&, const Buffer::Descriptor&);
     void Destroy();
     enum MapState MapState() const;
     uint64_t Size() const;
     void Unmap();
-    void MapAsync(Mode, uint64_t offset, uint64_t size);
+    void MapAsync(Flags<Mode>, uint64_t offset, uint64_t size);
     void* GetMappedRange();
     void* GetMappedRange(uint64_t offset);
     void* GetMappedRange(uint64_t offset, uint64_t size);
+
+    operator bool() const { return impl_; }
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }

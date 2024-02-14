@@ -11,45 +11,46 @@ namespace nickel::rhi::vulkan {
 
 inline vk::BufferUsageFlags BufferUsage2Vk(BufferUsage usage) {
     uint32_t bits = 0;
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::MapRead)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eTransferSrc);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::CopySrc)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eTransferSrc);
     }
-    if (static_cast<uint32_t>(usage) |
+    
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::MapWrite)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eTransferDst);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::CopyDst)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eTransferDst);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::Vertex)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eVertexBuffer);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::Index)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eIndexBuffer);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::Uniform)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eUniformBuffer);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::Index)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eIndirectBuffer);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::Storage)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eStorageBuffer);
     }
-    if (static_cast<uint32_t>(usage) |
+    if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::QueryResolve)) {
-        // TODO
+        // TODO: don't know what type
     }
     return static_cast<vk::BufferUsageFlags>(bits);
 }
@@ -105,7 +106,7 @@ inline vk::ImageType TextureType2Vk(TextureType type) {
     }
 }
 
-inline vk::ImageUsageFlags TextureUsage2Vk(TextureUsage usage) {
+inline vk::ImageUsageFlags TextureUsage2Vk(TextureUsage usage, bool isDepthStencil = false) {
     uint32_t flags = 0;
     switch (usage) {
         case TextureUsage::CopySrc:
@@ -123,9 +124,13 @@ inline vk::ImageUsageFlags TextureUsage2Vk(TextureUsage usage) {
             flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eStorage);
             break;
         case TextureUsage::RenderAttachment:
-            flags |= static_cast<uint32_t>(
-                vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eDepthStencilAttachment);
+            if (isDepthStencil) {
+                flags |= static_cast<uint32_t>(
+                    vk::ImageUsageFlagBits::eDepthStencilAttachment);
+            } else {
+                flags |= static_cast<uint32_t>(
+                    vk::ImageUsageFlagBits::eColorAttachment);
+            }
             break;
     }
     return static_cast<vk::ImageUsageFlags>(flags);
@@ -143,237 +148,259 @@ inline vk::SampleCountFlagBits SampleCount2Vk(SampleCount count) {
     }
 }
 
-inline vk::Format Format2Vk(Format f) {
+inline vk::Format TextureFormat2Vk(TextureFormat f) {
     switch (f) {
-        CASE(Format::R8_UNORM, vk::Format::eR8Unorm);
-        CASE(Format::R8_SNORM, vk::Format::eR8Snorm);
-        CASE(Format::R8_UINT, vk::Format::eR8Uint);
-        CASE(Format::R8_SINT, vk::Format::eR8Sint);
+        CASE(TextureFormat::R8_UNORM, vk::Format::eR8Unorm);
+        CASE(TextureFormat::R8_SNORM, vk::Format::eR8Snorm);
+        CASE(TextureFormat::R8_UINT, vk::Format::eR8Uint);
+        CASE(TextureFormat::R8_SINT, vk::Format::eR8Sint);
 
-        CASE(Format::R16_UINT, vk::Format::eR16Uint);
-        CASE(Format::R16_SINT, vk::Format::eR16Sint);
-        CASE(Format::R16_FLOAT, vk::Format::eR16Sfloat);
-        CASE(Format::RG8_UNORM, vk::Format::eR8G8Unorm);
-        CASE(Format::RG8_SNORM, vk::Format::eR8G8Snorm);
-        CASE(Format::RG8_UINT, vk::Format::eR8G8Uint);
-        CASE(Format::RG8_SINT, vk::Format::eR8G8Sint);
+        CASE(TextureFormat::R16_UINT, vk::Format::eR16Uint);
+        CASE(TextureFormat::R16_SINT, vk::Format::eR16Sint);
+        CASE(TextureFormat::R16_FLOAT, vk::Format::eR16Sfloat);
+        CASE(TextureFormat::RG8_UNORM, vk::Format::eR8G8Unorm);
+        CASE(TextureFormat::RG8_SNORM, vk::Format::eR8G8Snorm);
+        CASE(TextureFormat::RG8_UINT, vk::Format::eR8G8Uint);
+        CASE(TextureFormat::RG8_SINT, vk::Format::eR8G8Sint);
 
-        CASE(Format::R32_UINT, vk::Format::eR32Uint);
-        CASE(Format::R32_SINT, vk::Format::eR32Sint);
-        CASE(Format::R32_FLOAT, vk::Format::eR32Sfloat);
-        CASE(Format::RG16_UINT, vk::Format::eR16G16Uint);
-        CASE(Format::RG16_SINT, vk::Format::eR16G16Sint);
-        CASE(Format::RG16_FLOAT, vk::Format::eR16G16Sfloat);
-        CASE(Format::RGBA8_UNORM, vk::Format::eR8G8B8A8Unorm);
-        CASE(Format::RGBA8_UNORM_SRGB, vk::Format::eR8G8B8A8Srgb);
-        CASE(Format::RGBA8_SNORM, vk::Format::eR8G8B8A8Snorm);
-        CASE(Format::RGBA8_UINT, vk::Format::eR8G8B8A8Uint);
-        CASE(Format::RGBA8_SINT, vk::Format::eR8G8B8A8Sint);
-        CASE(Format::BGRA8_UNORM, vk::Format::eB8G8R8A8Unorm);
-        CASE(Format::BGRA8_UNORM_SRGB, vk::Format::eB8G8R8A8Srgb);
+        CASE(TextureFormat::R32_UINT, vk::Format::eR32Uint);
+        CASE(TextureFormat::R32_SINT, vk::Format::eR32Sint);
+        CASE(TextureFormat::R32_FLOAT, vk::Format::eR32Sfloat);
+        CASE(TextureFormat::RG16_UINT, vk::Format::eR16G16Uint);
+        CASE(TextureFormat::RG16_SINT, vk::Format::eR16G16Sint);
+        CASE(TextureFormat::RG16_FLOAT, vk::Format::eR16G16Sfloat);
+        CASE(TextureFormat::RGBA8_UNORM, vk::Format::eR8G8B8A8Unorm);
+        CASE(TextureFormat::RGBA8_UNORM_SRGB, vk::Format::eR8G8B8A8Srgb);
+        CASE(TextureFormat::RGBA8_SNORM, vk::Format::eR8G8B8A8Snorm);
+        CASE(TextureFormat::RGBA8_UINT, vk::Format::eR8G8B8A8Uint);
+        CASE(TextureFormat::RGBA8_SINT, vk::Format::eR8G8B8A8Sint);
+        CASE(TextureFormat::BGRA8_UNORM, vk::Format::eB8G8R8A8Unorm);
+        CASE(TextureFormat::BGRA8_UNORM_SRGB, vk::Format::eB8G8R8A8Srgb);
 
         // NOTE: these packed format's order is reversed. Do we need reverse
-        // order when create image?
-        CASE(Format::RGB9E5_UFLOAT, vk::Format::eE5B9G9R9UfloatPack32);
-        CASE(Format::RGB10A2_UINT, vk::Format::eA2B10G10R10UintPack32);
-        CASE(Format::RGB10A2_UNORM, vk::Format::eA2B10G10R10UnormPack32);
-        CASE(Format::RG11B10_UFLOAT, vk::Format::eB10G11R11UfloatPack32);
+        // orTextureder when create image?
+        CASE(TextureFormat::RGB9E5_UFLOAT, vk::Format::eE5B9G9R9UfloatPack32);
+        CASE(TextureFormat::RGB10A2_UINT, vk::Format::eA2B10G10R10UintPack32);
+        CASE(TextureFormat::RGB10A2_UNORM, vk::Format::eA2B10G10R10UnormPack32);
+        CASE(TextureFormat::RG11B10_UFLOAT, vk::Format::eB10G11R11UfloatPack32);
 
-        CASE(Format::RG32_UINT, vk::Format::eR32G32Uint);
-        CASE(Format::RG32_SINT, vk::Format::eR32G32Sint);
-        CASE(Format::RG32_FLOAT, vk::Format::eR32G32Sfloat);
-        CASE(Format::RGBA16_UINT, vk::Format::eR16G16B16A16Uint);
-        CASE(Format::RGBA16_SINT, vk::Format::eR16G16B16A16Sint);
-        CASE(Format::RGBA16_FLOAT, vk::Format::eR16G16B16A16Sfloat);
+        CASE(TextureFormat::RG32_UINT, vk::Format::eR32G32Uint);
+        CASE(TextureFormat::RG32_SINT, vk::Format::eR32G32Sint);
+        CASE(TextureFormat::RG32_FLOAT, vk::Format::eR32G32Sfloat);
+        CASE(TextureFormat::RGBA16_UINT, vk::Format::eR16G16B16A16Uint);
+        CASE(TextureFormat::RGBA16_SINT, vk::Format::eR16G16B16A16Sint);
+        CASE(TextureFormat::RGBA16_FLOAT, vk::Format::eR16G16B16A16Sfloat);
 
-        CASE(Format::RGBA32_UINT, vk::Format::eR32G32B32A32Uint);
-        CASE(Format::RGBA32_SINT, vk::Format::eR32G32B32A32Sint);
-        CASE(Format::RGBA32_FLOAT, vk::Format::eR32G32B32A32Sfloat);
+        CASE(TextureFormat::RGBA32_UINT, vk::Format::eR32G32B32A32Uint);
+        CASE(TextureFormat::RGBA32_SINT, vk::Format::eR32G32B32A32Sint);
+        CASE(TextureFormat::RGBA32_FLOAT, vk::Format::eR32G32B32A32Sfloat);
 
-        CASE(Format::STENCIL8, vk::Format::eS8Uint);
-        CASE(Format::DEPTH16_UNORM, vk::Format::eD16Unorm);
-        CASE(Format::DEPTH24_PLUS, vk::Format::eD24UnormS8Uint);  // doubt
-        CASE(Format::DEPTH24_PLUS_STENCIL8,
+        CASE(TextureFormat::STENCIL8, vk::Format::eS8Uint);
+        CASE(TextureFormat::DEPTH16_UNORM, vk::Format::eD16Unorm);
+        CASE(TextureFormat::DEPTH24_PLUS,
              vk::Format::eX8D24UnormPack32);  // doubt
-        CASE(Format::DEPTH32_FLOAT, vk::Format::eD32Sfloat);
+        CASE(TextureFormat::DEPTH24_PLUS_STENCIL8, vk::Format::eD24UnormS8Uint);
+        CASE(TextureFormat::DEPTH32_FLOAT, vk::Format::eD32Sfloat);
+        CASE(TextureFormat::DEPTH32_FLOAT_STENCIL8,
+             vk::Format::eD32SfloatS8Uint);
 
-        CASE(Format::DEPTH32_FLOAT_STENCIL8, vk::Format::eD32SfloatS8Uint);
+        CASE(TextureFormat::BC1_RGBA_UNORM, vk::Format::eBc1RgbaUnormBlock);
+        CASE(TextureFormat::BC1_RGBA_UNORM_SRGB, vk::Format::eBc1RgbaSrgbBlock);
+        CASE(TextureFormat::BC2_RGBA_UNORM, vk::Format::eBc2UnormBlock);
+        CASE(TextureFormat::BC2_RGBA_UNORM_SRGB, vk::Format::eBc2SrgbBlock);
+        CASE(TextureFormat::BC3_RGBA_UNORM, vk::Format::eBc3UnormBlock);
+        CASE(TextureFormat::BC3_RGBA_UNORM_SRGB, vk::Format::eBc3SrgbBlock);
+        CASE(TextureFormat::BC4_R_UNORM, vk::Format::eBc4UnormBlock);
+        CASE(TextureFormat::BC4_R_SNORM, vk::Format::eBc4SnormBlock);
+        CASE(TextureFormat::BC5_RG_UNORM, vk::Format::eBc5UnormBlock);
+        CASE(TextureFormat::BC5_RG_SNORM, vk::Format::eBc5SnormBlock);
+        CASE(TextureFormat::BC6H_RGB_UFLOAT, vk::Format::eBc6HUfloatBlock);
+        CASE(TextureFormat::BC6H_RGB_FLOAT, vk::Format::eBc6HSfloatBlock);
+        CASE(TextureFormat::BC7_RGBA_UNORM, vk::Format::eBc7UnormBlock);
+        CASE(TextureFormat::BC7_RGBA_UNORM_SRGB, vk::Format::eBc7SrgbBlock);
 
-        CASE(Format::BC1_RGBA_UNORM, vk::Format::eBc1RgbaUnormBlock);
-        CASE(Format::BC1_RGBA_UNORM_SRGB, vk::Format::eBc1RgbaSrgbBlock);
-        CASE(Format::BC2_RGBA_UNORM, vk::Format::eBc2UnormBlock);
-        CASE(Format::BC2_RGBA_UNORM_SRGB, vk::Format::eBc2SrgbBlock);
-        CASE(Format::BC3_RGBA_UNORM, vk::Format::eBc3UnormBlock);
-        CASE(Format::BC3_RGBA_UNORM_SRGB, vk::Format::eBc3SrgbBlock);
-        CASE(Format::BC4_R_UNORM, vk::Format::eBc4UnormBlock);
-        CASE(Format::BC4_R_SNORM, vk::Format::eBc4SnormBlock);
-        CASE(Format::BC5_RG_UNORM, vk::Format::eBc5UnormBlock);
-        CASE(Format::BC5_RG_SNORM, vk::Format::eBc5SnormBlock);
-        CASE(Format::BC6H_RGB_UFLOAT, vk::Format::eBc6HUfloatBlock);
-        CASE(Format::BC6H_RGB_FLOAT, vk::Format::eBc6HSfloatBlock);
-        CASE(Format::BC7_RGBA_UNORM, vk::Format::eBc7UnormBlock);
-        CASE(Format::BC7_RGBA_UNORM_SRGB, vk::Format::eBc7SrgbBlock);
-
-        CASE(Format::ETC2_RGB8_UNORM, vk::Format::eEtc2R8G8B8UnormBlock);
-        CASE(Format::ETC2_RGB8_UNORM_SRGB, vk::Format::eEtc2R8G8B8SrgbBlock);
-        CASE(Format::ETC2_RGB8A1_UNORM, vk::Format::eEtc2R8G8B8A1UnormBlock);
-        CASE(Format::ETC2_RGB8A1_UNORM_SRGB,
+        CASE(TextureFormat::ETC2_RGB8_UNORM, vk::Format::eEtc2R8G8B8UnormBlock);
+        CASE(TextureFormat::ETC2_RGB8_UNORM_SRGB,
+             vk::Format::eEtc2R8G8B8SrgbBlock);
+        CASE(TextureFormat::ETC2_RGB8A1_UNORM,
+             vk::Format::eEtc2R8G8B8A1UnormBlock);
+        CASE(TextureFormat::ETC2_RGB8A1_UNORM_SRGB,
              vk::Format::eEtc2R8G8B8A1SrgbBlock);
-        CASE(Format::ETC2_RGBA8_UNORM, vk::Format::eEtc2R8G8B8A8UnormBlock);
-        CASE(Format::ETC2_RGBA8_UNORM_SRGB, vk::Format::eEtc2R8G8B8A8SrgbBlock);
-        CASE(Format::EAC_R11_UNORM, vk::Format::eEacR11UnormBlock);
-        CASE(Format::EAC_R11_SNORM, vk::Format::eEacR11SnormBlock);
-        CASE(Format::EAC_RG11_UNORM, vk::Format::eEacR11G11UnormBlock);
-        CASE(Format::EAC_RG11_SNORM, vk::Format::eEacR11G11SnormBlock);
+        CASE(TextureFormat::ETC2_RGBA8_UNORM,
+             vk::Format::eEtc2R8G8B8A8UnormBlock);
+        CASE(TextureFormat::ETC2_RGBA8_UNORM_SRGB,
+             vk::Format::eEtc2R8G8B8A8SrgbBlock);
+        CASE(TextureFormat::EAC_R11_UNORM, vk::Format::eEacR11UnormBlock);
+        CASE(TextureFormat::EAC_R11_SNORM, vk::Format::eEacR11SnormBlock);
+        CASE(TextureFormat::EAC_RG11_UNORM, vk::Format::eEacR11G11UnormBlock);
+        CASE(TextureFormat::EAC_RG11_SNORM, vk::Format::eEacR11G11SnormBlock);
 
-        CASE(Format::ASTC_4X4_UNORM, vk::Format::eAstc4x4UnormBlock);
-        CASE(Format::ASTC_4X4_UNORM_SRGB, vk::Format::eAstc4x4SrgbBlock);
-        CASE(Format::ASTC_5X4_UNORM, vk::Format::eAstc5x4UnormBlock);
-        CASE(Format::ASTC_5X4_UNORM_SRGB, vk::Format::eAstc5x4SrgbBlock);
-        CASE(Format::ASTC_5X5_UNORM, vk::Format::eAstc5x5UnormBlock);
-        CASE(Format::ASTC_5X5_UNORM_SRGB, vk::Format::eAstc5x5SrgbBlock);
-        CASE(Format::ASTC_6X5_UNORM, vk::Format::eAstc6x5UnormBlock);
-        CASE(Format::ASTC_6X5_UNORM_SRGB, vk::Format::eAstc6x5SrgbBlock);
-        CASE(Format::ASTC_6X6_UNORM, vk::Format::eAstc6x6UnormBlock);
-        CASE(Format::ASTC_6X6_UNORM_SRGB, vk::Format::eAstc6x6SrgbBlock);
-        CASE(Format::ASTC_8X5_UNORM, vk::Format::eAstc8x5UnormBlock);
-        CASE(Format::ASTC_8X5_UNORM_SRGB, vk::Format::eAstc8x5SrgbBlock);
+        CASE(TextureFormat::ASTC_4X4_UNORM, vk::Format::eAstc4x4UnormBlock);
+        CASE(TextureFormat::ASTC_4X4_UNORM_SRGB, vk::Format::eAstc4x4SrgbBlock);
+        CASE(TextureFormat::ASTC_5X4_UNORM, vk::Format::eAstc5x4UnormBlock);
+        CASE(TextureFormat::ASTC_5X4_UNORM_SRGB, vk::Format::eAstc5x4SrgbBlock);
+        CASE(TextureFormat::ASTC_5X5_UNORM, vk::Format::eAstc5x5UnormBlock);
+        CASE(TextureFormat::ASTC_5X5_UNORM_SRGB, vk::Format::eAstc5x5SrgbBlock);
+        CASE(TextureFormat::ASTC_6X5_UNORM, vk::Format::eAstc6x5UnormBlock);
+        CASE(TextureFormat::ASTC_6X5_UNORM_SRGB, vk::Format::eAstc6x5SrgbBlock);
+        CASE(TextureFormat::ASTC_6X6_UNORM, vk::Format::eAstc6x6UnormBlock);
+        CASE(TextureFormat::ASTC_6X6_UNORM_SRGB, vk::Format::eAstc6x6SrgbBlock);
+        CASE(TextureFormat::ASTC_8X5_UNORM, vk::Format::eAstc8x5UnormBlock);
+        CASE(TextureFormat::ASTC_8X5_UNORM_SRGB, vk::Format::eAstc8x5SrgbBlock);
 
-        CASE(Format::ASTC_8X6_UNORM, vk::Format::eAstc8x6UnormBlock);
-        CASE(Format::ASTC_8X6_UNORM_SRGB, vk::Format::eAstc8x6SrgbBlock);
-        CASE(Format::ASTC_8X8_UNORM, vk::Format::eAstc8x8UnormBlock);
-        CASE(Format::ASTC_8X8_UNORM_SRGB, vk::Format::eAstc8x8SrgbBlock);
-        CASE(Format::ASTC_10X5_UNORM, vk::Format::eAstc10x5UnormBlock);
-        CASE(Format::ASTC_10X5_UNORM_SRGB, vk::Format::eAstc10x5SrgbBlock);
-        CASE(Format::ASTC_10X6_UNORM, vk::Format::eAstc10x6UnormBlock);
-        CASE(Format::ASTC_10X6_UNORM_SRGB, vk::Format::eAstc10x6SrgbBlock);
-        CASE(Format::ASTC_10X8_UNORM, vk::Format::eAstc10x8UnormBlock);
-        CASE(Format::ASTC_10X8_UNORM_SRGB, vk::Format::eAstc10x8SrgbBlock);
-        CASE(Format::ASTC_10X10_UNORM, vk::Format::eAstc10x10UnormBlock);
-        CASE(Format::ASTC_10X10_UNORM_SRGB, vk::Format::eAstc10x10SrgbBlock);
-        CASE(Format::ASTC_12X10_UNORM, vk::Format::eAstc12x10UnormBlock);
-        CASE(Format::ASTC_12X10_UNORM_SRGB, vk::Format::eAstc12x10SrgbBlock);
-        CASE(Format::ASTC_12X12_UNORM, vk::Format::eAstc12x12UnormBlock);
-        CASE(Format::ASTC_12X12_UNORM_SRGB, vk::Format::eAstc12x12SrgbBlock);
+        CASE(TextureFormat::ASTC_8X6_UNORM, vk::Format::eAstc8x6UnormBlock);
+        CASE(TextureFormat::ASTC_8X6_UNORM_SRGB, vk::Format::eAstc8x6SrgbBlock);
+        CASE(TextureFormat::ASTC_8X8_UNORM, vk::Format::eAstc8x8UnormBlock);
+        CASE(TextureFormat::ASTC_8X8_UNORM_SRGB, vk::Format::eAstc8x8SrgbBlock);
+        CASE(TextureFormat::ASTC_10X5_UNORM, vk::Format::eAstc10x5UnormBlock);
+        CASE(TextureFormat::ASTC_10X5_UNORM_SRGB,
+             vk::Format::eAstc10x5SrgbBlock);
+        CASE(TextureFormat::ASTC_10X6_UNORM, vk::Format::eAstc10x6UnormBlock);
+        CASE(TextureFormat::ASTC_10X6_UNORM_SRGB,
+             vk::Format::eAstc10x6SrgbBlock);
+        CASE(TextureFormat::ASTC_10X8_UNORM, vk::Format::eAstc10x8UnormBlock);
+        CASE(TextureFormat::ASTC_10X8_UNORM_SRGB,
+             vk::Format::eAstc10x8SrgbBlock);
+        CASE(TextureFormat::ASTC_10X10_UNORM, vk::Format::eAstc10x10UnormBlock);
+        CASE(TextureFormat::ASTC_10X10_UNORM_SRGB,
+             vk::Format::eAstc10x10SrgbBlock);
+        CASE(TextureFormat::ASTC_12X10_UNORM, vk::Format::eAstc12x10UnormBlock);
+        CASE(TextureFormat::ASTC_12X10_UNORM_SRGB,
+             vk::Format::eAstc12x10SrgbBlock);
+        CASE(TextureFormat::ASTC_12X12_UNORM, vk::Format::eAstc12x12UnormBlock);
+        CASE(TextureFormat::ASTC_12X12_UNORM_SRGB,
+             vk::Format::eAstc12x12SrgbBlock);
         default:
             return vk::Format::eUndefined;
     }
 }
 
-inline Format FormatFromVk(vk::Format f) {
+inline TextureFormat TextureFormatFromVk(vk::Format f) {
     switch (f) {
-        CASE(vk::Format::eR8Unorm, Format::R8_UNORM);
-        CASE(vk::Format::eR8Snorm, Format::R8_SNORM);
-        CASE(vk::Format::eR8Uint, Format::R8_UINT);
-        CASE(vk::Format::eR8Sint, Format::R8_SINT);
+        CASE(vk::Format::eR8Unorm, TextureFormat::R8_UNORM);
+        CASE(vk::Format::eR8Snorm, TextureFormat::R8_SNORM);
+        CASE(vk::Format::eR8Uint, TextureFormat::R8_UINT);
+        CASE(vk::Format::eR8Sint, TextureFormat::R8_SINT);
 
-        CASE(vk::Format::eR16Uint, Format::R16_UINT);
-        CASE(vk::Format::eR16Sint, Format::R16_SINT);
-        CASE(vk::Format::eR16Sfloat, Format::R16_FLOAT);
-        CASE(vk::Format::eR8G8Unorm, Format::RG8_UNORM);
-        CASE(vk::Format::eR8G8Snorm, Format::RG8_SNORM);
-        CASE(vk::Format::eR8G8Uint, Format::RG8_UINT);
-        CASE(vk::Format::eR8G8Sint, Format::RG8_SINT);
+        CASE(vk::Format::eR16Uint, TextureFormat::R16_UINT);
+        CASE(vk::Format::eR16Sint, TextureFormat::R16_SINT);
+        CASE(vk::Format::eR16Sfloat, TextureFormat::R16_FLOAT);
+        CASE(vk::Format::eR8G8Unorm, TextureFormat::RG8_UNORM);
+        CASE(vk::Format::eR8G8Snorm, TextureFormat::RG8_SNORM);
+        CASE(vk::Format::eR8G8Uint, TextureFormat::RG8_UINT);
+        CASE(vk::Format::eR8G8Sint, TextureFormat::RG8_SINT);
 
-        CASE(vk::Format::eR32Uint, Format::R32_UINT);
-        CASE(vk::Format::eR32Sint, Format::R32_SINT);
-        CASE(vk::Format::eR32Sfloat, Format::R32_FLOAT);
-        CASE(vk::Format::eR16G16Uint, Format::RG16_UINT);
-        CASE(vk::Format::eR16G16Sint, Format::RG16_SINT);
-        CASE(vk::Format::eR16G16Sfloat, Format::RG16_FLOAT);
-        CASE(vk::Format::eR8G8B8A8Unorm, Format::RGBA8_UNORM);
-        CASE(vk::Format::eR8G8B8A8Srgb, Format::RGBA8_UNORM_SRGB);
-        CASE(vk::Format::eR8G8B8A8Snorm, Format::RGBA8_SNORM);
-        CASE(vk::Format::eR8G8B8A8Uint, Format::RGBA8_UINT);
-        CASE(vk::Format::eR8G8B8A8Sint, Format::RGBA8_SINT);
-        CASE(vk::Format::eB8G8R8A8Unorm, Format::BGRA8_UNORM);
-        CASE(vk::Format::eB8G8R8A8Srgb, Format::BGRA8_UNORM_SRGB);
+        CASE(vk::Format::eR32Uint, TextureFormat::R32_UINT);
+        CASE(vk::Format::eR32Sint, TextureFormat::R32_SINT);
+        CASE(vk::Format::eR32Sfloat, TextureFormat::R32_FLOAT);
+        CASE(vk::Format::eR16G16Uint, TextureFormat::RG16_UINT);
+        CASE(vk::Format::eR16G16Sint, TextureFormat::RG16_SINT);
+        CASE(vk::Format::eR16G16Sfloat, TextureFormat::RG16_FLOAT);
+        CASE(vk::Format::eR8G8B8A8Unorm, TextureFormat::RGBA8_UNORM);
+        CASE(vk::Format::eR8G8B8A8Srgb, TextureFormat::RGBA8_UNORM_SRGB);
+        CASE(vk::Format::eR8G8B8A8Snorm, TextureFormat::RGBA8_SNORM);
+        CASE(vk::Format::eR8G8B8A8Uint, TextureFormat::RGBA8_UINT);
+        CASE(vk::Format::eR8G8B8A8Sint, TextureFormat::RGBA8_SINT);
+        CASE(vk::Format::eB8G8R8A8Unorm, TextureFormat::BGRA8_UNORM);
+        CASE(vk::Format::eB8G8R8A8Srgb, TextureFormat::BGRA8_UNORM_SRGB);
 
         // NOTE: these packed format's order is reversed. Do we need reverse
         // order when create image?
-        CASE(vk::Format::eE5B9G9R9UfloatPack32, Format::RGB9E5_UFLOAT);
-        CASE(vk::Format::eA2B10G10R10UintPack32, Format::RGB10A2_UINT);
-        CASE(vk::Format::eA2B10G10R10UnormPack32, Format::RGB10A2_UNORM);
-        CASE(vk::Format::eB10G11R11UfloatPack32, Format::RG11B10_UFLOAT);
+        CASE(vk::Format::eE5B9G9R9UfloatPack32, TextureFormat::RGB9E5_UFLOAT);
+        CASE(vk::Format::eA2B10G10R10UintPack32, TextureFormat::RGB10A2_UINT);
+        CASE(vk::Format::eA2B10G10R10UnormPack32, TextureFormat::RGB10A2_UNORM);
+        CASE(vk::Format::eB10G11R11UfloatPack32, TextureFormat::RG11B10_UFLOAT);
 
-        CASE(vk::Format::eR32G32Uint, Format::RG32_UINT);
-        CASE(vk::Format::eR32G32Sint, Format::RG32_SINT);
-        CASE(vk::Format::eR32G32Sfloat, Format::RG32_FLOAT);
-        CASE(vk::Format::eR16G16B16A16Uint, Format::RGBA16_UINT);
-        CASE(vk::Format::eR16G16B16A16Sint, Format::RGBA16_SINT);
-        CASE(vk::Format::eR16G16B16A16Sfloat, Format::RGBA16_FLOAT);
+        CASE(vk::Format::eR32G32Uint, TextureFormat::RG32_UINT);
+        CASE(vk::Format::eR32G32Sint, TextureFormat::RG32_SINT);
+        CASE(vk::Format::eR32G32Sfloat, TextureFormat::RG32_FLOAT);
+        CASE(vk::Format::eR16G16B16A16Uint, TextureFormat::RGBA16_UINT);
+        CASE(vk::Format::eR16G16B16A16Sint, TextureFormat::RGBA16_SINT);
+        CASE(vk::Format::eR16G16B16A16Sfloat, TextureFormat::RGBA16_FLOAT);
 
-        CASE(vk::Format::eR32G32B32A32Uint, Format::RGBA32_UINT);
-        CASE(vk::Format::eR32G32B32A32Sint, Format::RGBA32_SINT);
-        CASE(vk::Format::eR32G32B32A32Sfloat, Format::RGBA32_FLOAT);
+        CASE(vk::Format::eR32G32B32A32Uint, TextureFormat::RGBA32_UINT);
+        CASE(vk::Format::eR32G32B32A32Sint, TextureFormat::RGBA32_SINT);
+        CASE(vk::Format::eR32G32B32A32Sfloat, TextureFormat::RGBA32_FLOAT);
 
-        CASE(vk::Format::eS8Uint, Format::STENCIL8);
-        CASE(vk::Format::eD16Unorm, Format::DEPTH16_UNORM);
-        CASE(vk::Format::eD24UnormS8Uint, Format::DEPTH24_PLUS);  // doubt
+        CASE(vk::Format::eS8Uint, TextureFormat::STENCIL8);
+        CASE(vk::Format::eD16Unorm, TextureFormat::DEPTH16_UNORM);
+        CASE(vk::Format::eD24UnormS8Uint,
+             TextureFormat::DEPTH24_PLUS);  // doubt
         CASE(vk::Format::eX8D24UnormPack32,
-             Format::DEPTH24_PLUS_STENCIL8);  // doubt
-        CASE(vk::Format::eD32Sfloat, Format::DEPTH32_FLOAT);
+             TextureFormat::DEPTH24_PLUS_STENCIL8);  // doubt
+        CASE(vk::Format::eD32Sfloat, TextureFormat::DEPTH32_FLOAT);
 
-        CASE(vk::Format::eD32SfloatS8Uint, Format::DEPTH32_FLOAT_STENCIL8);
+        CASE(vk::Format::eD32SfloatS8Uint,
+             TextureFormat::DEPTH32_FLOAT_STENCIL8);
 
-        CASE(vk::Format::eBc1RgbaUnormBlock, Format::BC1_RGBA_UNORM);
-        CASE(vk::Format::eBc1RgbaSrgbBlock, Format::BC1_RGBA_UNORM_SRGB);
-        CASE(vk::Format::eBc2UnormBlock, Format::BC2_RGBA_UNORM);
-        CASE(vk::Format::eBc2SrgbBlock, Format::BC2_RGBA_UNORM_SRGB);
-        CASE(vk::Format::eBc3UnormBlock, Format::BC3_RGBA_UNORM);
-        CASE(vk::Format::eBc3SrgbBlock, Format::BC3_RGBA_UNORM_SRGB);
-        CASE(vk::Format::eBc4UnormBlock, Format::BC4_R_UNORM);
-        CASE(vk::Format::eBc4SnormBlock, Format::BC4_R_SNORM);
-        CASE(vk::Format::eBc5UnormBlock, Format::BC5_RG_UNORM);
-        CASE(vk::Format::eBc5SnormBlock, Format::BC5_RG_SNORM);
-        CASE(vk::Format::eBc6HUfloatBlock, Format::BC6H_RGB_UFLOAT);
-        CASE(vk::Format::eBc6HSfloatBlock, Format::BC6H_RGB_FLOAT);
-        CASE(vk::Format::eBc7UnormBlock, Format::BC7_RGBA_UNORM);
-        CASE(vk::Format::eBc7SrgbBlock, Format::BC7_RGBA_UNORM_SRGB);
+        CASE(vk::Format::eBc1RgbaUnormBlock, TextureFormat::BC1_RGBA_UNORM);
+        CASE(vk::Format::eBc1RgbaSrgbBlock, TextureFormat::BC1_RGBA_UNORM_SRGB);
+        CASE(vk::Format::eBc2UnormBlock, TextureFormat::BC2_RGBA_UNORM);
+        CASE(vk::Format::eBc2SrgbBlock, TextureFormat::BC2_RGBA_UNORM_SRGB);
+        CASE(vk::Format::eBc3UnormBlock, TextureFormat::BC3_RGBA_UNORM);
+        CASE(vk::Format::eBc3SrgbBlock, TextureFormat::BC3_RGBA_UNORM_SRGB);
+        CASE(vk::Format::eBc4UnormBlock, TextureFormat::BC4_R_UNORM);
+        CASE(vk::Format::eBc4SnormBlock, TextureFormat::BC4_R_SNORM);
+        CASE(vk::Format::eBc5UnormBlock, TextureFormat::BC5_RG_UNORM);
+        CASE(vk::Format::eBc5SnormBlock, TextureFormat::BC5_RG_SNORM);
+        CASE(vk::Format::eBc6HUfloatBlock, TextureFormat::BC6H_RGB_UFLOAT);
+        CASE(vk::Format::eBc6HSfloatBlock, TextureFormat::BC6H_RGB_FLOAT);
+        CASE(vk::Format::eBc7UnormBlock, TextureFormat::BC7_RGBA_UNORM);
+        CASE(vk::Format::eBc7SrgbBlock, TextureFormat::BC7_RGBA_UNORM_SRGB);
 
-        CASE(vk::Format::eEtc2R8G8B8UnormBlock, Format::ETC2_RGB8_UNORM);
-        CASE(vk::Format::eEtc2R8G8B8SrgbBlock, Format::ETC2_RGB8_UNORM_SRGB);
-        CASE(vk::Format::eEtc2R8G8B8A1UnormBlock, Format::ETC2_RGB8A1_UNORM);
+        CASE(vk::Format::eEtc2R8G8B8UnormBlock, TextureFormat::ETC2_RGB8_UNORM);
+        CASE(vk::Format::eEtc2R8G8B8SrgbBlock,
+             TextureFormat::ETC2_RGB8_UNORM_SRGB);
+        CASE(vk::Format::eEtc2R8G8B8A1UnormBlock,
+             TextureFormat::ETC2_RGB8A1_UNORM);
         CASE(vk::Format::eEtc2R8G8B8A1SrgbBlock,
-             Format::ETC2_RGB8A1_UNORM_SRGB);
-        CASE(vk::Format::eEtc2R8G8B8A8UnormBlock, Format::ETC2_RGBA8_UNORM);
-        CASE(vk::Format::eEtc2R8G8B8A8SrgbBlock, Format::ETC2_RGBA8_UNORM_SRGB);
-        CASE(vk::Format::eEacR11UnormBlock, Format::EAC_R11_UNORM);
-        CASE(vk::Format::eEacR11SnormBlock, Format::EAC_R11_SNORM);
-        CASE(vk::Format::eEacR11G11UnormBlock, Format::EAC_RG11_UNORM);
-        CASE(vk::Format::eEacR11G11SnormBlock, Format::EAC_RG11_SNORM);
+             TextureFormat::ETC2_RGB8A1_UNORM_SRGB);
+        CASE(vk::Format::eEtc2R8G8B8A8UnormBlock,
+             TextureFormat::ETC2_RGBA8_UNORM);
+        CASE(vk::Format::eEtc2R8G8B8A8SrgbBlock,
+             TextureFormat::ETC2_RGBA8_UNORM_SRGB);
+        CASE(vk::Format::eEacR11UnormBlock, TextureFormat::EAC_R11_UNORM);
+        CASE(vk::Format::eEacR11SnormBlock, TextureFormat::EAC_R11_SNORM);
+        CASE(vk::Format::eEacR11G11UnormBlock, TextureFormat::EAC_RG11_UNORM);
+        CASE(vk::Format::eEacR11G11SnormBlock, TextureFormat::EAC_RG11_SNORM);
 
-        CASE(vk::Format::eAstc4x4UnormBlock, Format::ASTC_4X4_UNORM);
-        CASE(vk::Format::eAstc4x4SrgbBlock, Format::ASTC_4X4_UNORM_SRGB);
-        CASE(vk::Format::eAstc5x4UnormBlock, Format::ASTC_5X4_UNORM);
-        CASE(vk::Format::eAstc5x4SrgbBlock, Format::ASTC_5X4_UNORM_SRGB);
-        CASE(vk::Format::eAstc5x5UnormBlock, Format::ASTC_5X5_UNORM);
-        CASE(vk::Format::eAstc5x5SrgbBlock, Format::ASTC_5X5_UNORM_SRGB);
-        CASE(vk::Format::eAstc6x5UnormBlock, Format::ASTC_6X5_UNORM);
-        CASE(vk::Format::eAstc6x5SrgbBlock, Format::ASTC_6X5_UNORM_SRGB);
-        CASE(vk::Format::eAstc6x6UnormBlock, Format::ASTC_6X6_UNORM);
-        CASE(vk::Format::eAstc6x6SrgbBlock, Format::ASTC_6X6_UNORM_SRGB);
-        CASE(vk::Format::eAstc8x5UnormBlock, Format::ASTC_8X5_UNORM);
-        CASE(vk::Format::eAstc8x5SrgbBlock, Format::ASTC_8X5_UNORM_SRGB);
+        CASE(vk::Format::eAstc4x4UnormBlock, TextureFormat::ASTC_4X4_UNORM);
+        CASE(vk::Format::eAstc4x4SrgbBlock, TextureFormat::ASTC_4X4_UNORM_SRGB);
+        CASE(vk::Format::eAstc5x4UnormBlock, TextureFormat::ASTC_5X4_UNORM);
+        CASE(vk::Format::eAstc5x4SrgbBlock, TextureFormat::ASTC_5X4_UNORM_SRGB);
+        CASE(vk::Format::eAstc5x5UnormBlock, TextureFormat::ASTC_5X5_UNORM);
+        CASE(vk::Format::eAstc5x5SrgbBlock, TextureFormat::ASTC_5X5_UNORM_SRGB);
+        CASE(vk::Format::eAstc6x5UnormBlock, TextureFormat::ASTC_6X5_UNORM);
+        CASE(vk::Format::eAstc6x5SrgbBlock, TextureFormat::ASTC_6X5_UNORM_SRGB);
+        CASE(vk::Format::eAstc6x6UnormBlock, TextureFormat::ASTC_6X6_UNORM);
+        CASE(vk::Format::eAstc6x6SrgbBlock, TextureFormat::ASTC_6X6_UNORM_SRGB);
+        CASE(vk::Format::eAstc8x5UnormBlock, TextureFormat::ASTC_8X5_UNORM);
+        CASE(vk::Format::eAstc8x5SrgbBlock, TextureFormat::ASTC_8X5_UNORM_SRGB);
 
-        CASE(vk::Format::eAstc8x6UnormBlock, Format::ASTC_8X6_UNORM);
-        CASE(vk::Format::eAstc8x6SrgbBlock, Format::ASTC_8X6_UNORM_SRGB);
-        CASE(vk::Format::eAstc8x8UnormBlock, Format::ASTC_8X8_UNORM);
-        CASE(vk::Format::eAstc8x8SrgbBlock, Format::ASTC_8X8_UNORM_SRGB);
-        CASE(vk::Format::eAstc10x5UnormBlock, Format::ASTC_10X5_UNORM);
-        CASE(vk::Format::eAstc10x5SrgbBlock, Format::ASTC_10X5_UNORM_SRGB);
-        CASE(vk::Format::eAstc10x6UnormBlock, Format::ASTC_10X6_UNORM);
-        CASE(vk::Format::eAstc10x6SrgbBlock, Format::ASTC_10X6_UNORM_SRGB);
-        CASE(vk::Format::eAstc10x8UnormBlock, Format::ASTC_10X8_UNORM);
-        CASE(vk::Format::eAstc10x8SrgbBlock, Format::ASTC_10X8_UNORM_SRGB);
-        CASE(vk::Format::eAstc10x10UnormBlock, Format::ASTC_10X10_UNORM);
-        CASE(vk::Format::eAstc10x10SrgbBlock, Format::ASTC_10X10_UNORM_SRGB);
-        CASE(vk::Format::eAstc12x10UnormBlock, Format::ASTC_12X10_UNORM);
-        CASE(vk::Format::eAstc12x10SrgbBlock, Format::ASTC_12X10_UNORM_SRGB);
-        CASE(vk::Format::eAstc12x12UnormBlock, Format::ASTC_12X12_UNORM);
-        CASE(vk::Format::eAstc12x12SrgbBlock, Format::ASTC_12X12_UNORM_SRGB);
+        CASE(vk::Format::eAstc8x6UnormBlock, TextureFormat::ASTC_8X6_UNORM);
+        CASE(vk::Format::eAstc8x6SrgbBlock, TextureFormat::ASTC_8X6_UNORM_SRGB);
+        CASE(vk::Format::eAstc8x8UnormBlock, TextureFormat::ASTC_8X8_UNORM);
+        CASE(vk::Format::eAstc8x8SrgbBlock, TextureFormat::ASTC_8X8_UNORM_SRGB);
+        CASE(vk::Format::eAstc10x5UnormBlock, TextureFormat::ASTC_10X5_UNORM);
+        CASE(vk::Format::eAstc10x5SrgbBlock,
+             TextureFormat::ASTC_10X5_UNORM_SRGB);
+        CASE(vk::Format::eAstc10x6UnormBlock, TextureFormat::ASTC_10X6_UNORM);
+        CASE(vk::Format::eAstc10x6SrgbBlock,
+             TextureFormat::ASTC_10X6_UNORM_SRGB);
+        CASE(vk::Format::eAstc10x8UnormBlock, TextureFormat::ASTC_10X8_UNORM);
+        CASE(vk::Format::eAstc10x8SrgbBlock,
+             TextureFormat::ASTC_10X8_UNORM_SRGB);
+        CASE(vk::Format::eAstc10x10UnormBlock, TextureFormat::ASTC_10X10_UNORM);
+        CASE(vk::Format::eAstc10x10SrgbBlock,
+             TextureFormat::ASTC_10X10_UNORM_SRGB);
+        CASE(vk::Format::eAstc12x10UnormBlock, TextureFormat::ASTC_12X10_UNORM);
+        CASE(vk::Format::eAstc12x10SrgbBlock,
+             TextureFormat::ASTC_12X10_UNORM_SRGB);
+        CASE(vk::Format::eAstc12x12UnormBlock, TextureFormat::ASTC_12X12_UNORM);
+        CASE(vk::Format::eAstc12x12SrgbBlock,
+             TextureFormat::ASTC_12X12_UNORM_SRGB);
         default:
-            return Format::Undefined;
+            return TextureFormat::Undefined;
     }
 }
 
@@ -525,6 +552,43 @@ inline vk::IndexType IndexType2Vk(IndexType type) {
     switch (type) {
         CASE(IndexType::Uint16, vk::IndexType::eUint16);
         CASE(IndexType::Uint32, vk::IndexType::eUint32);
+    }
+}
+
+inline vk::Format VertexFormat2Vk(VertexFormat fmt) {
+    switch (fmt) {
+        CASE(VertexFormat::Uint8x2, vk::Format::eR8G8Uint);
+        CASE(VertexFormat::Uint8x4, vk::Format::eR8G8B8A8Uint);
+        CASE(VertexFormat::Sint8x2, vk::Format::eR8G8Sint);
+        CASE(VertexFormat::Sint8x4, vk::Format::eR8G8B8A8Sint);
+        CASE(VertexFormat::Unorm8x2, vk::Format::eR8G8Unorm);
+        CASE(VertexFormat::Unorm8x4, vk::Format::eR8G8B8A8Unorm);
+        CASE(VertexFormat::Snorm8x2, vk::Format::eR8G8Snorm);
+        CASE(VertexFormat::Snorm8x4, vk::Format::eR8G8B8A8Snorm);
+        CASE(VertexFormat::Uint16x2, vk::Format::eR16G16Uint);
+        CASE(VertexFormat::Uint16x4, vk::Format::eR16G16B16A16Uint);
+        CASE(VertexFormat::Sint16x2, vk::Format::eR16G16Sint);
+        CASE(VertexFormat::Sint16x4, vk::Format::eR16G16B16A16Sint);
+        CASE(VertexFormat::Unorm16x2, vk::Format::eR16G16Unorm);
+        CASE(VertexFormat::Unorm16x4, vk::Format::eR16G16B16A16Sint);
+        CASE(VertexFormat::Snorm16x2, vk::Format::eR16G16Snorm);
+        CASE(VertexFormat::Snorm16x4, vk::Format::eR16G16B16A16Sint);
+        CASE(VertexFormat::Float16x2, vk::Format::eR16G16Sfloat);
+        CASE(VertexFormat::Float16x4, vk::Format::eR16G16B16A16Sfloat);
+        CASE(VertexFormat::Float32, vk::Format::eR32Sfloat);
+        CASE(VertexFormat::Float32x2, vk::Format::eR32G32Sfloat);
+        CASE(VertexFormat::Float32x3, vk::Format::eR32G32B32Sfloat);
+        CASE(VertexFormat::Float32x4, vk::Format::eR32G32B32A32Sfloat);
+        CASE(VertexFormat::Uint32, vk::Format::eR32Uint);
+        CASE(VertexFormat::Uint32x2, vk::Format::eR32G32Uint);
+        CASE(VertexFormat::Uint32x3, vk::Format::eR32G32B32Uint);
+        CASE(VertexFormat::Uint32x4, vk::Format::eR32G32B32A32Uint);
+        CASE(VertexFormat::Sint32, vk::Format::eR32Sint);
+        CASE(VertexFormat::Sint32x2, vk::Format::eR32G32Sint);
+        CASE(VertexFormat::Sint32x3, vk::Format::eR32G32B32Sint);
+        CASE(VertexFormat::Sint32x4, vk::Format::eR32G32B32A32Sint);
+        CASE(VertexFormat::Unorm10_10_10_2,
+             vk::Format::eA2R10G10B10UnormPack32);  // doubt!
     }
 }
 

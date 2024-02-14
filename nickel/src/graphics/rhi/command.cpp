@@ -7,6 +7,13 @@ CommandEncoder::CommandEncoder(CommandEncoderImpl* impl) : impl_{impl} {}
 
 CommandBuffer::CommandBuffer(CommandBufferImpl* impl) : impl_{impl} {}
 
+void CommandBuffer::Destroy() {
+    if (impl_) {
+        delete impl_;
+        impl_ = nullptr;
+    }
+}
+
 void CommandEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                                         const Buffer& dst, uint64_t dstOffset,
                                         uint64_t size) {
@@ -26,6 +33,13 @@ RenderPassEncoder CommandEncoder::BeginRenderPass(
 
 CommandBuffer CommandEncoder::Finish() {
     return impl_->Finish();
+}
+
+void CommandEncoder::Destroy() {
+    if (impl_) {
+        delete impl_;
+        impl_ = nullptr;
+    }
 }
 
 void RenderPassEncoder::Draw(uint32_t vertexCount, uint32_t instanceCount,
@@ -60,6 +74,10 @@ void RenderPassEncoder::SetPipeline(RenderPipeline pipeline) {
 
 void RenderPassEncoder::End() {
     impl_->End();
+    if (impl_) {
+        delete impl_;
+        impl_ = nullptr;
+    }
 }
 
 }  // namespace nickel::rhi

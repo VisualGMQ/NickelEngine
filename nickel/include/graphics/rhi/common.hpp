@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 namespace nickel::rhi {
 
@@ -78,7 +79,7 @@ enum class SampleCount {
     Count64,
 };
 
-enum class Format {
+enum class TextureFormat {
     Undefined,
     Presentation,
 
@@ -220,9 +221,7 @@ struct Extent3D {
                depthOrArrayLayers == e.depthOrArrayLayers;
     }
 
-    bool operator!=(const Extent3D& e) const {
-        return !(*this == e);
-    }
+    bool operator!=(const Extent3D& e) const { return !(*this == e); }
 };
 
 enum class TextureAspect {
@@ -232,9 +231,9 @@ enum class TextureAspect {
 };
 
 enum class ShaderStage {
-    Vertex,
-    Compute,
-    Fragment,
+    Vertex = 0x01,
+    Compute = 0x02,
+    Fragment = 0x04,
 };
 
 enum class DepthCompare {
@@ -366,6 +365,103 @@ enum class ColorWriteMask {
     Blue = 0x04,
     Alpha = 0x08,
     All = 0,
+};
+
+enum class VertexFormat {
+    Uint8x2,
+    Uint8x4,
+    Sint8x2,
+    Sint8x4,
+    Unorm8x2,
+    Unorm8x4,
+    Snorm8x2,
+    Snorm8x4,
+    Uint16x2,
+    Uint16x4,
+    Sint16x2,
+    Sint16x4,
+    Unorm16x2,
+    Unorm16x4,
+    Snorm16x2,
+    Snorm16x4,
+    Float16x2,
+    Float16x4,
+    Float32,
+    Float32x2,
+    Float32x3,
+    Float32x4,
+    Uint32,
+    Uint32x2,
+    Uint32x3,
+    Uint32x4,
+    Sint32,
+    Sint32x2,
+    Sint32x3,
+    Sint32x4,
+    Unorm10_10_10_2,
+};
+
+template <typename T>
+struct Flags final {
+public:
+    static_assert(std::is_enum_v<T>);
+
+    using underlying_type = std::underlying_type_t<T>;
+
+    Flags() = default;
+
+    explicit Flags(T mask) : data_{static_cast<underlying_type>(mask)} {}
+    explicit Flags(underlying_type mask) : data_{mask} {}
+
+    Flags operator|(T mask) const {
+        return Flags(static_cast<underlying_type>(mask) | data_);
+    }
+
+    Flags operator&(T mask) const {
+        return Flags(static_cast<underlying_type>(mask) & data_);
+    }
+
+    Flags& operator|=(T mask) {
+        data_ |= static_cast<underlying_type>(mask);
+        return *this;
+    }
+
+    Flags& operator&=(T mask) {
+        data_ &= static_cast<underlying_type>(mask);
+        return *this;
+    }
+
+    bool operator==(T mask) const {
+        return data_ == static_cast<underlying_type>(mask);
+    }
+
+    bool operator==(Flags mask) const {
+        return data_ == mask.data_;
+    }
+
+    bool operator!=(T mask) const {
+        return !(*this == mask);
+    }
+
+    bool operator!=(Flags mask) const {
+        return !(*this != mask);
+    }
+
+    Flags& operator=(T mask) {
+        data_ = static_cast<underlying_type>(mask);
+        return *this;
+    }
+
+    Flags& operator=(Flags mask) {
+        data_ = mask.data_;
+        return *this;
+    }
+
+    operator T() const { return static_cast<T>(data_); }
+    operator underlying_type() const { return data_; }
+
+private:
+    underlying_type data_ = {};
 };
 
 }  // namespace nickel::rhi

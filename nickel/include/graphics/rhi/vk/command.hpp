@@ -13,7 +13,7 @@ class DeviceImpl;
 
 class RenderPassEncoderImpl : public rhi::RenderPassEncoderImpl {
 public:
-    explicit RenderPassEncoderImpl(vk::CommandBuffer cmd);
+    RenderPassEncoderImpl(DeviceImpl&, vk::CommandBuffer cmd);
 
     void Draw(uint32_t vertexCount, uint32_t instanceCount,
               uint32_t firstVertex, uint32_t firstInstance) override;
@@ -30,6 +30,7 @@ public:
     void End() override;
 
 private:
+    DeviceImpl& dev_;
     vk::CommandBuffer cmd_;
     RenderPipeline pipeline_;
 };
@@ -49,8 +50,11 @@ public:
 
     CommandBuffer Finish() override;
 
+    void Reset();
+
 private:
     vk::CommandPool pool_;
+    CommandBuffer* cmdBuf_{};
     vk::CommandBuffer buf_;
     DeviceImpl& dev_;
 };

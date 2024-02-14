@@ -19,7 +19,7 @@ enum class BufferType {
 struct BufferBinding final {
     Buffer buffer;
     bool hasDynamicOffset = false;
-    uint64_t minBindingSize = 0;
+    std::optional<uint64_t> minBindingSize;
     BufferType type = BufferType::Uniform;
 };
 
@@ -38,7 +38,7 @@ struct StorageTextureBinding final {
         WriteOnly,
     } access = StorageTextureAccess::Undefined;
     TextureView view;
-    Format format;
+    VertexFormat format;
     TextureViewType viewDimension = TextureViewType::Dim2;
 };
 
@@ -75,8 +75,11 @@ public:
         std::vector<Entry> entries;
     };
 
+    BindGroupLayout() = default;
     BindGroupLayout(APIPreference api, DeviceImpl&, const Descriptor&);
     void Destroy();
+
+    operator bool() const { return impl_; }
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
@@ -94,11 +97,14 @@ public:
         BindGroupLayout layout;
     };
 
+    BindGroup() = default;
     BindGroup(APIPreference, DeviceImpl&, const Descriptor&);
     BindGroupLayout GetLayout() const;
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
     void Destroy();
+
+    operator bool() const { return impl_; }
 
 private:
     BindGroupImpl* impl_{};

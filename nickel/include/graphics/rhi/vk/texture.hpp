@@ -28,7 +28,7 @@ private:
 
     void createImage(const Texture::Descriptor& desc,
                      const std::vector<uint32_t>& queueIndices);
-    void allocMem(vk::PhysicalDevice phyDevice, enum Format, const Extent3D&);
+    void allocMem(vk::PhysicalDevice phyDevice, enum TextureFormat, const Extent3D&);
 };
 
 }  // namespace nickel::rhi::vulkan

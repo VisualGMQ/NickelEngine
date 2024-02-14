@@ -3,14 +3,14 @@
 
 namespace nickel::rhi {
 
-TextureViewImpl::TextureViewImpl(enum Format format, TextureImpl& texture)
+TextureViewImpl::TextureViewImpl(enum TextureFormat format, TextureImpl& texture)
     : format_{format}, texture_{texture} {}
 
 const Texture::Descriptor& TextureViewImpl::TextureDescriptor() const {
     return texture_.Descriptor();
 }
 
-enum Format TextureViewImpl::Format() const {
+enum TextureFormat TextureViewImpl::Format() const {
     return format_;
 }
 

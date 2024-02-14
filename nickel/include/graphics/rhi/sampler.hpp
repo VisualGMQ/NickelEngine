@@ -23,8 +23,13 @@ public:
         Filter mipmapFilter = Filter::Nearest;
     };
 
+    Sampler() = default;
     explicit Sampler(APIPreference api, DeviceImpl& dev, const Descriptor& desc);
     void Destroy();
+
+    operator bool() const {
+        return impl_;
+    }
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
