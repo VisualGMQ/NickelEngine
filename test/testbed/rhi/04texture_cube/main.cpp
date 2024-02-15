@@ -1,6 +1,8 @@
 #include "graphics/rhi/rhi.hpp"
 #include "nickel.hpp"
+#include "stb_image.h"
 #include "vertex.hpp"
+
 
 using namespace nickel::rhi;
 
@@ -13,6 +15,9 @@ struct Context {
     BindGroup bindGroup;
     Texture depth;
     TextureView depthView;
+    Texture image;
+    TextureView imageView;
+    Sampler sampler;
 };
 
 struct MVP {
@@ -23,13 +28,13 @@ void initShaders(Device device, RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
     shaderDesc.code =
         nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/03cube/vert.spv", std::ios::binary)
+            "test/testbed/rhi/04texture_cube/vert.spv", std::ios::binary)
             .value();
     desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
     shaderDesc.code =
         nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/03cube/frag.spv", std::ios::binary)
+            "test/testbed/rhi/04texture_cube/frag.spv", std::ios::binary)
             .value();
     desc.fragment.module = device.CreateShaderModule(shaderDesc);
 }
@@ -49,7 +54,8 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
                                            window.Size().w / window.Size().h,
                                            0.1, 100);
-    mvp.view = nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -5});
+    mvp.view =
+        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -5});
     mvp.model = nickel::cgmath::Mat44::Identity();
 
     Buffer::Descriptor bufferDesc;
@@ -57,8 +63,13 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     bufferDesc.mappedAtCreation = true;
     bufferDesc.size = 4 * 4 * 4 * 3;
     ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
-    void *data = ctx.uniformBuffer.GetMappedRange();
+    void* data = ctx.uniformBuffer.GetMappedRange();
     memcpy(data, &mvp, sizeof(mvp));
+}
+
+void initSampler(Context& ctx, Device& device) {
+    Sampler::Descriptor desc;
+    ctx.sampler = device.CreateSampler(desc);
 }
 
 void initPipelineLayout(Context& ctx, Device& device) {
@@ -67,9 +78,10 @@ void initPipelineLayout(Context& ctx, Device& device) {
     ctx.layout = device.CreatePipelineLayout(layoutDesc);
 }
 
-void initBindGroupAndLayout(Context& ctx, Device& device){
+void initBindGroupAndLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
+    // uniform buffer
     Entry entry;
     entry.arraySize = 1;
     entry.binding = 0;
@@ -80,11 +92,33 @@ void initBindGroupAndLayout(Context& ctx, Device& device){
     bufferBinding.type = BufferType::Uniform;
     entry.resourceLayout = bufferBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // sampler
+    entry.arraySize = 1;
+    entry.binding = 1;
+    entry.visibility = ShaderStage::Fragment;
+    SamplerBinding samplerBinding;
+    samplerBinding.type = SamplerBinding::SamplerType::Filtering;
+    samplerBinding.sampler = ctx.sampler;
+    entry.resourceLayout = samplerBinding;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // texture
+    entry.arraySize = 1;
+    entry.binding = 2;
+    entry.visibility = ShaderStage::Fragment;
+    TextureBinding textureBinding;
+    textureBinding.sampleType = TextureBinding::SampleType::Float;
+    textureBinding.viewDimension = TextureViewType::Dim2;
+    textureBinding.view = ctx.imageView;
+    entry.resourceLayout = textureBinding;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
-    bindGroupDesc.entries.push_back(entry);
+    bindGroupDesc.entries = bindGroupLayoutDesc.entries;
     ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
@@ -98,6 +132,53 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
     ctx.depth = dev.CreateTexture(desc);
 
     ctx.depthView = ctx.depth.CreateView();
+}
+
+void initImage(Context& ctx, Device& dev) {
+    int w, h;
+    void* data = stbi_load("test/testbed/rhi/04texture_cube/texture.jpg", &w,
+                           &h, nullptr, STBI_rgb_alpha);
+
+    Texture::Descriptor desc;
+    desc.format = TextureFormat::RGBA8_UNORM_SRGB;
+    desc.size.width = w;
+    desc.size.height = h;
+    desc.size.depthOrArrayLayers = 1;
+    desc.usage = static_cast<uint32_t>(TextureUsage::TextureBinding) |
+                 static_cast<uint32_t>(TextureUsage::CopyDst);
+    ctx.image = dev.CreateTexture(desc);
+
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.usage = BufferUsage::CopySrc;
+    bufferDesc.size = 4 * w * h;
+    Buffer copyBuffer = dev.CreateBuffer(bufferDesc);
+
+    void* bufData = copyBuffer.GetMappedRange();
+    memcpy(bufData, data, bufferDesc.size);
+    copyBuffer.Unmap();
+
+    auto encoder = dev.CreateCommandEncoder();
+    CommandEncoder::BufTexCopySrc src;
+    src.buffer = copyBuffer;
+    src.offset = 0;
+    src.bytesPerRow = w;
+    src.rowsPerImage = h;
+    CommandEncoder::BufTexCopyDst dst;
+    dst.texture = ctx.image;
+    dst.aspect = TextureAspect::All;
+    dst.miplevel = 0;
+    encoder.CopyBufferToTexture(src, dst,
+                                Extent3D{(uint32_t)w, (uint32_t)h, 1});
+    auto buf = encoder.Finish();
+    dev.GetQueue().Submit({buf});
+    dev.WaitIdle();
+    encoder.Destroy();
+
+    ctx.imageView = ctx.image.CreateView();
+
+    stbi_image_free(data);
+    copyBuffer.Destroy();
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -114,7 +195,8 @@ void StartupSystem(gecs::commands cmds,
 
     bufferState.attributes.push_back({VertexFormat::Float32x3, 0, 0});
     bufferState.attributes.push_back({VertexFormat::Float32x3, 12, 1});
-    bufferState.arrayStride = 6 * 4;
+    bufferState.attributes.push_back({VertexFormat::Float32x2, 24, 2});
+    bufferState.arrayStride = 8 * 4;
     desc.vertex.buffers.emplace_back(bufferState);
 
     desc.viewport.viewport.x = 0;
@@ -128,6 +210,8 @@ void StartupSystem(gecs::commands cmds,
 
     initShaders(device, desc);
 
+    initSampler(ctx, device);
+    initImage(ctx, device);
     initVertexBuffer(ctx, device);
     initUniformBuffer(ctx, device, window.get());
     initBindGroupAndLayout(ctx, device);
@@ -164,7 +248,8 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
 
-    desc.depthStencilAttachment = RenderPass::Descriptor::DepthStencilAttachment{};
+    desc.depthStencilAttachment =
+        RenderPass::Descriptor::DepthStencilAttachment{};
     desc.depthStencilAttachment->view = ctx->depthView;
     desc.depthStencilAttachment->depthLoadOp = AttachmentLoadOp::Clear;
     desc.depthStencilAttachment->depthStoreOp = AttachmentStoreOp::Discard;
@@ -193,7 +278,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
-    
+
     void* data = ctx->uniformBuffer.GetMappedRange();
     mvp.model = nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
@@ -203,6 +288,7 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
+    ctx->sampler.Destroy();
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
     ctx->bindGroup.Destroy();
@@ -217,8 +303,8 @@ void ShutdownSystem(gecs::commands cmds,
 
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
-    nickel::Window& window =
-        reg.commands().emplace_resource<nickel::Window>("03 cube", 1024, 720);
+    nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
+        "04 texture cube", 1024, 720);
 
     reg
         // startup systems

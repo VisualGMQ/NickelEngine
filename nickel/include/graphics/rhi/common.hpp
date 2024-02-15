@@ -408,60 +408,83 @@ public:
 
     using underlying_type = std::underlying_type_t<T>;
 
-    Flags() = default;
+    constexpr Flags(): data_{0} {}
+    constexpr Flags(T mask) : data_{static_cast<underlying_type>(mask)} {}
+    constexpr Flags(const Flags&) = default;
+    explicit constexpr Flags(underlying_type mask) : data_{mask} {}
 
-    explicit Flags(T mask) : data_{static_cast<underlying_type>(mask)} {}
-    explicit Flags(underlying_type mask) : data_{mask} {}
-
-    Flags operator|(T mask) const {
+    constexpr Flags operator|(T mask) const {
         return Flags(static_cast<underlying_type>(mask) | data_);
     }
 
-    Flags operator&(T mask) const {
+    constexpr Flags operator|(Flags mask) const {
+        return Flags(static_cast<underlying_type>(mask.data_) | data_);
+    }
+
+    constexpr Flags operator&(T mask) const {
         return Flags(static_cast<underlying_type>(mask) & data_);
     }
 
-    Flags& operator|=(T mask) {
+    constexpr Flags operator&(Flags mask) const {
+        return Flags(static_cast<underlying_type>(mask.data_) & data_);
+    }
+
+    constexpr Flags& operator|=(T mask) {
         data_ |= static_cast<underlying_type>(mask);
         return *this;
     }
 
-    Flags& operator&=(T mask) {
+    constexpr Flags& operator|=(Flags mask) {
+        data_ |= static_cast<underlying_type>(mask.data_);
+        return *this;
+    }
+
+    constexpr Flags& operator&=(T mask) {
         data_ &= static_cast<underlying_type>(mask);
         return *this;
     }
 
-    bool operator==(T mask) const {
+    constexpr Flags& operator&=(Flags mask) {
+        data_ &= static_cast<underlying_type>(mask.data_);
+        return *this;
+    }
+
+    constexpr bool operator==(T mask) const {
         return data_ == static_cast<underlying_type>(mask);
     }
 
-    bool operator==(Flags mask) const {
+    constexpr bool operator==(Flags mask) const {
         return data_ == mask.data_;
     }
 
-    bool operator!=(T mask) const {
+    constexpr bool operator!=(T mask) const {
         return !(*this == mask);
     }
 
-    bool operator!=(Flags mask) const {
+    constexpr bool operator!=(Flags mask) const {
         return !(*this != mask);
     }
 
-    Flags& operator=(T mask) {
+    constexpr Flags& operator=(T mask) {
         data_ = static_cast<underlying_type>(mask);
         return *this;
     }
 
-    Flags& operator=(Flags mask) {
+    constexpr Flags& operator=(Flags mask) {
         data_ = mask.data_;
         return *this;
     }
 
-    operator T() const { return static_cast<T>(data_); }
-    operator underlying_type() const { return data_; }
+    constexpr Flags& operator=(underlying_type mask) {
+        data_ = mask;
+        return *this;
+    }
+
+    constexpr operator T() const { return static_cast<T>(data_); }
+    constexpr operator underlying_type() const { return data_; }
 
 private:
-    underlying_type data_ = {};
+    underlying_type data_;
 };
 
 }  // namespace nickel::rhi

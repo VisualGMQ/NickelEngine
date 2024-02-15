@@ -17,7 +17,7 @@ public:
         std::optional<CompareOp> compare;
         uint32_t lodMinClamp = 0;
         uint32_t lodMaxClamp = 32;
-        std::optional<float> maxAnisotropy = 1.0;
+        std::optional<float> maxAnisotropy;
         Filter min = Filter::Nearest;
         Filter mag = Filter::Nearest;
         Filter mipmapFilter = Filter::Nearest;

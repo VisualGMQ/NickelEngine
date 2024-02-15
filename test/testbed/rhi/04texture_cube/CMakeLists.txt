@@ -1,0 +1,2 @@
+AddRHITest(rhi_04texture_cube)
+target_link_libraries(rhi_04texture_cube PRIVATE stb_image)

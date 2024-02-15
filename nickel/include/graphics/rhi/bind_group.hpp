@@ -60,7 +60,7 @@ using ResourceLayout = std::variant<BufferBinding, SamplerBinding,
 
 struct Entry final {
     uint32_t binding;
-    ShaderStage visibility;
+    Flags<ShaderStage> visibility;
     ResourceLayout resourceLayout;
     uint32_t arraySize = 1;
 };

@@ -18,7 +18,7 @@ public:
         TextureType dimension = TextureType::Dim2;
         uint32_t mipmapLevelCount = 1;
         SampleCount sampleCount = SampleCount::Count1;
-        TextureUsage usage;
+        Flags<TextureUsage> usage;
         std::optional<TextureFormat> viewFormat;
     };
 

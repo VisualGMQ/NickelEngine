@@ -41,8 +41,7 @@ struct getDescriptorTypeHelper {
     }
 
     vk::DescriptorType operator()(const TextureBinding& layout) const {
-        // FIXME: doubt!
-        return vk::DescriptorType::eCombinedImageSampler;
+        return vk::DescriptorType::eSampledImage;
     }
 };
 
@@ -200,13 +199,13 @@ private:
 
 void BindGroupImpl::writeDescriptors(vk::Device dev,
                                      const BindGroup::Descriptor& desc) {
-    for (int i = 0; i < desc.entries.size(); i++) {
-        auto& entry = desc.entries[i];
-        uint32_t imgCount = device_.swapchain.ImageInfo().imagCount;
-        for (int j = 0; j < imgCount; j++) {
-            auto type = getDescriptorType(entry.resourceLayout);
+    uint32_t imgCount = device_.swapchain.ImageInfo().imagCount;
+    for (int i = 0; i < imgCount; i++) {
+        auto set = sets[i];
+        for (int j = 0; j < desc.entries.size(); j++) {
+            auto& entry = desc.entries[j];
 
-            WriteDescriptorHelper helper(sets[i * imgCount + j], dev, entry);
+            WriteDescriptorHelper helper(set, dev, entry);
             std::visit(helper, entry.resourceLayout);
         }
     }

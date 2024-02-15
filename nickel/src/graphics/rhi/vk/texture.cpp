@@ -28,6 +28,14 @@ TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
     }
 }
 
+bool isDepthStencil(TextureFormat fmt) {
+    return fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+           fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+           fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+           fmt == TextureFormat::DEPTH16_UNORM ||
+           fmt == TextureFormat::DEPTH32_FLOAT;
+}
+
 void TextureImpl::createImage(const Texture::Descriptor& desc,
                               const std::vector<uint32_t>& queueIndices) {
     vk::ImageCreateInfo info;
@@ -39,7 +47,7 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
         .setExtent(
             {desc.size.width, desc.size.height, desc.size.depthOrArrayLayers})
         .setArrayLayers(desc.size.depthOrArrayLayers)
-        .setUsage(TextureUsage2Vk(desc.usage, true));
+        .setUsage(TextureUsage2Vk(desc.usage, isDepthStencil(desc.format)));
 
     if (queueIndices.size() > 1) {
         info.setQueueFamilyIndices(queueIndices)

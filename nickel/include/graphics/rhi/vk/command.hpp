@@ -35,6 +35,12 @@ private:
     RenderPipeline pipeline_;
 };
 
+enum class CmdType {
+    None,
+    RenderPass,
+    CopyData,
+};
+
 class CommandEncoderImpl : public rhi::CommandEncoderImpl {
 public:
     explicit CommandEncoderImpl(DeviceImpl&, vk::CommandPool);
@@ -50,20 +56,28 @@ public:
 
     CommandBuffer Finish() override;
 
-    void Reset();
+    CmdType Type() const { return type_; }
 
 private:
     vk::CommandPool pool_;
     CommandBuffer* cmdBuf_{};
     vk::CommandBuffer buf_;
     DeviceImpl& dev_;
+    CmdType type_ = CmdType::None;
 };
 
 class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:
+    friend class CommandEncoderImpl;
+
     explicit CommandBufferImpl(vk::CommandBuffer buf) : buf{buf} {}
 
     vk::CommandBuffer buf;
+
+    CmdType Type() const { return type_; }
+
+private:
+    CmdType type_ = CmdType::None;
 };
 
 }  // namespace nickel::rhi::vulkan

@@ -19,7 +19,7 @@ inline vk::BufferUsageFlags BufferUsage2Vk(BufferUsage usage) {
         static_cast<uint32_t>(BufferUsage::CopySrc)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eTransferSrc);
     }
-    
+
     if (static_cast<uint32_t>(usage) &
         static_cast<uint32_t>(BufferUsage::MapWrite)) {
         bits |= static_cast<uint32_t>(vk::BufferUsageFlagBits::eTransferDst);
@@ -106,33 +106,31 @@ inline vk::ImageType TextureType2Vk(TextureType type) {
     }
 }
 
-inline vk::ImageUsageFlags TextureUsage2Vk(TextureUsage usage, bool isDepthStencil = false) {
+inline vk::ImageUsageFlags TextureUsage2Vk(Flags<TextureUsage> usage,
+                                           bool isDepthStencil = false) {
     uint32_t flags = 0;
-    switch (usage) {
-        case TextureUsage::CopySrc:
-            flags |=
-                static_cast<uint32_t>(vk::ImageUsageFlagBits::eTransferSrc);
-            break;
-        case TextureUsage::CopyDst:
-            flags |=
-                static_cast<uint32_t>(vk::ImageUsageFlagBits::eTransferDst);
-            break;
-        case TextureUsage::TextureBinding:
-            flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eSampled);
-            break;
-        case TextureUsage::StorageBinding:
-            flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eStorage);
-            break;
-        case TextureUsage::RenderAttachment:
-            if (isDepthStencil) {
-                flags |= static_cast<uint32_t>(
-                    vk::ImageUsageFlagBits::eDepthStencilAttachment);
-            } else {
-                flags |= static_cast<uint32_t>(
-                    vk::ImageUsageFlagBits::eColorAttachment);
-            }
-            break;
+    if (usage & TextureUsage::TextureBinding) {
+        flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eSampled);
     }
+    if (usage & TextureUsage::CopySrc) {
+        flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eTransferSrc);
+    }
+    if (usage & TextureUsage::CopyDst) {
+        flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eTransferDst);
+    }
+    if (usage & TextureUsage::StorageBinding) {
+        flags |= static_cast<uint32_t>(vk::ImageUsageFlagBits::eStorage);
+    }
+    if (usage & TextureUsage::RenderAttachment) {
+        if (isDepthStencil) {
+            flags |= static_cast<uint32_t>(
+                vk::ImageUsageFlagBits::eDepthStencilAttachment);
+        } else {
+            flags |=
+                static_cast<uint32_t>(vk::ImageUsageFlagBits::eColorAttachment);
+        }
+    }
+
     return static_cast<vk::ImageUsageFlags>(flags);
 }
 
@@ -425,16 +423,15 @@ inline vk::ImageViewType TextureViewType2Vk(TextureViewType type) {
     }
 }
 
-inline vk::ShaderStageFlags ShaderStage2Vk(ShaderStage stage) {
+inline vk::ShaderStageFlags ShaderStage2Vk(Flags<ShaderStage> stage) {
     uint32_t result = 0;
-    uint32_t numeric = static_cast<uint32_t>(stage);
-    if (numeric & static_cast<uint32_t>(ShaderStage::Vertex)) {
+    if (stage & ShaderStage::Vertex) {
         result |= static_cast<uint32_t>(vk::ShaderStageFlagBits::eVertex);
     }
-    if (numeric & static_cast<uint32_t>(ShaderStage::Fragment)) {
+    if (stage & ShaderStage::Fragment) {
         result |= static_cast<uint32_t>(vk::ShaderStageFlagBits::eFragment);
     }
-    if (numeric & static_cast<uint32_t>(ShaderStage::Compute)) {
+    if (stage & ShaderStage::Compute) {
         result |= static_cast<uint32_t>(vk::ShaderStageFlagBits::eCompute);
     }
     return static_cast<vk::ShaderStageFlags>(result);

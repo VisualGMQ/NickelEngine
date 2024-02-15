@@ -9,7 +9,7 @@ class PipelineLayoutImpl;
 struct PushConstantRange final {
     uint64_t offset;
     uint64_t size;
-    ShaderStage stage;
+    Flags<ShaderStage> stage;
 };
 
 class PipelineLayout final {

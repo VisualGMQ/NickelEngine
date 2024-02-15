@@ -120,6 +120,11 @@ bool isSameFramebuffer(const std::vector<vk::ImageView>& view,
 
 RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     const RenderPass::Descriptor& desc) {
+    if (type_ != CmdType::RenderPass && type_ != CmdType::None) {
+        LOGE(log_tag::Vulkan, "record non-compatible commands");
+    }
+    type_ = CmdType::RenderPass;
+
     std::vector<vk::ImageView> views;
 
     for (auto& colorAtt : desc.colorAttachments) {
@@ -223,6 +228,11 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
                                             uint64_t srcOffset,
                                             const Buffer& dst,
                                             uint64_t dstOffset, uint64_t size) {
+    if (type_ != CmdType::CopyData && type_ != CmdType::None) {
+        LOGE(log_tag::Vulkan, "record non-compatible commands");
+    }
+    type_ = CmdType::CopyData;
+    
     // maybe we need barrier
     vk::BufferCopy region;
     region.setSize(size).setSrcOffset(srcOffset).setDstOffset(dstOffset);
@@ -234,68 +244,64 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
 void CommandEncoderImpl::CopyBufferToTexture(
     const CommandEncoder::BufTexCopySrc& src,
     const CommandEncoder::BufTexCopyDst& dst, const Extent3D& copySize) {
+    if (type_ != CmdType::CopyData && type_ != CmdType::None) {
+        LOGE(log_tag::Vulkan, "record non-compatible commands");
+    }
+    type_ = CmdType::CopyData;
+
     auto& buffer =
         static_cast<const vulkan::BufferImpl*>(src.buffer.Impl())->buffer;
-    auto image = *static_cast<const vulkan::TextureImpl*>(dst.texture.Impl());
+    auto& image = *static_cast<const vulkan::TextureImpl*>(dst.texture.Impl());
 
-    vk::CommandBufferBeginInfo beginInfo;
-    beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    VK_CALL_NO_VALUE(buf_.begin(beginInfo));
-    {
-        auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
-        vk::ImageSubresourceRange range;
-        range.setAspectMask(aspect)
-            .setBaseArrayLayer(0)
-            .setLevelCount(1)
-            .setLayerCount(1)
-            .setBaseMipLevel(dst.miplevel);
-        vk::ImageMemoryBarrier barrier;
-        barrier.setImage(image.GetImage())
-            .setOldLayout(vk::ImageLayout::eUndefined)
-            .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
-            .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
-            .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
-            .setSubresourceRange(range);
-        buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                             vk::PipelineStageFlagBits::eTransfer,
-                             vk::DependencyFlagBits::eByRegion, {}, {},
-                             barrier);
+    auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
+    vk::ImageSubresourceRange range;
+    range.setAspectMask(aspect)
+        .setBaseArrayLayer(0)
+        .setLevelCount(1)
+        .setLayerCount(1)
+        .setBaseMipLevel(dst.miplevel);
+    vk::ImageMemoryBarrier barrier;
+    barrier.setImage(image.GetImage())
+        .setOldLayout(vk::ImageLayout::eUndefined)
+        .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
+        .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
+        .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
+        .setSubresourceRange(range);
+    buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+                            vk::PipelineStageFlagBits::eTransfer,
+                            vk::DependencyFlagBits::eByRegion, {}, {},
+                            barrier);
 
-        vk::ImageSubresourceLayers layers;
-        layers.setAspectMask(aspect)
-            .setBaseArrayLayer(0)
-            .setLayerCount(1)
-            .setMipLevel(dst.miplevel);
-        vk::BufferImageCopy copyInfo;
-        copyInfo.setBufferOffset(src.offset)
-            .setImageOffset(0)
-            .setBufferImageHeight(src.rowsPerImage)
-            .setBufferRowLength(src.bytesPerRow)
-            .setImageExtent({image.Extent().width, image.Extent().height,
-                             image.Extent().depthOrArrayLayers})
-            .setImageSubresource(layers);
-        buf_.copyBufferToImage(buffer, image.GetImage(),
-                               vk::ImageLayout::eTransferDstOptimal, copyInfo);
+    vk::ImageSubresourceLayers layers;
+    layers.setAspectMask(aspect)
+        .setBaseArrayLayer(0)
+        .setLayerCount(1)
+        .setMipLevel(dst.miplevel);
+    vk::BufferImageCopy copyInfo;
+    copyInfo.setBufferOffset(src.offset)
+        .setImageOffset(0)
+        .setBufferImageHeight(src.rowsPerImage)
+        .setBufferRowLength(src.bytesPerRow)
+        .setImageExtent({image.Extent().width, image.Extent().height,
+                            image.Extent().depthOrArrayLayers})
+        .setImageSubresource(layers);
+    buf_.copyBufferToImage(buffer, image.GetImage(),
+                            vk::ImageLayout::eTransferDstOptimal, copyInfo);
 
-        barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
-            .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-            .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
-            .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-        buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                             vk::PipelineStageFlagBits::eFragmentShader,
-                             vk::DependencyFlagBits::eByRegion, {}, {},
-                             barrier);
-    }
-    VK_CALL_NO_VALUE(buf_.end());
+    barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
+        .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+        .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+        .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+    buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                            vk::PipelineStageFlagBits::eFragmentShader,
+                            vk::DependencyFlagBits::eByRegion, {}, {},
+                            barrier);
 }
 
 CommandBuffer CommandEncoderImpl::Finish() {
     VK_CALL_NO_VALUE(buf_.end());
+    static_cast<CommandBufferImpl*>(cmdBuf_->Impl())->type_ = type_;
     return *cmdBuf_;
-}
-
-void CommandEncoderImpl::Reset() {
-    dev_.device.resetCommandPool(pool_);
 }
 
 }  // namespace nickel::rhi::vulkan
