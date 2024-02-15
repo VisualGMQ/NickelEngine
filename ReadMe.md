@@ -59,7 +59,10 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [x] Prefab save/load
 - [ ] UI(WIP)
 - [ ] Game physics(WIP)
-- [ ] RHI covered OpenGL3/ES and Vulkan(WIP)
+- [ ] RHI covered OpenGL4/ES and Vulkan(WIP)
+    - [x] basic vulkan layer
+    - [ ] basic GL4.3 layer
+    - [ ] basic GLES layer
 - [ ] Game sound playing(WIP)
 - [ ] 3D rendering
 - [ ] Scene change/load/save
