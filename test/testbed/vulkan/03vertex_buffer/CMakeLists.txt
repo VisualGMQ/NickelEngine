@@ -1,1 +1,0 @@
-AddVulkanTest(03vertex_buffer)

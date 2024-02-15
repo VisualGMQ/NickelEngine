@@ -1,2 +1,0 @@
-AddVulkanTest(06cube)
-target_link_libraries(06cube PRIVATE stb_image)

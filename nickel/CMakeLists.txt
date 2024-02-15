@@ -145,20 +145,6 @@ target_link_libraries(Nickel.Refl PUBLIC
     Nickel.Physics
     Nickel.UI)
 
-# Nickel.Vulkan
-aux_source_directory(src/vulkan nickel_vulkan_src)
-file(GLOB_RECURSE nickel_vulkan_headers ./include/vulkan/*.hpp)
-
-add_library(Nickel.Vulkan STATIC)
-target_sources(Nickel.Vulkan PRIVATE ${nickel_vulkan_src})
-target_sources(Nickel.Vulkan PUBLIC ${nickel_vulkan_headers})
-target_include_directories(Nickel.Vulkan PUBLIC ./include)
-set_target_properties(Nickel.Vulkan
-    PROPERTIES
-    PUBLIC_HEADER "${nickel_vulkan_headers}")
-target_compile_features(Nickel.Vulkan PUBLIC cxx_std_17)
-target_link_libraries(Nickel.Vulkan PUBLIC Nickel.Common Vulkan SDL2)
-
 # Nickel.Misc
 aux_source_directory(src/misc nickel_misc_src)
 aux_source_directory(src/system nickel_misc_src)

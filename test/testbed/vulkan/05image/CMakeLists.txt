@@ -1,2 +1,0 @@
-AddVulkanTest(05image)
-target_link_libraries(05image PRIVATE stb_image)

@@ -1,1 +1,0 @@
-AddVulkanTest(04uniform)

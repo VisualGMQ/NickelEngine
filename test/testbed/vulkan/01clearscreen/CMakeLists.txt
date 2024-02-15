@@ -1,1 +1,0 @@
-AddVulkanTest(01clearscreen)
