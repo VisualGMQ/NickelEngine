@@ -1,6 +1,8 @@
 #include "graphics/rhi/device.hpp"
-#include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/common.hpp"
+#include "graphics/rhi/null/device.hpp"
+#include "graphics/rhi/vk/device.hpp"
+
 
 namespace nickel::rhi {
 
@@ -15,6 +17,9 @@ Device::Device(AdapterImpl& adapter) {
             impl_ = new vulkan::DeviceImpl(adapterImpl);
             break;
         }
+        case APIPreference::Null:
+            impl_ = new null::DeviceImpl{};
+            break;
     }
 }
 
@@ -25,16 +30,17 @@ void Device::Destroy() {
     }
 }
 
-
 Texture Device::CreateTexture(const Texture::Descriptor& desc) {
     return impl_->CreateTexture(desc);
 }
 
-RenderPipeline Device::CreateRenderPipeline(const RenderPipeline::Descriptor& desc) {
+RenderPipeline Device::CreateRenderPipeline(
+    const RenderPipeline::Descriptor& desc) {
     return impl_->CreateRenderPipeline(desc);
 }
 
-PipelineLayout Device::CreatePipelineLayout(const PipelineLayout::Descriptor& desc) {
+PipelineLayout Device::CreatePipelineLayout(
+    const PipelineLayout::Descriptor& desc) {
     return impl_->CreatePipelineLayout(desc);
 }
 
@@ -50,7 +56,8 @@ BindGroup Device::CreateBindGroup(const BindGroup::Descriptor& desc) {
     return impl_->CreateBindGroup(desc);
 }
 
-BindGroupLayout Device::CreateBindGroupLayout(const BindGroupLayout::Descriptor& desc) {
+BindGroupLayout Device::CreateBindGroupLayout(
+    const BindGroupLayout::Descriptor& desc) {
     return impl_->CreateBindGroupLayout(desc);
 }
 

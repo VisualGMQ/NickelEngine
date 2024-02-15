@@ -1,7 +1,9 @@
 #include "graphics/rhi/texture_view.hpp"
+#include "graphics/rhi/null/texture.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
+#include "graphics/rhi/null/texture_view.hpp"
 
 namespace nickel::rhi {
 
@@ -18,6 +20,10 @@ TextureView::TextureView(APIPreference api, DeviceImpl& dev,
                 static_cast<vulkan::DeviceImpl&>(dev),
                 static_cast<vulkan::TextureImpl&>(texture), desc);
             break;
+        case APIPreference::Null: {
+            null::TextureImpl fakeImpl{};
+            impl_ = new null::TextureViewImpl{fakeImpl};
+        } break;
     }
 }
 

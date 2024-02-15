@@ -1,4 +1,5 @@
 #include "graphics/rhi/texture.hpp"
+#include "graphics/rhi/null/texture.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/texture.hpp"
 
@@ -17,6 +18,9 @@ Texture::Texture(AdapterImpl& adapter, rhi::DeviceImpl& dev,
             impl_ = new vulkan::TextureImpl(
                 static_cast<vulkan::AdapterImpl&>(adapter),
                 static_cast<vulkan::DeviceImpl&>(dev), desc, queueIndices);
+            break;
+        case APIPreference::Null:
+            impl_ = new null::TextureImpl{};
             break;
     }
 }

@@ -1,5 +1,6 @@
 #include "graphics/rhi/command.hpp"
 #include "graphics/rhi/vk/command.hpp"
+#include "graphics/rhi/null/command.hpp"
 
 namespace nickel::rhi {
 

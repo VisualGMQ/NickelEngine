@@ -9,9 +9,12 @@ namespace nickel::rhi::vulkan {
 class ShaderModuleImpl: public rhi::ShaderModuleImpl {
 public:
     ShaderModuleImpl(vk::Device, const std::vector<char>& code);
-    void Destroy(rhi::DeviceImpl&) override;
+    ~ShaderModuleImpl();
 
     vk::ShaderModule module;
+
+private:
+    vk::Device dev_;
 };
 
 }

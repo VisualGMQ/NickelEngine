@@ -1,6 +1,7 @@
 #include "graphics/rhi/adapter.hpp"
 #include "common/assert.hpp"
 #include "graphics/rhi/vk/adapter.hpp"
+#include "graphics/rhi/null/adapter.hpp"
 
 namespace nickel::rhi {
 
@@ -23,6 +24,9 @@ Adapter::Adapter(void* window, Option option) {
             break;
         case APIPreference::Vulkan:
             impl_ = new vulkan::AdapterImpl(window);
+            break;
+        case APIPreference::Null:
+            impl_ = new null::AdapterImpl{};
             break;
     }
 }

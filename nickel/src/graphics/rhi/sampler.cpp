@@ -1,7 +1,7 @@
 #include "graphics/rhi/sampler.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/sampler.hpp"
-
+#include "graphics/rhi/null/sampler.hpp"
 
 namespace nickel::rhi {
 
@@ -17,6 +17,9 @@ Sampler::Sampler(APIPreference api, rhi::DeviceImpl& dev,
                 static_cast<vulkan::DeviceImpl&>(dev), desc);
             break;
         }
+        case APIPreference::Null:
+            impl_ = new null::SamplerImpl{};
+            break;
     }
 }
 

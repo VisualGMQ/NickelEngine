@@ -7,6 +7,7 @@ namespace nickel::rhi {
 
 enum class APIPreference {
     Undefine,
+    Null,
     GL,
     Vulkan,
 };

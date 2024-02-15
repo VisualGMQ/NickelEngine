@@ -3,6 +3,7 @@
 #include "graphics/rhi/vk/convert.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/pipeline_layout.hpp"
+#include "graphics/rhi/null/pipeline_layout.hpp"
 
 namespace nickel::rhi {
 
@@ -31,6 +32,9 @@ PipelineLayout::PipelineLayout(APIPreference api, DeviceImpl& dev,
             impl_ = new vulkan::PipelineLayoutImpl(
                 static_cast<vulkan::DeviceImpl&>(dev), layouts, ranges);
         } break;
+        case APIPreference::Null:
+            impl_ = new null::PipelineLayoutImpl{};
+            break;
     }
 }
 

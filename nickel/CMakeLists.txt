@@ -20,6 +20,7 @@ aux_source_directory(src/graphics nickel_graphics_src)
 aux_source_directory(src/graphics/rhi nickel_graphics_src)
 aux_source_directory(src/graphics/rhi/vk nickel_graphics_src)
 aux_source_directory(src/graphics/rhi/impl nickel_graphics_src)
+aux_source_directory(src/graphics/rhi/null nickel_graphics_src)
 file(GLOB_RECURSE nickel_graphics_headers ./include/graphics/*.hpp)
 
 add_library(Nickel.Graphics STATIC)

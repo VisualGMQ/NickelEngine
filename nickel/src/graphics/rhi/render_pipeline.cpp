@@ -3,6 +3,7 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/pipeline_layout.hpp"
 #include "graphics/rhi/vk/render_pipeline.hpp"
+#include "graphics/rhi/null/render_pipeline.hpp"
 
 namespace nickel::rhi {
 
@@ -16,6 +17,9 @@ RenderPipeline::RenderPipeline(APIPreference api, DeviceImpl& dev,
         case APIPreference::Vulkan:
             impl_ = new vulkan::RenderPipelineImpl(
                 static_cast<vulkan::DeviceImpl&>(dev), desc);
+            break;
+        case APIPreference::Null:
+            impl_ = new null::RenderPipelineImpl{};
             break;
     }
 }

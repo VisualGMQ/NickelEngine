@@ -2,6 +2,7 @@
 #include "graphics/rhi/vk/adapter.hpp"
 #include "graphics/rhi/vk/buffer.hpp"
 #include "graphics/rhi/vk/device.hpp"
+#include "graphics/rhi/null/buffer.hpp"
 
 namespace nickel::rhi {
 
@@ -16,6 +17,9 @@ Buffer::Buffer(AdapterImpl& adapter, DeviceImpl& device,
             impl_ = new vulkan::BufferImpl(
                 static_cast<vulkan::DeviceImpl&>(device),
                 static_cast<vulkan::AdapterImpl&>(adapter).phyDevice, desc);
+            break;
+        case APIPreference::Null:
+            impl_ = new null::BufferImpl{};
             break;
     }
 }
