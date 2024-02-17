@@ -33,7 +33,7 @@ set_target_properties(Nickel.Graphics
 target_compile_features(Nickel.Graphics PUBLIC cxx_std_17)
 # move glad to PRIVATE
 target_link_libraries(Nickel.Graphics PUBLIC Nickel.Common glad)
-target_link_libraries(Nickel.Graphics PRIVATE stb_image rapidxml freetype lunasvg)
+target_link_libraries(Nickel.Graphics PRIVATE stb_image rapidxml freetype lunasvg tinygltf)
 if (TARGET Vulkan)
     target_link_libraries(Nickel.Graphics PRIVATE Vulkan SDL2)
     target_compile_definitions(Nickel.Graphics PUBLIC NICKEL_HAS_VULKAN)

@@ -276,7 +276,10 @@ public:
 protected:
     void storeNewItem(AssetHandle handle, AssetStoreType&& item) {
         if (handle) {
-            pathHandleMap_.emplace(item->RelativePath(), handle);
+            auto& relativePath = item->RelativePath();
+            if (!relativePath.empty()) {
+                pathHandleMap_.emplace(relativePath, handle);
+            }
             datas_.emplace(handle, std::move(item));
         }
     }

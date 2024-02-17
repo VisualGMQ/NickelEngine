@@ -79,6 +79,10 @@ public:
     TextureHandle Load(
         const std::filesystem::path& filename,
         const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat());
+    TextureHandle Create(
+        const std::filesystem::path& name,
+        void* data, uint32_t w, uint32_t h,
+        const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat());
     TextureHandle LoadSVG(const std::filesystem::path& filename,
                           const gogl::Sampler&,
                           std::optional<cgmath::Vec2> size = std::nullopt);

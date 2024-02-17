@@ -24,3 +24,4 @@ set(EASY_PROFILER_NO_GUI ON)
 add_subdirectory(easy_profiler)
 
 add_subdirectory(vulkan)
+add_subdirectory(tinygltf)

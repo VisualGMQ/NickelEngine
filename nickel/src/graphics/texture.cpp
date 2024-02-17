@@ -1,6 +1,7 @@
 #include "graphics/texture.hpp"
-#include "stb_image.h"
 #include "lunasvg.h"
+#include "stb_image.h"
+
 
 namespace nickel {
 
@@ -8,7 +9,8 @@ Texture Texture::Null = Texture{};
 
 Texture::Texture(const std::filesystem::path& filename,
                  const gogl::Sampler& sampler, gogl::Format fmt,
-                 gogl::Format gpuFmt): Asset(filename) {
+                 gogl::Format gpuFmt)
+    : Asset(filename) {
     stbi_uc* pixels = stbi_load((filename).string().c_str(), &w_, &h_, nullptr,
                                 STBI_rgb_alpha);
     if (pixels) {
@@ -81,9 +83,27 @@ TextureHandle TextureManager::Load(const std::filesystem::path& filename,
         return GetHandle(filename);
     }
 
-    TextureHandle handle = TextureHandle::Create();
     auto texture = std::make_unique<Texture>(filename, sampler);
     if (texture && *texture) {
+        TextureHandle handle = TextureHandle::Create();
+        storeNewItem(handle, std::move(texture));
+        return handle;
+    } else {
+        return TextureHandle::Null();
+    }
+}
+
+TextureHandle TextureManager::Create(const std::filesystem::path& name,
+                                     void* data, uint32_t w, uint32_t h,
+                                     const gogl::Sampler& sampler) {
+    if (Has(name)) {
+        return GetHandle(name);
+    }
+
+    auto texture = std::make_unique<Texture>(data, w, h, sampler);
+    texture->AssociateFile(name);
+    if (texture && *texture) {
+        TextureHandle handle = TextureHandle::Create();
         storeNewItem(handle, std::move(texture));
         return handle;
     } else {

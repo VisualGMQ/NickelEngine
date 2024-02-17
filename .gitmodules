@@ -19,3 +19,6 @@
 [submodule "3rdlibs/easy_profiler"]
 	path = 3rdlibs/easy_profiler
 	url = https://github.com/yse/easy_profiler.git
+[submodule "3rdlibs/tinygltf"]
+	path = 3rdlibs/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
