@@ -56,14 +56,12 @@ void RenderPipelineImpl::createRenderPipeline(
     shaderStages[0]
         .setStage(vk::ShaderStageFlagBits::eVertex)
         .setModule(
-            static_cast<const ShaderModuleImpl&>(desc.vertex.module.Impl())
-                .module)
+            static_cast<ShaderModuleImpl*>(desc.vertex.module.Impl())->module)
         .setPName(desc.vertex.entryPoint.c_str());
     shaderStages[1]
         .setStage(vk::ShaderStageFlagBits::eFragment)
         .setModule(
-            static_cast<const ShaderModuleImpl&>(desc.fragment.module.Impl())
-                .module)
+            static_cast<ShaderModuleImpl*>(desc.fragment.module.Impl())->module)
         .setPName(desc.fragment.entryPoint.c_str());
 
     // viewport

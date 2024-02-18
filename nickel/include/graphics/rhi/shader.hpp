@@ -19,7 +19,7 @@ public:
     ShaderModule(APIPreference, DeviceImpl&, const Descriptor&);
     void Destroy(DeviceImpl&);
 
-    auto& Impl() const { return *impl_; }
+    auto Impl() const { return impl_; }
 
 private:
     ShaderModuleImpl* impl_{};
