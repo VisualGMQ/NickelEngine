@@ -15,6 +15,8 @@ public:
     Device RequestDevice() override;
     Adapter::Info RequestAdapterInfo() override;
 
+    SDL_Window* window;
+
 private:
     SDL_GLContext ctx_;
 };

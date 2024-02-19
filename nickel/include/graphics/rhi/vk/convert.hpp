@@ -493,27 +493,27 @@ inline vk::BlendOp BlendOp2Vk(BlendOp op) {
 
 inline vk::BlendFactor BlendFactor2Vk(BlendFactor factor) {
     switch (factor) {
-        CASE(BlendFactor::eZero, vk::BlendFactor::eZero);
-        CASE(BlendFactor::eOne, vk::BlendFactor::eOne);
-        CASE(BlendFactor::eSrcColor, vk::BlendFactor::eSrcColor);
-        CASE(BlendFactor::eOneMinusSrcColor,
+        CASE(BlendFactor::Zero, vk::BlendFactor::eZero);
+        CASE(BlendFactor::One, vk::BlendFactor::eOne);
+        CASE(BlendFactor::SrcColor, vk::BlendFactor::eSrcColor);
+        CASE(BlendFactor::OneMinusSrcColor,
              vk::BlendFactor::eOneMinusSrcColor);
-        CASE(BlendFactor::eDstColor, vk::BlendFactor::eDstColor);
-        CASE(BlendFactor::eOneMinusDstColor,
+        CASE(BlendFactor::DstColor, vk::BlendFactor::eDstColor);
+        CASE(BlendFactor::OneMinusDstColor,
              vk::BlendFactor::eOneMinusDstColor);
-        CASE(BlendFactor::eSrcAlpha, vk::BlendFactor::eSrcAlpha);
-        CASE(BlendFactor::eOneMinusSrcAlpha,
+        CASE(BlendFactor::SrcAlpha, vk::BlendFactor::eSrcAlpha);
+        CASE(BlendFactor::OneMinusSrcAlpha,
              vk::BlendFactor::eOneMinusSrcAlpha);
-        CASE(BlendFactor::eDstAlpha, vk::BlendFactor::eDstAlpha);
-        CASE(BlendFactor::eOneMinusDstAlpha,
+        CASE(BlendFactor::DstAlpha, vk::BlendFactor::eDstAlpha);
+        CASE(BlendFactor::OneMinusDstAlpha,
              vk::BlendFactor::eOneMinusDstAlpha);
-        CASE(BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor);
-        CASE(BlendFactor::eOneMinusConstantColor,
+        CASE(BlendFactor::ConstantColor, vk::BlendFactor::eConstantColor);
+        CASE(BlendFactor::OneMinusConstantColor,
              vk::BlendFactor::eOneMinusConstantColor);
-        CASE(BlendFactor::eConstantAlpha, vk::BlendFactor::eConstantAlpha);
-        CASE(BlendFactor::eOneMinusConstantAlpha,
+        CASE(BlendFactor::ConstantAlpha, vk::BlendFactor::eConstantAlpha);
+        CASE(BlendFactor::OneMinusConstantAlpha,
              vk::BlendFactor::eOneMinusConstantAlpha);
-        CASE(BlendFactor::eSrcAlphaSaturate,
+        CASE(BlendFactor::SrcAlphaSaturate,
              vk::BlendFactor::eSrcAlphaSaturate);
     }
 }

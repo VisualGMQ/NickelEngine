@@ -293,21 +293,21 @@ enum class FlagsConstant {
 };
 
 enum class BlendFactor {
-    eZero,
-    eOne,
-    eSrcColor,
-    eOneMinusSrcColor,
-    eDstColor,
-    eOneMinusDstColor,
-    eSrcAlpha,
-    eOneMinusSrcAlpha,
-    eDstAlpha,
-    eOneMinusDstAlpha,
-    eConstantColor,
-    eOneMinusConstantColor,
-    eConstantAlpha,
-    eOneMinusConstantAlpha,
-    eSrcAlphaSaturate,
+    Zero,
+    One,
+    SrcColor,
+    OneMinusSrcColor,
+    DstColor,
+    OneMinusDstColor,
+    SrcAlpha,
+    OneMinusSrcAlpha,
+    DstAlpha,
+    OneMinusDstAlpha,
+    ConstantColor,
+    OneMinusConstantColor,
+    ConstantAlpha,
+    OneMinusConstantAlpha,
+    SrcAlphaSaturate,
 };
 
 enum class BlendOp {
@@ -365,7 +365,7 @@ enum class ColorWriteMask {
     Green = 0x02,
     Blue = 0x04,
     Alpha = 0x08,
-    All = 0,
+    All = 0x01 | 0x02 | 0x04 | 0x08,
 };
 
 enum class VertexFormat {

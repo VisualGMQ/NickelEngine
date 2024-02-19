@@ -6,7 +6,7 @@
 
 namespace nickel::rhi::gl4 {
 
-AdapterImpl::AdapterImpl(SDL_Window* window) {
+AdapterImpl::AdapterImpl(SDL_Window* window): window{window} {
     ctx_ = SDL_GL_CreateContext(window);
 
     if (gladLoadGL() == 0) {

@@ -37,8 +37,8 @@ public:
     };
 
     struct BlendComponentState final {
-        BlendFactor dstFactor = BlendFactor::eZero;
-        BlendFactor srcFactor = BlendFactor::eOne;
+        BlendFactor dstFactor = BlendFactor::Zero;
+        BlendFactor srcFactor = BlendFactor::One;
         BlendOp operation = BlendOp::Add;
     };
 
@@ -50,7 +50,7 @@ public:
     struct FragmentTarget final {
         TextureFormat format;
         BlendState blend;
-        ColorWriteMask writeMask = ColorWriteMask::All;
+        Flags<ColorWriteMask> writeMask = ColorWriteMask::All;
     };
 
     struct FragmentState final {
@@ -58,7 +58,6 @@ public:
         ShaderModule module;
         std::vector<FragmentTarget> targets;
         TextureFormat format;
-        FlagsConstant writeMask;
     };
 
     struct BufferState final {
@@ -119,6 +118,8 @@ public:
     RenderPipeline() = default;
     RenderPipeline(APIPreference api, DeviceImpl&, const Descriptor& desc);
     PipelineLayout GetLayout() const;
+
+    operator bool() const { return impl_; }
 
     auto Impl() const { return impl_; }
 

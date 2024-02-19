@@ -14,6 +14,8 @@ public:
 
     void Apply() const;
 
+    auto& Descriptor() const { return desc_; }
+
 private:
     RenderPipeline::Descriptor desc_;
     GLuint shaderId_;
