@@ -21,6 +21,8 @@ public:
     Framebuffer(FramebufferImpl*);
     void Destroy();
 
+    operator bool() const { return impl_; }
+
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
 

@@ -2,15 +2,20 @@
 #include "graphics/rhi/command.hpp"
 #include "graphics/rhi/gl4/buffer.hpp"
 #include "graphics/rhi/gl4/convert.hpp"
+#include "graphics/rhi/gl4/device.hpp"
+#include "graphics/rhi/gl4/framebuffer.hpp"
 #include "graphics/rhi/gl4/glcall.hpp"
 #include "graphics/rhi/gl4/render_pipeline.hpp"
+#include "graphics/rhi/gl4/renderpass.hpp"
 #include "graphics/rhi/gl4/texture.hpp"
-
+#include "graphics/rhi/gl4/texture_view.hpp"
 
 namespace nickel::rhi::gl4 {
 
 struct CmdExecutor final {
-    CmdExecutor(const CommandBufferImpl& buffer) : buffer_{buffer} {}
+    CmdExecutor(const CommandBufferImpl& buffer) : buffer_{buffer} {
+        // TODO: apply renderpass & framebuffer
+    }
 
     void operator()(const CmdCopyBuf2Buf& cmd) const {
         auto src = static_cast<const BufferImpl*>(cmd.src.Impl());
@@ -82,6 +87,8 @@ CommandBuffer CommandEncoderImpl::Finish() {
     return CommandBuffer{&buffer_};
 }
 
+CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& impl) : device_{&impl} {}
+
 void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
                                             uint64_t srcOffset,
                                             const Buffer& dst,
@@ -98,7 +105,41 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
 RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     const RenderPass::Descriptor& desc) {
-    // TODO: not finish
+    std::vector<uint32_t> attachments;
+    for (auto& colorAtt : desc.colorAttachments) {
+        attachments.emplace_back(
+            static_cast<const TextureViewImpl*>(colorAtt.view.Impl())
+                ->texture->id);
+    }
+    if (desc.depthStencilAttachment) {
+        attachments.emplace_back(static_cast<const TextureViewImpl*>(
+                                     desc.depthStencilAttachment->view.Impl())
+                                     ->texture->id);
+    }
+
+    for (auto fbo : device_->framebuffers) {
+        if (static_cast<const FramebufferImpl*>(fbo.Impl())
+                ->GetAttachmentIDs() == attachments) {
+            buffer_.framebuffer = fbo;
+        }
+    }
+
+    if (!buffer_.framebuffer) {
+        Framebuffer::Descriptor fboDesc;
+        for (auto att : desc.colorAttachments) {
+            fboDesc.views.emplace_back(att.view);
+        }
+        if (desc.depthStencilAttachment) {
+            fboDesc.views.emplace_back(desc.depthStencilAttachment->view);
+        }
+        buffer_.framebuffer =
+            device_->framebuffers.emplace_back(new FramebufferImpl(fboDesc));
+        fboDesc.extent = desc.colorAttachments.at(0).view.Texture().Extent();
+    }
+
+    buffer_.renderPass = desc;
+
+    return RenderPassEncoder{new RenderPassEncoderImpl(buffer_)};
 }
 
 RenderPassEncoderImpl::RenderPassEncoderImpl(CommandBufferImpl& buf)

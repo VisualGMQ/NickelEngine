@@ -8,6 +8,14 @@ namespace nickel::rhi::gl4 {
 DeviceImpl::DeviceImpl(AdapterImpl& adapter)
     : queue{new QueueImpl{}}, adapter_(&adapter) {}
 
+DeviceImpl::~DeviceImpl() {
+    for (auto fbo : framebuffers) {
+        fbo.Destroy();
+    }
+    framebuffers.clear();
+    queue.Destroy();
+}
+
 Texture DeviceImpl::CreateTexture(const Texture::Descriptor& desc) {
     return Texture{*adapter_, *this, desc, {}};
 }
@@ -27,7 +35,7 @@ Sampler DeviceImpl::CreateSampler(const Sampler::Descriptor& desc) {
 }
 
 CommandEncoder DeviceImpl::CreateCommandEncoder() {
-    return CommandEncoder{new CommandEncoderImpl{}};
+    return CommandEncoder{new CommandEncoderImpl{*this}};
 }
 
 BindGroup DeviceImpl::CreateBindGroup(const BindGroup::Descriptor& desc) {

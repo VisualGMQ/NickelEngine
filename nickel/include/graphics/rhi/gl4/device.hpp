@@ -17,6 +17,7 @@ class AdapterImpl;
 class DeviceImpl: public rhi::DeviceImpl {
 public:
     explicit DeviceImpl(AdapterImpl& adapter);
+    ~DeviceImpl();
 
     Texture CreateTexture(const Texture::Descriptor& desc) override;
     RenderPipeline CreateRenderPipeline(
@@ -37,6 +38,8 @@ public:
     void WaitIdle() override;
 
     Queue queue;
+
+    std::vector<Framebuffer> framebuffers;
 
 private:
     AdapterImpl* adapter_;

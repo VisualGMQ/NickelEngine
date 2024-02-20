@@ -4,6 +4,7 @@
 
 namespace nickel::rhi::gl4 {
 
+class DeviceImpl;
 class CommandEncoderImpl;
 
 struct CmdCopyBuf2Texture {
@@ -43,12 +44,16 @@ public:
     std::vector<Command> cmds;
     RenderPipeline pipeline;
     std::unordered_map<uint32_t, BindGroup> bindGroups;
+    std::optional<RenderPass::Descriptor> renderPass;
+    Framebuffer framebuffer;
 
     void Execute();
 };
 
 class CommandEncoderImpl : public rhi::CommandEncoderImpl {
 public:
+    explicit CommandEncoderImpl(DeviceImpl&);
+
     CommandBuffer Finish() override;
     void CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                             const Buffer& dst, uint64_t dstOffset,
@@ -61,6 +66,7 @@ public:
 
 private:
     CommandBufferImpl buffer_;
+    DeviceImpl* device_;
 };
 
 class RenderPassEncoderImpl : public rhi::RenderPassEncoderImpl {

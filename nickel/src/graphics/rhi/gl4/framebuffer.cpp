@@ -12,10 +12,13 @@ FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc) {
     for (int i = 0; i < renderPassDesc.colorAttachments.size(); i++) {
         auto& att = renderPassDesc.colorAttachments[i];
         auto texture = static_cast<TextureViewImpl*>(att.view.Impl())->texture;
-        if (texture->Type() == GL_TEXTURE_1D) {
+        if (texture->Type() == GL_TEXTURE_1D ||
+            texture->Type() == GL_TEXTURE_2D ||
+            texture->Type() == GL_TEXTURE_3D) {
             GL_CALL(glFramebufferTexture(
                 GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, texture->id, 0));
         }
+        attachments.emplace_back(texture->id);
     }
     if (renderPassDesc.depthStencilAttachment) {
         auto texture = static_cast<TextureViewImpl*>(
@@ -35,6 +38,7 @@ FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc) {
             GL_CALL(glFramebufferTexture(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
                                          texture->id, 0));
         }
+        attachments.emplace_back(texture->id);
     }
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {

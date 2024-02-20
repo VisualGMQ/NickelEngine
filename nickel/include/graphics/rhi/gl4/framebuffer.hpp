@@ -15,6 +15,11 @@ public:
     void Unbind() const;
 
     GLuint id = 0;
+
+    auto& GetAttachmentIDs() const { return attachments; }
+
+private:
+    std::vector<uint32_t> attachments;
 };
 
 }
