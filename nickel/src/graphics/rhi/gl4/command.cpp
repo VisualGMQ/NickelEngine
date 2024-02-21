@@ -32,7 +32,7 @@ struct CmdExecutor final {
 
                 if (attachment.loadOp == AttachmentLoadOp::Clear) {
                     GLenum buffer = GL_COLOR_ATTACHMENT0 + i;
-                    GL_CALL(glDrawBuffers(1, &buffer));
+                    GL_CALL(glDrawBuffer(buffer));
                     GL_CALL(glClearBufferfv(GL_COLOR, 0,
                                             attachment.clearValue.data()));
                 }
@@ -173,10 +173,9 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
             fboDesc.views.emplace_back(desc.depthStencilAttachment->view);
         }
         fboDesc.extent = desc.colorAttachments[0].view.Texture().Extent();
-        device_->framebuffers.emplace_back(new FramebufferImpl(fboDesc, desc));
+        buffer_.framebuffer = device_->framebuffers.emplace_back(new FramebufferImpl(fboDesc, desc));
         fboDesc.extent = desc.colorAttachments.at(0).view.Texture().Extent();
     }
-
 
     buffer_.renderPass = desc;
 
