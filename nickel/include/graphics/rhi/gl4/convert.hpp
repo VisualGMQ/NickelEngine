@@ -209,25 +209,25 @@ inline GLenum BlendFactor2GL(BlendFactor op) {
 }
 
 inline GLenum BufferUsageFlag2GL(Flags<BufferUsage> flags) {
-    if (flags & static_cast<uint32_t>(BufferUsage::Vertex)) {
+    if (flags & BufferUsage::Vertex) {
         return GL_ARRAY_BUFFER;
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::Index)) {
+    if (flags & BufferUsage::Index) {
         return GL_ELEMENT_ARRAY_BUFFER;
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::CopyDst)) {
+    if (flags & BufferUsage::CopyDst) {
         return GL_COPY_READ_BUFFER;
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::CopySrc)) {
+    if (flags & BufferUsage::CopySrc) {
         return GL_COPY_WRITE_BUFFER;
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::Uniform)) {
+    if (flags & BufferUsage::Uniform) {
         return GL_UNIFORM_BUFFER;
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::Storage)) {
+    if (flags & BufferUsage::Storage) {
         return GL_SHADER_STORAGE_BUFFER;
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::Indirect)) {
+    if (flags & BufferUsage::Indirect) {
         /*
         return GL_DRAW_INDIRECT_BUFFER;
         return GL_DISPATCH_INDIRECT_BUFFER;
@@ -235,7 +235,7 @@ inline GLenum BufferUsageFlag2GL(Flags<BufferUsage> flags) {
         // NOTE: opengl separate indirect buffer in two, must unify with Vulkan
         Assert(false, "don't support indirect buffer in GL currently");
     }
-    if (flags & static_cast<uint32_t>(BufferUsage::QueryResolve)) {
+    if (flags & BufferUsage::QueryResolve) {
         return GL_QUERY_BUFFER;
     }
 

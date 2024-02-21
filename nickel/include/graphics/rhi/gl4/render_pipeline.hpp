@@ -21,6 +21,7 @@ public:
 private:
     RenderPipeline::Descriptor desc_;
     GLuint shaderId_;
+    GLuint vao_;    // move vao to layout
 
     void createShader(const RenderPipeline::Descriptor&);
 };

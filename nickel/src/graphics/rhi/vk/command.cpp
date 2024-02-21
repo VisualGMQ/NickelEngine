@@ -40,7 +40,7 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType type,
 }
 
 void RenderPassEncoderImpl::SetBindGroup(uint32_t index, BindGroup group) {
-    auto bindGroup = static_cast<BindGroupImpl*>(group.Impl());
+    auto bindGroup = static_cast<const BindGroupImpl*>(group.Impl());
     cmd_.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         static_cast<const PipelineLayoutImpl*>(pipeline_.GetLayout().Impl())
@@ -300,7 +300,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
 CommandBuffer CommandEncoderImpl::Finish() {
     VK_CALL_NO_VALUE(buf_.end());
-    static_cast<CommandBufferImpl*>(cmdBuf_->Impl())->type_ = type_;
+    static_cast<const CommandBufferImpl*>(cmdBuf_->Impl())->type_ = type_;
     return *cmdBuf_;
 }
 

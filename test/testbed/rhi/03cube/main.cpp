@@ -186,6 +186,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     queue.Submit({cmd});
     device->SwapContext();
 
+    cmd.Destroy();
     encoder.Destroy();
     view.Destroy();
     texture.Destroy();

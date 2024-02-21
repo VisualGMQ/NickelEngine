@@ -9,6 +9,9 @@ ShaderModuleImpl::ShaderModuleImpl(const ShaderModule::Descriptor& desc)
 
 GLuint ShaderModuleImpl::CreateShader(GLenum stage) {
     GLuint id = glCreateShader(stage);
+    if (desc_.code.back() != '\0') {
+        desc_.code.push_back('\0');
+    }
     const char* source = desc_.code.data();
     GL_CALL(glShaderSource(id, 1, &source, nullptr));
     GL_CALL(glCompileShader(id));

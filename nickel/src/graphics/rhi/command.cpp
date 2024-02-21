@@ -12,10 +12,8 @@ CommandEncoder::CommandEncoder(CommandEncoderImpl* impl) : impl_{impl} {}
 CommandBuffer::CommandBuffer(CommandBufferImpl* impl) : impl_{impl} {}
 
 void CommandBuffer::Destroy() {
-    if (impl_) {
-        delete impl_;
-        impl_ = nullptr;
-    }
+    delete impl_;
+    impl_ = nullptr;
 }
 
 void CommandEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,

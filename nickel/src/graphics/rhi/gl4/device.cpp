@@ -13,8 +13,8 @@ DeviceImpl::DeviceImpl(AdapterImpl& adapter)
     GL_CALL(glBindTexture(GL_TEXTURE_2D, swapchainTexture));
     GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
     GL_CALL(glGenFramebuffers(1, &swapchainFramebuffer));
-    GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, swapchainFramebuffer));
-    GL_CALL(glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, swapchainFramebuffer));
+    GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                    GL_TEXTURE_2D, swapchainTexture, 0));
 }
 
@@ -73,11 +73,12 @@ Queue DeviceImpl::GetQueue() {
 
 void DeviceImpl::SwapContext() {
     GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, swapchainFramebuffer));
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    GL_CALL(glReadBuffer(GL_COLOR_ATTACHMENT0));
+    GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
     int w, h;
     SDL_GetWindowSize(adapter->window, &w, &h);
     GL_CALL(glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT,
-                              GL_NEAREST));
+                              GL_LINEAR));
     SDL_GL_SwapWindow(adapter->window);
 }
 

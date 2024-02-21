@@ -5,7 +5,7 @@ namespace nickel::rhi::gl4 {
 
 void QueueImpl::Submit(const std::vector<CommandBuffer>& cmds) {
     for (auto cmd : cmds) {
-        static_cast<CommandBufferImpl*>(cmd.Impl())->Execute();
+        static_cast<const CommandBufferImpl*>(cmd.Impl())->Execute();
     }
 }
 

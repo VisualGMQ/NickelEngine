@@ -20,6 +20,7 @@ public:
     void Destroy(DeviceImpl&);
 
     auto Impl() const { return impl_; }
+    auto Impl() { return impl_; }
 
 private:
     ShaderModuleImpl* impl_{};

@@ -16,7 +16,7 @@ enum TextureFormat TextureViewImpl::Format() const {
 }
 
 class Texture TextureViewImpl::Texture() const {
-    return (class Texture){&texture_};
+    return (class Texture)(&texture_);
 }
 
 }  // namespace nickel::rhi

@@ -8,23 +8,23 @@ namespace nickel::rhi::gl4 {
 RenderPipelineImpl::RenderPipelineImpl(const RenderPipeline::Descriptor& desc)
     : desc_{desc} {
     createShader(desc);
+    GL_CALL(glGenVertexArrays(1, &vao_));
 }
 
 RenderPipelineImpl::~RenderPipelineImpl() {
+    GL_CALL(glDeleteVertexArrays(1, &vao_));
     GL_CALL(glDeleteProgram(shaderId_));
 }
 
 void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
     shaderId_ = glCreateProgram();
 
-    auto vertexModule =
-        static_cast<ShaderModuleImpl*>(desc.vertex.module.Impl());
-    GLuint vertexId = vertexModule->CreateShader(GL_VERTEX_SHADER);
+    rhi::ShaderModuleImpl* vertexModule = desc.vertex.module.Impl();
+    GLuint vertexId = static_cast<ShaderModuleImpl*>(vertexModule)->CreateShader(GL_VERTEX_SHADER);
     GL_CALL(glAttachShader(shaderId_, vertexId));
 
-    auto fragModule =
-        static_cast<ShaderModuleImpl*>(desc.fragment.module.Impl());
-    GLuint fragId = fragModule->CreateShader(GL_FRAGMENT_SHADER);
+    rhi::ShaderModuleImpl* fragModule = desc.fragment.module.Impl();
+    GLuint fragId = static_cast<ShaderModuleImpl*>(fragModule)->CreateShader(GL_FRAGMENT_SHADER);
     GL_CALL(glAttachShader(shaderId_, fragId));
 
     GL_CALL(glLinkProgram(shaderId_));
@@ -44,6 +44,7 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
 void RenderPipelineImpl::Apply() const {
     // shader apply
     GL_CALL(glUseProgram(shaderId_));
+    GL_CALL(glBindVertexArray(vao_));
 
     GL_CALL(glPolygonMode(GL_FRONT_AND_BACK,
                           PolygonMode2GL(desc_.primitive.polygonMode)));
@@ -101,14 +102,14 @@ void RenderPipelineImpl::Apply() const {
                                       desc_.depthStencil->stencilWriteMask));
     } else {
         GL_CALL(glDisable(GL_DEPTH_TEST));
-        GL_CALL(glDisable(GL_DEPTH_TEST));
+        GL_CALL(glDisable(GL_STENCIL_TEST));
     }
 
     // multisample apply
     if (desc_.multisample.alphaToCoverageEnabled) {
         GL_CALL(glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE));
     } else {
-        GL_CALL(glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE));
+        GL_CALL(glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE));
     }
 
     if (desc_.primitive.unclippedDepth) {
@@ -119,11 +120,12 @@ void RenderPipelineImpl::Apply() const {
 
     // color blend
     GL_CALL(glEnable(GL_BLEND));
-    GL_CALL(glEnable(GL_COLOR_LOGIC_OP));
+    // GL_CALL(glEnable(GL_COLOR_LOGIC_OP));
 
     for (int i = 0; i < desc_.fragment.targets.size(); i++) {
         auto& target = desc_.fragment.targets[i];
         auto& blend = target.blend;
+
         GL_CALL(glEnablei(GL_BLEND, i));
         GL_CALL(glBlendEquationSeparatei(i, BlendOp2GL(blend.color.operation),
                                          BlendOp2GL(blend.alpha.operation)));

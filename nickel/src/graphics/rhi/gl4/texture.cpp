@@ -58,11 +58,11 @@ TextureImpl::TextureImpl(DeviceImpl& device, const Texture::Descriptor& desc)
 
 void TextureImpl::Bind(int slot) const {
     GL_CALL(glActiveTexture(GL_TEXTURE0 + slot));
-    GL_CALL(glBindTexture(static_cast<GLenum>(type_), id));
+    GL_CALL(glBindTexture(type_, id));
 }
 
 void TextureImpl::Unbind() const {
-    GL_CALL(glBindTexture(static_cast<GLenum>(type_), 0));
+    GL_CALL(glBindTexture(type_, 0));
 }
 
 TextureImpl::~TextureImpl() {

@@ -11,8 +11,8 @@ FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc,
     Bind();
     for (int i = 0; i < renderPassDesc.colorAttachments.size(); i++) {
         auto& att = renderPassDesc.colorAttachments[i];
-        auto texture = static_cast<TextureImpl*>(
-            static_cast<TextureViewImpl*>(att.view.Impl())->Texture().Impl());
+        auto texture = static_cast<const TextureImpl*>(
+            static_cast<const TextureViewImpl*>(att.view.Impl())->Texture().Impl());
         if (texture->Type() == GL_TEXTURE_1D ||
             texture->Type() == GL_TEXTURE_2D ||
             texture->Type() == GL_TEXTURE_3D) {
@@ -22,8 +22,8 @@ FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc,
         attachments.emplace_back(texture->id);
     }
     if (renderPassDesc.depthStencilAttachment) {
-        auto texture = static_cast<TextureImpl*>(
-            static_cast<TextureViewImpl*>(
+        auto texture = static_cast<const TextureImpl*>(
+            static_cast<const TextureViewImpl*>(
                 renderPassDesc.depthStencilAttachment->view.Impl())
                 ->Texture()
                 .Impl());

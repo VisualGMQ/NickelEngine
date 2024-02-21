@@ -47,12 +47,13 @@ public:
     std::optional<RenderPass::Descriptor> renderPass;
     Framebuffer framebuffer;
 
-    void Execute();
+    void Execute() const;
 };
 
 class CommandEncoderImpl : public rhi::CommandEncoderImpl {
 public:
     explicit CommandEncoderImpl(DeviceImpl&);
+    ~CommandEncoderImpl();
 
     CommandBuffer Finish() override;
     void CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
@@ -65,7 +66,7 @@ public:
     RenderPassEncoder BeginRenderPass(const RenderPass::Descriptor&) override;
 
 private:
-    CommandBufferImpl buffer_;
+    CommandBufferImpl* buffer_;
     DeviceImpl* device_;
 };
 

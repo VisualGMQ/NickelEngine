@@ -23,7 +23,7 @@ PipelineLayout::PipelineLayout(APIPreference api, DeviceImpl& dev,
             std::vector<vk::DescriptorSetLayout> layouts;
             for (auto& layout : desc.layouts) {
                 layouts.emplace_back(
-                    static_cast<vulkan::BindGroupLayoutImpl*>(layout.impl_)
+                    static_cast<const vulkan::BindGroupLayoutImpl*>(layout.impl_)
                         ->layout);
             }
             std::vector<vk::PushConstantRange> ranges;

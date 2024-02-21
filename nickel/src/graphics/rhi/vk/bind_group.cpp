@@ -124,7 +124,7 @@ struct WriteDescriptorHelper final {
         vk::WriteDescriptorSet writeInfo;
         vk::DescriptorBufferInfo bufferInfo;
 
-        auto buffer = static_cast<BufferImpl*>(binding.buffer.Impl());
+        auto buffer = static_cast<const BufferImpl*>(binding.buffer.Impl());
         bufferInfo.setBuffer(buffer->buffer)
             .setOffset(0)
             .setRange(binding.minBindingSize ? binding.minBindingSize.value()
