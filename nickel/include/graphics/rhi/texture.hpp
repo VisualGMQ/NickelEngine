@@ -37,6 +37,7 @@ public:
     SampleCount SampleCount() const;
     TextureUsage Usage() const;
     TextureView CreateView(const TextureView::Descriptor& = {});
+    const Descriptor& GetDescriptor() const;
 
     auto Impl() const { return impl_; }
 

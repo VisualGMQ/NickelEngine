@@ -1,7 +1,11 @@
 #include "graphics/rhi/device.hpp"
 #include "graphics/rhi/common.hpp"
 #include "graphics/rhi/null/device.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/device.hpp"
+#endif
+#include "graphics/rhi/gl4/device.hpp"
+#include "graphics/rhi/gl4/adapter.hpp"
 
 
 namespace nickel::rhi {
@@ -10,11 +14,16 @@ Device::Device(AdapterImpl& adapter) {
     switch (adapter.RequestAdapterInfo().api) {
         case APIPreference::Undefine:
             break;
-        case APIPreference::GL:
+        case APIPreference::GL:{
+            auto& adapterImpl = static_cast<gl4::AdapterImpl&>(adapter);
+            impl_ = new gl4::DeviceImpl(adapterImpl);
             break;
+        }
         case APIPreference::Vulkan: {
+#ifdef NICKEL_HAS_VULKAN
             auto& adapterImpl = static_cast<vulkan::AdapterImpl&>(adapter);
             impl_ = new vulkan::DeviceImpl(adapterImpl);
+#endif
             break;
         }
         case APIPreference::Null:

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "graphics/rhi/impl/adapter.hpp"
 #include "SDL.h"
+#include "graphics/rhi/impl/adapter.hpp"
+
 
 namespace nickel::rhi::gl4 {
 
-class AdapterImpl: public rhi::AdapterImpl {
+class AdapterImpl : public rhi::AdapterImpl {
 public:
     AdapterImpl(SDL_Window* window);
     ~AdapterImpl();
@@ -21,4 +22,4 @@ private:
     SDL_GLContext ctx_;
 };
 
-}
+}  // namespace nickel::rhi::gl4

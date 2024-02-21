@@ -6,9 +6,20 @@
 namespace nickel::rhi::gl4 {
 
 DeviceImpl::DeviceImpl(AdapterImpl& adapter)
-    : queue{new QueueImpl{}}, adapter_(&adapter) {}
+    : queue{new QueueImpl{}}, adapter(&adapter) {
+    GL_CALL(glGenTextures(1, &swapchainTexture));
+    int w, h;
+    SDL_GetWindowSize(adapter.window, &w, &h);
+    GL_CALL(glBindTexture(GL_TEXTURE_2D, swapchainTexture));
+    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
+    GL_CALL(glGenFramebuffers(1, &swapchainFramebuffer));
+    GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, swapchainFramebuffer));
+    GL_CALL(glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   GL_TEXTURE_2D, swapchainTexture, 0));
+}
 
 DeviceImpl::~DeviceImpl() {
+    GL_CALL(glDeleteTextures(1, &swapchainTexture));
     for (auto fbo : framebuffers) {
         fbo.Destroy();
     }
@@ -17,7 +28,7 @@ DeviceImpl::~DeviceImpl() {
 }
 
 Texture DeviceImpl::CreateTexture(const Texture::Descriptor& desc) {
-    return Texture{*adapter_, *this, desc, {}};
+    return Texture{*adapter, *this, desc, {}};
 }
 
 RenderPipeline DeviceImpl::CreateRenderPipeline(
@@ -53,7 +64,7 @@ ShaderModule DeviceImpl::CreateShaderModule(
 }
 
 Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
-    return Buffer{*adapter_, *this, desc};
+    return Buffer{*adapter, *this, desc};
 }
 
 Queue DeviceImpl::GetQueue() {
@@ -61,7 +72,13 @@ Queue DeviceImpl::GetQueue() {
 }
 
 void DeviceImpl::SwapContext() {
-    SDL_GL_SwapWindow(adapter_->window);
+    GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, swapchainFramebuffer));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    int w, h;
+    SDL_GetWindowSize(adapter->window, &w, &h);
+    GL_CALL(glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT,
+                              GL_NEAREST));
+    SDL_GL_SwapWindow(adapter->window);
 }
 
 void DeviceImpl::WaitIdle() {

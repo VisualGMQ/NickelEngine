@@ -3,7 +3,7 @@
 #include "graphics/rhi/impl/render_pipeline.hpp"
 #include "graphics/rhi/render_pipeline.hpp"
 #include "graphics/rhi/shader.hpp"
-#include "glad/glad.h"
+#include "graphics/rhi/gl4/glpch.hpp"
 
 namespace nickel::rhi::gl4 {
 
@@ -15,6 +15,8 @@ public:
     void Apply() const;
 
     auto& Descriptor() const { return desc_; }
+
+    PipelineLayout GetLayout() const override { return {}; }
 
 private:
     RenderPipeline::Descriptor desc_;

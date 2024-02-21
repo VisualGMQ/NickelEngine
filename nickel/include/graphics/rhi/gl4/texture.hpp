@@ -5,9 +5,11 @@
 
 namespace nickel::rhi::gl4 {
 
+class DeviceImpl;
+
 class TextureImpl: public rhi::TextureImpl {
 public:
-    TextureImpl(const Texture::Descriptor&);
+    TextureImpl(DeviceImpl&, const Texture::Descriptor&);
     ~TextureImpl();
 
     void Bind(int slot = 0) const;

@@ -1,5 +1,6 @@
 #include "graphics/rhi/impl/texture_view.hpp"
-#include "graphics/rhi/vk/texture.hpp"
+#include "graphics/rhi/texture.hpp"
+#include "graphics/rhi/impl/texture.hpp"
 
 namespace nickel::rhi {
 

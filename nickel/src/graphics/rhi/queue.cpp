@@ -1,5 +1,8 @@
 #include "graphics/rhi/queue.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/queue.hpp"
+#endif
+#include "graphics/rhi/gl4/queue.hpp"
 
 namespace nickel::rhi {
 

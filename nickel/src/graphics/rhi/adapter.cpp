@@ -1,6 +1,9 @@
 #include "graphics/rhi/adapter.hpp"
 #include "common/assert.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/adapter.hpp"
+#endif
+#include "graphics/rhi/gl4/adapter.hpp"
 #include "graphics/rhi/null/adapter.hpp"
 
 namespace nickel::rhi {
@@ -15,16 +18,24 @@ Adapter::Adapter(void* window, Option option) {
 #endif
     }
 
+    if (api == APIPreference::Vulkan) {
+#ifndef NICKEL_HAS_VULKAN
+        api = APIPreference::GL;
+#endif
+    }
+
     switch (api) {
         case APIPreference::Undefine:
             Assert(false, "undefined render api");
             break;
         case APIPreference::GL:
-            // TODO: create GL Adapter
+            impl_ = new gl4::AdapterImpl((SDL_Window*)window);
             break;
         case APIPreference::Vulkan:
+#ifdef NICKEL_HAS_VULKAN
             impl_ = new vulkan::AdapterImpl(window);
             break;
+#endif
         case APIPreference::Null:
             impl_ = new null::AdapterImpl{};
             break;

@@ -1,5 +1,5 @@
 #pragma once
-#include "glad/glad.h"
+#include "graphics/rhi/gl4/glpch.hpp"
 #include "common/log.hpp"
 #include "common/log_tag.hpp"
 

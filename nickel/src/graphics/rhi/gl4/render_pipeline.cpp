@@ -24,7 +24,7 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
 
     auto fragModule =
         static_cast<ShaderModuleImpl*>(desc.fragment.module.Impl());
-    GLuint fragId = vertexModule->CreateShader(GL_VERTEX_SHADER);
+    GLuint fragId = fragModule->CreateShader(GL_FRAGMENT_SHADER);
     GL_CALL(glAttachShader(shaderId_, fragId));
 
     GL_CALL(glLinkProgram(shaderId_));

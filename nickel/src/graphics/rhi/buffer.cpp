@@ -1,8 +1,12 @@
 #include "graphics/rhi/buffer.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/adapter.hpp"
 #include "graphics/rhi/vk/buffer.hpp"
 #include "graphics/rhi/vk/device.hpp"
+#endif
 #include "graphics/rhi/null/buffer.hpp"
+#include "graphics/rhi/gl4/buffer.hpp"
+#include "graphics/rhi/gl4/adapter.hpp"
 
 namespace nickel::rhi {
 
@@ -12,11 +16,14 @@ Buffer::Buffer(AdapterImpl& adapter, DeviceImpl& device,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
+            impl_ = new gl4::BufferImpl(desc);
             break;
         case APIPreference::Vulkan:
+        #ifdef NICKEL_HAS_VULKAN
             impl_ = new vulkan::BufferImpl(
                 static_cast<vulkan::DeviceImpl&>(device),
                 static_cast<vulkan::AdapterImpl&>(adapter).phyDevice, desc);
+        #endif
             break;
         case APIPreference::Null:
             impl_ = new null::BufferImpl{};

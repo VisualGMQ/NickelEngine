@@ -1,5 +1,8 @@
 #include "graphics/rhi/framebuffer.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/framebuffer.hpp"
+#endif
+#include "graphics/rhi/gl4/framebuffer.hpp"
 
 namespace nickel::rhi {
 

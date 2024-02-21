@@ -39,10 +39,12 @@ public:
 
     Queue queue;
 
+    GLuint swapchainTexture;
+    GLuint swapchainFramebuffer;
+
     std::vector<Framebuffer> framebuffers;
 
-private:
-    AdapterImpl* adapter_;
+    AdapterImpl* adapter;
 };
 
 }

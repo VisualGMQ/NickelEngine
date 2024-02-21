@@ -11,25 +11,12 @@ namespace nickel {
 
 Window::Window(const std::string& title, int width, int height)
     : title_(title) {
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config::GLMajorVersion);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config::GLMinorVersion);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                        SDL_GL_CONTEXT_PROFILE_CORE);
-
     window_ = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED,
                                SDL_WINDOWPOS_CENTERED, width, height,
-                               SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
+                               SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 
     if (!window_) {
         LOGE(log_tag::SDL2, "create window failed");
-    } else {
-        // SDL_GL_CreateContext(window_);
-
-        // if (gladLoadGL() == 0) {
-        //     LOGE("GLAD", "load opengl ", config::GLMajorVersion, ".",
-        //          config::GLMinorVersion, " failed");
-        // }
-        // GL_CALL(glViewport(0, 0, width, height));
     }
 }
 

@@ -1,8 +1,12 @@
 #include "graphics/rhi/texture.hpp"
+#include "graphics/rhi/gl4/texture.hpp"
+#include "graphics/rhi/gl4/adapter.hpp"
+#include "graphics/rhi/gl4/device.hpp"
 #include "graphics/rhi/null/texture.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/texture.hpp"
-
+#endif
 
 namespace nickel::rhi {
 
@@ -13,11 +17,15 @@ Texture::Texture(AdapterImpl& adapter, rhi::DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
+            impl_ =
+                new gl4::TextureImpl(static_cast<gl4::DeviceImpl&>(dev), desc);
             break;
         case APIPreference::Vulkan:
+#ifdef NICKEL_HAS_VULKAN
             impl_ = new vulkan::TextureImpl(
                 static_cast<vulkan::AdapterImpl&>(adapter),
                 static_cast<vulkan::DeviceImpl&>(dev), desc, queueIndices);
+#endif
             break;
         case APIPreference::Null:
             impl_ = new null::TextureImpl{};
@@ -60,6 +68,10 @@ TextureUsage Texture::Usage() const {
 
 TextureView Texture::CreateView(const TextureView::Descriptor& desc) {
     return impl_->CreateView(desc);
+}
+
+const Texture::Descriptor& Texture::GetDescriptor() const {
+    return impl_->Descriptor();
 }
 
 }  // namespace nickel::rhi

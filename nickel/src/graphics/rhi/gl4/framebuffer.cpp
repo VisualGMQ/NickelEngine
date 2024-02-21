@@ -5,13 +5,14 @@
 
 namespace nickel::rhi::gl4 {
 
-FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc) {
-    GL_CALL(glCreateFramebuffers(1, &id));
+FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc,
+                                 const RenderPass::Descriptor& renderPassDesc) {
+    GL_CALL(glGenFramebuffers(1, &id));
     Bind();
-    auto& renderPassDesc = desc.renderPass.GetDescriptor();
     for (int i = 0; i < renderPassDesc.colorAttachments.size(); i++) {
         auto& att = renderPassDesc.colorAttachments[i];
-        auto texture = static_cast<TextureViewImpl*>(att.view.Impl())->texture;
+        auto texture = static_cast<TextureImpl*>(
+            static_cast<TextureViewImpl*>(att.view.Impl())->Texture().Impl());
         if (texture->Type() == GL_TEXTURE_1D ||
             texture->Type() == GL_TEXTURE_2D ||
             texture->Type() == GL_TEXTURE_3D) {
@@ -21,9 +22,11 @@ FramebufferImpl::FramebufferImpl(const Framebuffer::Descriptor& desc) {
         attachments.emplace_back(texture->id);
     }
     if (renderPassDesc.depthStencilAttachment) {
-        auto texture = static_cast<TextureViewImpl*>(
-                           renderPassDesc.depthStencilAttachment->view.Impl())
-                           ->texture;
+        auto texture = static_cast<TextureImpl*>(
+            static_cast<TextureViewImpl*>(
+                renderPassDesc.depthStencilAttachment->view.Impl())
+                ->Texture()
+                .Impl());
         auto fmt = texture->Format();
         if (fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
             fmt == TextureFormat::DEPTH32_FLOAT_STENCIL8) {

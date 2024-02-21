@@ -2,7 +2,7 @@
 
 #include "graphics/rhi/impl/buffer.hpp"
 #include "graphics/rhi/buffer.hpp"
-#include "glad/glad.h"
+#include "graphics/rhi/gl4/glpch.hpp"
 
 namespace nickel::rhi::gl4 {
 

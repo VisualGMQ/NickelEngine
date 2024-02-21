@@ -1,5 +1,5 @@
 #pragma once
-#include "glad/glad.h"
+#include "graphics/rhi/gl4/glpch.hpp"
 #include "graphics/rhi/gl4/convert.hpp"
 #include "graphics/rhi/impl/sampler.hpp"
 #include "graphics/rhi/sampler.hpp"

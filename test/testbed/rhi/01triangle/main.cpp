@@ -8,20 +8,34 @@ struct Context {
     RenderPipeline pipeline;
 };
 
-void initShaders(Device device,
+void initShaders(APIPreference api, Device device,
                  RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/01triangle/vert.spv", std::ios::binary)
-            .value();
-    desc.vertex.module = device.CreateShaderModule(shaderDesc);
+    if (api == APIPreference::Vulkan) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/01triangle/vert.spv", std::ios::binary)
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/01triangle/frag.spv", std::ios::binary)
-            .value();
-    desc.fragment.module = device.CreateShaderModule(shaderDesc);
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/01triangle/frag.spv", std::ios::binary)
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    } else if (api == APIPreference::GL) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/01triangle/shader.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/01triangle/shader.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    }
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -41,7 +55,7 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
 
-    initShaders(device, desc);
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     ctx.layout = device.CreatePipelineLayout({});
     desc.layout = ctx.layout;

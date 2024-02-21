@@ -2,13 +2,13 @@
 
 #include "graphics/rhi/impl/framebuffer.hpp"
 #include "graphics/rhi/framebuffer.hpp"
-#include "glad/glad.h"
+#include "graphics/rhi/gl4/glpch.hpp"
 
 namespace nickel::rhi::gl4 {
 
 class FramebufferImpl: public rhi::FramebufferImpl {
 public:
-    FramebufferImpl(const Framebuffer::Descriptor&);
+    FramebufferImpl(const Framebuffer::Descriptor&, const RenderPass::Descriptor&);
     ~FramebufferImpl();
 
     void Bind() const;

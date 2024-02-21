@@ -1,5 +1,8 @@
 #include "graphics/rhi/command.hpp"
+#ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/command.hpp"
+#endif
+#include "graphics/rhi/gl4/command.hpp"
 #include "graphics/rhi/null/command.hpp"
 
 namespace nickel::rhi {

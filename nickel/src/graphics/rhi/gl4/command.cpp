@@ -14,7 +14,40 @@ namespace nickel::rhi::gl4 {
 
 struct CmdExecutor final {
     CmdExecutor(const CommandBufferImpl& buffer) : buffer_{buffer} {
-        // TODO: apply renderpass & framebuffer
+        if (buffer.renderPass) {
+            auto renderPass = buffer.renderPass;
+
+            if (buffer.framebuffer) {
+                static_cast<const FramebufferImpl*>(buffer.framebuffer.Impl())
+                    ->Bind();
+            } else {
+                GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+            }
+
+            static_cast<const RenderPipelineImpl*>(buffer.pipeline.Impl())
+                ->Apply();
+
+            for (int i = 0; i < renderPass->colorAttachments.size(); i++) {
+                auto attachment = renderPass->colorAttachments[i];
+
+                if (attachment.loadOp == AttachmentLoadOp::Clear) {
+                    GLenum buffer = GL_COLOR_ATTACHMENT0 + i;
+                    GL_CALL(glDrawBuffers(1, &buffer));
+                    GL_CALL(glClearBufferfv(GL_COLOR, 0,
+                                            attachment.clearValue.data()));
+                }
+            }
+
+            if (renderPass->depthStencilAttachment) {
+                auto attachment = renderPass->depthStencilAttachment.value();
+                if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
+                    GL_CALL(glClearDepth(attachment.depthClearValue));
+                }
+                if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
+                    GL_CALL(glClearStencil(attachment.depthClearValue));
+                }
+            }
+        }
     }
 
     void operator()(const CmdCopyBuf2Buf& cmd) const {
@@ -108,13 +141,20 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     std::vector<uint32_t> attachments;
     for (auto& colorAtt : desc.colorAttachments) {
         attachments.emplace_back(
-            static_cast<const TextureViewImpl*>(colorAtt.view.Impl())
-                ->texture->id);
+            static_cast<const TextureImpl*>(
+                static_cast<const TextureViewImpl*>(colorAtt.view.Impl())
+                    ->Texture()
+                    .Impl())
+                ->id);
     }
     if (desc.depthStencilAttachment) {
-        attachments.emplace_back(static_cast<const TextureViewImpl*>(
-                                     desc.depthStencilAttachment->view.Impl())
-                                     ->texture->id);
+        attachments.emplace_back(
+            static_cast<const TextureImpl*>(
+                static_cast<const TextureViewImpl*>(
+                    desc.depthStencilAttachment->view.Impl())
+                    ->Texture()
+                    .Impl())
+                ->id);
     }
 
     for (auto fbo : device_->framebuffers) {
@@ -132,10 +172,11 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         if (desc.depthStencilAttachment) {
             fboDesc.views.emplace_back(desc.depthStencilAttachment->view);
         }
-        buffer_.framebuffer =
-            device_->framebuffers.emplace_back(new FramebufferImpl(fboDesc));
+        fboDesc.extent = desc.colorAttachments[0].view.Texture().Extent();
+        device_->framebuffers.emplace_back(new FramebufferImpl(fboDesc, desc));
         fboDesc.extent = desc.colorAttachments.at(0).view.Texture().Extent();
     }
+
 
     buffer_.renderPass = desc;
 
@@ -163,7 +204,6 @@ void RenderPassEncoderImpl::DrawIndexed(uint32_t indexCount,
 void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
                                             uint64_t offset, uint64_t size) {
     auto buf = static_cast<const BufferImpl*>(buffer.Impl());
-    GL_CALL(glBindBufferRange(GL_ARRAY_BUFFER, slot, buf->id, offset, size));
 }
 
 void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
