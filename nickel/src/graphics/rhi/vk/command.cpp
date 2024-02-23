@@ -300,7 +300,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
 CommandBuffer CommandEncoderImpl::Finish() {
     VK_CALL_NO_VALUE(buf_.end());
-    static_cast<const CommandBufferImpl*>(cmdBuf_->Impl())->type_ = type_;
+    static_cast<CommandBufferImpl*>(cmdBuf_->Impl())->type_ = type_;
     return *cmdBuf_;
 }
 

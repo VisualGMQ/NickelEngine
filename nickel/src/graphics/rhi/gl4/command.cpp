@@ -9,11 +9,14 @@
 #include "graphics/rhi/gl4/renderpass.hpp"
 #include "graphics/rhi/gl4/texture.hpp"
 #include "graphics/rhi/gl4/texture_view.hpp"
+#include "graphics/rhi/buffer.hpp"
 
 namespace nickel::rhi::gl4 {
 
+
 struct CmdExecutor final {
-    CmdExecutor(const CommandBufferImpl& buffer) : buffer_{buffer} {
+    CmdExecutor(DeviceImpl& dev, const CommandBufferImpl& buffer)
+        : buffer_{buffer}, device_{dev} {
         if (buffer.renderPass) {
             auto renderPass = buffer.renderPass;
 
@@ -107,10 +110,11 @@ struct CmdExecutor final {
 
 private:
     const CommandBufferImpl& buffer_;
+    DeviceImpl& device_;
 };
 
-void CommandBufferImpl::Execute() const {
-    CmdExecutor executor{*this};
+void CommandBufferImpl::Execute(DeviceImpl& device) const {
+    CmdExecutor executor{device, *this};
     for (auto& cmd : cmds) {
         std::visit(executor, cmd);
     }
@@ -187,11 +191,11 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
 
     buffer_->renderPass = desc;
 
-    return RenderPassEncoder{new RenderPassEncoderImpl(*buffer_)};
+    return RenderPassEncoder{new RenderPassEncoderImpl(*device_, *buffer_)};
 }
 
-RenderPassEncoderImpl::RenderPassEncoderImpl(CommandBufferImpl& buf)
-    : buffer_{&buf} {}
+RenderPassEncoderImpl::RenderPassEncoderImpl(DeviceImpl& device, CommandBufferImpl& buf)
+    : device_{device},  buffer_{&buf} {}
 
 void RenderPassEncoderImpl::Draw(uint32_t vertexCount, uint32_t instanceCount,
                                  uint32_t firstVertex, uint32_t firstInstance) {
@@ -210,12 +214,28 @@ void RenderPassEncoderImpl::DrawIndexed(uint32_t indexCount,
 
 void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
                                             uint64_t offset, uint64_t size) {
+    // TODO: use glVertexAttribPointer to bind buffer to vao;
+    
     auto buf = static_cast<const BufferImpl*>(buffer.Impl());
+    buf->Bind();
 }
 
 void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
                                            uint32_t offset, uint32_t size) {
+    if (auto it = device_.vaos.find((size_t)buffer.Impl());
+        it != device_.vaos.end()) {
+        GL_CALL(glBindVertexArray(it->second));
+        buffer_->vao = it->second;
+    } else {
+        GLuint vao;
+        GL_CALL(glGenVertexArrays(1, &vao));
+        GL_CALL(glBindVertexArray(vao));
+        device_.vaos.emplace((size_t)buffer.Impl(), vao);
+        buffer_->vao = vao;
+    }
+
     auto buf = static_cast<const BufferImpl*>(buffer.Impl());
+    // FIXME: maybe not use this
     GL_CALL(
         glBindBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, buf->id, offset, size));
 }

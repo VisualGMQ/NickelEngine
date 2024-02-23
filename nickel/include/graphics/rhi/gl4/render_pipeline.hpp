@@ -7,6 +7,9 @@
 
 namespace nickel::rhi::gl4 {
 
+GLuint BindVertexLayout2VAO(GLuint vao,
+                            const RenderPipeline::VertexState& state);
+
 class RenderPipelineImpl: public rhi::RenderPipelineImpl {
 public:
     explicit RenderPipelineImpl(const RenderPipeline::Descriptor&);
@@ -18,12 +21,15 @@ public:
 
     PipelineLayout GetLayout() const override { return {}; }
 
+    GLuint GetDefaultVAO() const { return vao_; }
+
 private:
     RenderPipeline::Descriptor desc_;
     GLuint shaderId_;
-    GLuint vao_;    // move vao to layout
+    GLuint vao_;
 
     void createShader(const RenderPipeline::Descriptor&);
+    void createVertexArray(const RenderPipeline::VertexState&);
 };
 
 }

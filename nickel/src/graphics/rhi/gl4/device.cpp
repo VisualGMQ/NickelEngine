@@ -6,7 +6,7 @@
 namespace nickel::rhi::gl4 {
 
 DeviceImpl::DeviceImpl(AdapterImpl& adapter)
-    : queue{new QueueImpl{}}, adapter(&adapter) {
+    : queue{new QueueImpl{*this}}, adapter(&adapter) {
     GL_CALL(glGenTextures(1, &swapchainTexture));
     int w, h;
     SDL_GetWindowSize(adapter.window, &w, &h);

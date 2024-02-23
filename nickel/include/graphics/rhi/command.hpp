@@ -18,6 +18,7 @@ public:
     void Destroy();
 
     auto Impl() const { return impl_; }
+    auto Impl() { return impl_; }
 
 private:
     CommandBufferImpl* impl_{};

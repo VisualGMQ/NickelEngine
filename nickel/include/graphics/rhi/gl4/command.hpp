@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/rhi/impl/command.hpp"
+#include "graphics/rhi/gl4/glpch.hpp"
 
 namespace nickel::rhi::gl4 {
 
@@ -46,8 +47,9 @@ public:
     std::unordered_map<uint32_t, BindGroup> bindGroups;
     std::optional<RenderPass::Descriptor> renderPass;
     Framebuffer framebuffer;
+    GLuint vao = 0;
 
-    void Execute() const;
+    void Execute(DeviceImpl&) const;
 };
 
 class CommandEncoderImpl : public rhi::CommandEncoderImpl {
@@ -72,7 +74,7 @@ private:
 
 class RenderPassEncoderImpl : public rhi::RenderPassEncoderImpl {
 public:
-    explicit RenderPassEncoderImpl(CommandBufferImpl&);
+    explicit RenderPassEncoderImpl(DeviceImpl& device, CommandBufferImpl&);
 
     void Draw(uint32_t vertexCount, uint32_t instanceCount,
               uint32_t firstVertex, uint32_t firstInstance) override;
@@ -89,6 +91,7 @@ public:
     void End() override;
 
 private:
+    DeviceImpl& device_;
     CommandBufferImpl* buffer_;
 };
 

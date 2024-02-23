@@ -40,7 +40,7 @@ void initShaders(Device device, RenderPipeline::Descriptor& desc) {
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
     auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{APIPreference::Vulkan});
+        window->Raw(), Adapter::Option{APIPreference::GL});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -120,10 +120,14 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 }
 
 void ShutdownSystem(gecs::commands cmds,
-                    gecs::resource<gecs::mut<Context>> ctx) {
+                    gecs::resource<gecs::mut<Context>> ctx,
+                    gecs::resource<gecs::mut<Device>> device,
+                    gecs::resource<gecs::mut<Adapter>> adapter) {
     ctx->vertexBuffer.Destroy();
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
+    device->Destroy();
+    adapter->Destroy();
     cmds.remove_resource<Device>();
     cmds.remove_resource<Adapter>();
 }

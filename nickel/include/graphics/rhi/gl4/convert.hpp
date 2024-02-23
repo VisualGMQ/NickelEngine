@@ -352,6 +352,130 @@ inline GLenum TextureFormat2GL(TextureFormat fmt) {
     }
 }
 
+inline GLenum GetVertexFormatGLType(VertexFormat fmt) {
+    switch (fmt) {
+        case VertexFormat::Uint8x2:
+        case VertexFormat::Uint8x4:
+        case VertexFormat::Unorm8x2:
+        case VertexFormat::Unorm8x4:
+            return GL_UNSIGNED_BYTE;
+        case VertexFormat::Sint8x2:
+        case VertexFormat::Sint8x4:
+        case VertexFormat::Snorm8x2:
+        case VertexFormat::Snorm8x4:
+            return GL_BYTE;
+        case VertexFormat::Uint16x2:
+        case VertexFormat::Uint16x4:
+        case VertexFormat::Unorm16x2:
+        case VertexFormat::Unorm16x4:
+            return GL_UNSIGNED_SHORT;
+        case VertexFormat::Sint16x2:
+        case VertexFormat::Sint16x4:
+        case VertexFormat::Snorm16x2:
+        case VertexFormat::Snorm16x4:
+            return GL_SHORT;
+        case VertexFormat::Float16x2:
+        case VertexFormat::Float16x4:
+            return GL_HALF_FLOAT;
+        case VertexFormat::Float32:
+        case VertexFormat::Float32x2:
+        case VertexFormat::Float32x3:
+        case VertexFormat::Float32x4:
+            return GL_FLOAT;
+        case VertexFormat::Uint32:
+        case VertexFormat::Uint32x2:
+        case VertexFormat::Uint32x3:
+        case VertexFormat::Uint32x4:
+            return GL_UNSIGNED_INT;
+        case VertexFormat::Sint32:
+        case VertexFormat::Sint32x2:
+        case VertexFormat::Sint32x3:
+        case VertexFormat::Sint32x4:
+            return GL_INT;
+        case VertexFormat::Unorm10_10_10_2:
+            return GL_UNSIGNED_INT_10_10_10_2;
+    }
+}
+
+inline uint32_t GetVertexFormatComponentCount(VertexFormat fmt) {
+    switch (fmt) {
+        case VertexFormat::Float32:
+        case VertexFormat::Uint32:
+        case VertexFormat::Sint32:
+        case VertexFormat::Unorm10_10_10_2:
+            return 1;
+        case VertexFormat::Uint8x2:
+        case VertexFormat::Unorm8x2:
+        case VertexFormat::Sint8x2:
+        case VertexFormat::Snorm8x2:
+        case VertexFormat::Uint16x2:
+        case VertexFormat::Unorm16x2:
+        case VertexFormat::Sint16x2:
+        case VertexFormat::Snorm16x2:
+        case VertexFormat::Float16x2:
+        case VertexFormat::Float32x2:
+        case VertexFormat::Uint32x2:
+        case VertexFormat::Sint32x2:
+            return 2;
+        case VertexFormat::Float32x3:
+        case VertexFormat::Uint32x3:
+        case VertexFormat::Sint32x3:
+            return 3;
+        case VertexFormat::Uint8x4:
+        case VertexFormat::Unorm8x4:
+        case VertexFormat::Sint8x4:
+        case VertexFormat::Snorm8x4:
+        case VertexFormat::Uint16x4:
+        case VertexFormat::Unorm16x4:
+        case VertexFormat::Sint16x4:
+        case VertexFormat::Snorm16x4:
+        case VertexFormat::Float16x4:
+        case VertexFormat::Float32x4:
+        case VertexFormat::Uint32x4:
+        case VertexFormat::Sint32x4:
+            return 4;
+    }
+}
+
+inline bool IsNormalizedVertexFormat(VertexFormat fmt) {
+    switch (fmt) {
+        case VertexFormat::Uint8x2:
+        case VertexFormat::Uint8x4:
+        case VertexFormat::Sint8x2:
+        case VertexFormat::Sint8x4:
+        case VertexFormat::Uint16x2:
+        case VertexFormat::Uint16x4:
+        case VertexFormat::Sint16x2:
+        case VertexFormat::Sint16x4:
+        case VertexFormat::Float16x2:
+        case VertexFormat::Float16x4:
+        case VertexFormat::Float32:
+        case VertexFormat::Float32x2:
+        case VertexFormat::Float32x3:
+        case VertexFormat::Float32x4:
+        case VertexFormat::Uint32:
+        case VertexFormat::Uint32x2:
+        case VertexFormat::Uint32x3:
+        case VertexFormat::Uint32x4:
+        case VertexFormat::Sint32:
+        case VertexFormat::Sint32x2:
+        case VertexFormat::Sint32x3:
+        case VertexFormat::Sint32x4:
+            return false;
+        case VertexFormat::Unorm8x2:
+        case VertexFormat::Unorm8x4:
+        case VertexFormat::Snorm8x2:
+        case VertexFormat::Snorm8x4:
+        case VertexFormat::Unorm16x2:
+        case VertexFormat::Unorm16x4:
+        case VertexFormat::Snorm16x2:
+        case VertexFormat::Snorm16x4:
+        case VertexFormat::Unorm10_10_10_2:
+            return true;
+    }
+}
+
+
 #undef CASE
 
 }  // namespace nickel::rhi::gl4

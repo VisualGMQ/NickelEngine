@@ -43,6 +43,7 @@ public:
     GLuint swapchainFramebuffer;
 
     std::vector<Framebuffer> framebuffers;
+    std::unordered_map<size_t, GLuint> vaos;  // index vao by indices-buffer
 
     AdapterImpl* adapter;
 };
