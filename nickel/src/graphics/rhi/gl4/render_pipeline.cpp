@@ -77,9 +77,9 @@ void RenderPipelineImpl::Apply() const {
         GL_CALL(glEnable(GL_DEPTH_TEST));
 
         if (desc_.depthStencil->depthWriteEnabled) {
-            GL_CALL(glDepthMask(GL_FALSE));
-        } else {
             GL_CALL(glDepthMask(GL_TRUE));
+        } else {
+            GL_CALL(glDepthMask(GL_FALSE));
         }
         GL_CALL(glDepthFunc(CompareOp2GL(desc_.depthStencil->depthCompare)));
 

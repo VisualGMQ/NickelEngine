@@ -15,7 +15,7 @@ public:
                                  uint64_t size) override;
     void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                                 uint32_t size) override;
-    void SetBindGroup(uint32_t index, BindGroup) override;
+    void SetBindGroup(BindGroup) override;
     void SetPipeline(RenderPipeline) override;
 
     void End() override;

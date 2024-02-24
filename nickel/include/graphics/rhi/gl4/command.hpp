@@ -44,8 +44,14 @@ struct CmdSetVertexBuffer final {
     uint64_t size;
 };
 
+struct CmdSetBindGroup final {
+    BindGroup group;
+};
+
+
 using Command =
-    std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw, CmdDrawIndexed, CmdSetVertexBuffer>;
+    std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw, CmdDrawIndexed,
+                 CmdSetVertexBuffer, CmdSetBindGroup>;
 
 class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:
@@ -92,7 +98,7 @@ public:
                          uint64_t size) override;
     void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                         uint32_t size) override;
-    void SetBindGroup(uint32_t index, BindGroup) override;
+    void SetBindGroup(BindGroup) override;
     void SetPipeline(RenderPipeline) override;
 
     void End() override;

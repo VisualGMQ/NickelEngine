@@ -14,11 +14,15 @@ private:
 
 class BindGroupImpl: public rhi::BindGroupImpl {
 public:
-    explicit BindGroupImpl(BindGroupLayout);
+    explicit BindGroupImpl(const BindGroup::Descriptor& desc);
     BindGroupLayout GetLayout() const override;
 
+    auto& Descriptor() const { return desc_; }
+
+    void Apply() const;
+
 private:
-    BindGroupLayout layout_;
+    BindGroup::Descriptor desc_;
 };
 
 }

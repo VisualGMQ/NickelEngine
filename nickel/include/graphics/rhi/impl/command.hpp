@@ -18,7 +18,7 @@ public:
                                  uint64_t size) = 0;
     virtual void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                                 uint32_t size) = 0;
-    virtual void SetBindGroup(uint32_t index, BindGroup) = 0;
+    virtual void SetBindGroup(BindGroup) = 0;
     virtual void SetPipeline(RenderPipeline) = 0;
 
     virtual void End() = 0;

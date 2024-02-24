@@ -66,8 +66,8 @@ void RenderPassEncoder::SetIndexBuffer(Buffer buffer, IndexType type,
     impl_->SetIndexBuffer(buffer, type, offset, size);
 }
 
-void RenderPassEncoder::SetBindGroup(uint32_t index, BindGroup group) {
-    impl_->SetBindGroup(index, group);
+void RenderPassEncoder::SetBindGroup(BindGroup group) {
+    impl_->SetBindGroup(group);
 }
 
 void RenderPassEncoder::SetPipeline(RenderPipeline pipeline) {

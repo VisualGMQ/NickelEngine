@@ -38,7 +38,7 @@ public:
                          uint64_t size);
     void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                         uint32_t size);
-    void SetBindGroup(uint32_t index, BindGroup);
+    void SetBindGroup(BindGroup);
     void SetPipeline(RenderPipeline);
 
     void End();

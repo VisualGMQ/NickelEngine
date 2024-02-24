@@ -39,13 +39,13 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType type,
                          offset, IndexType2Vk(type));
 }
 
-void RenderPassEncoderImpl::SetBindGroup(uint32_t index, BindGroup group) {
+void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
     auto bindGroup = static_cast<const BindGroupImpl*>(group.Impl());
     cmd_.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         static_cast<const PipelineLayoutImpl*>(pipeline_.GetLayout().Impl())
             ->layout,
-        index, bindGroup->sets[dev_.curImageIndex], {});
+        0, bindGroup->sets[dev_.curImageIndex], {});
 }
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {

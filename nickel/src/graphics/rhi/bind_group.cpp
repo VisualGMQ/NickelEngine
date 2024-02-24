@@ -43,6 +43,7 @@ BindGroup::BindGroup(APIPreference api, DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
+            impl_ = new gl4::BindGroupImpl(desc);
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN

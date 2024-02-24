@@ -3,6 +3,8 @@
 
 using namespace nickel::rhi;
 
+constexpr APIPreference API = APIPreference::Vulkan;
+
 struct Context {
     PipelineLayout layout;
     RenderPipeline pipeline;
@@ -41,7 +43,7 @@ void initShaders(APIPreference api, Device device,
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
     auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{APIPreference::GL});
+        window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -114,7 +116,7 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "01 triangle", 1024, 720);
+        "01 triangle", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

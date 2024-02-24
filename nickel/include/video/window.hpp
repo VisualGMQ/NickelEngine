@@ -28,7 +28,7 @@ public:
         return *this;
     }
 
-    Window(const std::string& title, int width, int height);
+    Window(const std::string& title, int width, int height, bool supportVulkan = false);
     ~Window();
 
     void SwapBuffer() const;

@@ -4,6 +4,8 @@
 
 using namespace nickel::rhi;
 
+constexpr APIPreference API = APIPreference::GL;
+
 struct Context {
     PipelineLayout layout;
     RenderPipeline pipeline;
@@ -19,19 +21,33 @@ struct MVP {
     nickel::cgmath::Mat44 model, view, proj;
 } mvp;
 
-void initShaders(Device device, RenderPipeline::Descriptor& desc) {
+void initShaders(APIPreference api, Device device,
+                 RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/03cube/vert.spv", std::ios::binary)
-            .value();
-    desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/03cube/frag.spv", std::ios::binary)
-            .value();
-    desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    if (api == APIPreference::Vulkan) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/03cube/vert.spv", std::ios::binary)
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/03cube/frag.spv", std::ios::binary)
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    } else if (api == APIPreference::GL) {
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/03cube/shader.glsl.vert")
+                              .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/03cube/shader.glsl.frag")
+                              .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    }
 }
 
 void initVertexBuffer(Context& ctx, Device& device) {
@@ -49,7 +65,8 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
                                            window.Size().w / window.Size().h,
                                            0.1, 100);
-    mvp.view = nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -5});
+    mvp.view =
+        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -5});
     mvp.model = nickel::cgmath::Mat44::Identity();
 
     Buffer::Descriptor bufferDesc;
@@ -57,7 +74,7 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     bufferDesc.mappedAtCreation = true;
     bufferDesc.size = 4 * 4 * 4 * 3;
     ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
-    void *data = ctx.uniformBuffer.GetMappedRange();
+    void* data = ctx.uniformBuffer.GetMappedRange();
     memcpy(data, &mvp, sizeof(mvp));
 }
 
@@ -67,7 +84,7 @@ void initPipelineLayout(Context& ctx, Device& device) {
     ctx.layout = device.CreatePipelineLayout(layoutDesc);
 }
 
-void initBindGroupAndLayout(Context& ctx, Device& device){
+void initBindGroupAndLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
     Entry entry;
@@ -103,7 +120,7 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
     auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{APIPreference::Vulkan});
+        window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -126,7 +143,7 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
 
-    initShaders(device, desc);
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     initVertexBuffer(ctx, device);
     initUniformBuffer(ctx, device, window.get());
@@ -164,7 +181,8 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
 
-    desc.depthStencilAttachment = RenderPass::Descriptor::DepthStencilAttachment{};
+    desc.depthStencilAttachment =
+        RenderPass::Descriptor::DepthStencilAttachment{};
     desc.depthStencilAttachment->view = ctx->depthView;
     desc.depthStencilAttachment->depthLoadOp = AttachmentLoadOp::Clear;
     desc.depthStencilAttachment->depthStoreOp = AttachmentStoreOp::Discard;
@@ -176,7 +194,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     renderPass.SetPipeline(ctx->pipeline);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
-    renderPass.SetBindGroup(0, ctx->bindGroup);
+    renderPass.SetBindGroup(ctx->bindGroup);
     renderPass.Draw(gVertices.size(), 1, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -194,7 +212,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
-    
+
     void* data = ctx->uniformBuffer.GetMappedRange();
     mvp.model = nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
@@ -219,7 +237,7 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     nickel::Window& window =
-        reg.commands().emplace_resource<nickel::Window>("03 cube", 1024, 720);
+        reg.commands().emplace_resource<nickel::Window>("03 cube", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

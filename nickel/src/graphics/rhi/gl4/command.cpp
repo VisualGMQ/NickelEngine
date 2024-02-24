@@ -1,6 +1,7 @@
 #include "graphics/rhi/gl4/command.hpp"
 #include "graphics/rhi/buffer.hpp"
 #include "graphics/rhi/command.hpp"
+#include "graphics/rhi/gl4/bind_group.hpp"
 #include "graphics/rhi/gl4/buffer.hpp"
 #include "graphics/rhi/gl4/convert.hpp"
 #include "graphics/rhi/gl4/device.hpp"
@@ -63,10 +64,12 @@ struct CmdExecutor final {
             if (renderPass->depthStencilAttachment) {
                 auto attachment = renderPass->depthStencilAttachment.value();
                 if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
-                    GL_CALL(glClearDepth(attachment.depthClearValue));
+                    GL_CALL(glClearBufferfv(GL_DEPTH, 0,
+                                            &attachment.depthClearValue));
                 }
                 if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
-                    GL_CALL(glClearStencil(attachment.depthClearValue));
+                    int value = attachment.stencilClearValue;
+                    GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
                 }
             }
         }
@@ -131,18 +134,22 @@ struct CmdExecutor final {
         GL_CALL(glBindVertexArray(vao_));
         auto& vertexState =
             static_cast<const RenderPipelineImpl*>(buffer_.pipeline.Impl())
-                ->Descriptor().vertex;
-        auto buffer =  vertexState.buffers.at(cmd.slot);
+                ->Descriptor()
+                .vertex;
+        auto buffer = vertexState.buffers.at(cmd.slot);
         static_cast<const BufferImpl*>(cmd.buffer.Impl())->Bind();
         for (auto& attr : buffer.attributes) {
             GL_CALL(glVertexAttribPointer(
-                attr.shaderLocation,
-                GetVertexFormatComponentCount(attr.format),
+                attr.shaderLocation, GetVertexFormatComponentCount(attr.format),
                 GetVertexFormatGLType(attr.format),
                 IsNormalizedVertexFormat(attr.format), buffer.arrayStride,
                 (void*)(attr.offset + cmd.offset)));
             GL_CALL(glEnableVertexAttribArray(attr.shaderLocation));
         }
+    }
+
+    void operator()(const CmdSetBindGroup& cmd) const {
+        static_cast<const BindGroupImpl*>(cmd.group.Impl())->Apply();
     }
 
 private:
@@ -267,8 +274,10 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
     buffer_->indicesBuffer = buffer;
 }
 
-void RenderPassEncoderImpl::SetBindGroup(uint32_t index, BindGroup group) {
-    buffer_->bindGroups[index] = group;
+void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
+    CmdSetBindGroup cmd;
+    cmd.group = group;
+    buffer_->cmds.emplace_back(std::move(cmd));
 }
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {

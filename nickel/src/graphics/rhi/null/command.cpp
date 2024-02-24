@@ -18,7 +18,7 @@ void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
 void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
                                            uint32_t offset, uint32_t size) {}
 
-void RenderPassEncoderImpl::SetBindGroup(uint32_t index, BindGroup) {}
+void RenderPassEncoderImpl::SetBindGroup(BindGroup) {}
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline) {}
 

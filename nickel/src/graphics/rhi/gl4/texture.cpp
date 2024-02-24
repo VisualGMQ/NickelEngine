@@ -36,15 +36,15 @@ TextureImpl::TextureImpl(DeviceImpl& device, const Texture::Descriptor& desc)
     if (desc.format != TextureFormat::Presentation) {
         GL_CALL(glGenTextures(1, &id));
         Bind();
-        GL_CALL(glTexImage2D(type_, 0, TextureFormat2GL(desc_.format),
+        GL_CALL(glTexImage2D(type_, 0, TextureFormat2GLInternal(desc_.format),
                              desc.size.width, desc.size.height, 0,
-                             TextureFormat2GL(desc_.format), GL_UNSIGNED_BYTE,
-                             0));
+                             TextureFormat2GL(desc_.format),
+                             TextureFormat2GLDataType(desc_.format), 0));
     } else {
         id = device.swapchainTexture;
         desc_.dimension = TextureType::Dim2;
         desc_.mipmapLevelCount = 1;
-        desc_.sampleCount = SampleCount::Count1; 
+        desc_.sampleCount = SampleCount::Count1;
         desc_.usage = TextureUsage::RenderAttachment;
         desc_.viewFormat = TextureFormat::RGBA8_UNORM_SRGB;
         type_ = GL_TEXTURE_2D;

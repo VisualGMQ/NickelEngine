@@ -9,11 +9,12 @@
 
 namespace nickel {
 
-Window::Window(const std::string& title, int width, int height)
+Window::Window(const std::string& title, int width, int height, bool supportVulkan)
     : title_(title) {
     window_ = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED,
                                SDL_WINDOWPOS_CENTERED, width, height,
-                               SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+        (supportVulkan ? SDL_WINDOW_VULKAN : SDL_WINDOW_OPENGL) |
+            SDL_WINDOW_SHOWN);
 
     if (!window_) {
         LOGE(log_tag::SDL2, "create window failed");

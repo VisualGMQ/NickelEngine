@@ -6,6 +6,8 @@
 
 using namespace nickel::rhi;
 
+constexpr APIPreference API = APIPreference::Vulkan;
+
 constexpr uint32_t InstanceCount = 16;
 
 struct Context {
@@ -219,7 +221,7 @@ void initImage(Context& ctx, Device& dev) {
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
     auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{APIPreference::Vulkan});
+        window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -298,7 +300,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     renderPass.SetPipeline(ctx->pipeline);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
-    renderPass.SetBindGroup(0, ctx->bindGroup);
+    renderPass.SetBindGroup(ctx->bindGroup);
     renderPass.Draw(gVertices.size(), InstanceCount, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -343,7 +345,7 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "05 instancing", 1024, 720);
+        "05 instancing", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems
