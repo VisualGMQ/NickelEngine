@@ -6,6 +6,7 @@
 #include "graphics/rhi/texture_view.hpp"
 #include <vector>
 #include <variant>
+#include <string>
 
 
 namespace nickel::rhi {
@@ -29,7 +30,9 @@ struct SamplerBinding final {
         Filtering,
         NonFiltering,
     } type = SamplerType::Filtering;
+    std::string name;   // require for GL
     Sampler sampler;
+    TextureView view;
 };
 
 struct StorageTextureBinding final {
@@ -50,6 +53,7 @@ struct TextureBinding final {
         Uint,
         UnfilterableFloat,
     } sampleType = SampleType::Float;
+    std::string name;
     TextureView view;
     bool multisampled = false;
     TextureViewType viewDimension = TextureViewType::Dim2;

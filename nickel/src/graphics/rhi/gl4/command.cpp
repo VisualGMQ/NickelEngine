@@ -17,59 +17,63 @@ namespace nickel::rhi::gl4 {
 struct CmdExecutor final {
     CmdExecutor(DeviceImpl& dev, const CommandBufferImpl& buffer)
         : buffer_{buffer}, device_{dev} {
-        if (buffer.indicesBuffer) {
-            if (auto it = device_.vaos.find((size_t)&buffer);
-                it != device_.vaos.end()) {
-                vao_ = it->second;
-                GL_CALL(glBindVertexArray(it->second));
+        if (buffer.framebuffer) {
+            if (buffer.indicesBuffer) {
+                if (auto it = device_.vaos.find((size_t)&buffer);
+                    it != device_.vaos.end()) {
+                    vao_ = it->second;
+                    GL_CALL(glBindVertexArray(it->second));
+                } else {
+                    GLuint newVao;
+                    GL_CALL(glGenVertexArrays(1, &newVao));
+                    GL_CALL(glBindVertexArray(newVao));
+                    vao_ = device_.vaos.emplace((size_t)&buffer, newVao).second;
+                    static_cast<const BufferImpl*>(buffer.indicesBuffer.Impl())
+                        ->Bind();
+                }
             } else {
-                GLuint newVao;
-                GL_CALL(glGenVertexArrays(1, &newVao));
-                GL_CALL(glBindVertexArray(newVao));
-                vao_ = device_.vaos.emplace((size_t)&buffer, newVao).second;
-                static_cast<const BufferImpl*>(buffer.indicesBuffer.Impl())
-                    ->Bind();
+                vao_ = static_cast<const RenderPipelineImpl*>(
+                           buffer.pipeline.Impl())
+                           ->GetDefaultVAO();
+                GL_CALL(glBindVertexArray(vao_));
             }
-        } else {
-            vao_ =
+
+            if (buffer.renderPass) {
+                auto renderPass = buffer.renderPass;
+
+                if (buffer.framebuffer) {
+                    static_cast<const FramebufferImpl*>(
+                        buffer.framebuffer.Impl())
+                        ->Bind();
+                } else {
+                    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+                }
+
                 static_cast<const RenderPipelineImpl*>(buffer.pipeline.Impl())
-                    ->GetDefaultVAO();
-            GL_CALL(glBindVertexArray(vao_));
-        }
+                    ->Apply();
 
-        if (buffer.renderPass) {
-            auto renderPass = buffer.renderPass;
+                for (int i = 0; i < renderPass->colorAttachments.size(); i++) {
+                    auto attachment = renderPass->colorAttachments[i];
 
-            if (buffer.framebuffer) {
-                static_cast<const FramebufferImpl*>(buffer.framebuffer.Impl())
-                    ->Bind();
-            } else {
-                GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-            }
-
-            static_cast<const RenderPipelineImpl*>(buffer.pipeline.Impl())
-                ->Apply();
-
-            for (int i = 0; i < renderPass->colorAttachments.size(); i++) {
-                auto attachment = renderPass->colorAttachments[i];
-
-                if (attachment.loadOp == AttachmentLoadOp::Clear) {
-                    GLenum index = GL_COLOR_ATTACHMENT0 + i;
-                    GL_CALL(glDrawBuffer(index));
-                    GL_CALL(glClearBufferfv(GL_COLOR, 0,
-                                            attachment.clearValue.data()));
+                    if (attachment.loadOp == AttachmentLoadOp::Clear) {
+                        GLenum index = GL_COLOR_ATTACHMENT0 + i;
+                        GL_CALL(glDrawBuffer(index));
+                        GL_CALL(glClearBufferfv(GL_COLOR, 0,
+                                                attachment.clearValue.data()));
+                    }
                 }
-            }
 
-            if (renderPass->depthStencilAttachment) {
-                auto attachment = renderPass->depthStencilAttachment.value();
-                if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
-                    GL_CALL(glClearBufferfv(GL_DEPTH, 0,
-                                            &attachment.depthClearValue));
-                }
-                if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
-                    int value = attachment.stencilClearValue;
-                    GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
+                if (renderPass->depthStencilAttachment) {
+                    auto attachment =
+                        renderPass->depthStencilAttachment.value();
+                    if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
+                        GL_CALL(glClearBufferfv(GL_DEPTH, 0,
+                                                &attachment.depthClearValue));
+                    }
+                    if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
+                        int value = attachment.stencilClearValue;
+                        GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
+                    }
                 }
             }
         }
@@ -85,16 +89,15 @@ struct CmdExecutor final {
     }
 
     void operator()(const CmdCopyBuf2Texture& cmd) const {
+        auto texture = static_cast<const TextureImpl*>(cmd.dst.texture.Impl());
+        texture->Bind();
         GL_CALL(glBindBuffer(
             GL_PIXEL_UNPACK_BUFFER,
             static_cast<const BufferImpl*>(cmd.src.buffer.Impl())->id));
-        auto texture = static_cast<const TextureImpl*>(cmd.dst.texture.Impl());
-        texture->Bind();
-        GL_CALL(glTexImage2D(texture->Type(), 0,
-                             TextureFormat2GL(texture->Format()),
-                             texture->Extent().width, texture->Extent().height,
-                             0, TextureFormat2GL(texture->Format()),
-                             GL_UNSIGNED_BYTE, &cmd.src.offset));
+        GL_CALL(glTexSubImage2D(
+            texture->Type(), 0,0, 0, texture->Extent().width,
+            texture->Extent().height, TextureFormat2GL(texture->Format()),
+            TextureFormat2GLDataType(texture->Format()), (void*)cmd.src.offset));
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
@@ -149,7 +152,9 @@ struct CmdExecutor final {
     }
 
     void operator()(const CmdSetBindGroup& cmd) const {
-        static_cast<const BindGroupImpl*>(cmd.group.Impl())->Apply();
+        static_cast<const BindGroupImpl*>(cmd.group.Impl())
+            ->Apply(*static_cast<const RenderPipelineImpl*>(
+                buffer_.pipeline.Impl()));
     }
 
 private:

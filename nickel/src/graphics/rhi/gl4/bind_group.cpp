@@ -1,6 +1,9 @@
 #include "graphics/rhi/gl4/bind_group.hpp"
 #include "graphics/rhi/gl4/buffer.hpp"
 #include "graphics/rhi/gl4/glcall.hpp"
+#include "graphics/rhi/gl4/render_pipeline.hpp"
+#include "graphics/rhi/gl4/texture.hpp"
+#include "graphics/rhi/gl4/sampler.hpp"
 
 namespace nickel::rhi::gl4 {
 
@@ -13,8 +16,8 @@ const BindGroupLayout::Descriptor& BindGroupLayoutImpl::Descriptor() const {
 }
 
 struct ResourceBindHelper final {
-    explicit ResourceBindHelper(const Entry& entry)
-        : entry_{entry} {}
+    explicit ResourceBindHelper(const RenderPipelineImpl& pipeline, const Entry& entry)
+        : pipeline_{pipeline}, entry_{entry} {}
 
     void operator()(const BufferBinding& binding) const {
         auto buffer = static_cast<const BufferImpl*>(binding.buffer.Impl());
@@ -37,28 +40,41 @@ struct ResourceBindHelper final {
         }
     }
 
-    void operator()(const SamplerBinding&) const {
-        // TODO: not finish
+    void operator()(const SamplerBinding& binding) {
+        GLuint index = glGetUniformLocation(pipeline_.GetShaderID(), binding.name.c_str());
+        GL_CALL(glActiveTexture(GL_TEXTURE0 + textureCount_));
+        static_cast<const TextureImpl*>(binding.view.Texture().Impl())->Bind();
+        GL_CALL(glUniform1i(index, textureCount_));
+        GL_CALL(glBindSampler(
+            textureCount_,
+            static_cast<const SamplerImpl*>(binding.sampler.Impl())->id));
+        textureCount_++;
     }
 
     void operator()(const StorageTextureBinding&) const {
         // TODO: not finish
     }
 
-    void operator()(const TextureBinding& binding) const {
-        // TODO: not finish
+    void operator()(const TextureBinding& binding) {
+        GLuint index = glGetUniformLocation(pipeline_.GetShaderID(), binding.name.c_str());
+        GL_CALL(glActiveTexture(GL_TEXTURE0 + textureCount_));
+        static_cast<const TextureImpl*>(binding.view.Texture().Impl())->Bind();
+        GL_CALL(glUniform1i(index, textureCount_));
+        textureCount_++;
     }
 
 private:
+    const RenderPipelineImpl& pipeline_;
     const Entry& entry_;
+    uint32_t textureCount_ = 0;
 };
 
 BindGroupImpl::BindGroupImpl(const BindGroup::Descriptor& desc)
     : desc_{desc} {}
 
-void BindGroupImpl::Apply() const {
+void BindGroupImpl::Apply(const RenderPipelineImpl& pipeline) const {
     for (auto& entry : desc_.entries) {
-        ResourceBindHelper helper{entry};
+        ResourceBindHelper helper{pipeline, entry};
         std::visit(helper, entry.resourceLayout);
     }
 }

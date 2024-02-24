@@ -3,7 +3,6 @@
 #include "graphics/rhi/vk/convert.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/sampler.hpp"
-#include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
 
 namespace nickel::rhi::vulkan {
@@ -33,7 +32,7 @@ struct getDescriptorTypeHelper {
     }
 
     vk::DescriptorType operator()(const SamplerBinding& layout) const {
-        return vk::DescriptorType::eSampler;
+        return vk::DescriptorType::eCombinedImageSampler;
     }
 
     vk::DescriptorType operator()(const StorageTextureBinding& layout) const {
@@ -145,10 +144,13 @@ struct WriteDescriptorHelper final {
         imageInfo
             .setSampler(static_cast<const SamplerImpl*>(binding.sampler.Impl())
                             ->sampler)
-            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+            .setImageView(
+                static_cast<const TextureViewImpl*>(binding.view.Impl())
+                    ->GetView());
         writeInfo.setImageInfo(imageInfo)
             .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eSampler)
+            .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
             .setDstBinding(entry_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);

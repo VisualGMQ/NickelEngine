@@ -3,10 +3,9 @@
 #include "stb_image.h"
 #include "vertex.hpp"
 
-
 using namespace nickel::rhi;
 
-constexpr APIPreference API = APIPreference::Vulkan;
+constexpr APIPreference API = APIPreference::GL;
 
 struct Context {
     PipelineLayout layout;
@@ -26,19 +25,35 @@ struct MVP {
     nickel::cgmath::Mat44 model, view, proj;
 } mvp;
 
-void initShaders(Device device, RenderPipeline::Descriptor& desc) {
+void initShaders(APIPreference api, Device device,
+                 RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/04texture_cube/vert.spv", std::ios::binary)
-            .value();
-    desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/04texture_cube/frag.spv", std::ios::binary)
-            .value();
-    desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    if (api == APIPreference::Vulkan) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/04texture_cube/vert.spv", std::ios::binary)
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/04texture_cube/frag.spv", std::ios::binary)
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    } else if (api == APIPreference::GL) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/04texture_cube/shader.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/04texture_cube/shader.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    }
 }
 
 void initVertexBuffer(Context& ctx, Device& device) {
@@ -101,19 +116,10 @@ void initBindGroupAndLayout(Context& ctx, Device& device) {
     entry.visibility = ShaderStage::Fragment;
     SamplerBinding samplerBinding;
     samplerBinding.type = SamplerBinding::SamplerType::Filtering;
+    samplerBinding.name = "mySampler";
     samplerBinding.sampler = ctx.sampler;
+    samplerBinding.view = ctx.imageView;
     entry.resourceLayout = samplerBinding;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
-
-    // texture
-    entry.arraySize = 1;
-    entry.binding = 2;
-    entry.visibility = ShaderStage::Fragment;
-    TextureBinding textureBinding;
-    textureBinding.sampleType = TextureBinding::SampleType::Float;
-    textureBinding.viewDimension = TextureViewType::Dim2;
-    textureBinding.view = ctx.imageView;
-    entry.resourceLayout = textureBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
@@ -185,8 +191,8 @@ void initImage(Context& ctx, Device& dev) {
 
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
-    auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{API});
+    auto& adapter =
+        cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -210,7 +216,7 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
 
-    initShaders(device, desc);
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     initSampler(ctx, device);
     initImage(ctx, device);

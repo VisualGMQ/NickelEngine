@@ -19,10 +19,11 @@ public:
     PipelineLayout GetLayout() const override { return {}; }
 
     GLuint GetDefaultVAO() const { return vao_; }
+    GLuint GetShaderID() const { return shaderId_; }
 
 private:
     RenderPipeline::Descriptor desc_;
-    GLuint shaderId_;
+    GLuint shaderId_ = 0;
     GLuint vao_;
 
     void createShader(const RenderPipeline::Descriptor&);

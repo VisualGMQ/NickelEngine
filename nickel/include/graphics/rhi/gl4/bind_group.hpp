@@ -3,6 +3,8 @@
 
 namespace nickel::rhi::gl4 {
 
+class RenderPipelineImpl;
+
 class BindGroupLayoutImpl: public rhi::BindGroupLayoutImpl {
 public:
     explicit BindGroupLayoutImpl(const BindGroupLayout::Descriptor&);
@@ -19,7 +21,7 @@ public:
 
     auto& Descriptor() const { return desc_; }
 
-    void Apply() const;
+    void Apply(const RenderPipelineImpl&) const;
 
 private:
     BindGroup::Descriptor desc_;
