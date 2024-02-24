@@ -22,10 +22,11 @@ void RenderPipelineImpl::createRenderPipeline(
     vk::PipelineVertexInputStateCreateInfo vertexInput;
     std::vector<vk::VertexInputAttributeDescription> attrDescs;
     std::vector<vk::VertexInputBindingDescription> bindings;
-    for (auto& state : vertexInputState.buffers) {
+    for (int i = 0; i < vertexInputState.buffers.size(); i++) {
+        auto& state = vertexInputState.buffers[i];
         for (auto& attr : state.attributes) {
             vk::VertexInputAttributeDescription attrDesc;
-            attrDesc.setBinding(0)
+            attrDesc.setBinding(i)
                 .setLocation(attr.shaderLocation)
                 .setFormat(VertexFormat2Vk(attr.format))
                 .setOffset(attr.offset);
@@ -33,7 +34,7 @@ void RenderPipelineImpl::createRenderPipeline(
         }
 
         vk::VertexInputBindingDescription binding;
-        binding.setBinding(0)
+        binding.setBinding(i)
             .setStride(state.arrayStride)
             .setInputRate(state.stepMode ==
                                   RenderPipeline::BufferState::StepMode::Vertex

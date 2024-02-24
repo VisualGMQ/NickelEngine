@@ -8,13 +8,13 @@ namespace nickel::rhi::gl4 {
 class DeviceImpl;
 class CommandEncoderImpl;
 
-struct CmdCopyBuf2Texture {
+struct CmdCopyBuf2Texture final {
     CommandEncoder::BufTexCopySrc src;
     CommandEncoder::BufTexCopyDst dst;
     Extent3D copySize;
 };
 
-struct CmdCopyBuf2Buf {
+struct CmdCopyBuf2Buf final {
     Buffer src;
     uint64_t srcOffset;
     Buffer dst;
@@ -22,14 +22,14 @@ struct CmdCopyBuf2Buf {
     uint64_t size;
 };
 
-struct CmdDraw {
+struct CmdDraw final {
     uint32_t vertexCount;
     uint32_t instanceCount;
     uint32_t firstVertex;
     uint32_t firstInstance;
 };
 
-struct CmdDrawIndexed {
+struct CmdDrawIndexed final {
     uint32_t indexCount;
     uint32_t instanceCount;
     uint32_t firstIndex;
@@ -37,8 +37,15 @@ struct CmdDrawIndexed {
     uint32_t firstInstance;
 };
 
+struct CmdSetVertexBuffer final {
+    uint32_t slot;
+    Buffer buffer;
+    uint64_t offset;
+    uint64_t size;
+};
+
 using Command =
-    std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw, CmdDrawIndexed>;
+    std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw, CmdDrawIndexed, CmdSetVertexBuffer>;
 
 class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:
@@ -47,7 +54,7 @@ public:
     std::unordered_map<uint32_t, BindGroup> bindGroups;
     std::optional<RenderPass::Descriptor> renderPass;
     Framebuffer framebuffer;
-    GLuint vao = 0;
+    Buffer indicesBuffer;
 
     void Execute(DeviceImpl&) const;
 };

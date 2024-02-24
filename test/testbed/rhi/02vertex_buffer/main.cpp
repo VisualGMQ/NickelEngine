@@ -22,19 +22,35 @@ std::array<Vertex, 3> gVertices = {
            nickel::cgmath::Vec3{0.0, 0.0, 1.0}                                 }
 };
 
-void initShaders(Device device, RenderPipeline::Descriptor& desc) {
+void initShaders(APIPreference api, Device device,
+                 RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/02vertex_buffer/vert.spv", std::ios::binary)
-            .value();
-    desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/02vertex_buffer/frag.spv", std::ios::binary)
-            .value();
-    desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    if (api == APIPreference::Vulkan) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/02vertex_buffer/vert.spv", std::ios::binary)
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/02vertex_buffer/frag.spv", std::ios::binary)
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    } else if (api == APIPreference::GL) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/02vertex_buffer/shader.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/02vertex_buffer/shader.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    }
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -63,7 +79,7 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
 
-    initShaders(device, desc);
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     ctx.layout = device.CreatePipelineLayout({});
     desc.layout = ctx.layout;
@@ -119,8 +135,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     texture.Destroy();
 }
 
-void ShutdownSystem(gecs::commands cmds,
-                    gecs::resource<gecs::mut<Context>> ctx,
+void ShutdownSystem(gecs::commands cmds, gecs::resource<gecs::mut<Context>> ctx,
                     gecs::resource<gecs::mut<Device>> device,
                     gecs::resource<gecs::mut<Adapter>> adapter) {
     ctx->vertexBuffer.Destroy();

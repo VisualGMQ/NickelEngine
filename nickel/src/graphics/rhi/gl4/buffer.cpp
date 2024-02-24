@@ -26,10 +26,10 @@ GLenum getBufferType(const Buffer::Descriptor& desc) {
 }
 
 BufferImpl::BufferImpl(const Buffer::Descriptor& desc)
-    : type_{getBufferType(desc)}, size_{desc.size} {
+    : type_{getBufferType(desc)}, size_{desc.size}, usage_{desc.usage} {
     GL_CALL(glGenBuffers(1, &id));
     Bind();
-    GL_CALL(glBufferData(type_, desc.size, 0, GL_STATIC_COPY));
+    GL_CALL(glBufferData(type_, desc.size, 0, GL_STATIC_DRAW));
     if (desc.mappedAtCreation) {
         if (desc.usage & BufferUsage::MapRead &&
             desc.usage & BufferUsage::MapWrite) {
@@ -40,6 +40,9 @@ BufferImpl::BufferImpl(const Buffer::Descriptor& desc)
             MapAsync(Buffer::Mode::Read, 0, desc.size);
         } else if (desc.usage & BufferUsage::MapWrite) {
             MapAsync(Buffer::Mode::Write, 0, desc.size);
+        } else {
+            MapAsync(
+                Buffer::Mode::Write, 0, desc.size);
         }
     }
     Unbind();
@@ -73,29 +76,33 @@ void BufferImpl::Unmap() {
 
 void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset,
                           uint64_t size) {
+    Bind();
     if (mapState_ != Buffer::MapState::Unmapped) {
         Unmap();
     }
+    GLenum access = 0;
     if (mode & Buffer::Mode::Read && mode & Buffer::Mode::Write) {
-        map_ = glMapBufferRange(type_, offset, size, GL_READ_WRITE);
+        access |= GL_MAP_READ_BIT|GL_MAP_WRITE_BIT;
     } else if (mode & Buffer::Mode::Read) {
-        map_ = glMapBufferRange(type_, offset, size, GL_READ_ONLY);
+        access = GL_MAP_READ_BIT;
     } else {
-        map_ = glMapBufferRange(type_, offset, size, GL_WRITE_ONLY);
+        access = GL_MAP_WRITE_BIT;
     }
+    map_ = glMapBufferRange(type_, offset, size, access|GL_MAP_COHERENT_BIT);
     mapState_ = Buffer::MapState::Mapped;
+    Unbind();
 };
 
 void* BufferImpl::GetMappedRange() {
-    return map_;
+    return GetMappedRange(0, size_);
 };
 
 void* BufferImpl::GetMappedRange(uint64_t offset) {
-    return map_;
+    return GetMappedRange(offset, size_ - offset);
 };
 
 void* BufferImpl::GetMappedRange(uint64_t offset, uint64_t size) {
-    return map_;
+    return (char*)map_ + offset;
 };
 
 }  // namespace nickel::rhi::gl4

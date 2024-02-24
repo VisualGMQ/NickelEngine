@@ -7,9 +7,6 @@
 
 namespace nickel::rhi::gl4 {
 
-GLuint BindVertexLayout2VAO(GLuint vao,
-                            const RenderPipeline::VertexState& state);
-
 class RenderPipelineImpl: public rhi::RenderPipelineImpl {
 public:
     explicit RenderPipelineImpl(const RenderPipeline::Descriptor&);

@@ -28,6 +28,7 @@ public:
 private:
     enum Buffer::MapState mapState_ = Buffer::MapState::Unmapped;
     GLenum type_;
+    BufferUsage usage_;
     uint64_t size_;
     void* map_{};
 };

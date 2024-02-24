@@ -6,28 +6,10 @@
 
 namespace nickel::rhi::gl4 {
 
-GLuint BindVertexLayout2VAO(GLuint vao,
-                            const RenderPipeline::VertexState& state) {
-    GL_CALL(glBindVertexArray(vao));
-    for (int i = 0; i < state.buffers.size(); i++) {
-        auto buffer = state.buffers[i];
-        for (auto& attr : buffer.attributes) {
-            GL_CALL(glVertexAttribPointer(
-                attr.shaderLocation, GetVertexFormatComponentCount(attr.format),
-                GetVertexFormatGLType(attr.format),
-                IsNormalizedVertexFormat(attr.format), buffer.arrayStride,
-                (void*)attr.offset));
-            GL_CALL(glEnableVertexAttribArray(attr.shaderLocation));
-        }
-    }
-    GL_CALL(glBindVertexArray(0));
-}
-
 RenderPipelineImpl::RenderPipelineImpl(const RenderPipeline::Descriptor& desc)
     : desc_{desc} {
     createShader(desc);
     GL_CALL(glGenVertexArrays(1, &vao_));
-    BindVertexLayout2VAO(vao_, desc.vertex);
 }
 
 RenderPipelineImpl::~RenderPipelineImpl() {
