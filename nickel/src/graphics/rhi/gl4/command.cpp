@@ -171,31 +171,23 @@ void CommandBufferImpl::Execute(DeviceImpl& device) const {
 }
 
 CommandBuffer CommandEncoderImpl::Finish() {
-    CommandBufferImpl* impl = buffer_;
-    buffer_ = nullptr;
-    return CommandBuffer{impl};
+    return CommandBuffer{&buffer_};
 }
 
-CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& impl) : device_{&impl} {
-    buffer_ = new CommandBufferImpl{};
-}
-
-CommandEncoderImpl::~CommandEncoderImpl() {
-    delete buffer_;
-}
+CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& impl) : device_{&impl} {}
 
 void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
                                             uint64_t srcOffset,
                                             const Buffer& dst,
                                             uint64_t dstOffset, uint64_t size) {
-    buffer_->cmds.push_back(
+    buffer_.cmds.push_back(
         CmdCopyBuf2Buf{src, srcOffset, dst, dstOffset, size});
 }
 
 void CommandEncoderImpl::CopyBufferToTexture(
     const CommandEncoder::BufTexCopySrc& src,
     const CommandEncoder::BufTexCopyDst& dst, const Extent3D& copySize) {
-    buffer_->cmds.push_back(CmdCopyBuf2Texture{src, dst, copySize});
+    buffer_.cmds.push_back(CmdCopyBuf2Texture{src, dst, copySize});
 }
 
 RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
@@ -222,12 +214,12 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     for (auto fbo : device_->framebuffers) {
         if (static_cast<const FramebufferImpl*>(fbo.Impl())
                 ->GetAttachmentIDs() == attachments) {
-            buffer_->framebuffer = fbo;
+            buffer_.framebuffer = fbo;
             break;
         }
     }
 
-    if (!buffer_->framebuffer) {
+    if (!buffer_.framebuffer) {
         Framebuffer::Descriptor fboDesc;
         for (auto att : desc.colorAttachments) {
             fboDesc.views.emplace_back(att.view);
@@ -236,13 +228,13 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
             fboDesc.views.emplace_back(desc.depthStencilAttachment->view);
         }
         fboDesc.extent = desc.colorAttachments.at(0).view.Texture().Extent();
-        buffer_->framebuffer = device_->framebuffers.emplace_back(
+        buffer_.framebuffer = device_->framebuffers.emplace_back(
             new FramebufferImpl(fboDesc, desc));
     }
 
-    buffer_->renderPass = desc;
+    buffer_.renderPass = desc;
 
-    return RenderPassEncoder{new RenderPassEncoderImpl(*device_, *buffer_)};
+    return RenderPassEncoder{new RenderPassEncoderImpl(*device_, buffer_)};
 }
 
 RenderPassEncoderImpl::RenderPassEncoderImpl(DeviceImpl& device,

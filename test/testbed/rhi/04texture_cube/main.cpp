@@ -5,7 +5,7 @@
 
 using namespace nickel::rhi;
 
-constexpr APIPreference API = APIPreference::GL;
+constexpr APIPreference API = APIPreference::Vulkan;
 
 struct Context {
     PipelineLayout layout;
@@ -279,7 +279,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     queue.Submit({cmd});
     device->SwapContext();
 
-    cmd.Destroy();
     encoder.Destroy();
     view.Destroy();
     texture.Destroy();

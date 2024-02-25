@@ -137,6 +137,7 @@ void RenderPipelineImpl::createRenderPipeline(
     colorBlend.setLogicOpEnable(false).setAttachments(attachmentStates);
 
     // depth stencil state
+    vk::PipelineDepthStencilStateCreateInfo depthStencilState;
     if (desc.depthStencil) {
         vk::StencilOpState frontState, backState;
         frontState.setWriteMask(desc.depthStencil->stencilWriteMask)
@@ -156,7 +157,7 @@ void RenderPipelineImpl::createRenderPipeline(
                 StencilOp2Vk(desc.depthStencil->stencilBack.depthFailOp))
             .setReference(0);
 
-        vk::PipelineDepthStencilStateCreateInfo depthStencilState;
+        depthStencilState.sType = vk::StructureType::ePipelineDepthStencilStateCreateInfo;
         depthStencilState.setDepthBoundsTestEnable(false)
             .setDepthTestEnable(true)
             .setStencilTestEnable(true)

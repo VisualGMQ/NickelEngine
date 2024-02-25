@@ -217,7 +217,6 @@ CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
 
 CommandEncoderImpl::~CommandEncoderImpl() {
     if (pool_) {
-        cmdBuf_->Destroy();
         delete cmdBuf_;
         dev_.device.freeCommandBuffers(pool_, buf_);
         dev_.device.resetCommandPool(pool_);

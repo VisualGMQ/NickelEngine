@@ -15,7 +15,6 @@ class RenderPassEncoderImpl;
 class CommandBuffer final {
 public:
     explicit CommandBuffer(CommandBufferImpl*);
-    void Destroy();
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
