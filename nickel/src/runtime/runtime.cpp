@@ -1,3 +1,4 @@
+#include "misc/argv.hpp"
 #include "nickel.hpp"
 #include "SDL.h"
 
@@ -27,6 +28,7 @@ int main(int argc, char** argv) {
     auto& world = ECS::Instance().World();
 
     auto& main_reg = world.regist_registry("MainReg");
+    main_reg.commands().emplace_resource<CmdLineArgs>(argc, argv);
 
     main_reg.regist_startup_system<BootstrapCallSystem>();
 

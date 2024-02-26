@@ -3,7 +3,7 @@
 
 using namespace nickel::rhi;
 
-constexpr APIPreference API = APIPreference::Vulkan;
+APIPreference API = APIPreference::Vulkan;
 
 struct Context {
     PipelineLayout layout;
@@ -114,8 +114,15 @@ void ShutdownSystem(gecs::commands cmds,
 
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
+    auto& args = reg.res<nickel::CmdLineArgs>()->Args();
+    bool isVulkanBackend = args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+    if (isVulkanBackend) {
+        API = APIPreference::Vulkan;
+    } else {
+        API = APIPreference::GL;
+    }
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "01 triangle", 1024, 720, API == APIPreference::Vulkan);
+        "01 triangle", 1024, 720, isVulkanBackend);
 
     reg
         // startup systems
