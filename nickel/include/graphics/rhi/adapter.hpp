@@ -7,11 +7,10 @@
 namespace nickel::rhi {
 
 struct GPUSupportFeatures {
-
 };
 
 struct GPUSupportLimits {
-
+    uint32_t nonCoherentAtomSize = 0;
 };
 
 class AdapterImpl;
@@ -31,7 +30,7 @@ public:
 
     Adapter(void* window, Option option = {APIPreference::Undefine});
     GPUSupportFeatures Features();
-    GPUSupportLimits Limits();
+    const GPUSupportLimits& Limits() const;
     Device RequestDevice();
     Info RequestAdapterInfo();
     void Destroy();

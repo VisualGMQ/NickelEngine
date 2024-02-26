@@ -3,10 +3,9 @@
 #include "stb_image.h"
 #include "vertex.hpp"
 
-
 using namespace nickel::rhi;
 
-constexpr APIPreference API = APIPreference::Vulkan;
+constexpr APIPreference API = APIPreference::GL;
 
 constexpr uint32_t InstanceCount = 16;
 
@@ -29,19 +28,33 @@ struct MVP {
     nickel::cgmath::Mat44 model, view, proj;
 } mvp;
 
-void initShaders(Device device, RenderPipeline::Descriptor& desc) {
+void initShaders(APIPreference api, Device device,
+                 RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/05instance/vert.spv", std::ios::binary)
-            .value();
-    desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-    shaderDesc.code =
-        nickel::ReadWholeFile<std::vector<char>>(
-            "test/testbed/rhi/05instance/frag.spv", std::ios::binary)
-            .value();
-    desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    if (api == APIPreference::Vulkan) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/05instance/vert.spv", std::ios::binary)
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/05instance/frag.spv", std::ios::binary)
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    } else if (api == APIPreference::GL) {
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/05instance/shader.glsl.vert")
+                              .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/05instance/shader.glsl.frag")
+                              .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    }
 }
 
 void initVertexBuffer(Context& ctx, Device& device) {
@@ -70,6 +83,9 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
     void* data = ctx.uniformBuffer.GetMappedRange();
     memcpy(data, &mvp, sizeof(mvp));
+    if (!ctx.uniformBuffer.IsMappingCoherence()) {
+        ctx.uniformBuffer.Flush();
+    }
 }
 
 void initInstanceUniformBuffer(Context& ctx, Device& device) {
@@ -92,7 +108,6 @@ void initInstanceUniformBuffer(Context& ctx, Device& device) {
     memcpy(data, offsets.data(), sizeof(offsets));
     ctx.instanceUniformBuffer.Unmap();
 }
-
 
 void initSampler(Context& ctx, Device& device) {
     Sampler::Descriptor desc;
@@ -136,19 +151,10 @@ void initBindGroupAndLayout(Context& ctx, Device& device) {
     entry.visibility = ShaderStage::Fragment;
     SamplerBinding samplerBinding;
     samplerBinding.type = SamplerBinding::SamplerType::Filtering;
+    samplerBinding.name = "mySampler";
     samplerBinding.sampler = ctx.sampler;
+    samplerBinding.view = ctx.imageView;
     entry.resourceLayout = samplerBinding;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
-
-    // texture
-    entry.arraySize = 1;
-    entry.binding = 3;
-    entry.visibility = ShaderStage::Fragment;
-    TextureBinding textureBinding;
-    textureBinding.sampleType = TextureBinding::SampleType::Float;
-    textureBinding.viewDimension = TextureViewType::Dim2;
-    textureBinding.view = ctx.imageView;
-    entry.resourceLayout = textureBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
@@ -220,8 +226,8 @@ void initImage(Context& ctx, Device& dev) {
 
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
-    auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{API});
+    auto& adapter =
+        cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -246,7 +252,7 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
 
-    initShaders(device, desc);
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     initSampler(ctx, device);
     initImage(ctx, device);
@@ -321,8 +327,11 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     void* data = ctx->uniformBuffer.GetMappedRange();
     mvp.model = nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
-    // x += 0.001;
-    // y += 0.002;
+    if (!ctx->uniformBuffer.IsMappingCoherence()) {
+        ctx->uniformBuffer.Flush();
+    }
+    x += 0.001;
+    y += 0.002;
 }
 
 void ShutdownSystem(gecs::commands cmds,

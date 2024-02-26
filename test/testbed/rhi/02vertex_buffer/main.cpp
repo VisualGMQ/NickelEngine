@@ -3,7 +3,7 @@
 
 using namespace nickel::rhi;
 
-constexpr APIPreference API = APIPreference::Vulkan;
+constexpr APIPreference API = APIPreference::GL;
 
 struct Context {
     PipelineLayout layout;

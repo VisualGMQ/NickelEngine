@@ -22,6 +22,12 @@ GLenum getBufferType(const Buffer::Descriptor& desc) {
     if (desc.usage & BufferUsage::QueryResolve) {
         return GL_QUERY_BUFFER;
     }
+    if (desc.usage & BufferUsage::CopyDst) {
+        return GL_COPY_WRITE_BUFFER;
+    }
+    if (desc.usage & BufferUsage::CopySrc) {
+        return GL_COPY_READ_BUFFER;
+    }
     return GL_ARRAY_BUFFER;
 }
 
@@ -70,6 +76,9 @@ uint64_t BufferImpl::Size() const {
 
 void BufferImpl::Unmap() {
     Bind();
+    if (isMappingCoherence_ && !isMappingCoherence_.value()) {
+        Flush();
+    }
     glUnmapBuffer(type_);
     Unbind();
 };
@@ -88,10 +97,31 @@ void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset,
     } else {
         access = GL_MAP_WRITE_BIT;
     }
-    map_ = glMapBufferRange(type_, offset, size, access|GL_MAP_COHERENT_BIT);
+    if (!isMappingCoherence_) {
+        map_ = glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT|access);
+        if (!map_) {
+            isMappingCoherence_ = false;
+            map_ = glMapBufferRange(type_, offset, size, GL_MAP_FLUSH_EXPLICIT_BIT|access);
+        }
+    } else if (isMappingCoherence_.value()) {
+        map_ = glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT|access);
+    } else {
+        map_ = glMapBufferRange(type_, offset, size, GL_MAP_FLUSH_EXPLICIT_BIT|access);
+    }
+    mappedOffset_ = offset;
+    mappedSize_ = size;
     mapState_ = Buffer::MapState::Mapped;
     Unbind();
 };
+
+void BufferImpl::Flush() {
+    Flush(mappedOffset_, mappedSize_);
+}
+
+void BufferImpl::Flush(uint64_t offset, uint64_t size) {
+    Bind();
+    GL_CALL(glFlushMappedBufferRange(type_, offset, size));
+}
 
 void* BufferImpl::GetMappedRange() {
     return GetMappedRange(0, size_);
@@ -104,5 +134,9 @@ void* BufferImpl::GetMappedRange(uint64_t offset) {
 void* BufferImpl::GetMappedRange(uint64_t offset, uint64_t size) {
     return (char*)map_ + offset;
 };
+
+bool BufferImpl::IsMappingCoherence() const {
+    return isMappingCoherence_.value_or(false);
+}
 
 }  // namespace nickel::rhi::gl4

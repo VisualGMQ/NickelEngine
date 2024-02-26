@@ -7,8 +7,8 @@ GPUSupportFeatures AdapterImpl::Features() {
     return {};
 }
 
-GPUSupportLimits AdapterImpl::Limits() {
-    return {};
+const GPUSupportLimits& AdapterImpl::Limits() const {
+    return limits_;
 }
 
 Device AdapterImpl::RequestDevice() {

@@ -76,6 +76,9 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
     void* data = ctx.uniformBuffer.GetMappedRange();
     memcpy(data, &mvp, sizeof(mvp));
+    if (!ctx.uniformBuffer.IsMappingCoherence()) {
+        ctx.uniformBuffer.Flush();
+    }
 }
 
 void initPipelineLayout(Context& ctx, Device& device) {
@@ -215,6 +218,9 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     void* data = ctx->uniformBuffer.GetMappedRange();
     mvp.model = nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
+    if (!ctx->uniformBuffer.IsMappingCoherence()) {
+        ctx->uniformBuffer.Flush();
+    }
     x += 0.001;
     y += 0.002;
 }

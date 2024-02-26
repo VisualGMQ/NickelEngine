@@ -11,6 +11,7 @@ AdapterImpl::AdapterImpl(void* window) : window{window} {
     createSurface(window);
     pickupPhyDevice();
     fillAdapterInfo();
+    querySupportLimits();
 }
 
 void AdapterImpl::createInstance(void* window) {
@@ -110,9 +111,13 @@ GPUSupportFeatures AdapterImpl::Features() {
     return {};
 }
 
-GPUSupportLimits AdapterImpl::Limits() {
-    // TODO: not finish
-    return {};
+const GPUSupportLimits& AdapterImpl::Limits() const {
+    return limits_;
+}
+
+void AdapterImpl::querySupportLimits() {
+    auto limits = phyDevice.getProperties().limits;
+    limits_.nonCoherentAtomSize = limits.nonCoherentAtomSize;
 }
 
 Device AdapterImpl::RequestDevice() {

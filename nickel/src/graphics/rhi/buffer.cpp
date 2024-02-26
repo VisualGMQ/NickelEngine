@@ -66,4 +66,16 @@ void* Buffer::GetMappedRange(uint64_t offset, uint64_t size) {
     return impl_->GetMappedRange(offset, size);
 }
 
+void Buffer::Flush() {
+    impl_->Flush();
+}
+
+void Buffer::Flush(uint64_t offset, uint64_t size) {
+    impl_->Flush(offset, size);
+}
+
+bool Buffer::IsMappingCoherence() const {
+    return impl_->IsMappingCoherence();
+}
+
 }  // namespace nickel::rhi

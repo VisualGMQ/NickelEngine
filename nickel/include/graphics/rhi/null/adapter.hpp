@@ -7,9 +7,12 @@ namespace nickel::rhi::null {
 class AdapterImpl: public rhi::AdapterImpl {
 public:
     GPUSupportFeatures Features() override;
-    GPUSupportLimits Limits() override;
+    const GPUSupportLimits& Limits() const override;
     Device RequestDevice() override;
     Adapter::Info RequestAdapterInfo() override;
+
+private:
+    GPUSupportLimits limits_;
 };
 
 }

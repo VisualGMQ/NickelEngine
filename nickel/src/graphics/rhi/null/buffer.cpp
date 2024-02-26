@@ -27,4 +27,12 @@ void* BufferImpl::GetMappedRange(uint64_t offset, uint64_t size) {
     return nullptr;
 }
 
+void BufferImpl::Flush() {}
+
+void BufferImpl::Flush(uint64_t, uint64_t) {}
+
+bool BufferImpl::IsMappingCoherence() const {
+    return false;
+}
+
 }  // namespace nickel::rhi::null

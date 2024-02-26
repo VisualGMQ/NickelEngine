@@ -116,8 +116,8 @@ GPUSupportFeatures AdapterImpl::Features() {
     return {};
 }
 
-GPUSupportLimits AdapterImpl::Limits() {
-    return {};
+const GPUSupportLimits& AdapterImpl::Limits() const {
+    return limits_;
 }
 
 Device AdapterImpl::RequestDevice() {
@@ -130,6 +130,9 @@ Adapter::Info AdapterImpl::RequestAdapterInfo() {
     info.vendorID = 0;
     info.device = (const char *)glGetString(GL_RENDERER);
     return info;
+}
+
+void AdapterImpl::querySupportLimits() {
 }
 
 }  // namespace nickel::rhi::gl4

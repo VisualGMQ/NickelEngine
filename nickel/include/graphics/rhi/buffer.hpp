@@ -38,6 +38,9 @@ public:
     void* GetMappedRange();
     void* GetMappedRange(uint64_t offset);
     void* GetMappedRange(uint64_t offset, uint64_t size);
+    void Flush();
+    void Flush(uint64_t offset, uint64_t size);
+    bool IsMappingCoherence() const;
 
     operator bool() const { return impl_; }
 

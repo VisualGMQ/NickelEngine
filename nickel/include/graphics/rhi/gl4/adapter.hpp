@@ -12,7 +12,7 @@ public:
     ~AdapterImpl();
 
     GPUSupportFeatures Features() override;
-    GPUSupportLimits Limits() override;
+    const GPUSupportLimits& Limits() const override;
     Device RequestDevice() override;
     Adapter::Info RequestAdapterInfo() override;
 
@@ -20,6 +20,9 @@ public:
 
 private:
     SDL_GLContext ctx_;
+    GPUSupportLimits limits_;
+
+    void querySupportLimits();
 };
 
 }  // namespace nickel::rhi::gl4

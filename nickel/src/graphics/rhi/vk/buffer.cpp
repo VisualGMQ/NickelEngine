@@ -17,7 +17,7 @@ BufferImpl::BufferImpl(DeviceImpl& dev, vk::PhysicalDevice phyDev,
     }
     createBuffer(desc.size, BufferUsage2Vk(desc.usage), indices,
                  desc.mappedAtCreation);
-    allocateMem(phyDev, getMemoryProperty(desc));
+    allocateMem(phyDev, getMemoryProperty(phyDev, desc));
     VK_CALL_NO_VALUE(dev.device.bindBufferMemory(buffer, mem, 0));
 
     if (desc.mappedAtCreation) {
@@ -58,15 +58,21 @@ void BufferImpl::allocateMem(vk::PhysicalDevice phyDevice,
 }
 
 vk::MemoryPropertyFlags BufferImpl::getMemoryProperty(
-    const Buffer::Descriptor& desc) const {
+    vk::PhysicalDevice phyDevice, const Buffer::Descriptor& desc) {
     uint32_t prop = 0;
     auto usageBits = desc.usage;
-    if (usageBits & BufferUsage::MapRead ||
-        usageBits & BufferUsage::MapWrite ||
+    if (usageBits & BufferUsage::MapRead || usageBits & BufferUsage::MapWrite ||
         desc.mappedAtCreation) {
-        prop |=
-            static_cast<uint32_t>(vk::MemoryPropertyFlagBits::eHostVisible |
-                                  vk::MemoryPropertyFlagBits::eHostCoherent);
+        if (phyDevice.getProperties().limits.nonCoherentAtomSize == 0) {
+            prop |=
+                static_cast<uint32_t>(vk::MemoryPropertyFlagBits::eHostVisible);
+            isMappingCoherence_ = false;
+        } else {
+            prop |= static_cast<uint32_t>(
+                vk::MemoryPropertyFlagBits::eHostVisible |
+                vk::MemoryPropertyFlagBits::eHostCoherent);
+            isMappingCoherence_ = true;
+        }
     } else {
         prop |= static_cast<uint32_t>(vk::MemoryPropertyFlagBits::eDeviceLocal);
     }
@@ -98,9 +104,12 @@ void BufferImpl::Unmap() {
     map_ = nullptr;
 }
 
-void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset, uint64_t size) {
+void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset,
+                          uint64_t size) {
     VK_CALL(map_, device_.mapMemory(mem, offset, size));
     if (map_) {
+        mappedOffset_ = offset;
+        mappedSize_ = size;
         mapState_ = Buffer::MapState::Mapped;
     }
 }
@@ -115,6 +124,22 @@ void* BufferImpl::GetMappedRange(uint64_t offset) {
 
 void* BufferImpl::GetMappedRange(uint64_t offset, uint64_t size) {
     return (char*)map_ + offset;
+}
+
+void BufferImpl::Flush() {
+    vk::MappedMemoryRange range;
+    range.setMemory(mem).setOffset(mappedOffset_).setSize(mappedSize_);
+    VK_CALL_NO_VALUE(device_.flushMappedMemoryRanges(range));
+}
+
+void BufferImpl::Flush(uint64_t offset, uint64_t size) {
+    vk::MappedMemoryRange range;
+    range.setMemory(mem).setOffset(offset).setSize(size);
+    VK_CALL_NO_VALUE(device_.flushMappedMemoryRanges(range));
+}
+
+bool BufferImpl::IsMappingCoherence() const {
+    return isMappingCoherence_;
 }
 
 }  // namespace nickel::rhi::vulkan

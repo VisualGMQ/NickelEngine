@@ -46,7 +46,7 @@ GPUSupportFeatures Adapter::Features() {
     return impl_->Features();
 }
 
-GPUSupportLimits Adapter::Limits() {
+const GPUSupportLimits& Adapter::Limits() const {
     return impl_->Limits();
 }
 
