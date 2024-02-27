@@ -3,38 +3,61 @@
 
 using namespace nickel::rhi;
 
-APIPreference API = APIPreference::Vulkan;
+APIPreference API = APIPreference::GL;
 
 struct Context {
     PipelineLayout layout;
     RenderPipeline pipeline;
+    Buffer vertexBuffer;
+    Buffer indicesBuffer;
+};
+
+struct Vertex {
+    nickel::cgmath::Vec2 position;
+    nickel::cgmath::Vec3 color;
+};
+
+std::array<Vertex, 4> gVertices = {
+    Vertex{nickel::cgmath::Vec2{-0.5, -0.5},
+           nickel::cgmath::Vec3{1.0, 0.0, 0.0}                                  },
+    Vertex{ nickel::cgmath::Vec2{0.5, -0.5},
+           nickel::cgmath::Vec3{0.0, 1.0, 0.0}                                  },
+    Vertex{  nickel::cgmath::Vec2{0.5, 0.5}, nickel::cgmath::Vec3{0.0, 0.0, 1.0}},
+    Vertex{ nickel::cgmath::Vec2{-0.5, 0.5},
+           nickel::cgmath::Vec3{0.0, 0.0, 1.0}                                  }
+};
+
+std::array<uint32_t, 9> gIndices = {
+    99, 99, 99,           // some invalid data for testing indices offset
+    0,  1,  2,  0, 2, 3,  // real indices data
 };
 
 void initShaders(APIPreference api, Device device,
                  RenderPipeline::Descriptor& desc) {
     ShaderModule::Descriptor shaderDesc;
+
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/01triangle/vert.spv", std::ios::binary)
+                "test/testbed/rhi/indices_buffer/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/01triangle/frag.spv", std::ios::binary)
+                "test/testbed/rhi/indices_buffer/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/01triangle/shader.glsl.vert")
+                "test/testbed/rhi/indices_buffer/shader.glsl.vert")
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/01triangle/shader.glsl.frag")
+                "test/testbed/rhi/indices_buffer/shader.glsl.frag")
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     }
@@ -42,12 +65,21 @@ void initShaders(APIPreference api, Device device,
 
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
-    auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{API});
+    auto& adapter =
+        cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
     RenderPipeline::Descriptor desc;
+
+    RenderPipeline::VertexState vertexState;
+    RenderPipeline::BufferState bufferState;
+
+    bufferState.attributes.push_back({VertexFormat::Float32x2, 0, 0});
+    bufferState.attributes.push_back({VertexFormat::Float32x3, 8, 1});
+    bufferState.arrayStride = 5 * 4;
+    desc.vertex.buffers.emplace_back(bufferState);
+
     desc.viewport.viewport.x = 0;
     desc.viewport.viewport.y = 0;
     desc.viewport.viewport.w = window->Size().w;
@@ -65,12 +97,28 @@ void StartupSystem(gecs::commands cmds,
     target.format = TextureFormat::Presentation;
     desc.fragment.targets.emplace_back(target);
 
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.size = sizeof(gVertices);
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.usage = BufferUsage::Vertex;
+    ctx.vertexBuffer = device.CreateBuffer(bufferDesc);
+    void* data = ctx.vertexBuffer.GetMappedRange();
+    memcpy(data, gVertices.data(), sizeof(gVertices));
+    ctx.vertexBuffer.Unmap();
+
+    bufferDesc.size = sizeof(gIndices);
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.usage = BufferUsage::Index;
+    ctx.indicesBuffer = device.CreateBuffer(bufferDesc);
+    data = ctx.indicesBuffer.GetMappedRange();
+    memcpy(data, gIndices.data(), sizeof(gIndices));
+    ctx.indicesBuffer.Unmap();
+
     ctx.pipeline = device.CreateRenderPipeline(desc);
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
                   gecs::resource<gecs::mut<Context>> ctx) {
-    auto encoder = device->CreateCommandEncoder();
     RenderPass::Descriptor desc;
     RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = AttachmentLoadOp::Clear;
@@ -84,9 +132,15 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto view = texture.CreateView();
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
+
+    auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->pipeline);
-    renderPass.Draw(3, 1, 0, 0);
+    renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
+                               ctx->vertexBuffer.Size());
+    renderPass.SetIndexBuffer(ctx->indicesBuffer, IndexType::Uint32, 0,
+                              sizeof(gIndices));
+    renderPass.DrawIndexed(6, 1, 3, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
 
@@ -100,13 +154,14 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     texture.Destroy();
 }
 
-void ShutdownSystem(gecs::commands cmds,
-                    gecs::resource<gecs::mut<Context>> ctx,
-                    gecs::resource<gecs::mut<Device>> dev,
+void ShutdownSystem(gecs::commands cmds, gecs::resource<gecs::mut<Context>> ctx,
+                    gecs::resource<gecs::mut<Device>> device,
                     gecs::resource<gecs::mut<Adapter>> adapter) {
+    ctx->vertexBuffer.Destroy();
+    ctx->indicesBuffer.Destroy();
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
-    dev->Destroy();
+    device->Destroy();
     adapter->Destroy();
     cmds.remove_resource<Device>();
     cmds.remove_resource<Adapter>();
@@ -115,14 +170,15 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     auto& args = reg.res<nickel::CmdLineArgs>()->Args();
-    bool isVulkanBackend = args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+    bool isVulkanBackend =
+        args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
     if (isVulkanBackend) {
         API = APIPreference::Vulkan;
     } else {
         API = APIPreference::GL;
     }
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "01 triangle", 1024, 720, isVulkanBackend);
+        "indices buffer", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

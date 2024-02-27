@@ -1,0 +1,2 @@
+AddRHITest(rhi_instance)
+target_link_libraries(rhi_instance PRIVATE stb_image)

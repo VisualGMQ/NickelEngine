@@ -36,6 +36,14 @@ set_target_properties(Nickel.Graphics
 target_compile_features(Nickel.Graphics PUBLIC cxx_std_17)
 target_link_libraries(Nickel.Graphics PUBLIC glad)
 target_link_libraries(Nickel.Graphics PRIVATE stb_image rapidxml freetype lunasvg tinygltf SDL2 Nickel.Common)
+target_compile_definitions(Nickel.Graphics PUBLIC
+    TINYGLTF_NO_STB_IMAGE 
+    TINYGLTF_NO_STB_IMAGE_WRITE
+    TINYGLTF_NO_EXTERNAL_IMAGE
+    TINYGLTF_NO_INCLUDE_STB_IMAGE
+    TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
+    TINYGLTF_USE_CPP14
+)
 if (TARGET Vulkan)
    target_link_libraries(Nickel.Graphics PRIVATE Vulkan)
    target_compile_definitions(Nickel.Graphics PUBLIC NICKEL_HAS_VULKAN)

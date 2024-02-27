@@ -1,0 +1,2 @@
+AddRHITest(rhi_gltf)
+target_link_libraries(rhi_gltf PRIVATE tinygltf)

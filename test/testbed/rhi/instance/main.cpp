@@ -35,23 +35,23 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/05instance/vert.spv", std::ios::binary)
+                "test/testbed/rhi/instance/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/05instance/frag.spv", std::ios::binary)
+                "test/testbed/rhi/instance/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/05instance/shader.glsl.vert")
+                              "test/testbed/rhi/instance/shader.glsl.vert")
                               .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/05instance/shader.glsl.frag")
+                              "test/testbed/rhi/instance/shader.glsl.frag")
                               .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     }
@@ -360,7 +360,7 @@ void BootstrapSystem(gecs::world& world,
         API = APIPreference::GL;
     }
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "05 instancing", 1024, 720, API == APIPreference::Vulkan);
+        "instancing", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

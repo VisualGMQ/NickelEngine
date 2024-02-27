@@ -1,7 +1,6 @@
 #include "graphics/mesh.hpp"
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 namespace nickel {
@@ -100,8 +99,8 @@ TextureHandle parseImage(const Model& model,
     }
 }
 
-Model LoadFromFile(const std::filesystem::path& filepath,
-                   TextureManager& textureMgr) {
+Model LoadModelFromFile(const std::filesystem::path& filepath,
+                        TextureManager& textureMgr) {
     tinygltf::TinyGLTF loader;
     tinygltf::Model gltfModel;
     std::string err, warn;

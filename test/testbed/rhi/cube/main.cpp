@@ -10,6 +10,7 @@ struct Context {
     PipelineLayout layout;
     RenderPipeline pipeline;
     Buffer vertexBuffer;
+    Buffer indicesBuffer;
     Buffer uniformBuffer;
     BindGroupLayout bindGroupLayout;
     BindGroup bindGroup;
@@ -28,23 +29,23 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/03cube/vert.spv", std::ios::binary)
+                "test/testbed/rhi/cube/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/03cube/frag.spv", std::ios::binary)
+                "test/testbed/rhi/cube/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/03cube/shader.glsl.vert")
+                              "test/testbed/rhi/cube/shader.glsl.vert")
                               .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/03cube/shader.glsl.frag")
+                              "test/testbed/rhi/cube/shader.glsl.frag")
                               .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     }
@@ -59,6 +60,17 @@ void initVertexBuffer(Context& ctx, Device& device) {
     auto data = ctx.vertexBuffer.GetMappedRange();
     memcpy(data, gVertices.data(), sizeof(gVertices));
     ctx.vertexBuffer.Unmap();
+}
+
+void initIndicesBuffer(Context& ctx, Device& device) {
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.size = sizeof(gIndices);
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.usage = BufferUsage::Index;
+    ctx.indicesBuffer = device.CreateBuffer(bufferDesc);
+    auto data = ctx.indicesBuffer.GetMappedRange();
+    memcpy(data, gIndices.data(), sizeof(gIndices));
+    ctx.indicesBuffer.Unmap();
 }
 
 void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
@@ -149,6 +161,7 @@ void StartupSystem(gecs::commands cmds,
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     initVertexBuffer(ctx, device);
+    initIndicesBuffer(ctx, device);
     initUniformBuffer(ctx, device, window.get());
     initBindGroupAndLayout(ctx, device);
     initPipelineLayout(ctx, device);
@@ -197,8 +210,9 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     renderPass.SetPipeline(ctx->pipeline);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
+    renderPass.SetIndexBuffer(ctx->indicesBuffer, IndexType::Uint32, 0, sizeof(gIndices));
     renderPass.SetBindGroup(ctx->bindGroup);
-    renderPass.Draw(gVertices.size(), 1, 0, 0);
+    renderPass.DrawIndexed(gIndices.size(), 1, 0, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
 
@@ -233,6 +247,7 @@ void ShutdownSystem(gecs::commands cmds,
     ctx->bindGroupLayout.Destroy();
     ctx->uniformBuffer.Destroy();
     ctx->vertexBuffer.Destroy();
+    ctx->indicesBuffer.Destroy();
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
     cmds.remove_resource<Device>();

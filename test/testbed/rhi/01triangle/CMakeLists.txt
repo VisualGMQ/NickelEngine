@@ -1,1 +1,0 @@
-AddRHITest(rhi_01triangle)

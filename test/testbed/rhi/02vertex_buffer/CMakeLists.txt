@@ -1,1 +1,0 @@
-AddRHITest(rhi_02vertex_buffer)

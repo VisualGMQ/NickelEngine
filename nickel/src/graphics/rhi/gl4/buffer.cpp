@@ -79,7 +79,9 @@ void BufferImpl::Unmap() {
     if (isMappingCoherence_ && !isMappingCoherence_.value()) {
         Flush();
     }
-    glUnmapBuffer(type_);
+    GL_CALL(glUnmapBuffer(type_));
+    map_ = nullptr;
+    mapState_ = Buffer::MapState::Unmapped;
     Unbind();
 };
 

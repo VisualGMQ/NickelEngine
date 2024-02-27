@@ -31,25 +31,25 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/02vertex_buffer/vert.spv", std::ios::binary)
+                "test/testbed/rhi/vertex_buffer/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/02vertex_buffer/frag.spv", std::ios::binary)
+                "test/testbed/rhi/vertex_buffer/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/02vertex_buffer/shader.glsl.vert")
+                "test/testbed/rhi/vertex_buffer/shader.glsl.vert")
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/02vertex_buffer/shader.glsl.frag")
+                "test/testbed/rhi/vertex_buffer/shader.glsl.frag")
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     }

@@ -28,8 +28,10 @@ struct CmdExecutor final {
                     GL_CALL(glGenVertexArrays(1, &newVao));
                     GL_CALL(glBindVertexArray(newVao));
                     vao_ = device_.vaos.emplace((size_t)&buffer, newVao).second;
-                    static_cast<const BufferImpl*>(buffer.indicesBuffer.Impl())
-                        ->Bind();
+                    GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                                         static_cast<const BufferImpl*>(
+                                             buffer.indicesBuffer.Impl())
+                                             ->id));
                 }
             } else {
                 vao_ = static_cast<const RenderPipelineImpl*>(
@@ -129,8 +131,11 @@ struct CmdExecutor final {
             desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
                 ? GL_UNSIGNED_SHORT
                 : GL_UNSIGNED_INT,
-            &cmd.firstIndex, cmd.instanceCount, cmd.baseVertex,
-            cmd.firstInstance));
+            (void*)((desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
+                         ? 2
+                         : 4) *
+                    cmd.firstIndex),
+            cmd.instanceCount, cmd.baseVertex, cmd.firstInstance));
     }
 
     void operator()(const CmdSetVertexBuffer& cmd) const {
@@ -140,7 +145,9 @@ struct CmdExecutor final {
                 ->Descriptor()
                 .vertex;
         auto buffer = vertexState.buffers.at(cmd.slot);
-        static_cast<const BufferImpl*>(cmd.buffer.Impl())->Bind();
+        GL_CALL(glBindBuffer(
+            GL_ARRAY_BUFFER,
+            static_cast<const BufferImpl*>(cmd.buffer.Impl())->id));
         for (auto& attr : buffer.attributes) {
             GL_CALL(glVertexAttribPointer(
                 attr.shaderLocation, GetVertexFormatComponentCount(attr.format),
