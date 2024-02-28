@@ -59,13 +59,24 @@ struct TextureBinding final {
     TextureViewType viewDimension = TextureViewType::Dim2;
 };
 
-using ResourceLayout = std::variant<BufferBinding, SamplerBinding,
-                                    StorageTextureBinding, TextureBinding>;
+enum class BindingType {
+    Buffer,
+    Sampler,
+    Texture,
+    StorageTexture,
+};
+
+struct ResourceEntry {
+    uint32_t binding;
+    std::variant<BufferBinding, SamplerBinding, StorageTextureBinding,
+                 TextureBinding> entry;
+
+};
 
 struct Entry final {
+    BindingType type;
     uint32_t binding;
     Flags<ShaderStage> visibility;
-    ResourceLayout resourceLayout;
     uint32_t arraySize = 1;
 };
 
@@ -97,7 +108,7 @@ class BindGroupImpl;
 class BindGroup final {
 public:
     struct Descriptor {
-        std::vector<Entry> entries;
+        std::vector<ResourceEntry> entries;
         BindGroupLayout layout;
     };
 

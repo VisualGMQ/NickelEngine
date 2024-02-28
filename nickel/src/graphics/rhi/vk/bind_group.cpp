@@ -4,6 +4,7 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/sampler.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
+#include "graphics/rhi/defs.hpp"
 
 namespace nickel::rhi::vulkan {
 
@@ -44,13 +45,26 @@ struct getDescriptorTypeHelper {
     }
 };
 
-vk::DescriptorType getDescriptorType(const ResourceLayout& layout) {
-    return std::visit(getDescriptorTypeHelper{}, layout);
+vk::DescriptorType BindingType2Vk(BindingType type) {
+    switch (type) {
+        case BindingType::Buffer:
+            return vk::DescriptorType::eUniformBuffer;
+        case BindingType::Sampler:
+            return vk::DescriptorType::eCombinedImageSampler;
+        case BindingType::Texture:
+            return vk::DescriptorType::eSampledImage;
+        case BindingType::StorageTexture:
+            return vk::DescriptorType::eStorageImage;
+    }
+}
+
+vk::DescriptorType getDescriptorType(const ResourceEntry& entry) {
+    return std::visit(getDescriptorTypeHelper{}, entry.entry);
 }
 
 BindGroupLayoutImpl::BindGroupLayoutImpl(
     DeviceImpl& dev, const BindGroupLayout::Descriptor& desc)
-    : device_{dev.device} {
+    : device_{dev}, desc_{desc} {
     std::vector<vk::DescriptorSetLayoutBinding> bindings;
     for (auto& entry : desc.entries) {
         bindings.emplace_back(getBinding(entry));
@@ -60,6 +74,16 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
     info.setBindings(bindings);
 
     VK_CALL(layout, dev.device.createDescriptorSetLayout(info));
+
+    createPool(dev.device, dev.swapchain.imageInfo.imagCount, desc);
+
+    // query physics device to determine this const
+    constexpr uint32_t shaderUniformMaxCount = 16;
+
+    allocSets(dev.device,
+              shaderUniformMaxCount * dev.swapchain.ImageInfo().imagCount *
+                  MaxDrawCallPerCmdBuf,
+              desc);
 }
 
 vk::DescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
@@ -69,49 +93,48 @@ vk::DescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
     binding.setBinding(entry.binding)
         .setDescriptorCount(entry.arraySize)
         .setStageFlags(ShaderStage2Vk(entry.visibility))
-        .setDescriptorType(getDescriptorType(entry.resourceLayout));
+        .setDescriptorType(BindingType2Vk(entry.type));
 
     return binding;
 }
 
-BindGroupLayoutImpl::~BindGroupLayoutImpl() {
-    device_.destroyDescriptorSetLayout(layout);
-}
 
-BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
-    : device_{dev}, layout_{desc.layout} {
-    createPool(dev.device, dev.swapchain.ImageInfo().imagCount, desc);
-    allocSets(dev.device, dev.swapchain.Images().size(), desc);
-    writeDescriptors(dev.device, desc);
-}
-
-void BindGroupImpl::createPool(vk::Device dev, uint32_t imageCount,
-                               const BindGroup::Descriptor& desc) {
+void BindGroupLayoutImpl::createPool(vk::Device dev, uint32_t count, const BindGroupLayout::Descriptor& desc) {
     vk::DescriptorPoolCreateInfo info;
     std::vector<vk::DescriptorPoolSize> sizes;
     uint32_t maxCount = 0;
     for (auto& entry : desc.entries) {
         vk::DescriptorPoolSize size;
-        size.setType(getDescriptorType(entry.resourceLayout))
-            .setDescriptorCount(imageCount);
+        size.setType(BindingType2Vk(entry.type))
+            .setDescriptorCount(count);
         sizes.emplace_back(size);
-        maxCount += imageCount;
+        maxCount += count;
     }
     info.setPoolSizes(sizes).setMaxSets(maxCount);
 
     VK_CALL(pool, dev.createDescriptorPool(info));
 }
 
-void BindGroupImpl::allocSets(vk::Device dev, uint32_t imageCount,
-                              const BindGroup::Descriptor& desc) {
+void BindGroupLayoutImpl::allocSets(vk::Device dev, uint32_t count,
+                              const BindGroupLayout::Descriptor& desc) {
     std::vector<vk::DescriptorSetLayout> layouts{
-        imageCount,
-        static_cast<const BindGroupLayoutImpl*>(desc.layout.Impl())->layout};
+        count, layout};
     vk::DescriptorSetAllocateInfo info;
-    info.setDescriptorSetCount(imageCount)
+    info.setDescriptorSetCount(count)
         .setDescriptorPool(pool)
         .setSetLayouts(layouts);
     VK_CALL(sets, dev.allocateDescriptorSets(info));
+}
+
+BindGroupLayoutImpl::~BindGroupLayoutImpl() {
+    device_.device.freeDescriptorSets(pool, sets);
+    device_.device.destroyDescriptorPool(pool);
+    device_.device.destroyDescriptorSetLayout(layout);
+}
+
+BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
+    : device_{dev}, layout_{desc.layout}, desc_{desc} {
+    // move sets to here;
 }
 
 struct WriteDescriptorHelper final {
@@ -199,23 +222,17 @@ private:
     const Entry& entry_;
 };
 
-void BindGroupImpl::writeDescriptors(vk::Device dev,
-                                     const BindGroup::Descriptor& desc) {
-    uint32_t imgCount = device_.swapchain.ImageInfo().imagCount;
-    for (int i = 0; i < imgCount; i++) {
-        auto set = sets[i];
-        for (int j = 0; j < desc.entries.size(); j++) {
-            auto& entry = desc.entries[j];
+void BindGroupImpl::WriteDescriptors() {
+    auto& layoutDesc =
+        static_cast<const BindGroupLayoutImpl*>(desc_.layout.Impl())
+            ->Descriptor();
 
-            WriteDescriptorHelper helper(set, dev, entry);
-            std::visit(helper, entry.resourceLayout);
+    for (auto set : sets) {
+        for (int i = 0; i < layoutDesc.entries.size(); i++) {
+            WriteDescriptorHelper helper(set, device_.device, layoutDesc.entries[i]);
+            std::visit(helper, desc_.entries[i].entry);
         }
     }
-}
-
-BindGroupImpl::~BindGroupImpl() {
-    device_.device.resetDescriptorPool(pool);
-    device_.device.destroyDescriptorPool(pool);
 }
 
 }  // namespace nickel::rhi::vulkan

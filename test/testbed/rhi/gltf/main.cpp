@@ -8,21 +8,34 @@ using namespace nickel::rhi;
 
 APIPreference API = APIPreference::GL;
 
-struct Context {
+struct Material final {
+    nickel::cgmath::Color basicColorFactor;
+};
+
+struct TextureBundle {
+    Texture texture;
+    TextureView view;
+    BindGroup bindGroup;
+    Sampler sampler;
+};
+
+struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
     Buffer uniformBuffer;
+    Buffer colorUniformBuffer;
     BindGroupLayout bindGroupLayout;
     BindGroup bindGroup;
     Texture depth;
     TextureView depthView;
-    std::vector<Texture> images;
-    std::vector<TextureView> imageViews;
-    std::vector<Sampler> samplers;
+    std::vector<TextureBundle> images;
+
+    // gltf related
     Buffer verticesBuffer;
     Buffer uvBuffer;
     Buffer indicesBuffer;
-    tinygltf::Model model;
+    TextureBundle whiteTexture;
+    std::vector<Material> materials;
 };
 
 struct BufferView {
@@ -52,14 +65,15 @@ void ConvertRangeData(const SrcT* src, DstT* dst, size_t blockCount,
 }
 
 template <typename RequireT>
-BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
-                              int componentType,
+BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
                               const tinygltf::Accessor& accessor,
                               const tinygltf::Model& model) {
     auto& view = model.bufferViews[accessor.bufferView];
     auto& buffer = model.buffers[view.buffer];
     auto offset = accessor.byteOffset + view.byteOffset;
-    auto size = accessor.count * sizeof(RequireT) * tinygltf::GetComponentSizeInBytes(accessor.type);
+    auto size = accessor.count * sizeof(RequireT) *
+                tinygltf::GetComponentSizeInBytes(accessor.componentType) *
+                tinygltf::GetNumComponentsInType(accessor.type);
     BufferView bufView;
     bufView.offset = dst.size();
     bufView.size = size;
@@ -69,7 +83,7 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
     auto copySrc = buffer.data.data() + offset;
     auto dstSrc = dst.data() + dst.size() - size;
     auto srcComponentNum = tinygltf::GetNumComponentsInType(accessor.type);
-    auto dstComponentNum = tinygltf::GetNumComponentsInType(componentType);
+    auto dstComponentNum = tinygltf::GetNumComponentsInType(type);
     switch (accessor.componentType) {
         case TINYGLTF_COMPONENT_TYPE_FLOAT:
             ConvertRangeData((const float*)copySrc, (RequireT*)dstSrc,
@@ -104,6 +118,8 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
                              accessor.count, dstComponentNum, srcComponentNum);
             break;
     }
+
+    return bufView;
 }
 
 struct GPUMesh {
@@ -122,130 +138,130 @@ struct GPUMesh {
         for (auto& image : model_.images) {
             auto [texture, view, sampler] =
                 loadTexture(device, rootDir / image.uri);
+            TextureBundle bundle;
+            bundle.texture = texture;
+            bundle.view = view;
+            bundle.sampler = sampler;
             ctx.images.emplace_back(texture);
             ctx.imageViews.emplace_back(view);
             ctx.samplers.emplace_back(sampler);
         }
 
         std::vector<unsigned char> verticesBuffer;
-        std::vector<uint32_t> indicesBuffer;
-        std::vector<float> uvBuffer;
+        std::vector<unsigned char> indicesBuffer;
+        std::vector<unsigned char> uvBuffer;
         for (auto& mesh : model_.meshes) {
             for (int i = 0; i < mesh.primitives.size(); i++) {
                 auto& prim = mesh.primitives[i];
                 auto& attrs = prim.attributes;
+                uint32_t positionCount = 0;
                 if (auto it = attrs.find("POSITION"); it != attrs.end()) {
                     auto& accessor = model_.accessors[it->second];
-                    auto& view = model_.bufferViews[accessor.bufferView];
-                    auto& buffer = model_.buffers[view.buffer];
-                    auto offset = accessor.byteOffset + view.byteOffset;
-                    auto size = accessor.count * 3 * 4;
-                    BufferView bufView;
-                    bufView.offset = verticesBuffer.size();
-                    bufView.size = size;
-                    bufView.count = accessor.count;
-                    verticesViews_[i] = bufView;
+                    positionCount = accessor.count;
+                    auto bufferView = CopyBufferFromGLTF<float>(
+                        verticesBuffer, TINYGLTF_TYPE_VEC3, accessor, model_);
+                    verticesViews_[i] = bufferView;
+                }
 
-                    verticesBuffer.resize(verticesBuffer.size() + size);
-                    auto copySrc = buffer.data.data() + offset;
-                    auto dstSrc =
-                        verticesBuffer.data() + verticesBuffer.size() - size;
-                    size_t elemCount = 3;
-                    if (accessor.type == TINYGLTF_TYPE_VEC4) {
-                        elemCount = 4;
-                    }
-                    switch (accessor.componentType) {
-                        case TINYGLTF_COMPONENT_TYPE_FLOAT:
-                            memcpy(dstSrc, copySrc, size);
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_DOUBLE:
-                            ConvertRangeData((const double*)copySrc,
-                                             (float*)dstSrc, accessor.count,
-                                             elemCount, 3);
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_INT:
-                            ConvertRangeData((const int*)copySrc,
-                                             (float*)dstSrc, accessor.count,
-                                             elemCount, 3);
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_BYTE:
-                            ConvertRangeData((const char*)copySrc,
-                                             (float*)dstSrc, accessor.count,
-                                             elemCount, 3);
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_SHORT:
-                            ConvertRangeData((const short*)copySrc,
-                                             (float*)dstSrc, accessor.count,
-                                             elemCount, 3);
-                            break;
-                    }
+                std::optional<uint32_t> indicesCount;
+                if (prim.indices != -1) {
+                    auto& accessor = model_.accessors[prim.indices];
+                    auto bufView = CopyBufferFromGLTF<uint32_t>(
+                        indicesBuffer, TINYGLTF_TYPE_SCALAR, accessor, model_);
+                    indicesViews_[i] = bufView;
+                    indicesCount = accessor.count;
                 }
 
                 if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
                     auto& accessor = model_.accessors[it->second];
-                    if (accessor.type != TINYGLTF_TYPE_VEC2 ||
-                        accessor.componentType !=
-                            TINYGLTF_COMPONENT_TYPE_FLOAT) {
-                        TODO("convert uv to vec3");
-                    }
-                    auto view = model_.bufferViews[accessor.bufferView];
-                    auto& buffer = model_.buffers[view.buffer];
+                    auto bufferView = CopyBufferFromGLTF<float>(
+                        uvBuffer, TINYGLTF_TYPE_VEC2, accessor, model_);
+                    uvViews_[i] = bufferView;
+                } else {
+                    BufferView view;
+                    view.count =
+                        indicesCount ? indicesCount.value() : positionCount;
+                    view.size = view.count * 4;
+                    view.count = uvBuffer.size();
+                    uvBuffer.resize(uvBuffer.size() + view.size, 0);
+                    uvViews_[i] = view;
                 }
 
-                if (prim.indices != -1) {
-                    auto& accessor = model_.accessors[prim.indices];
-                    auto& view = model_.bufferViews[accessor.bufferView];
-                    auto& buffer = model_.buffers[view.buffer];
-                    auto offset = accessor.byteOffset + view.byteOffset;
-
-                    if (accessor.type != TINYGLTF_TYPE_SCALAR ||
-                        (accessor.componentType !=
-                             TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT &&
-                         accessor.componentType !=
-                             TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)) {
-                        TODO("convert indices to uint32_t");
+                if (prim.material != -1) {
+                    auto& material = model_.materials[prim.material];
+                    Material mat;
+                    auto& pbrBaseColorFactor =
+                        material.pbrMetallicRoughness.baseColorFactor;
+                    for (int i = 0; i < pbrBaseColorFactor.size(); i++) {
+                        mat.basicColorFactor.data[i] = pbrBaseColorFactor[i];
                     }
-                    BufferView bufView;
-                    bufView.offset = indicesBuffer.size();
-                    bufView.size = sizeof(uint32_t) * accessor.count;
-                    bufView.count = accessor.count;
-                    indicesViews_[i] = bufView;
-                    if (accessor.componentType ==
-                        TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                        indicesBuffer.resize(indicesBuffer.size() +
-                                             accessor.count);
-                        ConvertRangeData<uint16_t, uint32_t>(
-                            (uint16_t*)(buffer.data.data() + offset),
-                            indicesBuffer.data() + indicesBuffer.size() -
-                                accessor.count,
-                            accessor.count, 1, 1);
-                    } else if (accessor.componentType ==
-                               TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-                        indicesBuffer.resize(indicesBuffer.size() +
-                                             accessor.count);
-                        memcpy(indicesBuffer.data(), buffer.data.data(),
-                               sizeof(uint32_t) * accessor.count);
-                    }
+                    ctx.materials.emplace_back(std::move(mat));
                 }
             }
         }
 
-        Buffer::Descriptor desc;
-        desc.usage = BufferUsage::Vertex;
-        desc.mappedAtCreation = true;
-        desc.size = verticesBuffer.size();
-        ctx.verticesBuffer = device.CreateBuffer(desc);
-        memcpy(ctx.verticesBuffer.GetMappedRange(), verticesBuffer.data(),
-               verticesBuffer.size());
-        ctx.verticesBuffer.Unmap();
+        ctx.verticesBuffer =
+            copyBuffer2GPU(device, verticesBuffer, BufferUsage::Vertex);
+        ctx.indicesBuffer =
+            copyBuffer2GPU(device, indicesBuffer, BufferUsage::Index);
+        ctx.uvBuffer = copyBuffer2GPU(device, uvBuffer, BufferUsage::Vertex);
+    }
 
-        desc.usage = BufferUsage::Index;
+    void Render(RenderPassEncoder renderPass, Context& ctx) {
+        for (auto& mesh : model_.meshes) {
+            for (int i = 0; i < mesh.primitives.size(); i++) {
+                BufferView *verticesView{}, *uvView{}, *indicesView{};
+                if (auto it = verticesViews_.find(i);
+                    it != verticesViews_.end()) {
+                    verticesView = &it->second;
+                }
+                if (auto it = uvViews_.find(i); it != uvViews_.end()) {
+                    uvView = &it->second;
+                }
+                if (auto it = indicesViews_.find(i);
+                    it != indicesViews_.end()) {
+                    indicesView = &it->second;
+                }
+
+                memcpy(ctx.colorUniformBuffer.GetMappedRange(),
+                       ctx.materials[i].basicColorFactor.data,
+                       sizeof(float) * 4);
+                if (!ctx.colorUniformBuffer.IsMappingCoherence()) {
+                    ctx.colorUniformBuffer.Flush();
+                }
+
+                renderPass.SetVertexBuffer(0, ctx.verticesBuffer,
+                                           verticesView->offset,
+                                           verticesView->size);
+                renderPass.SetVertexBuffer(1, ctx.uvBuffer, uvView->offset,
+                                           uvView->size);
+                renderPass.SetBindGroup(ctx.bindGroup);
+
+                if (indicesView) {
+                    renderPass.SetIndexBuffer(
+                        ctx.indicesBuffer, IndexType::Uint32,
+                        indicesView->offset, indicesView->size);
+                    renderPass.DrawIndexed(
+                        indicesView->count, 1,
+                        indicesView->offset / sizeof(uint32_t), 0, 0);
+                } else {
+                    renderPass.Draw(verticesView->count, 1, 0, 0);
+                }
+            }
+        }
+    }
+
+private:
+    Buffer copyBuffer2GPU(Device device, const std::vector<unsigned char>& src,
+                          BufferUsage usage) {
+        Buffer::Descriptor desc;
+        desc.usage = usage;
         desc.mappedAtCreation = true;
-        desc.size = indicesBuffer.size() * sizeof(uint32_t);
-        ctx.indicesBuffer = device.CreateBuffer(desc);
-        memcpy(ctx.indicesBuffer.GetMappedRange(), indicesBuffer.data(),
-               desc.size);
-        ctx.indicesBuffer.Unmap();
+        desc.size = src.size();
+        auto buffer = device.CreateBuffer(desc);
+        memcpy(buffer.GetMappedRange(), src.data(), desc.size);
+        buffer.Unmap();
+        return buffer;
     }
 
     std::tuple<Texture, TextureView, Sampler> loadTexture(
@@ -295,42 +311,15 @@ struct GPUMesh {
         stbi_image_free(data);
         copyBuffer.Destroy();
 
+        BindGroup::Descriptor bindGroupDesc;
+        device.CreateBindGroup();
+
         return {texture, view, device.CreateSampler({})};
-    }
-
-    void Render(RenderPassEncoder renderPass, Context& ctx) {
-        for (auto& mesh : model_.meshes) {
-            for (int i = 0; i < mesh.primitives.size(); i++) {
-                BufferView *verticesView{}, *indicesView{};
-                if (auto it = verticesViews_.find(i);
-                    it != verticesViews_.end()) {
-                    verticesView = &it->second;
-                }
-                if (auto it = indicesViews_.find(i);
-                    it != indicesViews_.end()) {
-                    indicesView = &it->second;
-                }
-
-                renderPass.SetVertexBuffer(0, ctx.verticesBuffer,
-                                           verticesView->offset,
-                                           verticesView->size);
-
-                if (indicesView) {
-                    renderPass.SetIndexBuffer(
-                        ctx.indicesBuffer, IndexType::Uint32,
-                        indicesView->offset, indicesView->size);
-                    renderPass.DrawIndexed(
-                        indicesView->count, 1,
-                        indicesView->offset / sizeof(uint32_t), 0, 0);
-                } else {
-                    renderPass.Draw(verticesView->count, 1, 0, 0);
-                }
-            }
-        }
     }
 
     tinygltf::Model model_;
     std::unordered_map<int, BufferView> verticesViews_;
+    std::unordered_map<int, BufferView> uvViews_;
     std::unordered_map<int, BufferView> indicesViews_;
 };
 
@@ -387,6 +376,15 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     }
 }
 
+void initColorUniformBuffer(Context& ctx, Device& device,
+                            nickel::Window& window) {
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.usage = BufferUsage::Uniform;
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.size = 4 * 4;
+    ctx.colorUniformBuffer = device.CreateBuffer(bufferDesc);
+}
+
 void initPipelineLayout(Context& ctx, Device& device) {
     PipelineLayout::Descriptor layoutDesc;
     layoutDesc.layouts.emplace_back(ctx.bindGroupLayout);
@@ -401,32 +399,43 @@ void initBindGroupAndLayout(Context& ctx, Device& device) {
     entry.arraySize = 1;
     entry.binding = 0;
     entry.visibility = ShaderStage::Vertex;
-    BufferBinding bufferBinding;
-    bufferBinding.buffer = ctx.uniformBuffer;
-    bufferBinding.hasDynamicOffset = false;
-    bufferBinding.type = BufferType::Uniform;
-    entry.resourceLayout = bufferBinding;
+    entry.type = BindingType::Buffer;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
-    /*
-    // sampler
+    // uniform buffer
     entry.arraySize = 1;
     entry.binding = 1;
+    entry.visibility = ShaderStage::Fragment;
+    entry.type = BindingType::Buffer;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // sampler
+    entry.arraySize = 1;
+    entry.binding = 2;
     entry.visibility = ShaderStage::Fragment;
     SamplerBinding samplerBinding;
     samplerBinding.type = SamplerBinding::SamplerType::Filtering;
     samplerBinding.name = "mySampler";
-    // samplerBinding.sampler = ctx.sampler;
-    // samplerBinding.view = ctx.imageView;
-    entry.resourceLayout = samplerBinding;
+    samplerBinding.sampler = ctx.whiteTextureSampler;
+    samplerBinding.view = ctx.whiteTextureView;
+    entry.type = BindingType::Sampler;
     bindGroupLayoutDesc.entries.emplace_back(entry);
-    */
 
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
-    bindGroupDesc.entries = bindGroupLayoutDesc.entries;
+
+    BufferBinding bufferBinding1, bufferBinding2;
+    bufferBinding1.buffer = ctx.uniformBuffer;
+    bufferBinding1.hasDynamicOffset = false;
+    bufferBinding1.type = BufferType::Uniform;
+
+    bufferBinding2.buffer = ctx.colorUniformBuffer;
+    bufferBinding2.hasDynamicOffset = false;
+    bufferBinding2.type = BufferType::Uniform;
+
+    bindGroupDesc.entries = {bufferBinding1, bufferBinding2, samplerBinding};
     ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
@@ -442,31 +451,92 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
     ctx.depthView = ctx.depth.CreateView();
 }
 
+void initWhiteTexture(Context& ctx, Device dev) {
+    Texture::Descriptor desc;
+    desc.dimension = TextureType::Dim2;
+    desc.format = TextureFormat::RGBA8_UNORM_SRGB;
+    desc.usage = Flags<TextureUsage>(TextureUsage::TextureBinding) |
+                 TextureUsage::CopyDst;
+    desc.size.width = 1;
+    desc.size.height = 1;
+    desc.size.depthOrArrayLayers = 1;
+    ctx.whiteTexture = dev.CreateTexture(desc);
+    ctx.whiteTextureView = ctx.whiteTexture.CreateView();
+
+    Buffer::Descriptor bufDesc;
+    bufDesc.size = 4;
+    bufDesc.usage = BufferUsage::CopySrc;
+    bufDesc.mappedAtCreation = true;
+    uint32_t data = 0xFFFF00FF;
+    auto buf = dev.CreateBuffer(bufDesc);
+    memcpy(buf.GetMappedRange(), &data, sizeof(uint32_t));
+    buf.Unmap();
+
+    Sampler::Descriptor samplerDesc;
+    samplerDesc.u = SamplerAddressMode::Repeat;
+    samplerDesc.v = SamplerAddressMode::Repeat;
+    samplerDesc.w = SamplerAddressMode::Repeat;
+    ctx.whiteTextureSampler = dev.CreateSampler(samplerDesc);
+
+    auto encoder = dev.CreateCommandEncoder();
+    CommandEncoder::BufTexCopySrc src;
+    src.buffer = buf;
+    src.offset = 0;
+    src.bytesPerRow = 4;
+    src.rowsPerImage = 1;
+    CommandEncoder::BufTexCopyDst dst;
+    dst.texture = ctx.whiteTexture;
+    encoder.CopyBufferToTexture(src, dst, {4, 1, 1});
+    dev.GetQueue().Submit({encoder.Finish()});
+    encoder.Destroy();
+    buf.Destroy();
+}
+
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
     auto& adapter =
         cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
+
+    RenderPipeline::Descriptor desc;
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
+    initUniformBuffer(ctx, device, window.get());
+    initColorUniformBuffer(ctx, device, window.get());
+    initWhiteTexture(ctx, device);
+    initBindGroupAndLayout(ctx, device);
+    initPipelineLayout(ctx, device);
+    initDepthTexture(ctx, device, window.get());
+
     auto& mesh = cmds.emplace_resource<GPUMesh>(
         std::filesystem::path{
             "external/glTF-Sample-Models/2.0/Box/glTF/Box.gltf"},
         device, ctx);
 
-    RenderPipeline::Descriptor desc;
+    // position buffer
+    {
+        RenderPipeline::BufferState state;
+        state.stepMode = RenderPipeline::BufferState::StepMode::Vertex;
+        state.arrayStride = 12;
+        RenderPipeline::BufferState::Attribute attr;
+        attr.format = VertexFormat::Float32x3;
+        attr.shaderLocation = 0;
+        attr.offset = 0;
+        state.attributes.push_back(attr);
+        desc.vertex.buffers.emplace_back(std::move(state));
+    }
 
-    RenderPipeline::VertexState vertexState;
-    RenderPipeline::BufferState bufferState;
-
-    RenderPipeline::BufferState state;
-    state.stepMode = RenderPipeline::BufferState::StepMode::Vertex;
-    state.arrayStride = 12;
-    RenderPipeline::BufferState::Attribute attr;
-    attr.format = VertexFormat::Float32x3;
-    attr.shaderLocation = 0;
-    attr.offset = 0;
-    state.attributes.push_back(attr);
-    desc.vertex.buffers.emplace_back(std::move(state));
+    // uv buffer
+    {
+        RenderPipeline::BufferState state;
+        RenderPipeline::BufferState::Attribute attr;
+        state.arrayStride = 8;
+        attr.format = VertexFormat::Float32x2;
+        attr.shaderLocation = 1;
+        attr.offset = 0;
+        state.attributes.push_back(attr);
+        desc.vertex.buffers.emplace_back(std::move(state));
+    }
 
     desc.viewport.viewport.x = 0;
     desc.viewport.viewport.y = 0;
@@ -476,13 +546,6 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.offset.y = 0;
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
-
-    initShaders(adapter.RequestAdapterInfo().api, device, desc);
-
-    initUniformBuffer(ctx, device, window.get());
-    initBindGroupAndLayout(ctx, device);
-    initPipelineLayout(ctx, device);
-    initDepthTexture(ctx, device, window.get());
 
     RenderPipeline::FragmentTarget target;
     target.format = TextureFormat::Presentation;

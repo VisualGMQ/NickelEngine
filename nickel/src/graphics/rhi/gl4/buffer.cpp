@@ -55,6 +55,9 @@ BufferImpl::BufferImpl(const Buffer::Descriptor& desc)
 }
 
 BufferImpl::~BufferImpl() {
+    if (mapState_ != Buffer::MapState::Unmapped) {
+        Unmap();
+    }
     GL_CALL(glDeleteBuffers(1, &id));
 }
 
