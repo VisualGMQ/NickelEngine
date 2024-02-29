@@ -1,4 +1,5 @@
 #include "graphics/rhi/rhi.hpp"
+#include "graphics/rhi/util.hpp"
 #include "nickel.hpp"
 #define TINYGLTF_IMPLEMENTATION
 #include "stb_image.h"
@@ -8,8 +9,15 @@ using namespace nickel::rhi;
 
 APIPreference API = APIPreference::GL;
 
+
+struct BufferView {
+    uint32_t offset;
+    uint64_t size;
+    uint32_t count;
+};
+
 struct Material final {
-    nickel::cgmath::Color basicColorFactor;
+    BufferView basicColorFactor;
 };
 
 struct TextureBundle {
@@ -23,9 +31,7 @@ struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
     Buffer uniformBuffer;
-    Buffer colorUniformBuffer;
     BindGroupLayout bindGroupLayout;
-    BindGroup bindGroup;
     Texture depth;
     TextureView depthView;
     std::vector<TextureBundle> images;
@@ -34,14 +40,9 @@ struct Context final {
     Buffer verticesBuffer;
     Buffer uvBuffer;
     Buffer indicesBuffer;
+    Buffer colorBuffer;
     TextureBundle whiteTexture;
     std::vector<Material> materials;
-};
-
-struct BufferView {
-    uint64_t offset;
-    uint64_t size;
-    uint32_t count;
 };
 
 template <typename SrcT, typename DstT>
@@ -123,7 +124,7 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
 }
 
 struct GPUMesh {
-    GPUMesh(const std::filesystem::path& filename, Device device,
+    GPUMesh(const std::filesystem::path& filename, Adapter adapter, Device device,
             Context& ctx) {
         tinygltf::TinyGLTF loader;
         std::string err, warn;
@@ -142,14 +143,31 @@ struct GPUMesh {
             bundle.texture = texture;
             bundle.view = view;
             bundle.sampler = sampler;
-            ctx.images.emplace_back(texture);
-            ctx.imageViews.emplace_back(view);
-            ctx.samplers.emplace_back(sampler);
+            BindGroup::Descriptor desc;
+            desc.layout = ctx.bindGroupLayout;
+            BindingPoint entry;
+            entry.binding = 2;
+            SamplerBinding binding;
+            binding.sampler = bundle.sampler;
+            binding.view = bundle.view;
+            binding.name = "mySampler";
+            entry.entry = binding;
+            desc.entries.emplace_back(entry);
+            bundle.bindGroup = device.CreateBindGroup(desc);
+            ctx.images.emplace_back(bundle);
         }
 
         std::vector<unsigned char> verticesBuffer;
         std::vector<unsigned char> indicesBuffer;
         std::vector<unsigned char> uvBuffer;
+        std::vector<unsigned char> colorBuffer;
+        colorBuffer.resize(4 * 4);
+        float* ptr = (float*)colorBuffer.data();
+        *ptr = 1;
+        *(ptr + 1) = 1;
+        *(ptr + 2) = 1;
+        *(ptr + 3) = 1;
+        int colorCount = 1;
         for (auto& mesh : model_.meshes) {
             for (int i = 0; i < mesh.primitives.size(); i++) {
                 auto& prim = mesh.primitives[i];
@@ -190,11 +208,25 @@ struct GPUMesh {
                 if (prim.material != -1) {
                     auto& material = model_.materials[prim.material];
                     Material mat;
-                    auto& pbrBaseColorFactor =
-                        material.pbrMetallicRoughness.baseColorFactor;
-                    for (int i = 0; i < pbrBaseColorFactor.size(); i++) {
-                        mat.basicColorFactor.data[i] = pbrBaseColorFactor[i];
+                    mat.basicColorFactor.count = 4;
+                    mat.basicColorFactor.offset = AlignTo(
+                        (colorCount++) * sizeof(nickel::cgmath::Color),
+                        adapter.Limits().minUniformBufferOffsetAlignment);
+                    mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
+                    auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
+                    int i = 0;
+                    colorBuffer.resize(mat.basicColorFactor.offset + mat.basicColorFactor.size);
+                    nickel::cgmath::Color color{0, 0, 0, 1};
+                    for (int i = 0; i < colorFactor.size(); i++) {
+                        color[i] = colorFactor[i];
                     }
+                    memcpy(colorBuffer.data() + mat.basicColorFactor.offset, color.data, sizeof(color.data));
+                    ctx.materials.emplace_back(std::move(mat));
+                } else {
+                    Material mat;
+                    mat.basicColorFactor.count = 4;
+                    mat.basicColorFactor.offset = 0;
+                    mat.basicColorFactor.size =  4 * 4;
                     ctx.materials.emplace_back(std::move(mat));
                 }
             }
@@ -205,6 +237,8 @@ struct GPUMesh {
         ctx.indicesBuffer =
             copyBuffer2GPU(device, indicesBuffer, BufferUsage::Index);
         ctx.uvBuffer = copyBuffer2GPU(device, uvBuffer, BufferUsage::Vertex);
+        ctx.colorBuffer =
+            copyBuffer2GPU(device, colorBuffer, BufferUsage::Uniform);
     }
 
     void Render(RenderPassEncoder renderPass, Context& ctx) {
@@ -223,19 +257,14 @@ struct GPUMesh {
                     indicesView = &it->second;
                 }
 
-                memcpy(ctx.colorUniformBuffer.GetMappedRange(),
-                       ctx.materials[i].basicColorFactor.data,
-                       sizeof(float) * 4);
-                if (!ctx.colorUniformBuffer.IsMappingCoherence()) {
-                    ctx.colorUniformBuffer.Flush();
-                }
+                auto& material = ctx.materials[i];
 
                 renderPass.SetVertexBuffer(0, ctx.verticesBuffer,
                                            verticesView->offset,
                                            verticesView->size);
                 renderPass.SetVertexBuffer(1, ctx.uvBuffer, uvView->offset,
                                            uvView->size);
-                renderPass.SetBindGroup(ctx.bindGroup);
+                renderPass.SetBindGroup(ctx.whiteTexture.bindGroup, {0, material.basicColorFactor.offset});
 
                 if (indicesView) {
                     renderPass.SetIndexBuffer(
@@ -263,6 +292,20 @@ private:
         buffer.Unmap();
         return buffer;
     }
+
+    Buffer copyBuffer2GPU(Device device, const void* data, size_t size,
+                          BufferUsage usage) {
+        Buffer::Descriptor desc;
+        desc.usage = usage;
+        desc.mappedAtCreation = true;
+        desc.size = size;
+        auto buffer = device.CreateBuffer(desc);
+        memcpy(buffer.GetMappedRange(), data, desc.size);
+        buffer.Unmap();
+        return buffer;
+    }
+
+
 
     std::tuple<Texture, TextureView, Sampler> loadTexture(
         Device device, const std::filesystem::path& filename) {
@@ -310,9 +353,6 @@ private:
 
         stbi_image_free(data);
         copyBuffer.Destroy();
-
-        BindGroup::Descriptor bindGroupDesc;
-        device.CreateBindGroup();
 
         return {texture, view, device.CreateSampler({})};
     }
@@ -376,67 +416,55 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
     }
 }
 
-void initColorUniformBuffer(Context& ctx, Device& device,
-                            nickel::Window& window) {
-    Buffer::Descriptor bufferDesc;
-    bufferDesc.usage = BufferUsage::Uniform;
-    bufferDesc.mappedAtCreation = true;
-    bufferDesc.size = 4 * 4;
-    ctx.colorUniformBuffer = device.CreateBuffer(bufferDesc);
-}
-
 void initPipelineLayout(Context& ctx, Device& device) {
     PipelineLayout::Descriptor layoutDesc;
     layoutDesc.layouts.emplace_back(ctx.bindGroupLayout);
     ctx.layout = device.CreatePipelineLayout(layoutDesc);
 }
 
-void initBindGroupAndLayout(Context& ctx, Device& device) {
+void initBindGroupLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
     // uniform buffer
-    Entry entry;
-    entry.arraySize = 1;
-    entry.binding = 0;
-    entry.visibility = ShaderStage::Vertex;
-    entry.type = BindingType::Buffer;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
-
-    // uniform buffer
-    entry.arraySize = 1;
-    entry.binding = 1;
-    entry.visibility = ShaderStage::Fragment;
-    entry.type = BindingType::Buffer;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
-
-    // sampler
-    entry.arraySize = 1;
-    entry.binding = 2;
-    entry.visibility = ShaderStage::Fragment;
-    SamplerBinding samplerBinding;
-    samplerBinding.type = SamplerBinding::SamplerType::Filtering;
-    samplerBinding.name = "mySampler";
-    samplerBinding.sampler = ctx.whiteTextureSampler;
-    samplerBinding.view = ctx.whiteTextureView;
-    entry.type = BindingType::Sampler;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
-
-    ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
-
-    BindGroup::Descriptor bindGroupDesc;
-    bindGroupDesc.layout = ctx.bindGroupLayout;
-
-    BufferBinding bufferBinding1, bufferBinding2;
+    BufferBinding bufferBinding1;
     bufferBinding1.buffer = ctx.uniformBuffer;
     bufferBinding1.hasDynamicOffset = false;
     bufferBinding1.type = BufferType::Uniform;
 
-    bufferBinding2.buffer = ctx.colorUniformBuffer;
-    bufferBinding2.hasDynamicOffset = false;
-    bufferBinding2.type = BufferType::Uniform;
+    Entry entry;
+    entry.arraySize = 1;
+    entry.binding.binding = 0;
+    entry.binding.entry = bufferBinding1;
+    entry.visibility = ShaderStage::Vertex;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
 
-    bindGroupDesc.entries = {bufferBinding1, bufferBinding2, samplerBinding};
-    ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
+    // uniform buffer
+    BufferBinding bufferBinding2;
+    bufferBinding2.buffer = ctx.colorBuffer;
+    bufferBinding2.hasDynamicOffset = true;
+    bufferBinding2.type = BufferType::Uniform;
+    bufferBinding2.minBindingSize = sizeof(nickel::cgmath::Color);
+
+    entry.arraySize = 1;
+    entry.binding.binding = 1;
+    entry.binding.entry = bufferBinding2;
+    entry.visibility = ShaderStage::Fragment;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // sampler
+    SamplerBinding samplerBinding;
+    samplerBinding.type = SamplerBinding::SamplerType::Filtering;
+    samplerBinding.name = "mySampler";
+    samplerBinding.sampler = ctx.whiteTexture.sampler;
+    samplerBinding.view = ctx.whiteTexture.view;
+
+    entry.arraySize = 1;
+    entry.binding.binding = 2;
+    entry.binding.entry = samplerBinding;
+    entry.visibility = ShaderStage::Fragment;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 }
 
 void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
@@ -460,8 +488,9 @@ void initWhiteTexture(Context& ctx, Device dev) {
     desc.size.width = 1;
     desc.size.height = 1;
     desc.size.depthOrArrayLayers = 1;
-    ctx.whiteTexture = dev.CreateTexture(desc);
-    ctx.whiteTextureView = ctx.whiteTexture.CreateView();
+    TextureBundle bundle;
+    bundle.texture = dev.CreateTexture(desc);
+    bundle.view = bundle.texture.CreateView();
 
     Buffer::Descriptor bufDesc;
     bufDesc.size = 4;
@@ -476,7 +505,7 @@ void initWhiteTexture(Context& ctx, Device dev) {
     samplerDesc.u = SamplerAddressMode::Repeat;
     samplerDesc.v = SamplerAddressMode::Repeat;
     samplerDesc.w = SamplerAddressMode::Repeat;
-    ctx.whiteTextureSampler = dev.CreateSampler(samplerDesc);
+    bundle.sampler = dev.CreateSampler(samplerDesc);
 
     auto encoder = dev.CreateCommandEncoder();
     CommandEncoder::BufTexCopySrc src;
@@ -485,11 +514,25 @@ void initWhiteTexture(Context& ctx, Device dev) {
     src.bytesPerRow = 4;
     src.rowsPerImage = 1;
     CommandEncoder::BufTexCopyDst dst;
-    dst.texture = ctx.whiteTexture;
+    dst.texture = bundle.texture;
     encoder.CopyBufferToTexture(src, dst, {4, 1, 1});
     dev.GetQueue().Submit({encoder.Finish()});
     encoder.Destroy();
     buf.Destroy();
+
+    BindGroup::Descriptor bindGroupDesc;
+    bindGroupDesc.layout = ctx.bindGroupLayout;
+    BindingPoint entry;
+    entry.binding = 2;
+    SamplerBinding binding;
+    binding.sampler = bundle.sampler;
+    binding.view = bundle.view;
+    binding.name = "mySampler";
+    entry.entry = binding;
+    bindGroupDesc.entries.emplace_back(entry);
+    bundle.bindGroup = dev.CreateBindGroup(bindGroupDesc);
+
+    ctx.whiteTexture = std::move(bundle);
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -499,19 +542,18 @@ void StartupSystem(gecs::commands cmds,
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
-    RenderPipeline::Descriptor desc;
-    initShaders(adapter.RequestAdapterInfo().api, device, desc);
-    initUniformBuffer(ctx, device, window.get());
-    initColorUniformBuffer(ctx, device, window.get());
-    initWhiteTexture(ctx, device);
-    initBindGroupAndLayout(ctx, device);
-    initPipelineLayout(ctx, device);
-    initDepthTexture(ctx, device, window.get());
-
     auto& mesh = cmds.emplace_resource<GPUMesh>(
         std::filesystem::path{
             "external/glTF-Sample-Models/2.0/Box/glTF/Box.gltf"},
-        device, ctx);
+        adapter, device, ctx);
+
+    RenderPipeline::Descriptor desc;
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
+    initUniformBuffer(ctx, device, window.get());
+    initBindGroupLayout(ctx, device);
+    initWhiteTexture(ctx, device);
+    initPipelineLayout(ctx, device);
+    initDepthTexture(ctx, device, window.get());
 
     // position buffer
     {
@@ -589,7 +631,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->pipeline);
-    renderPass.SetBindGroup(ctx->bindGroup);
     mesh->Render(renderPass, ctx.get());
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -621,7 +662,6 @@ void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
-    ctx->bindGroup.Destroy();
     ctx->bindGroupLayout.Destroy();
     ctx->uniformBuffer.Destroy();
     ctx->layout.Destroy();

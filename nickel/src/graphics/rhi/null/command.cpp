@@ -19,6 +19,7 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
                                            uint32_t offset, uint32_t size) {}
 
 void RenderPassEncoderImpl::SetBindGroup(BindGroup) {}
+void RenderPassEncoderImpl::SetBindGroup(BindGroup, const std::vector<uint32_t>&) {}
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline) {}
 

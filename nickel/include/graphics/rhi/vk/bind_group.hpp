@@ -26,7 +26,7 @@ private:
 
     vk::DescriptorSetLayoutBinding getBinding(const Entry&);
 
-    void createPool(vk::Device dev, uint32_t imageCount,
+    void createPool(vk::Device dev, uint32_t count,
                     const BindGroupLayout::Descriptor& desc);
     void allocSets(vk::Device dev, uint32_t count,
                    const BindGroupLayout::Descriptor& desc);

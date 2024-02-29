@@ -48,6 +48,15 @@ void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
         0, bindGroup->sets[dev_.curImageIndex], {});
 }
 
+void RenderPassEncoderImpl::SetBindGroup(BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
+    auto bindGroup = static_cast<const BindGroupImpl*>(group.Impl());
+    cmd_.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        static_cast<const PipelineLayoutImpl*>(pipeline_.GetLayout().Impl())
+            ->layout,
+        0, bindGroup->sets[dev_.curImageIndex], dynamicOffset);
+}
+
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     pipeline_ = pipeline;
     cmd_.bindPipeline(

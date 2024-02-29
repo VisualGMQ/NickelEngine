@@ -38,6 +38,7 @@ public:
     void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                         uint32_t size);
     void SetBindGroup(BindGroup);
+    void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset);
     void SetPipeline(RenderPipeline);
 
     void End();

@@ -98,7 +98,7 @@ void initPipelineLayout(Context& ctx, Device& device) {
     ctx.layout = device.CreatePipelineLayout(layoutDesc);
 }
 
-void initBindGroupAndLayout(Context& ctx, Device& device) {
+void initBindGroupLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
     // uniform buffer
@@ -225,7 +225,7 @@ void StartupSystem(gecs::commands cmds,
     initImage(ctx, device);
     initVertexBuffer(ctx, device);
     initUniformBuffer(ctx, device, window.get());
-    initBindGroupAndLayout(ctx, device);
+    initBindGroupLayout(ctx, device);
     initPipelineLayout(ctx, device);
     initDepthTexture(ctx, device, window.get());
 

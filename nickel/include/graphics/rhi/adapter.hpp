@@ -10,6 +10,8 @@ struct GPUSupportFeatures {
 };
 
 struct GPUSupportLimits {
+    uint32_t minUniformBufferOffsetAlignment = 256;
+    uint32_t minStorageBufferOffsetAlignment;
     uint32_t nonCoherentAtomSize = 0;
 };
 

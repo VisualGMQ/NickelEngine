@@ -118,6 +118,8 @@ const GPUSupportLimits& AdapterImpl::Limits() const {
 void AdapterImpl::querySupportLimits() {
     auto limits = phyDevice.getProperties().limits;
     limits_.nonCoherentAtomSize = limits.nonCoherentAtomSize;
+    limits_.minUniformBufferOffsetAlignment = limits.minUniformBufferOffsetAlignment;
+    limits_.minStorageBufferOffsetAlignment = limits.minStorageBufferOffsetAlignment;
 }
 
 Device AdapterImpl::RequestDevice() {

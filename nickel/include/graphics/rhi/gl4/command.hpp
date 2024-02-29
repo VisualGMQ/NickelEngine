@@ -46,6 +46,7 @@ struct CmdSetVertexBuffer final {
 
 struct CmdSetBindGroup final {
     BindGroup group;
+    std::vector<uint32_t> dynamicOffset;
 };
 
 
@@ -98,6 +99,7 @@ public:
     void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                         uint32_t size) override;
     void SetBindGroup(BindGroup) override;
+    void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset) override;
     void SetPipeline(RenderPipeline) override;
 
     void End() override;

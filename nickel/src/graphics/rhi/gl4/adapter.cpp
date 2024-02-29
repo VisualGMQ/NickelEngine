@@ -133,6 +133,11 @@ Adapter::Info AdapterImpl::RequestAdapterInfo() {
 }
 
 void AdapterImpl::querySupportLimits() {
+    GLint value;
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value);
+    limits_.minUniformBufferOffsetAlignment = value;
+    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &value);
+    limits_.minStorageBufferOffsetAlignment = value;
 }
 
 }  // namespace nickel::rhi::gl4

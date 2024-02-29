@@ -21,7 +21,7 @@ public:
 
     auto& Descriptor() const { return desc_; }
 
-    void Apply(const RenderPipelineImpl&) const;
+    void Apply(const RenderPipelineImpl&, const std::vector<uint32_t>& dynamicOffset) const;
 
 private:
     BindGroup::Descriptor desc_;

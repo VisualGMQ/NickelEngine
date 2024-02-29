@@ -161,7 +161,7 @@ struct CmdExecutor final {
     void operator()(const CmdSetBindGroup& cmd) const {
         static_cast<const BindGroupImpl*>(cmd.group.Impl())
             ->Apply(*static_cast<const RenderPipelineImpl*>(
-                buffer_.pipeline.Impl()));
+                buffer_.pipeline.Impl()), cmd.dynamicOffset);
     }
 
 private:
@@ -281,6 +281,13 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
 void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
     CmdSetBindGroup cmd;
     cmd.group = group;
+    buffer_->cmds.emplace_back(std::move(cmd));
+}
+
+void RenderPassEncoderImpl::SetBindGroup(BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
+    CmdSetBindGroup cmd;
+    cmd.group = group;
+    cmd.dynamicOffset = dynamicOffset;
     buffer_->cmds.emplace_back(std::move(cmd));
 }
 

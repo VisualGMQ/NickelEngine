@@ -66,7 +66,7 @@ enum class BindingType {
     StorageTexture,
 };
 
-struct ResourceEntry {
+struct BindingPoint {
     uint32_t binding;
     std::variant<BufferBinding, SamplerBinding, StorageTextureBinding,
                  TextureBinding> entry;
@@ -74,8 +74,7 @@ struct ResourceEntry {
 };
 
 struct Entry final {
-    BindingType type;
-    uint32_t binding;
+    BindingPoint binding;
     Flags<ShaderStage> visibility;
     uint32_t arraySize = 1;
 };
@@ -108,7 +107,7 @@ class BindGroupImpl;
 class BindGroup final {
 public:
     struct Descriptor {
-        std::vector<ResourceEntry> entries;
+        std::vector<BindingPoint> entries;
         BindGroupLayout layout;
     };
 

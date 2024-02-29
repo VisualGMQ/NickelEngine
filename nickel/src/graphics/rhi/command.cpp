@@ -65,6 +65,10 @@ void RenderPassEncoder::SetBindGroup(BindGroup group) {
     impl_->SetBindGroup(group);
 }
 
+void RenderPassEncoder::SetBindGroup(BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
+    impl_->SetBindGroup(group, dynamicOffset);
+}
+
 void RenderPassEncoder::SetPipeline(RenderPipeline pipeline) {
     impl_->SetPipeline(pipeline);
 }
