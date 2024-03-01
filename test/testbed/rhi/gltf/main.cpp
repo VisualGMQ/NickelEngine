@@ -18,13 +18,12 @@ struct BufferView {
 
 struct Material final {
     BufferView basicColorFactor;
+    std::optional<uint32_t> texture;
 };
 
 struct TextureBundle {
     Texture texture;
     TextureView view;
-    BindGroup bindGroup;
-    Sampler sampler;
 };
 
 struct Context final {
@@ -35,6 +34,8 @@ struct Context final {
     Texture depth;
     TextureView depthView;
     std::vector<TextureBundle> images;
+    std::vector<Sampler> samplers;
+    std::vector<BindGroup> textureBindGroups;
 
     // gltf related
     Buffer verticesBuffer;
@@ -42,6 +43,9 @@ struct Context final {
     Buffer indicesBuffer;
     Buffer colorBuffer;
     TextureBundle whiteTexture;
+    Sampler whiteTextureSampler;
+    BindGroup whiteTextureBindGroup;
+
     std::vector<Material> materials;
 };
 
@@ -73,8 +77,7 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
     auto& buffer = model.buffers[view.buffer];
     auto offset = accessor.byteOffset + view.byteOffset;
     auto size = accessor.count * sizeof(RequireT) *
-                tinygltf::GetComponentSizeInBytes(accessor.componentType) *
-                tinygltf::GetNumComponentsInType(accessor.type);
+                tinygltf::GetNumComponentsInType(type);
     BufferView bufView;
     bufView.offset = dst.size();
     bufView.size = size;
@@ -123,6 +126,34 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
     return bufView;
 }
 
+inline Filter GLTFFilter2RHI(int type) {
+    switch (type) {
+        case TINYGLTF_TEXTURE_FILTER_LINEAR:
+        // TODO: support mipmap;
+        case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
+        case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+            return Filter::Linear;
+        case TINYGLTF_TEXTURE_FILTER_NEAREST:
+        // TODO: support mipmap;
+        case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+        case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+            return Filter::Nearest;
+    }
+    return Filter::Linear;
+}
+
+inline SamplerAddressMode GLTFWrapper2RHI(int type) {
+    switch (type) {
+        case TINYGLTF_TEXTURE_WRAP_REPEAT:
+            return SamplerAddressMode::Repeat;
+        case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+            return SamplerAddressMode::MirrorRepeat;
+        case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+            return SamplerAddressMode::ClampToEdge;
+    }
+    return SamplerAddressMode::ClampToEdge;
+}
+
 struct GPUMesh {
     GPUMesh(const std::filesystem::path& filename, Adapter adapter, Device device,
             Context& ctx) {
@@ -137,24 +168,19 @@ struct GPUMesh {
         auto rootDir = filename.parent_path();
 
         for (auto& image : model_.images) {
-            auto [texture, view, sampler] =
+            auto [texture, view] =
                 loadTexture(device, rootDir / image.uri);
             TextureBundle bundle;
             bundle.texture = texture;
             bundle.view = view;
-            bundle.sampler = sampler;
             BindGroup::Descriptor desc;
             desc.layout = ctx.bindGroupLayout;
-            BindingPoint entry;
-            entry.binding = 2;
-            SamplerBinding binding;
-            binding.sampler = bundle.sampler;
-            binding.view = bundle.view;
-            binding.name = "mySampler";
-            entry.entry = binding;
-            desc.entries.emplace_back(entry);
-            bundle.bindGroup = device.CreateBindGroup(desc);
             ctx.images.emplace_back(bundle);
+        }
+
+        for (auto& sampler : model_.samplers) {
+            auto spl = createSampler(device, sampler);
+            ctx.samplers.emplace_back(spl);
         }
 
         std::vector<unsigned char> verticesBuffer;
@@ -168,9 +194,12 @@ struct GPUMesh {
         *(ptr + 2) = 1;
         *(ptr + 3) = 1;
         int colorCount = 1;
-        for (auto& mesh : model_.meshes) {
-            for (int i = 0; i < mesh.primitives.size(); i++) {
-                auto& prim = mesh.primitives[i];
+        for (int i = 0; i < model_.meshes.size(); i++) {
+            auto& mesh = model_.meshes[i];
+            for (int j = 0; j < mesh.primitives.size(); j++) {
+                auto index = uint32_t(i) << 4 | uint32_t(j);
+
+                auto& prim = mesh.primitives[j];
                 auto& attrs = prim.attributes;
                 uint32_t positionCount = 0;
                 if (auto it = attrs.find("POSITION"); it != attrs.end()) {
@@ -178,7 +207,7 @@ struct GPUMesh {
                     positionCount = accessor.count;
                     auto bufferView = CopyBufferFromGLTF<float>(
                         verticesBuffer, TINYGLTF_TYPE_VEC3, accessor, model_);
-                    verticesViews_[i] = bufferView;
+                    verticesViews_[index] = bufferView;
                 }
 
                 std::optional<uint32_t> indicesCount;
@@ -186,41 +215,53 @@ struct GPUMesh {
                     auto& accessor = model_.accessors[prim.indices];
                     auto bufView = CopyBufferFromGLTF<uint32_t>(
                         indicesBuffer, TINYGLTF_TYPE_SCALAR, accessor, model_);
-                    indicesViews_[i] = bufView;
+                    indicesViews_[index] = bufView;
                     indicesCount = accessor.count;
                 }
 
                 if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
                     auto& accessor = model_.accessors[it->second];
+                    
                     auto bufferView = CopyBufferFromGLTF<float>(
                         uvBuffer, TINYGLTF_TYPE_VEC2, accessor, model_);
-                    uvViews_[i] = bufferView;
+                    uvViews_[index] = bufferView;
                 } else {
                     BufferView view;
                     view.count =
                         indicesCount ? indicesCount.value() : positionCount;
-                    view.size = view.count * 4;
-                    view.count = uvBuffer.size();
+                    view.size = view.count * 4 * 2;
+                    view.count = view.count;
+                    view.offset = uvBuffer.size();
                     uvBuffer.resize(uvBuffer.size() + view.size, 0);
-                    uvViews_[i] = view;
+                    uvViews_[index] = view;
                 }
+
 
                 if (prim.material != -1) {
                     auto& material = model_.materials[prim.material];
                     Material mat;
+
+                    // basic color factor
+                    auto align = adapter.Limits().minUniformBufferOffsetAlignment;
                     mat.basicColorFactor.count = 4;
                     mat.basicColorFactor.offset = AlignTo(
-                        (colorCount++) * sizeof(nickel::cgmath::Color),
-                        adapter.Limits().minUniformBufferOffsetAlignment);
+                        (colorCount - 1) * align + sizeof(nickel::cgmath::Color),
+                        align);
+                    colorCount += std::ceil(mat.basicColorFactor.offset / float(align));
                     mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
                     auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
-                    int i = 0;
                     colorBuffer.resize(mat.basicColorFactor.offset + mat.basicColorFactor.size);
                     nickel::cgmath::Color color{0, 0, 0, 1};
                     for (int i = 0; i < colorFactor.size(); i++) {
                         color[i] = colorFactor[i];
                     }
                     memcpy(colorBuffer.data() + mat.basicColorFactor.offset, color.data, sizeof(color.data));
+
+                    // basic texture
+                    if (material.pbrMetallicRoughness.baseColorTexture.index != -1) {
+                        mat.texture = material.pbrMetallicRoughness.baseColorTexture.index;
+                    }
+
                     ctx.materials.emplace_back(std::move(mat));
                 } else {
                     Material mat;
@@ -229,6 +270,8 @@ struct GPUMesh {
                     mat.basicColorFactor.size =  4 * 4;
                     ctx.materials.emplace_back(std::move(mat));
                 }
+
+                materialIndices_[index] = ctx.materials.size() - 1;
             }
         }
 
@@ -242,29 +285,35 @@ struct GPUMesh {
     }
 
     void Render(RenderPassEncoder renderPass, Context& ctx) {
-        for (auto& mesh : model_.meshes) {
-            for (int i = 0; i < mesh.primitives.size(); i++) {
+        for (int i = 0; i < model_.meshes.size(); i++) {
+            auto& mesh = model_.meshes[i];
+            for (int j = 0; j < mesh.primitives.size(); j++) {
+                auto index = uint32_t(i) << 4 | uint32_t(j);
                 BufferView *verticesView{}, *uvView{}, *indicesView{};
-                if (auto it = verticesViews_.find(i);
+                if (auto it = verticesViews_.find(index);
                     it != verticesViews_.end()) {
                     verticesView = &it->second;
                 }
-                if (auto it = uvViews_.find(i); it != uvViews_.end()) {
+                if (auto it = uvViews_.find(index); it != uvViews_.end()) {
                     uvView = &it->second;
                 }
-                if (auto it = indicesViews_.find(i);
+                if (auto it = indicesViews_.find(index);
                     it != indicesViews_.end()) {
                     indicesView = &it->second;
                 }
 
-                auto& material = ctx.materials[i];
+                auto& material = ctx.materials[materialIndices_[index]];
 
                 renderPass.SetVertexBuffer(0, ctx.verticesBuffer,
                                            verticesView->offset,
                                            verticesView->size);
                 renderPass.SetVertexBuffer(1, ctx.uvBuffer, uvView->offset,
                                            uvView->size);
-                renderPass.SetBindGroup(ctx.whiteTexture.bindGroup, {0, material.basicColorFactor.offset});
+                if (material.texture) {
+                    renderPass.SetBindGroup(ctx.textureBindGroups[material.texture.value()], {0, material.basicColorFactor.offset});
+                } else {
+                    renderPass.SetBindGroup(ctx.whiteTextureBindGroup, {0, material.basicColorFactor.offset});
+                }
 
                 if (indicesView) {
                     renderPass.SetIndexBuffer(
@@ -272,11 +321,17 @@ struct GPUMesh {
                         indicesView->offset, indicesView->size);
                     renderPass.DrawIndexed(
                         indicesView->count, 1,
-                        indicesView->offset / sizeof(uint32_t), 0, 0);
+                        0, 0, 0);
                 } else {
                     renderPass.Draw(verticesView->count, 1, 0, 0);
                 }
             }
+        }
+    }
+
+    void InitImageBindGroups(Device dev, Context& ctx) {
+        for (int i = 0; i < model_.textures.size(); i++) {
+            initTextureBindGroup(dev, ctx, model_.textures[i]);
         }
     }
 
@@ -305,9 +360,7 @@ private:
         return buffer;
     }
 
-
-
-    std::tuple<Texture, TextureView, Sampler> loadTexture(
+    std::tuple<Texture, TextureView> loadTexture(
         Device device, const std::filesystem::path& filename) {
         int w, h;
         void* data = stbi_load(filename.string().c_str(), &w, &h, nullptr,
@@ -354,13 +407,37 @@ private:
         stbi_image_free(data);
         copyBuffer.Destroy();
 
-        return {texture, view, device.CreateSampler({})};
+        return {texture, view};
+    }
+
+    Sampler createSampler(Device device, const tinygltf::Sampler& gltfSampler) {
+        Sampler::Descriptor desc;
+        desc.min = GLTFFilter2RHI(gltfSampler.minFilter);
+        desc.mag = GLTFFilter2RHI(gltfSampler.magFilter);
+        desc.u = GLTFWrapper2RHI(gltfSampler.wrapS);
+        desc.v = GLTFWrapper2RHI(gltfSampler.wrapT);
+        return device.CreateSampler(desc);
+    }
+
+    void initTextureBindGroup(Device device, Context& ctx, const tinygltf::Texture& texture) {
+        BindGroup::Descriptor desc;
+        desc.layout = ctx.bindGroupLayout;
+        BindingPoint entry;
+        entry.binding = 2;
+        SamplerBinding binding;
+        binding.sampler = ctx.samplers[texture.sampler];
+        binding.view = ctx.images[texture.source].view;
+        binding.name = "mySampler";
+        entry.entry = binding;
+        desc.entries.emplace_back(entry);
+        ctx.textureBindGroups.emplace_back(device.CreateBindGroup(desc));
     }
 
     tinygltf::Model model_;
-    std::unordered_map<int, BufferView> verticesViews_;
-    std::unordered_map<int, BufferView> uvViews_;
-    std::unordered_map<int, BufferView> indicesViews_;
+    std::unordered_map<uint64_t, BufferView> verticesViews_;
+    std::unordered_map<uint64_t, BufferView> uvViews_;
+    std::unordered_map<uint64_t, BufferView> indicesViews_;
+    std::unordered_map<uint64_t, uint32_t> materialIndices_;
 };
 
 struct MVP {
@@ -455,7 +532,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     SamplerBinding samplerBinding;
     samplerBinding.type = SamplerBinding::SamplerType::Filtering;
     samplerBinding.name = "mySampler";
-    samplerBinding.sampler = ctx.whiteTexture.sampler;
+    samplerBinding.sampler = ctx.whiteTextureSampler;
     samplerBinding.view = ctx.whiteTexture.view;
 
     entry.arraySize = 1;
@@ -496,7 +573,7 @@ void initWhiteTexture(Context& ctx, Device dev) {
     bufDesc.size = 4;
     bufDesc.usage = BufferUsage::CopySrc;
     bufDesc.mappedAtCreation = true;
-    uint32_t data = 0xFFFF00FF;
+    uint32_t data = 0xFFFFFFFF;
     auto buf = dev.CreateBuffer(bufDesc);
     memcpy(buf.GetMappedRange(), &data, sizeof(uint32_t));
     buf.Unmap();
@@ -505,7 +582,7 @@ void initWhiteTexture(Context& ctx, Device dev) {
     samplerDesc.u = SamplerAddressMode::Repeat;
     samplerDesc.v = SamplerAddressMode::Repeat;
     samplerDesc.w = SamplerAddressMode::Repeat;
-    bundle.sampler = dev.CreateSampler(samplerDesc);
+    ctx.whiteTextureSampler = dev.CreateSampler(samplerDesc);
 
     auto encoder = dev.CreateCommandEncoder();
     CommandEncoder::BufTexCopySrc src;
@@ -520,19 +597,23 @@ void initWhiteTexture(Context& ctx, Device dev) {
     encoder.Destroy();
     buf.Destroy();
 
+    ctx.whiteTexture = std::move(bundle);
+}
+
+void initWhiteTextureBindGroup(Device device, Context& ctx) {
+    auto& bundle = ctx.whiteTexture;
+
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
     BindingPoint entry;
     entry.binding = 2;
     SamplerBinding binding;
-    binding.sampler = bundle.sampler;
+    binding.sampler = ctx.whiteTextureSampler;
     binding.view = bundle.view;
     binding.name = "mySampler";
     entry.entry = binding;
     bindGroupDesc.entries.emplace_back(entry);
-    bundle.bindGroup = dev.CreateBindGroup(bindGroupDesc);
-
-    ctx.whiteTexture = std::move(bundle);
+    ctx.whiteTextureBindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -544,14 +625,24 @@ void StartupSystem(gecs::commands cmds,
 
     auto& mesh = cmds.emplace_resource<GPUMesh>(
         std::filesystem::path{
-            "external/glTF-Sample-Models/2.0/Box/glTF/Box.gltf"},
+            // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
+            // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
+            // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
+            // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
+            // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},
+            // "external/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"},
+            // "external/glTF-Sample-Models/2.0/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"},
+            // "external/glTF-Sample-Models/2.0/UnlitTest/glTF/UnlitTest.gltf"},
+            "external/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf"},
         adapter, device, ctx);
 
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
     initUniformBuffer(ctx, device, window.get());
-    initBindGroupLayout(ctx, device);
     initWhiteTexture(ctx, device);
+    initBindGroupLayout(ctx, device);
+    initWhiteTextureBindGroup(device, ctx);
+    mesh.InitImageBindGroups(device, ctx);
     initPipelineLayout(ctx, device);
     initDepthTexture(ctx, device, window.get());
 
@@ -610,7 +701,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = AttachmentLoadOp::Clear;
     colorAtt.storeOp = AttachmentStoreOp::Store;
-    colorAtt.clearValue.fill(1);
+    colorAtt.clearValue = {0.3, 0.3, 0.3, 1};
 
     Texture::Descriptor textureDesc;
     textureDesc.format = TextureFormat::Presentation;
@@ -649,7 +740,10 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
 
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateXYZRotation({x, y, 0});
+    mvp.model = // nickel::cgmath::CreateScale({3, 3, 3});
+        nickel::cgmath::CreateScale({3, 3, 1}) *
+        // nickel::cgmath::CreateScale({0.01, 0.01, 0.01});
+      nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
