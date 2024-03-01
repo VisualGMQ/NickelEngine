@@ -22,6 +22,3 @@
 [submodule "3rdlibs/tinygltf"]
 	path = 3rdlibs/tinygltf
 	url = https://github.com/syoyo/tinygltf.git
-[submodule "external/glTF-Sample-Models"]
-	path = external/glTF-Sample-Models
-	url = https://github.com/KhronosGroup/glTF-Sample-Models.git
