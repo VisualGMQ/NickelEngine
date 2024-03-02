@@ -198,29 +198,20 @@ struct GPUMesh {
         *(ptr + 2) = 1;
         *(ptr + 3) = 1;
 
-        std::vector<bool> isNode(model_.nodes.size());
-        for (auto& node : model_.nodes) {
-            for (auto child : node.children) {
-                isNode[child] = true;
+        for (auto& scene : model_.scenes) {
+            for (auto& node : scene.nodes) {
+                preorderNodes(adapter, ctx, model_.nodes[node], model_,
+                            nickel::cgmath::Mat44::Identity(), positionBuffer,
+                            uvBuffer, indicesBuffer, colorBuffer, modelMatBuffer);
             }
         }
-
-        uint32_t rootNode = 0;
-        for (int i = 0; i < isNode.size(); i++) {
-            if (!isNode[i]) {
-                rootNode = i;
-                break;
-            }
-        }
-
-        preorderNodes(adapter, ctx, model_.nodes[rootNode], model_,
-                      nickel::cgmath::Mat44::Identity(), positionBuffer,
-                      uvBuffer, indicesBuffer, colorBuffer, modelMatBuffer);
 
         ctx.positionBuffer =
             copyBuffer2GPU(device, positionBuffer, BufferUsage::Vertex);
-        ctx.indicesBuffer =
-            copyBuffer2GPU(device, indicesBuffer, BufferUsage::Index);
+        if (!indicesBuffer.empty()) {
+            ctx.indicesBuffer =
+                copyBuffer2GPU(device, indicesBuffer, BufferUsage::Index);
+        }
         ctx.uvBuffer = copyBuffer2GPU(device, uvBuffer, BufferUsage::Vertex);
         ctx.colorBuffer =
             copyBuffer2GPU(device, colorBuffer, BufferUsage::Uniform);
@@ -567,7 +558,7 @@ private:
             auto align = adapter.Limits().minUniformBufferOffsetAlignment;
             mat.basicColorFactor.count = 4;
             mat.basicColorFactor.offset =
-                std::ceil(colors.size() / align) * align;
+                std::ceil(colors.size() / (float)align) * align;
             mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
             auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
             colors.resize(mat.basicColorFactor.offset +
@@ -842,9 +833,8 @@ void StartupSystem(gecs::commands cmds,
 
     auto& mesh = cmds.emplace_resource<GPUMesh>(
         std::filesystem::path{
-            // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
-            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/"
-            "CesiumMilkTruck.gltf"},
+            "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
+            // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
         // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
         // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
         // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
@@ -960,9 +950,8 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 
         float half = x * 0.5;
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model =  // nickel::cgmath::CreateScale({3, 3, 3});
-                 // nickel::cgmath::CreateScale({3, 3, 1}) *
-                 // nickel::cgmath::CreateScale({0.01, 0.01, 0.01});
+    mvp.model =  // nickel::cgmath::CreateScale({3, 3, 3}) *
+        nickel::cgmath::CreateScale({0.01, 0.01, 0.01}) *
         nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
