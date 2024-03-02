@@ -104,32 +104,31 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     // uniform buffer
     Entry entry;
     entry.arraySize = 1;
-    entry.binding = 0;
+    entry.binding.binding = 0;
     entry.visibility = ShaderStage::Vertex;
     BufferBinding bufferBinding;
     bufferBinding.buffer = ctx.uniformBuffer;
     bufferBinding.hasDynamicOffset = false;
     bufferBinding.type = BufferType::Uniform;
-    entry.resourceLayout = bufferBinding;
+    entry.binding.entry = bufferBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
     // sampler
     entry.arraySize = 1;
-    entry.binding = 1;
+    entry.binding.binding = 1;
     entry.visibility = ShaderStage::Fragment;
     SamplerBinding samplerBinding;
     samplerBinding.type = SamplerBinding::SamplerType::Filtering;
     samplerBinding.name = "mySampler";
     samplerBinding.sampler = ctx.sampler;
     samplerBinding.view = ctx.imageView;
-    entry.resourceLayout = samplerBinding;
+    entry.binding.entry = samplerBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
-    bindGroupDesc.entries = bindGroupLayoutDesc.entries;
     ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
@@ -147,7 +146,7 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
 
 void initImage(Context& ctx, Device& dev) {
     int w, h;
-    void* data = stbi_load("test/testbed/rhi/04texture_cube/texture.jpg", &w,
+    void* data = stbi_load("test/testbed/rhi/texture_cube/texture.jpg", &w,
                            &h, nullptr, STBI_rgb_alpha);
 
     Texture::Descriptor desc;

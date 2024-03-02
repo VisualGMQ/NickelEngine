@@ -454,7 +454,7 @@ public:
         this->z = z;
     }
 
-    auto Cross(const Vec<T, 3>& o) { return cgmath::Cross(*this, o); }
+    auto Cross(const Vec<T, 3>& o) const { return cgmath::Cross(*this, o); }
 };
 
 template <typename T>
@@ -983,6 +983,80 @@ T GetRadianIn180Signed(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
     auto cos = Dot(v1, v2);
     auto sin = Cross(v1, v2);
     return std::acos(cos) * Sign(sin);
+}
+
+template <typename T>
+struct Quaternion final {
+    Vec<T, 3> v;
+    T w;
+
+    Quaternion(const Vec<T, 3>& v, T w) : v{v}, w{w} {}
+
+    Quaternion(T x, T y, T z, T w) : v{x, y, z}, w{w} {}
+
+    // only for unit quaternion
+    Quaternion Conjugate() const {
+        Assert(std::abs(LengthSqrd() - 1) <= 0.00001,
+               "conjugate only for unit quaternion");
+        return {-v, w};
+    }
+
+    // only for unit quaternion
+    Quaternion Inverse() const {
+        Assert(std::abs(LengthSqrd() - 1) <= 0.00001,
+               "inverse only for unit quaternion");
+        return Conjugate();
+    }
+
+    auto LengthSqrd() const { return v.LengthSqrd() + w * w; }
+
+    auto Length() const { return std::sqrt(v.LengthSqrd() + w * w); }
+
+    // clang-format off
+    Mat44 ToMat() const {
+        auto x2 = v.x * v.x;
+        auto y2 = v.y * v.y;
+        auto z2 = v.z * v.z;
+        auto xy = v.x * v.y;
+        auto yz = v.y * v.z;
+        auto xz = v.x * v.z;
+        auto xw = v.x * w;
+        auto yw = v.y * w;
+        auto zw = v.z * w;
+        return Mat44::FromCol({
+            1 - 2 * (y2 + z2),     2 * (xy + zw),     2 * (xz - yw), 0,
+               2 * (xy  - zw), 1 - 2 * (x2 + z2),     2 * (yz + xw), 0,
+                2 * (xz + yw),     2 * (yz - xw), 1 - 2 * (x2 + y2), 0,
+                            0,                 0,                 0, 1
+        });
+    }
+
+    // clang-format on
+};
+
+template <typename T>
+Quaternion<T> operator*(const Quaternion<T>& q1, const Quaternion<T>& q2) {
+    return {q1.w * q2.v + q2.w * q1.v + q1.v.Cross(q2.v),
+            q1.w * q2.w - q1.v.Dot(q2.v)};
+}
+
+using Quat = Quaternion<CGMATH_NUMERIC_TYPE>;
+
+template <typename T>
+Quaternion<T> CreateQuatByRotate(const Vec<T, 3>& axis, T radians) {
+    auto half = radians * 0.5;
+    return {axis * std::sin(half), std::cos(half)};
+}
+
+template <typename T>
+cgmath::Vec<T, 3> RotateByAxis(const cgmath::Vec<T, 3>& v,
+                               const Quaternion<T>& q) {
+    return q *
+           Quaternion<T>{
+               {v.x, v.y, v.z},
+               0
+    } *
+           q.Inverse().v;
 }
 
 }  // namespace cgmath

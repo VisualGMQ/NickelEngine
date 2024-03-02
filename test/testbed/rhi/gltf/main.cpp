@@ -38,10 +38,11 @@ struct Context final {
     std::vector<BindGroup> textureBindGroups;
 
     // gltf related
-    Buffer verticesBuffer;
+    Buffer positionBuffer;
     Buffer uvBuffer;
     Buffer indicesBuffer;
     Buffer colorBuffer;
+    Buffer modelMatBuffer;
     TextureBundle whiteTexture;
     Sampler whiteTextureSampler;
     BindGroup whiteTextureBindGroup;
@@ -183,148 +184,91 @@ struct GPUMesh {
             ctx.samplers.emplace_back(spl);
         }
 
-        std::vector<unsigned char> verticesBuffer;
+        std::vector<unsigned char> positionBuffer;
         std::vector<unsigned char> indicesBuffer;
         std::vector<unsigned char> uvBuffer;
         std::vector<unsigned char> colorBuffer;
+        std::vector<unsigned char> modelMatBuffer;
+
+        // init default color
         colorBuffer.resize(4 * 4);
         float* ptr = (float*)colorBuffer.data();
         *ptr = 1;
         *(ptr + 1) = 1;
         *(ptr + 2) = 1;
         *(ptr + 3) = 1;
-        int colorCount = 1;
-        for (int i = 0; i < model_.meshes.size(); i++) {
-            auto& mesh = model_.meshes[i];
-            for (int j = 0; j < mesh.primitives.size(); j++) {
-                auto index = uint32_t(i) << 4 | uint32_t(j);
 
-                auto& prim = mesh.primitives[j];
-                auto& attrs = prim.attributes;
-                uint32_t positionCount = 0;
-                if (auto it = attrs.find("POSITION"); it != attrs.end()) {
-                    auto& accessor = model_.accessors[it->second];
-                    positionCount = accessor.count;
-                    auto bufferView = CopyBufferFromGLTF<float>(
-                        verticesBuffer, TINYGLTF_TYPE_VEC3, accessor, model_);
-                    verticesViews_[index] = bufferView;
-                }
-
-                std::optional<uint32_t> indicesCount;
-                if (prim.indices != -1) {
-                    auto& accessor = model_.accessors[prim.indices];
-                    auto bufView = CopyBufferFromGLTF<uint32_t>(
-                        indicesBuffer, TINYGLTF_TYPE_SCALAR, accessor, model_);
-                    indicesViews_[index] = bufView;
-                    indicesCount = accessor.count;
-                }
-
-                if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
-                    auto& accessor = model_.accessors[it->second];
-                    
-                    auto bufferView = CopyBufferFromGLTF<float>(
-                        uvBuffer, TINYGLTF_TYPE_VEC2, accessor, model_);
-                    uvViews_[index] = bufferView;
-                } else {
-                    BufferView view;
-                    view.count =
-                        indicesCount ? indicesCount.value() : positionCount;
-                    view.size = view.count * 4 * 2;
-                    view.count = view.count;
-                    view.offset = uvBuffer.size();
-                    uvBuffer.resize(uvBuffer.size() + view.size, 0);
-                    uvViews_[index] = view;
-                }
-
-
-                if (prim.material != -1) {
-                    auto& material = model_.materials[prim.material];
-                    Material mat;
-
-                    // basic color factor
-                    auto align = adapter.Limits().minUniformBufferOffsetAlignment;
-                    mat.basicColorFactor.count = 4;
-                    mat.basicColorFactor.offset = AlignTo(
-                        (colorCount - 1) * align + sizeof(nickel::cgmath::Color),
-                        align);
-                    colorCount += std::ceil(mat.basicColorFactor.offset / float(align));
-                    mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
-                    auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
-                    colorBuffer.resize(mat.basicColorFactor.offset + mat.basicColorFactor.size);
-                    nickel::cgmath::Color color{0, 0, 0, 1};
-                    for (int i = 0; i < colorFactor.size(); i++) {
-                        color[i] = colorFactor[i];
-                    }
-                    memcpy(colorBuffer.data() + mat.basicColorFactor.offset, color.data, sizeof(color.data));
-
-                    // basic texture
-                    if (material.pbrMetallicRoughness.baseColorTexture.index != -1) {
-                        mat.texture = material.pbrMetallicRoughness.baseColorTexture.index;
-                    }
-
-                    ctx.materials.emplace_back(std::move(mat));
-                } else {
-                    Material mat;
-                    mat.basicColorFactor.count = 4;
-                    mat.basicColorFactor.offset = 0;
-                    mat.basicColorFactor.size =  4 * 4;
-                    ctx.materials.emplace_back(std::move(mat));
-                }
-
-                materialIndices_[index] = ctx.materials.size() - 1;
+        std::vector<bool> isNode(model_.nodes.size());
+        for (auto& node : model_.nodes) {
+            for (auto child : node.children) {
+                isNode[child] = true;
             }
         }
 
-        ctx.verticesBuffer =
-            copyBuffer2GPU(device, verticesBuffer, BufferUsage::Vertex);
+        uint32_t rootNode = 0;
+        for (int i = 0; i < isNode.size(); i++) {
+            if (!isNode[i]) {
+                rootNode = i;
+                break;
+            }
+        }
+
+        preorderNodes(adapter, ctx, model_.nodes[rootNode], model_,
+                      nickel::cgmath::Mat44::Identity(), positionBuffer,
+                      uvBuffer, indicesBuffer, colorBuffer, modelMatBuffer);
+
+        ctx.positionBuffer =
+            copyBuffer2GPU(device, positionBuffer, BufferUsage::Vertex);
         ctx.indicesBuffer =
             copyBuffer2GPU(device, indicesBuffer, BufferUsage::Index);
         ctx.uvBuffer = copyBuffer2GPU(device, uvBuffer, BufferUsage::Vertex);
         ctx.colorBuffer =
             copyBuffer2GPU(device, colorBuffer, BufferUsage::Uniform);
+        ctx.modelMatBuffer =
+            copyBuffer2GPU(device, modelMatBuffer, BufferUsage::Uniform);
     }
 
     void Render(RenderPassEncoder renderPass, Context& ctx) {
-        for (int i = 0; i < model_.meshes.size(); i++) {
-            auto& mesh = model_.meshes[i];
-            for (int j = 0; j < mesh.primitives.size(); j++) {
-                auto index = uint32_t(i) << 4 | uint32_t(j);
-                BufferView *verticesView{}, *uvView{}, *indicesView{};
-                if (auto it = verticesViews_.find(index);
-                    it != verticesViews_.end()) {
-                    verticesView = &it->second;
-                }
-                if (auto it = uvViews_.find(index); it != uvViews_.end()) {
-                    uvView = &it->second;
-                }
-                if (auto it = indicesViews_.find(index);
-                    it != indicesViews_.end()) {
-                    indicesView = &it->second;
-                }
+        for (auto index : primIds_) {
+            BufferView *verticesView{}, *uvView{}, *indicesView{};
+            if (auto it = verticesViews_.find(index);
+                it != verticesViews_.end()) {
+                verticesView = &it->second;
+            }
+            if (auto it = uvViews_.find(index); it != uvViews_.end()) {
+                uvView = &it->second;
+            }
+            if (auto it = indicesViews_.find(index);
+                it != indicesViews_.end()) {
+                indicesView = &it->second;
+            }
 
-                auto& material = ctx.materials[materialIndices_[index]];
+            auto& material = ctx.materials[materialIndices_[index]];
+            auto& modelMatBufferView = modelMatViews_[index];
 
-                renderPass.SetVertexBuffer(0, ctx.verticesBuffer,
-                                           verticesView->offset,
-                                           verticesView->size);
-                renderPass.SetVertexBuffer(1, ctx.uvBuffer, uvView->offset,
-                                           uvView->size);
-                if (material.texture) {
-                    renderPass.SetBindGroup(ctx.textureBindGroups[material.texture.value()], {0, material.basicColorFactor.offset});
-                } else {
-                    renderPass.SetBindGroup(ctx.whiteTextureBindGroup, {0, material.basicColorFactor.offset});
-                }
+            renderPass.SetVertexBuffer(0, ctx.positionBuffer,
+                                       verticesView->offset,
+                                       verticesView->size);
+            renderPass.SetVertexBuffer(1, ctx.uvBuffer, uvView->offset,
+                                       uvView->size);
+            if (material.texture) {
+                renderPass.SetBindGroup(
+                    ctx.textureBindGroups[material.texture.value()],
+                    {material.basicColorFactor.offset,
+                     modelMatBufferView.offset});
+            } else {
+                renderPass.SetBindGroup(ctx.whiteTextureBindGroup,
+                                        {material.basicColorFactor.offset,
+                                         modelMatBufferView.offset});
+            }
 
-                if (indicesView) {
-                    renderPass.SetIndexBuffer(
-                        ctx.indicesBuffer, IndexType::Uint32,
-                        indicesView->offset, indicesView->size);
-                    renderPass.DrawIndexed(
-                        indicesView->count, 1,
-                        0, 0, 0);
-                } else {
-                    renderPass.Draw(verticesView->count, 1, 0, 0);
-                }
+            if (indicesView) {
+                renderPass.SetIndexBuffer(ctx.indicesBuffer, IndexType::Uint32,
+                                          indicesView->offset,
+                                          indicesView->size);
+                renderPass.DrawIndexed(indicesView->count, 1, 0, 0, 0);
+            } else {
+                renderPass.Draw(verticesView->count, 1, 0, 0);
             }
         }
     }
@@ -419,13 +363,25 @@ private:
         return device.CreateSampler(desc);
     }
 
-    void initTextureBindGroup(Device device, Context& ctx, const tinygltf::Texture& texture) {
+    void initTextureBindGroup(Device device, Context& ctx,
+                              const tinygltf::Texture& texture) {
         BindGroup::Descriptor desc;
         desc.layout = ctx.bindGroupLayout;
         BindingPoint entry;
         entry.binding = 2;
         SamplerBinding binding;
-        binding.sampler = ctx.samplers[texture.sampler];
+        if (texture.sampler == -1) {
+            Sampler::Descriptor desc;
+            desc.u = SamplerAddressMode::Repeat;
+            desc.v = SamplerAddressMode::Repeat;
+            desc.w = SamplerAddressMode::Repeat;
+            desc.min = Filter::Linear;
+            desc.mag = Filter::Linear;
+            binding.sampler =
+                ctx.samplers.emplace_back(device.CreateSampler(desc));
+        } else {
+            binding.sampler = ctx.samplers[texture.sampler];
+        }
         binding.view = ctx.images[texture.source].view;
         binding.name = "mySampler";
         entry.entry = binding;
@@ -433,11 +389,259 @@ private:
         ctx.textureBindGroups.emplace_back(device.CreateBindGroup(desc));
     }
 
+    void recordMeshInfo(Adapter adapter, Context& ctx,
+                        const tinygltf::Model& model,
+                        const tinygltf::Mesh& mesh, uint32_t highId,
+                        std::vector<unsigned char>& positions,
+                        std::vector<unsigned char>& uvs,
+                        std::vector<unsigned char>& indices,
+                        std::vector<unsigned char>& colors,
+                        std::vector<unsigned char>& preModelMats) {
+        for (int i = 0; i < mesh.primitives.size(); i++) {
+            uint64_t index = primIds_.emplace_back((highId) << 4 | uint32_t(i));
+
+            auto& prim = mesh.primitives[i];
+            auto& attrs = prim.attributes;
+
+            uint32_t positionCount = 0;
+            if (auto it = attrs.find("POSITION"); it != attrs.end()) {
+                auto& accessor = model_.accessors[it->second];
+                positionCount = accessor.count;
+                auto bufferView = CopyBufferFromGLTF<float>(
+                    positions, TINYGLTF_TYPE_VEC3, accessor, model_);
+                verticesViews_[index] = bufferView;
+            }
+
+            std::optional<uint32_t> indicesCount;
+            if (prim.indices != -1) {
+                auto& accessor = model_.accessors[prim.indices];
+                auto bufView = CopyBufferFromGLTF<uint32_t>(
+                    indices, TINYGLTF_TYPE_SCALAR, accessor, model_);
+                indicesViews_[index] = bufView;
+                indicesCount = accessor.count;
+            }
+
+            if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
+                auto& accessor = model_.accessors[it->second];
+
+                auto bufferView = CopyBufferFromGLTF<float>(
+                    uvs, TINYGLTF_TYPE_VEC2, accessor, model_);
+                uvViews_[index] = bufferView;
+            } else {
+                BufferView view;
+                view.count =
+                    indicesCount ? indicesCount.value() : positionCount;
+                view.size = view.count * 4 * 2;
+                view.count = view.count;
+                view.offset = uvs.size();
+                uvs.resize(uvs.size() + view.size, 0);
+                uvViews_[index] = view;
+            }
+
+            if (prim.material != -1) {
+                auto& material = model_.materials[prim.material];
+                Material mat;
+
+                // basic color factor
+                auto align = adapter.Limits().minUniformBufferOffsetAlignment;
+                mat.basicColorFactor.count = 4;
+                mat.basicColorFactor.offset =
+                    std::ceil(colors.size() / align) * align;
+                mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
+                auto& colorFactor =
+                    material.pbrMetallicRoughness.baseColorFactor;
+                colors.resize(mat.basicColorFactor.offset +
+                              mat.basicColorFactor.size);
+                nickel::cgmath::Color color{0, 0, 0, 1};
+                for (int i = 0; i < colorFactor.size(); i++) {
+                    color[i] = colorFactor[i];
+                }
+                memcpy(colors.data() + mat.basicColorFactor.offset, color.data,
+                       sizeof(color.data));
+
+                // basic texture
+                if (material.pbrMetallicRoughness.baseColorTexture.index !=
+                    -1) {
+                    mat.texture =
+                        material.pbrMetallicRoughness.baseColorTexture.index;
+                }
+
+                ctx.materials.emplace_back(std::move(mat));
+            } else {
+                Material mat;
+                mat.basicColorFactor.count = 4;
+                mat.basicColorFactor.offset = 0;
+                mat.basicColorFactor.size = 4 * 4;
+                ctx.materials.emplace_back(std::move(mat));
+            }
+
+            materialIndices_[index] = ctx.materials.size() - 1;
+        }
+    }
+
+    void preorderNodes(Adapter adapter, Context& ctx,
+                       const tinygltf::Node& node, const tinygltf::Model& model,
+                       const nickel::cgmath::Mat44 mat,
+                       std::vector<unsigned char>& positions,
+                       std::vector<unsigned char>& uvs,
+                       std::vector<unsigned char>& indices,
+                       std::vector<unsigned char>& colors,
+                       std::vector<unsigned char>& preModelMats) {
+        auto m = mat * calcNodeTransform(node);
+
+        if (node.mesh != -1) {
+            auto align = adapter.Limits().minUniformBufferOffsetAlignment;
+            auto& mesh = model_.meshes[node.mesh];
+            for (uint32_t i = 0; i < mesh.primitives.size(); i++) {
+                auto index = primIds_.emplace_back(maxId_ << 4 | i);
+                recordPrimInfo(adapter, ctx, model, mesh.primitives[i], index,
+                               positions, uvs, indices, colors, preModelMats);
+
+                BufferView view;
+                view.size = 4 * 4 * 4;
+                view.count = 1;
+                view.offset =
+                    std::ceil(preModelMats.size() / float(align)) * align;
+                preModelMats.resize(view.offset + view.size);
+                memcpy(preModelMats.data() + view.offset, m.data, view.size);
+                modelMatViews_[index] = view;
+            }
+            maxId_++;
+        }
+
+        for (auto child : node.children) {
+            preorderNodes(adapter, ctx, model.nodes[child], model, m, positions,
+                          uvs, indices, colors, preModelMats);
+        }
+    }
+
+    void recordPrimInfo(Adapter adapter, Context& ctx,
+                        const tinygltf::Model& model,
+                        const tinygltf::Primitive& prim, uint64_t index,
+                        std::vector<unsigned char>& positions,
+                        std::vector<unsigned char>& uvs,
+                        std::vector<unsigned char>& indices,
+                        std::vector<unsigned char>& colors,
+                        std::vector<unsigned char>& preModelMats) {
+        auto& attrs = prim.attributes;
+
+        uint32_t positionCount = 0;
+        if (auto it = attrs.find("POSITION"); it != attrs.end()) {
+            auto& accessor = model_.accessors[it->second];
+            positionCount = accessor.count;
+            auto bufferView = CopyBufferFromGLTF<float>(
+                positions, TINYGLTF_TYPE_VEC3, accessor, model_);
+            verticesViews_[index] = bufferView;
+        }
+
+        std::optional<uint32_t> indicesCount;
+        if (prim.indices != -1) {
+            auto& accessor = model_.accessors[prim.indices];
+            auto bufView = CopyBufferFromGLTF<uint32_t>(
+                indices, TINYGLTF_TYPE_SCALAR, accessor, model_);
+            indicesViews_[index] = bufView;
+            indicesCount = accessor.count;
+        }
+
+        if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
+            auto& accessor = model_.accessors[it->second];
+
+            auto bufferView = CopyBufferFromGLTF<float>(uvs, TINYGLTF_TYPE_VEC2,
+                                                        accessor, model_);
+            uvViews_[index] = bufferView;
+        } else {
+            BufferView view;
+            view.count = indicesCount ? indicesCount.value() : positionCount;
+            view.size = view.count * 4 * 2;
+            view.count = view.count;
+            view.offset = uvs.size();
+            uvs.resize(uvs.size() + view.size, 0);
+            uvViews_[index] = view;
+        }
+
+        if (prim.material != -1) {
+            auto& material = model_.materials[prim.material];
+            Material mat;
+
+            // basic color factor
+            auto align = adapter.Limits().minUniformBufferOffsetAlignment;
+            mat.basicColorFactor.count = 4;
+            mat.basicColorFactor.offset =
+                std::ceil(colors.size() / align) * align;
+            mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
+            auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
+            colors.resize(mat.basicColorFactor.offset +
+                          mat.basicColorFactor.size);
+            nickel::cgmath::Color color{0, 0, 0, 1};
+            for (int i = 0; i < colorFactor.size(); i++) {
+                color[i] = colorFactor[i];
+            }
+            memcpy(colors.data() + mat.basicColorFactor.offset, color.data,
+                   sizeof(color.data));
+
+            // basic texture
+            if (material.pbrMetallicRoughness.baseColorTexture.index != -1) {
+                mat.texture =
+                    material.pbrMetallicRoughness.baseColorTexture.index;
+            }
+
+            ctx.materials.emplace_back(std::move(mat));
+        } else {
+            Material mat;
+            mat.basicColorFactor.count = 4;
+            mat.basicColorFactor.offset = 0;
+            mat.basicColorFactor.size = 4 * 4;
+            ctx.materials.emplace_back(std::move(mat));
+        }
+
+        materialIndices_[index] = ctx.materials.size() - 1;
+    }
+
+    nickel::cgmath::Mat44 calcNodeTransform(const tinygltf::Node& node) {
+        auto cvtMat = [](const std::vector<double>& datas) {
+            nickel::cgmath::Mat44 mat;
+            for (int i = 0; i < datas.size(); i++) {
+                mat.data[i] = datas[i];
+            }
+            return mat;
+        };
+
+        auto m = nickel::cgmath::Mat44::Identity();
+        if (!node.matrix.empty()) {
+            m = cvtMat(node.matrix);
+        } else if (!node.scale.empty() || !node.translation.empty() ||
+                   !node.rotation.empty()) {
+            m = nickel::cgmath::Mat44::Identity();
+            if (!node.scale.empty()) {
+                m = nickel::cgmath::CreateScale(nickel::cgmath::Vec3(
+                        node.scale[0], node.scale[1], node.scale[2])) *
+                    m;
+            }
+            if (!node.rotation.empty()) {
+                m = nickel::cgmath::Quat(node.rotation[0], node.rotation[1],
+                                         node.rotation[2], node.rotation[3])
+                        .ToMat() *
+                    m;
+            }
+            if (!node.translation.empty()) {
+                m = nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3(
+                        node.translation[0], node.translation[1],
+                        node.translation[2])) *
+                    m;
+            }
+        }
+
+        return m;
+    }
+
     tinygltf::Model model_;
     std::unordered_map<uint64_t, BufferView> verticesViews_;
     std::unordered_map<uint64_t, BufferView> uvViews_;
     std::unordered_map<uint64_t, BufferView> indicesViews_;
+    std::unordered_map<uint64_t, BufferView> modelMatViews_;
     std::unordered_map<uint64_t, uint32_t> materialIndices_;
+    std::vector<uint64_t> primIds_;
+    uint32_t maxId_ = 0;
 };
 
 struct MVP {
@@ -502,7 +706,7 @@ void initPipelineLayout(Context& ctx, Device& device) {
 void initBindGroupLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
-    // uniform buffer
+    // MVP uniform buffer
     BufferBinding bufferBinding1;
     bufferBinding1.buffer = ctx.uniformBuffer;
     bufferBinding1.hasDynamicOffset = false;
@@ -515,7 +719,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     entry.visibility = ShaderStage::Vertex;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
-    // uniform buffer
+    // color uniform buffer
     BufferBinding bufferBinding2;
     bufferBinding2.buffer = ctx.colorBuffer;
     bufferBinding2.hasDynamicOffset = true;
@@ -526,6 +730,19 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     entry.binding.binding = 1;
     entry.binding.entry = bufferBinding2;
     entry.visibility = ShaderStage::Fragment;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // pre-model mat uniform buffer
+    BufferBinding bufferBinding3;
+    bufferBinding3.buffer = ctx.modelMatBuffer;
+    bufferBinding3.hasDynamicOffset = true;
+    bufferBinding3.type = BufferType::Uniform;
+    bufferBinding3.minBindingSize = sizeof(nickel::cgmath::Mat44);
+
+    entry.arraySize = 1;
+    entry.binding.binding = 3;
+    entry.binding.entry = bufferBinding3;
+    entry.visibility = ShaderStage::Vertex;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
     // sampler
@@ -626,14 +843,16 @@ void StartupSystem(gecs::commands cmds,
     auto& mesh = cmds.emplace_resource<GPUMesh>(
         std::filesystem::path{
             // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
-            // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
-            // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
-            // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
-            // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},
-            // "external/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"},
-            // "external/glTF-Sample-Models/2.0/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"},
-            // "external/glTF-Sample-Models/2.0/UnlitTest/glTF/UnlitTest.gltf"},
-            "external/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf"},
+            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/"
+            "CesiumMilkTruck.gltf"},
+        // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
+        // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
+        // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
+        // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},
+        // "external/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"},
+        // "external/glTF-Sample-Models/2.0/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"},
+        // "external/glTF-Sample-Models/2.0/UnlitTest/glTF/UnlitTest.gltf"},
+        // "external/glTF-Sample-Models/2.0/CesiumMan/glTF/CesiumMan.gltf"},
         adapter, device, ctx);
 
     RenderPipeline::Descriptor desc;
@@ -739,11 +958,12 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
 
+        float half = x * 0.5;
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = // nickel::cgmath::CreateScale({3, 3, 3});
-        nickel::cgmath::CreateScale({3, 3, 1}) *
-        // nickel::cgmath::CreateScale({0.01, 0.01, 0.01});
-      nickel::cgmath::CreateXYZRotation({x, y, 0});
+    mvp.model =  // nickel::cgmath::CreateScale({3, 3, 3});
+                 // nickel::cgmath::CreateScale({3, 3, 1}) *
+                 // nickel::cgmath::CreateScale({0.01, 0.01, 0.01});
+        nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
@@ -754,10 +974,28 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
+    for (auto sampler : ctx->samplers) {
+        sampler.Destroy();
+    }
+    ctx->samplers.clear();
+    ctx->whiteTexture.view.Destroy();
+    ctx->whiteTextureBindGroup.Destroy();
+    ctx->whiteTextureSampler.Destroy();
+    for (auto image : ctx->images) {
+        image.view.Destroy();
+        image.texture.Destroy();
+    }
+    for (auto bindGroup : ctx->textureBindGroups) {
+        bindGroup.Destroy();
+    }
+    ctx->whiteTexture.texture.Destroy();
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
     ctx->bindGroupLayout.Destroy();
     ctx->uniformBuffer.Destroy();
+    ctx->colorBuffer.Destroy();
+    ctx->uvBuffer.Destroy();
+    ctx->indicesBuffer.Destroy();
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
     cmds.remove_resource<Device>();
@@ -774,7 +1012,6 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 
@@ -789,7 +1026,8 @@ void BootstrapSystem(gecs::world& world,
         .regist_shutdown_system<nickel::EngineShutdown>()
         // update systems
         .regist_update_system<nickel::VideoSystemUpdate>()
-        // other input handle event must put here(after mouse/keyboard update)
+        // other input handle event must put here(after mouse/keyboard
+        // update)
         .regist_update_system<nickel::Mouse::Update>()
         .regist_update_system<nickel::Keyboard::Update>()
         .regist_update_system<nickel::HandleInputEvents>()

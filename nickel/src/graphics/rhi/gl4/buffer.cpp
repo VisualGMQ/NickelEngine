@@ -104,6 +104,7 @@ void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset,
     }
     if (!isMappingCoherence_) {
         map_ = glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT|access);
+        isMappingCoherence_ = true;
         if (!map_) {
             isMappingCoherence_ = false;
             map_ = glMapBufferRange(type_, offset, size, GL_MAP_FLUSH_EXPLICIT_BIT|access);
@@ -141,7 +142,7 @@ void* BufferImpl::GetMappedRange(uint64_t offset, uint64_t size) {
 };
 
 bool BufferImpl::IsMappingCoherence() const {
-    return isMappingCoherence_.value_or(false);
+    return isMappingCoherence_.value_or(true);
 }
 
 }  // namespace nickel::rhi::gl4

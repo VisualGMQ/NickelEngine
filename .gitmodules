@@ -19,6 +19,9 @@
 [submodule "3rdlibs/easy_profiler"]
 	path = 3rdlibs/easy_profiler
 	url = https://github.com/yse/easy_profiler.git
+[submodule "external/glTF-Sample-Models"]
+	path = external/glTF-Sample-Models
+	url = https://github.com/KhronosGroup/glTF-Sample-Models.git
 [submodule "3rdlibs/tinygltf"]
 	path = 3rdlibs/tinygltf
 	url = https://github.com/syoyo/tinygltf.git

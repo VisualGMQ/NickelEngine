@@ -39,7 +39,7 @@ struct ResourceBindHelper final {
                                            : buffer->Size();
         GL_CALL(glBindBufferRange(bufferType, entry_.binding, buffer->id,
                                   offset, size));
-        return true;
+        return binding.hasDynamicOffset;
     }
 
     bool operator()(const SamplerBinding& binding) {
@@ -55,9 +55,9 @@ struct ResourceBindHelper final {
         return false;
     }
 
-    bool operator()(const StorageTextureBinding&) const {
+    bool operator()(const StorageTextureBinding& binding) const {
         // TODO: not finish
-        return true;
+        return false;
     }
 
     bool operator()(const TextureBinding& binding) {

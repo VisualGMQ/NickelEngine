@@ -104,19 +104,18 @@ void initBindGroupLayout(Context& ctx, Device& device) {
 
     Entry entry;
     entry.arraySize = 1;
-    entry.binding = 0;
+    entry.binding.binding = 0;
     entry.visibility = ShaderStage::Vertex;
     BufferBinding bufferBinding;
     bufferBinding.buffer = ctx.uniformBuffer;
     bufferBinding.hasDynamicOffset = false;
     bufferBinding.type = BufferType::Uniform;
-    entry.resourceLayout = bufferBinding;
+    entry.binding.entry = bufferBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
-    bindGroupDesc.entries.push_back(entry);
     ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
@@ -263,8 +262,8 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    nickel::Window& window =
-        reg.commands().emplace_resource<nickel::Window>("03 cube", 1024, 720, API == APIPreference::Vulkan);
+    nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
+        "03 cube", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

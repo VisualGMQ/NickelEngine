@@ -20,7 +20,12 @@ public:
     vk::DescriptorPool pool;
     std::vector<vk::DescriptorSet> sets;
 
+    std::vector<vk::DescriptorSet> RequireSets(uint32_t id);
+    uint32_t RequireBindGroupID();
+    void DestoryID(uint32_t id);
+
 private:
+    std::vector<bool> ids_;
     DeviceImpl& device_;
     BindGroupLayout::Descriptor desc_;
 
@@ -35,17 +40,18 @@ private:
 class BindGroupImpl : public rhi::BindGroupImpl {
 public:
     BindGroupImpl(DeviceImpl&, const BindGroup::Descriptor&);
+    ~BindGroupImpl();
 
-    BindGroupLayout GetLayout() const { return layout_; }
+    BindGroupLayout GetLayout() const { return desc_.layout; }
 
     std::vector<vk::DescriptorSet> sets;
 
-    void WriteDescriptors();
-
 private:
+    uint32_t id_;
     DeviceImpl& device_;
-    BindGroupLayout layout_;
     BindGroup::Descriptor desc_;
+
+    void writeDescriptors();
 };
 
 }  // namespace nickel::rhi::vulkan

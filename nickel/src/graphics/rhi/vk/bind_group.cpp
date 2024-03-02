@@ -6,9 +6,6 @@
 #include "graphics/rhi/vk/sampler.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
 
-// query physics device to determine this const
-constexpr uint32_t shaderUniformMaxCount = 16;
-
 namespace nickel::rhi::vulkan {
 
 struct getDescriptorTypeHelper {
@@ -78,10 +75,11 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
 
     VK_CALL(layout, dev.device.createDescriptorSetLayout(info));
 
-    uint32_t count = shaderUniformMaxCount * dev.swapchain.ImageInfo().imagCount *
-                  MaxDrawCallPerCmdBuf;
+    uint32_t count = dev.swapchain.ImageInfo().imagCount * MaxDrawCallPerCmdBuf;
     createPool(dev.device, count, desc);
     allocSets(dev.device, count, desc);
+
+    ids_.resize(MaxDrawCallPerCmdBuf);
 }
 
 vk::DescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
@@ -119,19 +117,68 @@ void BindGroupLayoutImpl::allocSets(vk::Device dev, uint32_t count,
     vk::DescriptorSetAllocateInfo info;
     info.setDescriptorSetCount(count).setDescriptorPool(pool).setSetLayouts(
         layouts);
+    ids_.resize(count / MaxDrawCallPerCmdBuf);
+    for (int i = 0; i < ids_.size(); i++) {
+        ids_[i] = i;
+    }
     VK_CALL(sets, dev.allocateDescriptorSets(info));
 }
 
+std::vector<vk::DescriptorSet> BindGroupLayoutImpl::RequireSets(uint32_t id) {
+    std::vector<vk::DescriptorSet> returnSets;
+    auto imgCount = device_.swapchain.imageInfo.imagCount;
+    for (int i = 0; i < imgCount; i++) {
+        returnSets.emplace_back(sets[id * imgCount + i]);
+    }
+    return returnSets;
+}
+
+uint32_t BindGroupLayoutImpl::RequireBindGroupID() {
+    for (uint32_t i = 0; i < ids_.size(); i++) {
+        if (!ids_[i]) {
+            ids_[i] = true;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void BindGroupLayoutImpl::DestoryID(uint32_t id) {
+    ids_[id] = false;
+}
+
 BindGroupLayoutImpl::~BindGroupLayoutImpl() {
-    device_.device.freeDescriptorSets(pool, sets);
     device_.device.destroyDescriptorPool(pool);
     device_.device.destroyDescriptorSetLayout(layout);
 }
 
 BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
-    : device_{dev}, layout_{desc.layout}, desc_{desc} {
-    auto& sets = static_cast<const BindGroupLayoutImpl*>(desc.layout.Impl())->sets;
-    // TODO: move sets to here;
+    : device_{dev},
+      desc_{desc} {
+    auto layout = static_cast<BindGroupLayoutImpl*>(desc.layout.Impl());
+    id_ = layout->RequireBindGroupID();
+    sets = layout->RequireSets(id_);
+
+    auto& layoutDesc =
+        static_cast<const BindGroupLayoutImpl*>(desc.layout.Impl())
+            ->Descriptor();
+    desc_.layout = desc.layout;
+    for (auto& layoutEntry : layoutDesc.entries) {
+        desc_.entries.emplace_back(layoutEntry.binding);
+        for (auto& groupEntry : desc.entries) {
+            if (groupEntry.binding == layoutEntry.binding.binding) {
+                desc_.entries.back() = groupEntry;
+                break;
+            }
+        }
+    }
+    
+    writeDescriptors();
+}
+
+BindGroupImpl::~BindGroupImpl() {
+    static_cast<BindGroupLayoutImpl*>(desc_.layout.Impl())->DestoryID(id_);
 }
 
 struct WriteDescriptorHelper final {
@@ -150,7 +197,9 @@ struct WriteDescriptorHelper final {
                                              : buffer->Size());
         writeInfo.setBufferInfo(bufferInfo)
             .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorType(binding.hasDynamicOffset
+                                   ? vk::DescriptorType::eUniformBufferDynamic
+                                   : vk::DescriptorType::eUniformBuffer)
             .setDstBinding(binding_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);
@@ -219,33 +268,14 @@ private:
     const BindingPoint& binding_;
 };
 
-void BindGroupImpl::WriteDescriptors() {
+void BindGroupImpl::writeDescriptors() {
     auto& layoutDesc =
         static_cast<const BindGroupLayoutImpl*>(desc_.layout.Impl())
             ->Descriptor();
     for (auto set : sets) {
-        // TODO: query shader max support count
-        constexpr int ShaderMaxSupportCount = 16;
-        std::array<bool, 16> uniformExistsList;
-        for (auto& entry : layoutDesc.entries) {
-            uniformExistsList[entry.binding.binding] = true;
-        }
-
         for (auto& entry : desc_.entries) {
             WriteDescriptorHelper helper{set, device_.device, entry};
             std::visit(helper, entry.entry);
-
-            uniformExistsList[entry.binding] = false;
-        }
-
-        for (int i = 0; i < uniformExistsList.size(); i++) {
-            if (!uniformExistsList[i]) {
-                continue;
-            }
-
-            auto& entry = layoutDesc.entries[i];
-            WriteDescriptorHelper helper{set, device_.device, entry.binding};
-            std::visit(helper, entry.binding.entry);
         }
     }
 }
