@@ -17,65 +17,36 @@ namespace nickel::rhi::gl4 {
 struct CmdExecutor final {
     CmdExecutor(DeviceImpl& dev, const CommandBufferImpl& buffer)
         : buffer_{buffer}, device_{dev} {
-        if (buffer.framebuffer) {
-            if (buffer.indicesBuffer) {
-                if (auto it = device_.vaos.find((size_t)&buffer);
-                    it != device_.vaos.end()) {
-                    vao_ = it->second;
-                    GL_CALL(glBindVertexArray(it->second));
-                } else {
-                    GLuint newVao;
-                    GL_CALL(glGenVertexArrays(1, &newVao));
-                    GL_CALL(glBindVertexArray(newVao));
-                    vao_ = device_.vaos.emplace((size_t)&buffer, newVao).second;
-                    GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-                                         static_cast<const BufferImpl*>(
-                                             buffer.indicesBuffer.Impl())
-                                             ->id));
-                }
+        if (buffer.renderPass) {
+            auto renderPass = buffer.renderPass;
+
+            if (buffer.framebuffer) {
+                static_cast<const FramebufferImpl*>(buffer.framebuffer.Impl())
+                    ->Bind();
             } else {
-                vao_ = static_cast<const RenderPipelineImpl*>(
-                           buffer.pipeline.Impl())
-                           ->GetDefaultVAO();
-                GL_CALL(glBindVertexArray(vao_));
+                GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
             }
 
-            if (buffer.renderPass) {
-                auto renderPass = buffer.renderPass;
+            for (int i = 0; i < renderPass->colorAttachments.size(); i++) {
+                auto attachment = renderPass->colorAttachments[i];
 
-                if (buffer.framebuffer) {
-                    static_cast<const FramebufferImpl*>(
-                        buffer.framebuffer.Impl())
-                        ->Bind();
-                } else {
-                    GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+                if (attachment.loadOp == AttachmentLoadOp::Clear) {
+                    GLenum index = GL_COLOR_ATTACHMENT0 + i;
+                    GL_CALL(glDrawBuffer(index));
+                    GL_CALL(glClearBufferfv(GL_COLOR, 0,
+                                            attachment.clearValue.data()));
                 }
+            }
 
-                static_cast<const RenderPipelineImpl*>(buffer.pipeline.Impl())
-                    ->Apply();
-
-                for (int i = 0; i < renderPass->colorAttachments.size(); i++) {
-                    auto attachment = renderPass->colorAttachments[i];
-
-                    if (attachment.loadOp == AttachmentLoadOp::Clear) {
-                        GLenum index = GL_COLOR_ATTACHMENT0 + i;
-                        GL_CALL(glDrawBuffer(index));
-                        GL_CALL(glClearBufferfv(GL_COLOR, 0,
-                                                attachment.clearValue.data()));
-                    }
+            if (renderPass->depthStencilAttachment) {
+                auto attachment = renderPass->depthStencilAttachment.value();
+                if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
+                    GL_CALL(glClearBufferfv(GL_DEPTH, 0,
+                                            &attachment.depthClearValue));
                 }
-
-                if (renderPass->depthStencilAttachment) {
-                    auto attachment =
-                        renderPass->depthStencilAttachment.value();
-                    if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
-                        GL_CALL(glClearBufferfv(GL_DEPTH, 0,
-                                                &attachment.depthClearValue));
-                    }
-                    if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
-                        int value = attachment.stencilClearValue;
-                        GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
-                    }
+                if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
+                    int value = attachment.stencilClearValue;
+                    GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
                 }
             }
         }
@@ -97,34 +68,34 @@ struct CmdExecutor final {
             GL_PIXEL_UNPACK_BUFFER,
             static_cast<const BufferImpl*>(cmd.src.buffer.Impl())->id));
         GL_CALL(glTexSubImage2D(
-            texture->Type(), 0,0, 0, texture->Extent().width,
+            texture->Type(), 0, 0, 0, texture->Extent().width,
             texture->Extent().height, TextureFormat2GL(texture->Format()),
-            TextureFormat2GLDataType(texture->Format()), (void*)cmd.src.offset));
+            TextureFormat2GLDataType(texture->Format()),
+            (void*)cmd.src.offset));
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
     void operator()(const CmdDraw& cmd) const {
-        if (!buffer_.pipeline) {
+        if (!renderPipeline_) {
             LOGW(log_tag::GL, "Do you forget bind pipeline before drawcall?");
         }
 
+        setVertexBuffer2VAO();
+
         GL_CALL(glDrawArraysInstancedBaseInstance(
-            Topology2GL(
-                static_cast<const RenderPipelineImpl*>(buffer_.pipeline.Impl())
-                    ->Descriptor()
-                    .primitive.topology),
+            Topology2GL(renderPipeline_->Descriptor().primitive.topology),
             cmd.firstVertex, cmd.vertexCount, cmd.instanceCount,
             cmd.firstInstance));
     }
 
     void operator()(const CmdDrawIndexed& cmd) const {
-        if (!buffer_.pipeline) {
+        if (!renderPipeline_) {
             LOGW(log_tag::GL, "Do you forget bind pipeline before drawcall?");
         }
 
-        auto& desc =
-            static_cast<const RenderPipelineImpl*>(buffer_.pipeline.Impl())
-                ->Descriptor();
+        setVertexBuffer2VAO();
+
+        auto& desc = renderPipeline_->Descriptor();
 
         GL_CALL(glDrawElementsInstancedBaseVertexBaseInstance(
             Topology2GL(desc.primitive.topology), cmd.indexCount,
@@ -134,46 +105,79 @@ struct CmdExecutor final {
             (void*)((desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
                          ? 2
                          : 4) *
-                    cmd.firstIndex),
+                    cmd.firstIndex + setIndexBufCmd_.offset),
             cmd.instanceCount, cmd.baseVertex, cmd.firstInstance));
     }
 
-    void operator()(const CmdSetVertexBuffer& cmd) const {
-        GL_CALL(glBindVertexArray(vao_));
-        auto& vertexState =
-            static_cast<const RenderPipelineImpl*>(buffer_.pipeline.Impl())
-                ->Descriptor()
-                .vertex;
-        auto buffer = vertexState.buffers.at(cmd.slot);
-        GL_CALL(glBindBuffer(
-            GL_ARRAY_BUFFER,
-            static_cast<const BufferImpl*>(cmd.buffer.Impl())->id));
-        for (auto& attr : buffer.attributes) {
-            GL_CALL(glVertexAttribPointer(
-                attr.shaderLocation, GetVertexFormatComponentCount(attr.format),
-                GetVertexFormatGLType(attr.format),
-                IsNormalizedVertexFormat(attr.format), buffer.arrayStride,
-                (void*)(attr.offset + cmd.offset)));
-            GL_CALL(glEnableVertexAttribArray(attr.shaderLocation));
-        }
+    void operator()(const CmdSetVertexBuffer& cmd) {
+        setVertexBufferCmds_.emplace_back(cmd);
     }
 
     void operator()(const CmdSetBindGroup& cmd) const {
         static_cast<const BindGroupImpl*>(cmd.group.Impl())
-            ->Apply(*static_cast<const RenderPipelineImpl*>(
-                buffer_.pipeline.Impl()), cmd.dynamicOffset);
+            ->Apply(*renderPipeline_, cmd.dynamicOffset);
+    }
+
+    void operator()(const CmdSetIndexBuffer& cmd) {
+        // first we set index buffer and init vao 
+        if (auto it = device_.vaos.find((size_t)cmd.buffer.Impl());
+            it != device_.vaos.end()) {
+            vao_ = it->second;
+            GL_CALL(glBindVertexArray(it->second));
+        } else {
+            GLuint newVao;
+            GL_CALL(glGenVertexArrays(1, &newVao));
+            GL_CALL(glBindVertexArray(newVao));
+            vao_ = device_.vaos.emplace((size_t)cmd.buffer.Impl(), newVao)
+                       .first->second;
+            GL_CALL(glBindBuffer(
+                GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<const BufferImpl*>(cmd.buffer.Impl())->id));
+            GL_CALL(glBindVertexArray(vao_));
+        }
+
+        setIndexBufCmd_ = cmd;
+    }
+
+    void operator()(const CmdSetRenderPipeline& cmd) {
+        renderPipeline_ =
+            static_cast<const RenderPipelineImpl*>(cmd.pipeline.Impl());
+        renderPipeline_->Apply();
+        vao_ = renderPipeline_->GetDefaultVAO();
     }
 
 private:
-    const CommandBufferImpl& buffer_;
     DeviceImpl& device_;
+    const CommandBufferImpl& buffer_;
+    const RenderPipelineImpl* renderPipeline_{};
     GLuint vao_;
+    CmdSetIndexBuffer setIndexBufCmd_;
+    std::vector<CmdSetVertexBuffer> setVertexBufferCmds_;
+
+    void setVertexBuffer2VAO() const {
+        for (auto& cmd : setVertexBufferCmds_) {
+            auto& vertexState = renderPipeline_->Descriptor().vertex;
+            auto buffer = vertexState.buffers.at(cmd.slot);
+            GL_CALL(glBindBuffer(
+                GL_ARRAY_BUFFER,
+                static_cast<const BufferImpl*>(cmd.buffer.Impl())->id));
+            for (auto& attr : buffer.attributes) {
+                GL_CALL(glVertexAttribPointer(
+                    attr.shaderLocation,
+                    GetVertexFormatComponentCount(attr.format),
+                    GetVertexFormatGLType(attr.format),
+                    IsNormalizedVertexFormat(attr.format), buffer.arrayStride,
+                    (void*)(attr.offset + cmd.offset)));
+                GL_CALL(glEnableVertexAttribArray(attr.shaderLocation));
+            }
+        }
+    }
 };
 
 void CommandBufferImpl::Execute(DeviceImpl& device) const {
     CmdExecutor executor{device, *this};
     for (auto& cmd : cmds) {
-        std::visit(executor, cmd);
+        std::visit(executor, cmd.cmd);
     }
 }
 
@@ -187,14 +191,18 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
                                             uint64_t srcOffset,
                                             const Buffer& dst,
                                             uint64_t dstOffset, uint64_t size) {
-    buffer_.cmds.push_back(
-        CmdCopyBuf2Buf{src, srcOffset, dst, dstOffset, size});
+    buffer_.cmds.push_back({
+        CmdType::CopyBuf2Buf,
+        CmdCopyBuf2Buf{src, srcOffset, dst, dstOffset, size}
+    });
 }
 
 void CommandEncoderImpl::CopyBufferToTexture(
     const CommandEncoder::BufTexCopySrc& src,
     const CommandEncoder::BufTexCopyDst& dst, const Extent3D& copySize) {
-    buffer_.cmds.push_back(CmdCopyBuf2Texture{src, dst, copySize});
+    buffer_.cmds.push_back({
+        CmdType::CopyBuf2Texture, CmdCopyBuf2Texture{src, dst, copySize}
+    });
 }
 
 RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
@@ -250,8 +258,10 @@ RenderPassEncoderImpl::RenderPassEncoderImpl(DeviceImpl& device,
 
 void RenderPassEncoderImpl::Draw(uint32_t vertexCount, uint32_t instanceCount,
                                  uint32_t firstVertex, uint32_t firstInstance) {
-    buffer_->cmds.push_back(
-        CmdDraw{vertexCount, instanceCount, firstVertex, firstInstance});
+    buffer_->cmds.push_back({
+        CmdType::Draw,
+        CmdDraw{vertexCount, instanceCount, firstVertex, firstInstance}
+    });
 }
 
 void RenderPassEncoderImpl::DrawIndexed(uint32_t indexCount,
@@ -259,8 +269,11 @@ void RenderPassEncoderImpl::DrawIndexed(uint32_t indexCount,
                                         uint32_t firstIndex,
                                         uint32_t baseVertex,
                                         uint32_t firstInstance) {
-    buffer_->cmds.push_back(CmdDrawIndexed{
-        indexCount, instanceCount, firstIndex, baseVertex, firstInstance});
+    buffer_->cmds.push_back({
+        CmdType::DrawIndexed,
+        CmdDrawIndexed{indexCount, instanceCount, firstIndex, baseVertex,
+                       firstInstance}
+    });
 }
 
 void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
@@ -270,29 +283,37 @@ void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
     cmd.buffer = buffer;
     cmd.offset = offset;
     cmd.size = size;
-    buffer_->cmds.emplace_back(std::move(cmd));
+    buffer_->cmds.push_back(Command{CmdType::SetVertexBuffer, std::move(cmd)});
 }
 
-void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType,
+void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType type,
                                            uint32_t offset, uint32_t size) {
-    buffer_->indicesBuffer = buffer;
+    CmdSetIndexBuffer cmd;
+    cmd.buffer = buffer;
+    cmd.offset = offset;
+    cmd.size = size;
+    cmd.indexType = type;
+    buffer_->cmds.push_back({CmdType::SetIndexBuffer, std::move(cmd)});
 }
 
 void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
     CmdSetBindGroup cmd;
     cmd.group = group;
-    buffer_->cmds.emplace_back(std::move(cmd));
+    buffer_->cmds.push_back({CmdType::SetBindGroup, std::move(cmd)});
 }
 
-void RenderPassEncoderImpl::SetBindGroup(BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
+void RenderPassEncoderImpl::SetBindGroup(
+    BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
     CmdSetBindGroup cmd;
     cmd.group = group;
     cmd.dynamicOffset = dynamicOffset;
-    buffer_->cmds.emplace_back(std::move(cmd));
+    buffer_->cmds.push_back({CmdType::SetBindGroup, std::move(cmd)});
 }
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
-    buffer_->pipeline = pipeline;
+    CmdSetRenderPipeline cmd;
+    cmd.pipeline = pipeline;
+    buffer_->cmds.push_back({CmdType::SetRenderPipeline, cmd});
 }
 
 void RenderPassEncoderImpl::End() {}

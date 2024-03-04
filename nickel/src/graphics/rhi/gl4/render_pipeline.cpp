@@ -47,6 +47,7 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
 void RenderPipelineImpl::Apply() const {
     // shader apply
     GL_CALL(glUseProgram(shaderId_));
+    GL_CALL(glBindVertexArray(vao_));
 
     GL_CALL(glPolygonMode(GL_FRONT_AND_BACK,
                           PolygonMode2GL(desc_.primitive.polygonMode)));

@@ -9,7 +9,6 @@ using namespace nickel::rhi;
 
 APIPreference API = APIPreference::GL;
 
-
 struct BufferView {
     uint32_t offset;
     uint64_t size;
@@ -48,6 +47,35 @@ struct Context final {
     BindGroup whiteTextureBindGroup;
 
     std::vector<Material> materials;
+
+    ~Context() {
+        layout.Destroy();
+        pipeline.Destroy();
+        uniformBuffer.Destroy();
+        bindGroupLayout.Destroy();
+        depth.Destroy();
+        depthView.Destroy();
+        for (auto elem : images) {
+            elem.view.Destroy();
+            elem.texture.Destroy();
+        }
+        for (auto elem : samplers) {
+            elem.Destroy();
+        }
+        for (auto elem : textureBindGroups) {
+            elem.Destroy();
+        }
+
+        positionBuffer.Destroy();
+        uvBuffer.Destroy();
+        indicesBuffer.Destroy();
+        colorBuffer.Destroy();
+        modelMatBuffer.Destroy();
+        whiteTexture.view.Destroy();
+        whiteTexture.texture.Destroy();
+        whiteTextureSampler.Destroy();
+        whiteTextureBindGroup.Destroy();
+    }
 };
 
 template <typename SrcT, typename DstT>
@@ -237,6 +265,12 @@ struct GPUMesh {
             auto& material = ctx.materials[materialIndices_[index]];
             auto& modelMatBufferView = modelMatViews_[index];
 
+            if (indicesView) {
+                renderPass.SetIndexBuffer(ctx.indicesBuffer, IndexType::Uint32,
+                                          indicesView->offset,
+                                          indicesView->size);
+            }
+
             renderPass.SetVertexBuffer(0, ctx.positionBuffer,
                                        verticesView->offset,
                                        verticesView->size);
@@ -254,9 +288,6 @@ struct GPUMesh {
             }
 
             if (indicesView) {
-                renderPass.SetIndexBuffer(ctx.indicesBuffer, IndexType::Uint32,
-                                          indicesView->offset,
-                                          indicesView->size);
                 renderPass.DrawIndexed(indicesView->count, 1, 0, 0, 0);
             } else {
                 renderPass.Draw(verticesView->count, 1, 0, 0);
@@ -963,30 +994,7 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
-    for (auto sampler : ctx->samplers) {
-        sampler.Destroy();
-    }
-    ctx->samplers.clear();
-    ctx->whiteTexture.view.Destroy();
-    ctx->whiteTextureBindGroup.Destroy();
-    ctx->whiteTextureSampler.Destroy();
-    for (auto image : ctx->images) {
-        image.view.Destroy();
-        image.texture.Destroy();
-    }
-    for (auto bindGroup : ctx->textureBindGroups) {
-        bindGroup.Destroy();
-    }
-    ctx->whiteTexture.texture.Destroy();
-    ctx->depthView.Destroy();
-    ctx->depth.Destroy();
-    ctx->bindGroupLayout.Destroy();
-    ctx->uniformBuffer.Destroy();
-    ctx->colorBuffer.Destroy();
-    ctx->uvBuffer.Destroy();
-    ctx->indicesBuffer.Destroy();
-    ctx->layout.Destroy();
-    ctx->pipeline.Destroy();
+    cmds.remove_resource<Context>();
     cmds.remove_resource<Device>();
     cmds.remove_resource<Adapter>();
 }

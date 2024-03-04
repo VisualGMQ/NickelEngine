@@ -1,7 +1,8 @@
 #pragma once
 
-#include "graphics/rhi/impl/command.hpp"
 #include "graphics/rhi/gl4/glpch.hpp"
+#include "graphics/rhi/impl/command.hpp"
+
 
 namespace nickel::rhi::gl4 {
 
@@ -37,6 +38,13 @@ struct CmdDrawIndexed final {
     uint32_t firstInstance;
 };
 
+struct CmdSetIndexBuffer final {
+    Buffer buffer;
+    IndexType indexType;
+    uint32_t offset {};
+    uint64_t size {};
+};
+
 struct CmdSetVertexBuffer final {
     uint32_t slot;
     Buffer buffer;
@@ -49,19 +57,38 @@ struct CmdSetBindGroup final {
     std::vector<uint32_t> dynamicOffset;
 };
 
+struct CmdSetRenderPipeline final {
+    RenderPipeline pipeline;
+};
 
-using Command =
-    std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw, CmdDrawIndexed,
-                 CmdSetVertexBuffer, CmdSetBindGroup>;
+enum class CmdType {
+    Unknown,
+    SetBindGroup,
+    SetRenderPipeline,
+    SetVertexBuffer,
+    SetIndexBuffer,
+    Draw,
+    DrawIndexed,
+    CopyBuf2Buf,
+    CopyBuf2Texture,
+};
+
+struct Command final {
+    using CmdUnion =
+        std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw,
+                     CmdDrawIndexed, CmdSetVertexBuffer, CmdSetIndexBuffer,
+                     CmdSetBindGroup, CmdSetRenderPipeline>;
+
+    CmdType type = CmdType::Unknown;
+    CmdUnion cmd;
+};
 
 class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:
     std::vector<Command> cmds;
-    RenderPipeline pipeline;
     std::unordered_map<uint32_t, BindGroup> bindGroups;
     std::optional<RenderPass::Descriptor> renderPass;
     Framebuffer framebuffer;
-    Buffer indicesBuffer;
 
     void Execute(DeviceImpl&) const;
 };
@@ -99,7 +126,8 @@ public:
     void SetIndexBuffer(Buffer buffer, IndexType, uint32_t offset,
                         uint32_t size) override;
     void SetBindGroup(BindGroup) override;
-    void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset) override;
+    void SetBindGroup(BindGroup,
+                      const std::vector<uint32_t>& dynamicOffset) override;
     void SetPipeline(RenderPipeline) override;
 
     void End() override;
