@@ -10,11 +10,11 @@ layout(binding = 0) uniform MyUniform {
     mat4 proj;
 } MVP;
 
-layout(binding = 3) uniform PreModelUniform {
-    mat4 mat;
-} preModelUniform;
+// layout(binding = 3) uniform PreModelUniform {
+//     mat4 mat;
+// } preModelUniform;
 
 void main() {
-    gl_Position = MVP.proj * MVP.view * MVP.model * preModelUniform.mat * vec4(inPosition, 1.0);
+    gl_Position = MVP.proj * MVP.view * MVP.model /* preModelUniform.mat */ * vec4(inPosition, 1.0);
     fragUV = texCoord;
 }

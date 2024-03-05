@@ -35,6 +35,10 @@ public:
         return !(*this == o);
     }
 
+    operator bool() const {
+        return impl_;
+    }
+
     void Destroy();
 
     auto Impl() const { return impl_; }
