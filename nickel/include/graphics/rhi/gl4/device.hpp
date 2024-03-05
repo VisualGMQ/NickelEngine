@@ -12,6 +12,8 @@
 
 namespace nickel::rhi::gl4 {
 
+constexpr uint32_t _NICKEL_PUSHCONSTANT_BIND_SLOT = 16;
+
 class AdapterImpl;
 
 class DeviceImpl: public rhi::DeviceImpl {
@@ -44,8 +46,13 @@ public:
 
     std::vector<Framebuffer> framebuffers;
     std::unordered_map<size_t, GLuint> vaos;  // index vao by indices-buffer
+    GLuint pushConstantBuf;
 
     AdapterImpl* adapter;
+
+private:
+    void initPushConstantBuffer();
+    void initSwapchain();
 };
 
 }

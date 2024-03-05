@@ -1,9 +1,10 @@
 #include "graphics/rhi/gl4/adapter.hpp"
-#include "graphics/rhi/gl4/glpch.hpp"
-#include "graphics/rhi/gl4/device.hpp"
-#include "common/log_tag.hpp"
 #include "common/log.hpp"
+#include "common/log_tag.hpp"
+#include "graphics/rhi/gl4/device.hpp"
 #include "graphics/rhi/gl4/glcall.hpp"
+#include "graphics/rhi/gl4/glpch.hpp"
+
 
 namespace nickel::rhi::gl4 {
 
@@ -87,25 +88,28 @@ AdapterImpl::AdapterImpl(SDL_Window *window) : window{window} {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
-                        SDL_GL_CONTEXT_DEBUG_FLAG);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
     ctx_ = SDL_GL_CreateContext(window);
 
     gladLoadGL();
 
-    int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    int flags;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         LOGI(log_tag::GL, "enable opengl debug output");
         glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); 
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(glDebugOutput, nullptr);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
+                              nullptr, GL_TRUE);
     }
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     GL_CALL(glViewport(0, 0, w, h));
+
+    querySupportLimits();
 }
 
 AdapterImpl::~AdapterImpl() {
@@ -116,7 +120,7 @@ GPUSupportFeatures AdapterImpl::Features() {
     return {};
 }
 
-const GPUSupportLimits& AdapterImpl::Limits() const {
+const GPUSupportLimits &AdapterImpl::Limits() const {
     return limits_;
 }
 
@@ -138,6 +142,7 @@ void AdapterImpl::querySupportLimits() {
     limits_.minUniformBufferOffsetAlignment = value;
     glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &value);
     limits_.minStorageBufferOffsetAlignment = value;
+    limits_.maxPushConstantSize = _NICKEL_GL_MAX_PUSHCONSTANT_SIZE;
 }
 
 }  // namespace nickel::rhi::gl4

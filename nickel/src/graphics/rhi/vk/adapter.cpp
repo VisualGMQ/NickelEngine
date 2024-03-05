@@ -120,6 +120,7 @@ void AdapterImpl::querySupportLimits() {
     limits_.nonCoherentAtomSize = limits.nonCoherentAtomSize;
     limits_.minUniformBufferOffsetAlignment = limits.minUniformBufferOffsetAlignment;
     limits_.minStorageBufferOffsetAlignment = limits.minStorageBufferOffsetAlignment;
+    limits_.maxPushConstantSize = limits.maxPushConstantsSize;
 }
 
 Device AdapterImpl::RequestDevice() {

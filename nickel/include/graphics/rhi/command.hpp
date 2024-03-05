@@ -40,6 +40,7 @@ public:
     void SetBindGroup(BindGroup);
     void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset);
     void SetPipeline(RenderPipeline);
+    void SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size);
 
     void End();
 

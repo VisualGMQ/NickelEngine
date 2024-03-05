@@ -1,13 +1,16 @@
 #include "graphics/rhi/gl4/render_pipeline.hpp"
 #include "graphics/rhi/gl4/convert.hpp"
+#include "graphics/rhi/gl4/device.hpp"
 #include "graphics/rhi/gl4/glcall.hpp"
+#include "graphics/rhi/gl4/pipeline_layout.hpp"
 #include "graphics/rhi/gl4/shader.hpp"
-#include "graphics/rhi/gl4/buffer.hpp"
+
 
 namespace nickel::rhi::gl4 {
 
-RenderPipelineImpl::RenderPipelineImpl(const RenderPipeline::Descriptor& desc)
-    : desc_{desc} {
+RenderPipelineImpl::RenderPipelineImpl(DeviceImpl& device,
+                                       const RenderPipeline::Descriptor& desc)
+    : dev_{device}, desc_{desc} {
     createShader(desc);
     GL_CALL(glGenVertexArrays(1, &vao_));
 }
@@ -141,6 +144,14 @@ void RenderPipelineImpl::Apply() const {
                              target.writeMask & ColorWriteMask::Green,
                              target.writeMask & ColorWriteMask::Blue,
                              target.writeMask & ColorWriteMask::Alpha));
+    }
+
+    // push constant apply
+    auto& ranges = static_cast<const PipelineLayoutImpl*>(GetLayout().Impl())
+                       ->Descriptor()
+                       .pushConstRanges;
+    if (!ranges.empty()) {
+        GL_CALL(glBindBufferBase(GL_UNIFORM_BUFFER, _NICKEL_PUSHCONSTANT_BIND_SLOT, dev_.pushConstantBuf));
     }
 }
 

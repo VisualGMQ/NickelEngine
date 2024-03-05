@@ -46,7 +46,6 @@ struct Context final {
         layout.Destroy();
         pipeline.Destroy();
         uniformBuffer.Destroy();
-        bindGroupLayout.Destroy();
         depth.Destroy();
         depthView.Destroy();
         for (auto elem : images) {
@@ -56,11 +55,11 @@ struct Context final {
         for (auto elem : samplers) {
             elem.Destroy();
         }
-
         whiteTexture.view.Destroy();
         whiteTexture.texture.Destroy();
         whiteTextureSampler.Destroy();
         whiteTextureBindGroup.Destroy();
+        bindGroupLayout.Destroy();
     }
 };
 
@@ -202,7 +201,7 @@ struct GPUMesh final {
 };
 
 struct Node final {
-    nickel::cgmath::Mat44 transform;
+    nickel::cgmath::Mat44 transform = nickel::cgmath::Mat44::Identity();
     GPUMesh mesh;
     std::vector<std::unique_ptr<Node>> children;
 };
@@ -591,7 +590,8 @@ private:
 };
 
 void renderNodeRecursive(Node& node, Context& ctx,
-                         RenderPassEncoder& renderPass) {
+                         RenderPassEncoder& renderPass, const nickel::cgmath::Mat44& model) {
+    auto newModel = model * node.transform;
     auto& mesh = node.mesh;
     if (mesh) {
         for (auto& prim : node.mesh.primitives) {
@@ -603,6 +603,8 @@ void renderNodeRecursive(Node& node, Context& ctx,
                                           prim.indicesBufView.size);
             }
 
+            renderPass.SetPushConstant(ShaderStage::Vertex, newModel.data, 0,
+                                       sizeof(nickel::cgmath::Mat44));
             renderPass.SetVertexBuffer(0, mesh.posBuf, prim.posBufView.offset,
                                        prim.posBufView.size);
             renderPass.SetVertexBuffer(1, mesh.uvBuf, prim.uvBufView.offset,
@@ -620,14 +622,15 @@ void renderNodeRecursive(Node& node, Context& ctx,
     }
 
     for (auto& child : node.children) {
-        renderNodeRecursive(*child, ctx, renderPass);
+        renderNodeRecursive(*child, ctx, renderPass, newModel);
     }
 }
 
 void RenderScenes(const GLTFNode& node, Context& ctx,
                   RenderPassEncoder& renderPass) {
     for (auto& scene : node.scenes) {
-        renderNodeRecursive(*scene.node, ctx, renderPass);
+        renderNodeRecursive(*scene.node, ctx, renderPass,
+                            nickel::cgmath::Mat44::Identity());
     }
 }
 
@@ -687,6 +690,11 @@ void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
 void initPipelineLayout(Context& ctx, Device& device) {
     PipelineLayout::Descriptor layoutDesc;
     layoutDesc.layouts.emplace_back(ctx.bindGroupLayout);
+    PushConstantRange range;
+    range.offset = 0;
+    range.size = sizeof(nickel::cgmath::Mat44);
+    range.stage = ShaderStage::Vertex;
+    layoutDesc.pushConstRanges.emplace_back(range);
     ctx.layout = device.CreatePipelineLayout(layoutDesc);
 }
 
@@ -947,9 +955,9 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 
     float half = x * 0.5;
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model =  nickel::cgmath::CreateScale({3, 3, 3}) *
-        // nickel::cgmath::CreateScale({0.01, 0.01, 0.01}) *
-        nickel::cgmath::CreateXYZRotation({x, y, 0});
+    mvp.model = nickel::cgmath::CreateScale({3, 3, 3}) *
+                // nickel::cgmath::CreateScale({0.01, 0.01, 0.01}) *
+                nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
@@ -975,7 +983,6 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

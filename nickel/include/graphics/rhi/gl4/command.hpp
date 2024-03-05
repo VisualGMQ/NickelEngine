@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphics/rhi/gl4/adapter.hpp"
 #include "graphics/rhi/gl4/glpch.hpp"
 #include "graphics/rhi/impl/command.hpp"
 
@@ -61,6 +62,13 @@ struct CmdSetRenderPipeline final {
     RenderPipeline pipeline;
 };
 
+struct CmdPushConstant final {
+    Flags<ShaderStage> stage;
+    std::vector<unsigned char> data;
+    uint32_t offset;
+    uint32_t size;
+};
+
 enum class CmdType {
     Unknown,
     SetBindGroup,
@@ -71,13 +79,14 @@ enum class CmdType {
     DrawIndexed,
     CopyBuf2Buf,
     CopyBuf2Texture,
+    PushConstant,
 };
 
 struct Command final {
     using CmdUnion =
         std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw,
                      CmdDrawIndexed, CmdSetVertexBuffer, CmdSetIndexBuffer,
-                     CmdSetBindGroup, CmdSetRenderPipeline>;
+                     CmdSetBindGroup, CmdSetRenderPipeline, CmdPushConstant>;
 
     CmdType type = CmdType::Unknown;
     CmdUnion cmd;
@@ -129,6 +138,8 @@ public:
     void SetBindGroup(BindGroup,
                       const std::vector<uint32_t>& dynamicOffset) override;
     void SetPipeline(RenderPipeline) override;
+    void SetPushConstant(ShaderStage stage, void* value, uint32_t offset,
+                         uint32_t size) override;
 
     void End() override;
 

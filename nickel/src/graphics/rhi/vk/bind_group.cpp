@@ -187,6 +187,10 @@ struct WriteDescriptorHelper final {
         : set_{set}, dev_{dev}, binding_{binding} {}
 
     void operator()(const BufferBinding& binding) const {
+        if (!binding.buffer) {
+            return ;
+        }
+
         vk::WriteDescriptorSet writeInfo;
         vk::DescriptorBufferInfo bufferInfo;
 
@@ -207,6 +211,10 @@ struct WriteDescriptorHelper final {
     }
 
     void operator()(const SamplerBinding& binding) const {
+        if (!binding.sampler) {
+            return ;
+        }
+
         vk::WriteDescriptorSet writeInfo;
         vk::DescriptorImageInfo imageInfo;
 
@@ -227,6 +235,10 @@ struct WriteDescriptorHelper final {
     }
 
     void operator()(const StorageTextureBinding& binding) const {
+        if (!binding.view) {
+            return ;
+        }
+        
         vk::WriteDescriptorSet writeInfo;
         vk::DescriptorImageInfo imageInfo;
 
@@ -245,6 +257,10 @@ struct WriteDescriptorHelper final {
     }
 
     void operator()(const TextureBinding& binding) const {
+        if (!binding.view) {
+            return ;
+        }
+
         vk::WriteDescriptorSet writeInfo;
         vk::DescriptorImageInfo imageInfo;
 

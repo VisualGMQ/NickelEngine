@@ -6,6 +6,8 @@
 
 namespace nickel::rhi::gl4 {
 
+constexpr uint32_t _NICKEL_GL_MAX_PUSHCONSTANT_SIZE = 128;
+
 class AdapterImpl : public rhi::AdapterImpl {
 public:
     AdapterImpl(SDL_Window* window);

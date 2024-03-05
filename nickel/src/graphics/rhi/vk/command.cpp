@@ -64,6 +64,16 @@ void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
         static_cast<const RenderPipelineImpl*>(pipeline.Impl())->pipeline);
 }
 
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size) {
+    cmd_.pushConstants(
+        static_cast<const PipelineLayoutImpl*>(
+            static_cast<const RenderPipelineImpl*>(pipeline_.Impl())
+                ->GetLayout()
+                .Impl())
+            ->layout,
+        ShaderStage2Vk(stage), offset, size, value);
+}
+
 void RenderPassEncoderImpl::End() {
     cmd_.endRenderPass();
 }
@@ -205,14 +215,15 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         .setFramebuffer(fbo);
     buf_.beginRenderPass(info, vk::SubpassContents::eInline);
 
-    return RenderPassEncoder{new RenderPassEncoderImpl{dev_, buf_}};
+    return RenderPassEncoder{
+        new RenderPassEncoderImpl{dev_, buf_}
+    };
 }
 
 CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
     : dev_{dev}, pool_{pool} {
     vk::CommandBufferAllocateInfo info;
-    info.setCommandPool(pool)
-        .setCommandBufferCount(1);
+    info.setCommandPool(pool).setCommandBufferCount(1);
     std::vector<vk::CommandBuffer> cmds;
     VK_CALL(cmds, dev.device.allocateCommandBuffers(info));
     buf_ = cmds[0];
@@ -240,7 +251,7 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
         LOGE(log_tag::Vulkan, "record non-compatible commands");
     }
     type_ = CmdType::CopyData;
-    
+
     // maybe we need barrier
     vk::BufferCopy region;
     region.setSize(size).setSrcOffset(srcOffset).setDstOffset(dstOffset);
@@ -276,9 +287,8 @@ void CommandEncoderImpl::CopyBufferToTexture(
         .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
         .setSubresourceRange(range);
     buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                            vk::PipelineStageFlagBits::eTransfer,
-                            vk::DependencyFlagBits::eByRegion, {}, {},
-                            barrier);
+                         vk::PipelineStageFlagBits::eTransfer,
+                         vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
 
     vk::ImageSubresourceLayers layers;
     layers.setAspectMask(aspect)
@@ -291,19 +301,18 @@ void CommandEncoderImpl::CopyBufferToTexture(
         .setBufferImageHeight(src.rowsPerImage)
         .setBufferRowLength(src.bytesPerRow)
         .setImageExtent({image.Extent().width, image.Extent().height,
-                            image.Extent().depthOrArrayLayers})
+                         image.Extent().depthOrArrayLayers})
         .setImageSubresource(layers);
     buf_.copyBufferToImage(buffer, image.GetImage(),
-                            vk::ImageLayout::eTransferDstOptimal, copyInfo);
+                           vk::ImageLayout::eTransferDstOptimal, copyInfo);
 
     barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
         .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
         .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
         .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
     buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                            vk::PipelineStageFlagBits::eFragmentShader,
-                            vk::DependencyFlagBits::eByRegion, {}, {},
-                            barrier);
+                         vk::PipelineStageFlagBits::eFragmentShader,
+                         vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
 }
 
 CommandBuffer CommandEncoderImpl::Finish() {

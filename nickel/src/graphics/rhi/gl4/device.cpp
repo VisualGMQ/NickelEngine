@@ -7,19 +7,34 @@ namespace nickel::rhi::gl4 {
 
 DeviceImpl::DeviceImpl(AdapterImpl& adapter)
     : queue{new QueueImpl{*this}}, adapter(&adapter) {
+    initSwapchain();
+    initPushConstantBuffer();
+}
+
+void DeviceImpl::initSwapchain() {
     GL_CALL(glGenTextures(1, &swapchainTexture));
     int w, h;
-    SDL_GetWindowSize(adapter.window, &w, &h);
+    SDL_GetWindowSize(adapter->window, &w, &h);
     GL_CALL(glBindTexture(GL_TEXTURE_2D, swapchainTexture));
-    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
+    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                         GL_UNSIGNED_BYTE, 0));
     GL_CALL(glGenFramebuffers(1, &swapchainFramebuffer));
     GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, swapchainFramebuffer));
     GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                    GL_TEXTURE_2D, swapchainTexture, 0));
 }
 
+void DeviceImpl::initPushConstantBuffer() {
+    GL_CALL(glGenBuffers(1, &pushConstantBuf));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, pushConstantBuf));
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, adapter->Limits().maxPushConstantSize,
+                         0, GL_DYNAMIC_DRAW));
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, 0));
+}
+
 DeviceImpl::~DeviceImpl() {
     GL_CALL(glDeleteTextures(1, &swapchainTexture));
+    GL_CALL(glDeleteBuffers(1, &pushConstantBuf));
     for (auto fbo : framebuffers) {
         fbo.Destroy();
     }

@@ -2,7 +2,8 @@
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 texCoord;
-layout(location = 0) out vec2 fragUV;
+
+out vec2 fragUV;
 
 layout(binding = 0) uniform MyUniform {
     mat4 model;
@@ -10,11 +11,11 @@ layout(binding = 0) uniform MyUniform {
     mat4 proj;
 } MVP;
 
-// layout(binding = 3) uniform PreModelUniform {
-//     mat4 mat;
-// } preModelUniform;
+layout(binding = 16) uniform PushConstant {
+    mat4 model;
+} pushConstant;
 
 void main() {
-    gl_Position = MVP.proj * MVP.view * MVP.model /* preModelUniform.mat */ * vec4(inPosition, 1.0);
+    gl_Position = MVP.proj * MVP.view * MVP.model * pushConstant.model * vec4(inPosition, 1.0);
     fragUV = texCoord;
 }

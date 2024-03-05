@@ -7,8 +7,8 @@ namespace nickel::rhi {
 class PipelineLayoutImpl;
 
 struct PushConstantRange final {
-    uint64_t offset;
-    uint64_t size;
+    uint64_t offset {};
+    uint64_t size {};
     Flags<ShaderStage> stage;
 };
 

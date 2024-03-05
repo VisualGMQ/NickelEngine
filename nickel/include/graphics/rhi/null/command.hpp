@@ -18,6 +18,7 @@ public:
     void SetBindGroup(BindGroup) override;
     void SetBindGroup(BindGroup, const std::vector<uint32_t>&) override;
     void SetPipeline(RenderPipeline) override;
+    void SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size) override;
 
     void End() override;
 };

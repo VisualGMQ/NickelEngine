@@ -8,6 +8,11 @@ namespace nickel::rhi::gl4 {
 class PipelineLayoutImpl: public rhi::PipelineLayoutImpl {
 public:
     explicit PipelineLayoutImpl(const PipelineLayout::Descriptor&);
+
+    const PipelineLayout::Descriptor& Descriptor() const;
+
+private:
+    PipelineLayout::Descriptor desc_;
 };
 
 }

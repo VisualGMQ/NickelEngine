@@ -105,7 +105,8 @@ struct CmdExecutor final {
             (void*)((desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
                          ? 2
                          : 4) *
-                    cmd.firstIndex + setIndexBufCmd_.offset),
+                        cmd.firstIndex +
+                    setIndexBufCmd_.offset),
             cmd.instanceCount, cmd.baseVertex, cmd.firstInstance));
     }
 
@@ -119,7 +120,7 @@ struct CmdExecutor final {
     }
 
     void operator()(const CmdSetIndexBuffer& cmd) {
-        // first we set index buffer and init vao 
+        // first we set index buffer and init vao
         if (auto it = device_.vaos.find((size_t)cmd.buffer.Impl());
             it != device_.vaos.end()) {
             vao_ = it->second;
@@ -144,6 +145,13 @@ struct CmdExecutor final {
             static_cast<const RenderPipelineImpl*>(cmd.pipeline.Impl());
         renderPipeline_->Apply();
         vao_ = renderPipeline_->GetDefaultVAO();
+    }
+
+    void operator()(const CmdPushConstant& cmd) {
+        auto id = renderPipeline_->GetShaderID();
+
+        GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, device_.pushConstantBuf));
+        GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, cmd.offset, cmd.size, cmd.data.data()));
     }
 
 private:
@@ -314,6 +322,23 @@ void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     CmdSetRenderPipeline cmd;
     cmd.pipeline = pipeline;
     buffer_->cmds.push_back({CmdType::SetRenderPipeline, cmd});
+}
+
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value,
+                                            uint32_t offset, uint32_t size) {
+    CmdPushConstant cmd;
+    cmd.stage = stage;
+    cmd.offset = offset;
+    cmd.size = size;
+    cmd.data.resize(size);
+    memcpy(cmd.data.data(), value, size);
+    auto maxSize = device_.adapter->Limits().maxPushConstantSize;
+    if (offset + size >= maxSize) {
+        LOGE(log_tag::GL, "push constant out of range: require ", offset + size,
+             ", has ", maxSize);
+    }
+
+    buffer_->cmds.push_back({CmdType::PushConstant, cmd});
 }
 
 void RenderPassEncoderImpl::End() {}

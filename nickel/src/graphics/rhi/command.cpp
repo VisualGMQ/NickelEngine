@@ -73,6 +73,10 @@ void RenderPassEncoder::SetPipeline(RenderPipeline pipeline) {
     impl_->SetPipeline(pipeline);
 }
 
+void RenderPassEncoder::SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size) {
+    impl_->SetPushConstant(stage, value, offset, size);
+}
+
 void RenderPassEncoder::End() {
     impl_->End();
     if (impl_) {
