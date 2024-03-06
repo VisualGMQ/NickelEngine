@@ -770,6 +770,24 @@ inline Mat44 CreateZRotation(float radians) {
     // clang-format on
 }
 
+inline Mat44 LookAt(const cgmath::Vec3& target, const cgmath::Vec3& srcPos,
+                    const cgmath::Vec3& up) {
+    Assert(up.LengthSqrd() == 1, "lookat param up must be normalized");
+
+    auto zAxis = Normalize(srcPos - target);
+    auto xAxis = nickel::cgmath::Normalize(up.Cross(zAxis));
+    auto yAxis = zAxis.Cross(xAxis);
+
+    // clang-format off
+    return Mat44::FromRow({
+        xAxis.x, xAxis.y, xAxis.z, -xAxis.Dot(srcPos),
+        yAxis.x, yAxis.y, yAxis.z, -yAxis.Dot(srcPos),
+        zAxis.x, zAxis.y, zAxis.z, -zAxis.Dot(srcPos),
+             0,      0,       0,                    1,
+    });
+    // clang-format on
+}
+
 inline Mat44 CreateXRotation(float radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
@@ -972,6 +990,7 @@ T GetRadianIn180Signed(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
     auto sin = Cross(v1, v2);
     return std::acos(cos) * Sign(sin);
 }
+
 
 template <typename T>
 struct Quaternion final {

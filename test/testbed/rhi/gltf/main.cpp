@@ -25,6 +25,67 @@ struct TextureBundle {
     TextureView view;
 };
 
+struct Camera {
+public:
+    friend class SphericalCoordCameraProxy;
+
+    Camera(APIPreference api, const nickel::cgmath::Vec2& size)
+        : proj_{nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
+                                            size.w / size.h, 0.1, 100,
+                                            api == APIPreference::GL)} {}
+
+    auto& View() const { return view_; }
+
+    auto& Proj() const { return proj_; }
+
+    auto& Position() const { return pos_; }
+
+    void Move(const nickel::cgmath::Vec3& pos) { pos_ = pos; }
+
+private:
+    nickel::cgmath::Mat44 proj_;
+    nickel::cgmath::Mat44 view_;
+    nickel::cgmath::Vec3 pos_;
+};
+
+struct SphericalCoordCameraProxy final {
+public:
+    float radius;
+    float phi;
+    float theta;
+
+    SphericalCoordCameraProxy(Camera& camera,
+                              const nickel::cgmath::Vec3& center)
+        : camera_{camera}, center_{center} {
+        auto dir = camera_.pos_ - center_;
+        auto zAxis = nickel::cgmath::Vec3{0, 1, 0};
+        radius = dir.Length();
+        dir.Normalize();
+        Assert(radius != 0, "your camera too close to origin (distance = 0)");
+
+        auto xozVec = nickel::cgmath::Normalize(dir - (dir.Dot(zAxis) * zAxis));
+
+        theta = std::acos(dir.Dot(nickel::cgmath::Vec3{0, 1, 0}));
+        phi = nickel::cgmath::GetRadianIn180Signed(
+            nickel::cgmath::Vec2{1, 0},
+            nickel::cgmath::Vec2{xozVec.x, xozVec.z});
+    }
+
+    void Update2Camera() {
+        auto xoyAxis = nickel::cgmath::Vec2{std::cos(phi), std::sin(phi)} *
+                       std::sin(theta) * radius;
+        auto y = std::cos(theta) * radius;
+
+        camera_.pos_.Set(xoyAxis.x, y, xoyAxis.y);
+        camera_.view_ =
+            nickel::cgmath::LookAt(center_, camera_.pos_, {0, 1, 0});
+    }
+
+private:
+    Camera& camera_;
+    nickel::cgmath::Vec3 center_;
+};
+
 struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
@@ -688,8 +749,9 @@ void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
                        nickel::Window& window) {
     mvp.proj = nickel::cgmath::CreatePersp(
         nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
-        100, adapter.RequestAdapterInfo().api == APIPreference::GL);
-    mvp.view = nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 0});
+        10000, adapter.RequestAdapterInfo().api == APIPreference::GL);
+    mvp.view =
+        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -30});
     mvp.model = nickel::cgmath::Mat44::Identity();
 
     Buffer::Descriptor bufferDesc;
@@ -838,6 +900,10 @@ void StartupSystem(gecs::commands cmds,
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
+    auto& camera = cmds.emplace_resource<Camera>(
+        adapter.RequestAdapterInfo().api, window->Size());
+    camera.Move({0, 0, 10});
+
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
     initUniformBuffer(ctx, adapter, device, window.get());
@@ -924,6 +990,19 @@ void StartupSystem(gecs::commands cmds,
     ctx.pipeline = device.CreateRenderPipeline(desc);
 }
 
+void HandleEvent(gecs::resource<gecs::mut<Camera>> camera,
+                 gecs::resource<nickel::Mouse> mouse) {
+    SphericalCoordCameraProxy proxy(camera.get(), {0, 0, 0});
+
+    auto dist = camera->Position().Length();
+    constexpr float offset = 0.01;
+    if (mouse->LeftBtn().IsPress()) {
+        proxy.phi += mouse->Offset().x * offset;
+        proxy.theta -= mouse->Offset().y * offset;
+    }
+    proxy.Update2Camera();
+}
+
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
                   gecs::resource<gecs::mut<Context>> ctx,
                   gecs::resource<gecs::mut<GLTFNode>> node) {
@@ -966,18 +1045,17 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     texture.Destroy();
 }
 
-void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
-    static float x = 0, y = 0;
+void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
+                 gecs::resource<Camera> camera) {
+    static float y = 0;
 
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateTranslation({0, 0, -30}) *
-                nickel::cgmath::CreateXYZRotation({x, y, 0});
-    nickel::cgmath::CreateXYZRotation({x, y, 0});
-    memcpy(data, mvp.model.data, sizeof(mvp.model));
+    mvp.model = nickel::cgmath::CreateYRotation(y);
+    mvp.view = camera->View();
+    memcpy(data, mvp.model.data, sizeof(mvp.view) * 2);
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
     }
-    x += 0.001;
     y += 0.002;
 }
 
@@ -998,7 +1076,7 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    API = APIPreference::GL;
+    // API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 
@@ -1019,5 +1097,6 @@ void BootstrapSystem(gecs::world& world,
         .regist_update_system<nickel::Keyboard::Update>()
         .regist_update_system<nickel::HandleInputEvents>()
         .regist_update_system<UpdateSystem>()
+        .regist_update_system<HandleEvent>()
         .regist_update_system<LogicUpdate>();
 }
