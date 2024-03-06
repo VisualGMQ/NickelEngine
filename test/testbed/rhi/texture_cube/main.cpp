@@ -67,12 +67,12 @@ void initVertexBuffer(Context& ctx, Device& device) {
     ctx.vertexBuffer.Unmap();
 }
 
-void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device, nickel::Window& window) {
     mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
                                            window.Size().w / window.Size().h,
-                                           0.1, 100);
+                                           0.1, 100, adapter.RequestAdapterInfo().api == APIPreference::GL);
     mvp.view =
-        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -5});
+        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 0});
     mvp.model = nickel::cgmath::Mat44::Identity();
 
     Buffer::Descriptor bufferDesc;
@@ -223,7 +223,7 @@ void StartupSystem(gecs::commands cmds,
     initSampler(ctx, device);
     initImage(ctx, device);
     initVertexBuffer(ctx, device);
-    initUniformBuffer(ctx, device, window.get());
+    initUniformBuffer(ctx, adapter, device, window.get());
     initBindGroupLayout(ctx, device);
     initPipelineLayout(ctx, device);
     initDepthTexture(ctx, device, window.get());
@@ -290,7 +290,7 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
 
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateXYZRotation({x, y, 0});
+    mvp.model = nickel::cgmath::CreateTranslation({0, 0, -5}) * nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
@@ -323,6 +323,7 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
+    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "04 texture cube", 1024, 720, API == APIPreference::Vulkan);
 

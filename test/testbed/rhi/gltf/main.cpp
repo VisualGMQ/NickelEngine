@@ -10,9 +10,9 @@ using namespace nickel::rhi;
 APIPreference API = APIPreference::GL;
 
 struct BufferView {
-    uint32_t offset {};
-    uint64_t size {};
-    uint32_t count {};
+    uint32_t offset{};
+    uint64_t size{};
+    uint32_t count{};
 };
 
 struct Material final {
@@ -268,7 +268,6 @@ private:
             }
         }
 
-
         return scenes;
     }
 
@@ -355,7 +354,8 @@ private:
         return device.CreateSampler(desc);
     }
 
-    BindGroup createBindGroup(Device device, Context& ctx, Buffer colorBuf, std::optional<tinygltf::Texture> texture) {
+    BindGroup createBindGroup(Device device, Context& ctx, Buffer colorBuf,
+                              std::optional<tinygltf::Texture> texture) {
         BindGroup::Descriptor desc;
         desc.layout = ctx.bindGroupLayout;
 
@@ -436,8 +436,8 @@ private:
                     copyBuffer2GPU(device, data.indices, BufferUsage::Index);
             }
             mesh.uvBuf = copyBuffer2GPU(device, data.uvs, BufferUsage::Vertex);
-            // mesh.normBuf =
-            //     copyBuffer2GPU(device, data.normals, BufferUsage::Vertex);
+            mesh.normBuf =
+                copyBuffer2GPU(device, data.normals, BufferUsage::Vertex);
             mesh.colorBuf =
                 copyBuffer2GPU(device, data.colors, BufferUsage::Uniform);
         }
@@ -482,10 +482,24 @@ private:
             BufferView view;
             view.count = indicesCount ? indicesCount.value() : positionCount;
             view.size = view.count * 4 * 2;
-            view.count = view.count;
             view.offset = data.uvs.size();
             data.uvs.resize(data.uvs.size() + view.size, 0);
             primitive.uvBufView = view;
+        }
+
+        if (auto it = attrs.find("NORMAL"); it != attrs.end()) {
+            auto& accessor = model_.accessors[it->second];
+
+            primitive.normBufView = CopyBufferFromGLTF<float>(
+                data.normals, TINYGLTF_TYPE_VEC3, accessor, model_);
+        } else {
+            BufferView view;
+            view.size = view.count * 4 * 3;
+            view.count = view.count;
+            view.offset = data.normals.size();
+            // TODO: generate normal
+            data.normals.resize(data.normals.size() + view.size, 0);
+            primitive.normBufView = view;
         }
 
         if (prim.material != -1) {
@@ -590,7 +604,8 @@ private:
 };
 
 void renderNodeRecursive(Node& node, Context& ctx,
-                         RenderPassEncoder& renderPass, const nickel::cgmath::Mat44& model) {
+                         RenderPassEncoder& renderPass,
+                         const nickel::cgmath::Mat44& model) {
     auto newModel = model * node.transform;
     auto& mesh = node.mesh;
     if (mesh) {
@@ -609,6 +624,8 @@ void renderNodeRecursive(Node& node, Context& ctx,
                                        prim.posBufView.size);
             renderPass.SetVertexBuffer(1, mesh.uvBuf, prim.uvBufView.offset,
                                        prim.uvBufView.size);
+            renderPass.SetVertexBuffer(2, mesh.normBuf, prim.normBufView.offset,
+                                       prim.normBufView.size);
 
             renderPass.SetBindGroup(prim.bindGroup,
                                     {material.basicColorFactor.offset});
@@ -667,12 +684,12 @@ void initShaders(APIPreference api, Device device,
     }
 }
 
-void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
-    mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
-                                           window.Size().w / window.Size().h,
-                                           0.1, 100);
-    mvp.view =
-        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -30});
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
+                       nickel::Window& window) {
+    mvp.proj = nickel::cgmath::CreatePersp(
+        nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
+        100, adapter.RequestAdapterInfo().api == APIPreference::GL);
+    mvp.view = nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 0});
     mvp.model = nickel::cgmath::Mat44::Identity();
 
     Buffer::Descriptor bufferDesc;
@@ -725,19 +742,6 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     entry.binding.entry = bufferBinding2;
     entry.visibility = ShaderStage::Fragment;
     bindGroupLayoutDesc.entries.emplace_back(entry);
-
-    // pre-model mat uniform buffer
-    // BufferBinding bufferBinding3;
-    // bufferBinding3.buffer = ctx.modelMatBuffer;
-    // bufferBinding3.hasDynamicOffset = true;
-    // bufferBinding3.type = BufferType::Uniform;
-    // bufferBinding3.minBindingSize = sizeof(nickel::cgmath::Mat44);
-
-    // entry.arraySize = 1;
-    // entry.binding.binding = 3;
-    // entry.binding.entry = bufferBinding3;
-    // entry.visibility = ShaderStage::Vertex;
-    // bindGroupLayoutDesc.entries.emplace_back(entry);
 
     // sampler
     SamplerBinding samplerBinding;
@@ -836,7 +840,7 @@ void StartupSystem(gecs::commands cmds,
 
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
-    initUniformBuffer(ctx, device, window.get());
+    initUniformBuffer(ctx, adapter, device, window.get());
     initWhiteTexture(ctx, device);
     initBindGroupLayout(ctx, device);
     initWhiteTextureBindGroup(device, ctx);
@@ -880,6 +884,18 @@ void StartupSystem(gecs::commands cmds,
         state.arrayStride = 8;
         attr.format = VertexFormat::Float32x2;
         attr.shaderLocation = 1;
+        attr.offset = 0;
+        state.attributes.push_back(attr);
+        desc.vertex.buffers.emplace_back(std::move(state));
+    }
+
+    // normal buffer
+    {
+        RenderPipeline::BufferState state;
+        RenderPipeline::BufferState::Attribute attr;
+        state.arrayStride = 12;
+        attr.format = VertexFormat::Float32x3;
+        attr.shaderLocation = 2;
         attr.offset = 0;
         state.attributes.push_back(attr);
         desc.vertex.buffers.emplace_back(std::move(state));
@@ -953,11 +969,10 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
 
-    float half = x * 0.5;
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateScale({3, 3, 3}) *
-                // nickel::cgmath::CreateScale({0.01, 0.01, 0.01}) *
+    mvp.model = nickel::cgmath::CreateTranslation({0, 0, -30}) *
                 nickel::cgmath::CreateXYZRotation({x, y, 0});
+    nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
@@ -983,6 +998,7 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
+    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

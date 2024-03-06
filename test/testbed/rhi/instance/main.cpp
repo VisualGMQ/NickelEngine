@@ -68,10 +68,11 @@ void initVertexBuffer(Context& ctx, Device& device) {
     ctx.vertexBuffer.Unmap();
 }
 
-void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
-    mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
-                                           window.Size().w / window.Size().h,
-                                           0.1, 100);
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
+                       nickel::Window& window) {
+    mvp.proj = nickel::cgmath::CreatePersp(
+        nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
+        100, adapter.RequestAdapterInfo().api == APIPreference::GL);
     mvp.view =
         nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -30});
     mvp.model = nickel::cgmath::Mat44::Identity();
@@ -256,7 +257,7 @@ void StartupSystem(gecs::commands cmds,
     initSampler(ctx, device);
     initImage(ctx, device);
     initVertexBuffer(ctx, device);
-    initUniformBuffer(ctx, device, window.get());
+    initUniformBuffer(ctx, adapter, device, window.get());
     initInstanceUniformBuffer(ctx, device);
     initBindGroupLayout(ctx, device);
     initPipelineLayout(ctx, device);
@@ -352,7 +353,8 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     auto& args = reg.res<nickel::CmdLineArgs>()->Args();
-    bool isVulkanBackend = args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+    bool isVulkanBackend =
+        args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
     if (isVulkanBackend) {
         API = APIPreference::Vulkan;
     } else {

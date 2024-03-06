@@ -73,10 +73,10 @@ void initIndicesBuffer(Context& ctx, Device& device) {
     ctx.indicesBuffer.Unmap();
 }
 
-void initUniformBuffer(Context& ctx, Device& device, nickel::Window& window) {
-    mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
-                                           window.Size().w / window.Size().h,
-                                           0.1, 100);
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device, nickel::Window& window) {
+    mvp.proj = nickel::cgmath::CreatePersp(
+        nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
+        100, adapter.RequestAdapterInfo().api == APIPreference::GL);
     mvp.view =
         nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -5});
     mvp.model = nickel::cgmath::Mat44::Identity();
@@ -161,7 +161,7 @@ void StartupSystem(gecs::commands cmds,
 
     initVertexBuffer(ctx, device);
     initIndicesBuffer(ctx, device);
-    initUniformBuffer(ctx, device, window.get());
+    initUniformBuffer(ctx, adapter, device, window.get());
     initBindGroupLayout(ctx, device);
     initPipelineLayout(ctx, device);
     initDepthTexture(ctx, device, window.get());
