@@ -11,19 +11,23 @@ Keyboard::Keyboard() {
 
 void ConnectInput2Event(gecs::event_dispatcher<MouseButtonEvent> btn,
                         gecs::event_dispatcher<MouseMotionEvent> motion,
+                        gecs::event_dispatcher<MouseWheelEvent> wheel,
                         gecs::event_dispatcher<KeyboardEvent> keyboard) {
     motion.sink().add<Mouse::mouseMotionEventHandle>();
     btn.sink().add<Mouse::mouseBtnEventHandle>();
+    wheel.sink().add<Mouse::mouseWheelEventHandle>();
     keyboard.sink().add<Keyboard::keyboardEventHandle>();
 }
 
 void HandleInputEvents(gecs::event_dispatcher<MouseButtonEvent> btn,
                        gecs::event_dispatcher<MouseMotionEvent> motion,
+                       gecs::event_dispatcher<MouseWheelEvent> wheel,
                        gecs::event_dispatcher<KeyboardEvent> keyboard) {
     PROFILE_BEGIN();
 
     btn.update();
     motion.update();
+    wheel.update();
     keyboard.update();
 }
 
@@ -49,6 +53,11 @@ void Mouse::mouseBtnEventHandle(const MouseButtonEvent& event,
     btn.isPress = event.action != Action::Release;
 }
 
+void Mouse::mouseWheelEventHandle(const MouseWheelEvent& event,
+                                gecs::resource<gecs::mut<Mouse>> mouse) {
+    mouse->wheel_ = event.offset;
+}
+
 void Keyboard::Update(gecs::resource<gecs::mut<Keyboard>> keyboard) {
     PROFILE_BEGIN();
 
@@ -64,6 +73,7 @@ void Mouse::Update(gecs::resource<gecs::mut<Mouse>> mouse) {
         btn.lastState = btn.isPress;
     }
     mouse->offset_.Set(0, 0);
+    mouse->wheel_.Set(0, 0);
 }
 
 }  // namespace nickel

@@ -900,10 +900,6 @@ void StartupSystem(gecs::commands cmds,
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
-    auto& camera = cmds.emplace_resource<Camera>(
-        adapter.RequestAdapterInfo().api, window->Size());
-    camera.Move({0, 0, 10});
-
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
     initUniformBuffer(ctx, adapter, device, window.get());
@@ -990,17 +986,23 @@ void StartupSystem(gecs::commands cmds,
     ctx.pipeline = device.CreateRenderPipeline(desc);
 }
 
-void HandleEvent(gecs::resource<gecs::mut<Camera>> camera,
+void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
                  gecs::resource<nickel::Mouse> mouse) {
-    SphericalCoordCameraProxy proxy(camera.get(), {0, 0, 0});
-
-    auto dist = camera->Position().Length();
     constexpr float offset = 0.01;
+    constexpr float scaleStep = 0.1;
+    static float scale = 1;
+    static float x = 0, y = 0;
     if (mouse->LeftBtn().IsPress()) {
-        proxy.phi += mouse->Offset().x * offset;
-        proxy.theta -= mouse->Offset().y * offset;
+        y += mouse->Offset().x * offset;
+        x += mouse->Offset().y * offset;
     }
-    proxy.Update2Camera();
+
+    if (auto y = mouse->WheelOffset().y; y != 0) {
+        scale += scaleStep * nickel::cgmath::Sign(y);
+    }
+
+    mvp.model = nickel::cgmath::CreateScale({scale, scale, scale}) *
+                nickel::cgmath::CreateXYZRotation({x, y, 0});
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
@@ -1045,18 +1047,12 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     texture.Destroy();
 }
 
-void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
-                 gecs::resource<Camera> camera) {
-    static float y = 0;
-
+void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateYRotation(y);
-    mvp.view = camera->View();
-    memcpy(data, mvp.model.data, sizeof(mvp.view) * 2);
+    memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
     }
-    y += 0.002;
 }
 
 void ShutdownSystem(gecs::commands cmds,
@@ -1069,14 +1065,17 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     auto& args = reg.res<nickel::CmdLineArgs>()->Args();
+#ifdef NICKEL_HAS_VULKAN
     bool isVulkanBackend =
         args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+#else
+    bool isVulkanBackend = false;
+#endif
     if (isVulkanBackend) {
         API = APIPreference::Vulkan;
     } else {
         API = APIPreference::GL;
     }
-    // API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

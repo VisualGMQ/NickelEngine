@@ -23,7 +23,9 @@ add_subdirectory(efsw)
 set(EASY_PROFILER_NO_GUI ON)
 add_subdirectory(easy_profiler)
 
-add_subdirectory(vulkan)
+if (NICKEL_RHI_ENABLE_VULKAN)
+    add_subdirectory(vulkan)
+endif()
 
 set(TINYGLTF_HEADER_ONLY ON)
 add_subdirectory(tinygltf)

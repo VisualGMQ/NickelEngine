@@ -256,12 +256,17 @@ void ShutdownSystem(gecs::commands cmds,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     auto& args = reg.res<nickel::CmdLineArgs>()->Args();
-    bool isVulkanBackend = args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+#ifdef NICKEL_HAS_VULKAN
+    bool isVulkanBackend =
+        args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
     if (isVulkanBackend) {
         API = APIPreference::Vulkan;
     } else {
         API = APIPreference::GL;
     }
+#else
+    bool isVulkanBackend = false;
+#endif
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "03 cube", 1024, 720, API == APIPreference::Vulkan);
 

@@ -297,6 +297,16 @@ void EventPoller::Poll() const {
             reg->event_dispatcher<MouseButtonEvent>().enqueue(e);
         }
 
+        if (event.type == SDL_MOUSEWHEEL) {
+            MouseWheelEvent e;
+            int factor =
+                event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
+            e.offset.x = event.wheel.preciseX * factor;
+            e.offset.y = event.wheel.preciseY * factor;
+
+            reg->event_dispatcher<MouseWheelEvent>().enqueue(e);
+        }
+
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
                 event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {

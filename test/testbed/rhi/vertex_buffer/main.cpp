@@ -41,24 +41,22 @@ void initShaders(APIPreference api, Device device,
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/vertex_buffer/shader.glsl.vert")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/vertex_buffer/shader.glsl.vert")
+                              .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/vertex_buffer/shader.glsl.frag")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/vertex_buffer/shader.glsl.frag")
+                              .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     }
 }
 
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
-    auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{API});
+    auto& adapter =
+        cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -151,14 +149,19 @@ void ShutdownSystem(gecs::commands cmds, gecs::resource<gecs::mut<Context>> ctx,
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     auto& args = reg.res<nickel::CmdLineArgs>()->Args();
-    bool isVulkanBackend = args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+#ifdef NICKEL_HAS_VULKAN
+    bool isVulkanBackend =
+        args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
     if (isVulkanBackend) {
         API = APIPreference::Vulkan;
     } else {
         API = APIPreference::GL;
     }
-    nickel::Window& window =
-        reg.commands().emplace_resource<nickel::Window>("02 cube", 1024, 720, API == APIPreference::Vulkan);
+#else
+    bool isVulkanBackend = false;
+#endif
+    nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
+        "02 cube", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

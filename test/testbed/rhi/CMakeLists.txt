@@ -2,6 +2,8 @@ macro(AddRHITest test_name)
     aux_source_directory(./ ${test_name}_src)
     add_executable(${test_name} ${${test_name}_src})
     target_link_libraries(${test_name} PRIVATE Nickel.Runtime Nickel.Graphics)
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    set_tests_properties(${name} PROPERTIES LABELS "visualable")
     CopyDLL(${test_name})
 endmacro(AddRHITest)
 
