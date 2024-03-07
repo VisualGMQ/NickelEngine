@@ -721,7 +721,8 @@ using Mat22 = Mat<CGMATH_NUMERIC_TYPE, 2, 2>;
 using Mat33 = Mat<CGMATH_NUMERIC_TYPE, 3, 3>;
 using Mat44 = Mat<CGMATH_NUMERIC_TYPE, 4, 4>;
 
-inline Mat44 CreatePersp(float fov, float aspect, float near, float far, bool GLCoord = false) {
+inline Mat44 CreatePersp(float fov, float aspect, float near, float far,
+                         bool GLCoord = false) {
     float focal = 1.0 / std::tan(fov * 0.5);
 
     // clang-format off
@@ -991,7 +992,6 @@ T GetRadianIn180Signed(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
     return std::acos(cos) * Sign(sin);
 }
 
-
 template <typename T>
 struct Quaternion final {
     Vec<T, 3> v;
@@ -1064,6 +1064,28 @@ cgmath::Vec<T, 3> RotateByAxis(const cgmath::Vec<T, 3>& v,
                0
     } *
            q.Inverse().v;
+}
+
+template <typename T>
+std::pair<Vec<T, 3>, Vec<T, 3>> GetNormalMapTB(Vec<T, 3> p1, Vec<T, 3> p2,
+                                               Vec<T, 3> p3, Vec<T, 2> uv1,
+                                               Vec<T, 2> uv2, Vec<T, 2> uv3,
+                                               uint32_t idx1, uint32_t idx2,
+                                               uint32_t idx3) {
+    Vec<T, 3> e1{p2 - p1}, e2{p3 - p1};
+    Vec<T, 2> dUV1{uv2 - uv1}, dUV2{uv3 - uv1};
+    float denoInv = 1.0 / dUV1.Cross(dUV2);
+
+    // clang-format off
+    Vec<T, 3> t = (dUV2.y * e1.x - dUV1.y * e2.x +
+                   dUV2.y * e1.y - dUV1.y * e2.y + 
+                   dUV2.y * e1.z - dUV1.y * e2.z) * denoInv;
+    Vec<T, 3> b = (-dUV2.x * e1.x + dUV1.x * e2.x +
+                   -dUV2.x * e1.y + dUV1.x * e2.y + 
+                   -dUV2.x * e1.z + dUV1.x * e2.z) * denoInv;
+    // clang-format on
+
+    return {t, b};
 }
 
 }  // namespace cgmath

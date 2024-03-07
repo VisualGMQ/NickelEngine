@@ -16,8 +16,15 @@ struct BufferView {
 };
 
 struct Material final {
+    struct TextureInfo {
+        uint32_t texture;
+        uint32_t sampler;
+    };
+
     BufferView basicColorFactor;
-    std::optional<uint32_t> texture;
+    std::optional<TextureInfo> basicTexture;
+    std::optional<TextureInfo> normalTexture;
+    BindGroup bindGroup;
 };
 
 struct TextureBundle {
@@ -99,7 +106,9 @@ struct Context final {
     // gltf related
     TextureBundle whiteTexture;
     Sampler whiteTextureSampler;
-    BindGroup whiteTextureBindGroup;
+
+    TextureBundle normalTexture;
+    Sampler normalTextureSampler;
 
     std::vector<Material> materials;
 
@@ -119,7 +128,6 @@ struct Context final {
         whiteTexture.view.Destroy();
         whiteTexture.texture.Destroy();
         whiteTextureSampler.Destroy();
-        whiteTextureBindGroup.Destroy();
         bindGroupLayout.Destroy();
     }
 };
@@ -229,25 +237,20 @@ inline SamplerAddressMode GLTFWrapper2RHI(int type) {
     return SamplerAddressMode::ClampToEdge;
 }
 
-// struct Vertex final {
-//     nickel::cgmath::Vec3 position;
-//     nickel::cgmath::Vec3 normal;
-//     nickel::cgmath::Vec2 uv;
-// };
-
 struct Primitive final {
     BufferView posBufView;
     BufferView normBufView;
+    BufferView tanBufView;
     BufferView uvBufView;
     BufferView colorBufView;
     BufferView indicesBufView;
-    BindGroup bindGroup;
     uint32_t material;
 };
 
 struct GPUMesh final {
     Buffer posBuf;
     Buffer normBuf;
+    Buffer tanBuf;
     Buffer uvBuf;
     Buffer indicesBuf;
     Buffer colorBuf;
@@ -288,6 +291,7 @@ private:
         std::vector<unsigned char> uvs;
         std::vector<unsigned char> colors;
         std::vector<unsigned char> indices;
+        std::vector<unsigned char> tangents;
     };
 
     std::vector<Scene> loadGLTF(const std::filesystem::path& filename,
@@ -416,7 +420,7 @@ private:
     }
 
     BindGroup createBindGroup(Device device, Context& ctx, Buffer colorBuf,
-                              std::optional<tinygltf::Texture> texture) {
+                              const Material& material) {
         BindGroup::Descriptor desc;
         desc.layout = ctx.bindGroupLayout;
 
@@ -431,9 +435,8 @@ private:
         bufferBinding.entry = entry;
         desc.entries.push_back(bufferBinding);
 
-        if (texture) {
-            setTexture2BindGroup(device, ctx, texture.value(), desc);
-        } else {
+        // color texture
+        {
             BindingPoint samplerBinding;
             samplerBinding.binding = 2;
             SamplerBinding binding;
@@ -441,35 +444,32 @@ private:
             binding.view = ctx.whiteTexture.view;
             binding.name = "mySampler";
             samplerBinding.entry = binding;
+
+            if (material.basicTexture) {
+                binding.sampler = ctx.samplers[material.basicTexture->sampler];
+                binding.view = ctx.images[material.basicTexture->texture].view;
+            }
+            desc.entries.push_back(samplerBinding);
+        }
+
+        // normal texture
+        {
+            BindingPoint samplerBinding;
+            samplerBinding.binding = 3;
+            SamplerBinding binding;
+            binding.sampler = ctx.normalTextureSampler;
+            binding.view = ctx.normalTexture.view;
+            binding.name = "normalMapSampler";
+            samplerBinding.entry = binding;
+
+            if (material.normalTexture) {
+                binding.sampler = ctx.samplers[material.normalTexture->sampler];
+                binding.view = ctx.images[material.normalTexture->texture].view;
+            }
             desc.entries.push_back(samplerBinding);
         }
 
         return device.CreateBindGroup(desc);
-    }
-
-    void setTexture2BindGroup(Device device, Context& ctx,
-                              const tinygltf::Texture& texture,
-                              BindGroup::Descriptor& desc) {
-        desc.layout = ctx.bindGroupLayout;
-        BindingPoint entry;
-        entry.binding = 2;
-        SamplerBinding binding;
-        if (texture.sampler == -1) {
-            Sampler::Descriptor desc;
-            desc.u = SamplerAddressMode::Repeat;
-            desc.v = SamplerAddressMode::Repeat;
-            desc.w = SamplerAddressMode::Repeat;
-            desc.min = Filter::Linear;
-            desc.mag = Filter::Linear;
-            binding.sampler =
-                ctx.samplers.emplace_back(device.CreateSampler(desc));
-        } else {
-            binding.sampler = ctx.samplers[texture.sampler];
-        }
-        binding.view = ctx.images[texture.source].view;
-        binding.name = "mySampler";
-        entry.entry = binding;
-        desc.entries.emplace_back(entry);
     }
 
     void preorderNodes(Adapter adapter, Device device, Context& ctx,
@@ -499,6 +499,8 @@ private:
             mesh.uvBuf = copyBuffer2GPU(device, data.uvs, BufferUsage::Vertex);
             mesh.normBuf =
                 copyBuffer2GPU(device, data.normals, BufferUsage::Vertex);
+            mesh.tanBuf =
+                copyBuffer2GPU(device, data.tangents, BufferUsage::Vertex);
             mesh.colorBuf =
                 copyBuffer2GPU(device, data.colors, BufferUsage::Uniform);
         }
@@ -558,9 +560,31 @@ private:
             view.size = view.count * 4 * 3;
             view.count = view.count;
             view.offset = data.normals.size();
-            // TODO: generate normal
+            // TODO: calculate normal
             data.normals.resize(data.normals.size() + view.size, 0);
             primitive.normBufView = view;
+        }
+
+        if (auto it = attrs.find("TANGENT"); it != attrs.end()) {
+            auto& accessor = model_.accessors[it->second];
+
+            primitive.tanBufView = CopyBufferFromGLTF<float>(
+                data.tangents, TINYGLTF_TYPE_VEC4, accessor, model_);
+        } else {
+            BufferView view;
+            view.count = indicesCount ? indicesCount.value() : positionCount;
+            view.size = view.count * 4 * 4;
+            view.offset = data.tangents.size();
+            data.tangents.resize(data.tangents.size() + view.size, 0);
+            // TODO: calcualte correct tangent
+            for (int i = 0; i < view.count; i++) {
+                nickel::cgmath::Vec4 tan{1, 0, 0, 1};
+                memcpy((nickel::cgmath::Vec4*)(data.tangents.data() +
+                                               view.offset) +
+                           i,
+                       tan.data, sizeof(tan));
+            }
+            primitive.tanBufView = view;
         }
 
         if (prim.material != -1) {
@@ -588,10 +612,46 @@ private:
             memcpy(data.colors.data() + mat.basicColorFactor.offset, color.data,
                    sizeof(color.data));
 
-            // basic texture
             if (material.pbrMetallicRoughness.baseColorTexture.index != -1) {
-                mat.texture =
-                    material.pbrMetallicRoughness.baseColorTexture.index;
+                Material::TextureInfo texture;
+                auto& info = model_.textures[material.pbrMetallicRoughness
+                                                 .baseColorTexture.index];
+                texture.texture = info.source;
+                if (info.sampler == -1) {
+                    Sampler::Descriptor desc;
+                    desc.u = SamplerAddressMode::Repeat;
+                    desc.v = SamplerAddressMode::Repeat;
+                    desc.w = SamplerAddressMode::Repeat;
+                    desc.min = Filter::Linear;
+                    desc.mag = Filter::Linear;
+                    auto sampler =
+                        ctx.samplers.emplace_back(dev.CreateSampler(desc));
+                    texture.sampler = ctx.samplers.back() - 1;
+                } else {
+                    texture.sampler = info.sampler;
+                }
+                mat.basicTexture = texture;
+            }
+
+            if (material.normalTexture.index != -1) {
+                Material::TextureInfo texture;
+                auto& info = model_.textures[material.normalTexture.index];
+                texture.texture = info.source;
+                mat.normalTexture = texture;
+
+                if (info.sampler == -1) {
+                    Sampler::Descriptor desc;
+                    desc.u = SamplerAddressMode::Repeat;
+                    desc.v = SamplerAddressMode::Repeat;
+                    desc.w = SamplerAddressMode::Repeat;
+                    desc.min = Filter::Linear;
+                    desc.mag = Filter::Linear;
+                    auto sampler =
+                        ctx.samplers.emplace_back(dev.CreateSampler(desc));
+                    texture.sampler = ctx.samplers.back() - 1;
+                } else {
+                    texture.sampler = info.sampler;
+                }
             }
 
             ctx.materials.emplace_back(std::move(mat));
@@ -611,11 +671,8 @@ private:
     void initBindGroupRecur(Device dev, Context& ctx, Node& node) {
         if (node.mesh) {
             for (auto& prim : node.mesh.primitives) {
-                prim.bindGroup = createBindGroup(
-                    dev, ctx, node.mesh.colorBuf,
-                    ctx.materials.back().texture
-                        ? model_.textures[ctx.materials.back().texture.value()]
-                        : tinygltf::Texture{});
+                ctx.materials[prim.material].bindGroup = createBindGroup(
+                    dev, ctx, node.mesh.colorBuf, ctx.materials[prim.material]);
             }
         }
 
@@ -687,8 +744,10 @@ void renderNodeRecursive(Node& node, Context& ctx,
                                        prim.uvBufView.size);
             renderPass.SetVertexBuffer(2, mesh.normBuf, prim.normBufView.offset,
                                        prim.normBufView.size);
+            renderPass.SetVertexBuffer(3, mesh.tanBuf, prim.tanBufView.offset,
+                                       prim.tanBufView.size);
 
-            renderPass.SetBindGroup(prim.bindGroup,
+            renderPass.SetBindGroup(material.bindGroup,
                                     {material.basicColorFactor.offset});
 
             if (prim.indicesBufView.size > 0) {
@@ -805,16 +864,25 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     entry.visibility = ShaderStage::Fragment;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
-    // sampler
-    SamplerBinding samplerBinding;
-    samplerBinding.type = SamplerBinding::SamplerType::Filtering;
-    samplerBinding.name = "mySampler";
-    samplerBinding.sampler = ctx.whiteTextureSampler;
-    samplerBinding.view = ctx.whiteTexture.view;
+    // color texture sampler
+    SamplerBinding colorTextureBinding;
+    colorTextureBinding.type = SamplerBinding::SamplerType::Filtering;
+    colorTextureBinding.name = "mySampler";
 
     entry.arraySize = 1;
     entry.binding.binding = 2;
-    entry.binding.entry = samplerBinding;
+    entry.binding.entry = colorTextureBinding;
+    entry.visibility = ShaderStage::Fragment;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // normal map sampler
+    SamplerBinding normalTextureBinding;
+    normalTextureBinding.type = SamplerBinding::SamplerType::Filtering;
+    normalTextureBinding.name = "normalMapSampler";
+
+    entry.arraySize = 1;
+    entry.binding.binding = 3;
+    entry.binding.entry = normalTextureBinding;
     entry.visibility = ShaderStage::Fragment;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
@@ -833,7 +901,8 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
     ctx.depthView = ctx.depth.CreateView();
 }
 
-void initWhiteTexture(Context& ctx, Device dev) {
+std::tuple<TextureBundle, Sampler, BindGroup> initSingleValueTexture(
+    std::string_view name, BindGroupLayout layout, Device dev, uint32_t color) {
     Texture::Descriptor desc;
     desc.dimension = TextureType::Dim2;
     desc.format = TextureFormat::RGBA8_UNORM_SRGB;
@@ -850,16 +919,16 @@ void initWhiteTexture(Context& ctx, Device dev) {
     bufDesc.size = 4;
     bufDesc.usage = BufferUsage::CopySrc;
     bufDesc.mappedAtCreation = true;
-    uint32_t data = 0xFFFFFFFF;
     auto buf = dev.CreateBuffer(bufDesc);
-    memcpy(buf.GetMappedRange(), &data, sizeof(uint32_t));
+    memcpy(buf.GetMappedRange(), &color, sizeof(uint32_t));
     buf.Unmap();
 
     Sampler::Descriptor samplerDesc;
     samplerDesc.u = SamplerAddressMode::Repeat;
     samplerDesc.v = SamplerAddressMode::Repeat;
     samplerDesc.w = SamplerAddressMode::Repeat;
-    ctx.whiteTextureSampler = dev.CreateSampler(samplerDesc);
+
+    auto sampler = dev.CreateSampler(samplerDesc);
 
     auto encoder = dev.CreateCommandEncoder();
     CommandEncoder::BufTexCopySrc src;
@@ -874,23 +943,33 @@ void initWhiteTexture(Context& ctx, Device dev) {
     encoder.Destroy();
     buf.Destroy();
 
-    ctx.whiteTexture = std::move(bundle);
-}
-
-void initWhiteTextureBindGroup(Device device, Context& ctx) {
-    auto& bundle = ctx.whiteTexture;
-
     BindGroup::Descriptor bindGroupDesc;
-    bindGroupDesc.layout = ctx.bindGroupLayout;
+    bindGroupDesc.layout = layout;
     BindingPoint entry;
     entry.binding = 2;
     SamplerBinding binding;
-    binding.sampler = ctx.whiteTextureSampler;
+    binding.sampler = sampler;
     binding.view = bundle.view;
-    binding.name = "mySampler";
+    binding.name = name;
     entry.entry = binding;
     bindGroupDesc.entries.emplace_back(entry);
-    ctx.whiteTextureBindGroup = device.CreateBindGroup(bindGroupDesc);
+    auto bindGroup = dev.CreateBindGroup(bindGroupDesc);
+
+    return {bundle, sampler, bindGroup};
+}
+
+void initWhiteTexture(Context& ctx, Device dev) {
+    auto [bundle, sampler, bindGroup] = initSingleValueTexture(
+        "mySampler", ctx.bindGroupLayout, dev, 0xFFFFFFFF);
+    ctx.whiteTextureSampler = sampler;
+    ctx.whiteTexture = bundle;
+}
+
+void initNormalTexture(Context& ctx, Device dev) {
+    auto [bundle, sampler, bindGroup] = initSingleValueTexture(
+        "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF0000);
+    ctx.normalTextureSampler = sampler;
+    ctx.normalTexture = bundle;
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -903,16 +982,16 @@ void StartupSystem(gecs::commands cmds,
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
     initUniformBuffer(ctx, adapter, device, window.get());
-    initWhiteTexture(ctx, device);
     initBindGroupLayout(ctx, device);
-    initWhiteTextureBindGroup(device, ctx);
+    initWhiteTexture(ctx, device);
+    initNormalTexture(ctx, device);
 
     GLTFLoader loader;
     cmds.emplace_resource<GLTFNode>(loader.Load(
-        std::filesystem::path{
-            // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
-            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/"
-            "CesiumMilkTruck.gltf"},
+        std::filesystem::path{"external/glTF-Sample-Models/2.0/2CylinderEngine/"
+                              "glTF/2CylinderEngine.gltf"},
+        // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
+        // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
         // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
         // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
         // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
@@ -963,6 +1042,18 @@ void StartupSystem(gecs::commands cmds,
         desc.vertex.buffers.emplace_back(std::move(state));
     }
 
+    // tangent buffer
+    {
+        RenderPipeline::BufferState state;
+        RenderPipeline::BufferState::Attribute attr;
+        state.arrayStride = 16;
+        attr.format = VertexFormat::Float32x4;
+        attr.shaderLocation = 3;
+        attr.offset = 0;
+        state.attributes.push_back(attr);
+        desc.vertex.buffers.emplace_back(std::move(state));
+    }
+
     desc.viewport.viewport.x = 0;
     desc.viewport.viewport.y = 0;
     desc.viewport.viewport.w = window->Size().w;
@@ -983,13 +1074,15 @@ void StartupSystem(gecs::commands cmds,
     depthStencilState.depthCompare = CompareOp::Greater;
     desc.depthStencil = depthStencilState;
 
+    desc.primitive.cullMode = CullMode::Back;
+
     ctx.pipeline = device.CreateRenderPipeline(desc);
 }
 
 void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
                  gecs::resource<nickel::Mouse> mouse) {
     constexpr float offset = 0.01;
-    constexpr float scaleStep = 0.1;
+    constexpr float scaleStep = 0.01;
     static float scale = 1;
     static float x = 0, y = 0;
     if (mouse->LeftBtn().IsPress()) {
@@ -1001,6 +1094,9 @@ void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
         scale += scaleStep * nickel::cgmath::Sign(y);
     }
 
+    if (scale < 0) {
+        scale = 0.001;
+    }
     mvp.model = nickel::cgmath::CreateScale({scale, scale, scale}) *
                 nickel::cgmath::CreateXYZRotation({x, y, 0});
 }

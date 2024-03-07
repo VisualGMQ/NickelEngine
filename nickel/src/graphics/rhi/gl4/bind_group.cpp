@@ -43,13 +43,12 @@ struct ResourceBindHelper final {
     }
 
     bool operator()(const SamplerBinding& binding) {
-        GLuint index =
-            glGetUniformLocation(pipeline_.GetShaderID(), binding.name.c_str());
-        GL_CALL(glActiveTexture(GL_TEXTURE0 + textureCount_));
-        static_cast<const TextureImpl*>(binding.view.Texture().Impl())->Bind();
-        GL_CALL(glUniform1i(index, textureCount_));
+        GL_CALL(glActiveTexture(GL_TEXTURE0 + entry_.binding));
+        auto texture = static_cast<const TextureImpl*>(binding.view.Texture().Impl());
+        texture->Bind(entry_.binding);
+
         GL_CALL(glBindSampler(
-            textureCount_,
+            entry_.binding,
             static_cast<const SamplerImpl*>(binding.sampler.Impl())->id));
         textureCount_++;
         return false;
@@ -61,11 +60,9 @@ struct ResourceBindHelper final {
     }
 
     bool operator()(const TextureBinding& binding) {
-        GLuint index =
-            glGetUniformLocation(pipeline_.GetShaderID(), binding.name.c_str());
-        GL_CALL(glActiveTexture(GL_TEXTURE0 + textureCount_));
-        static_cast<const TextureImpl*>(binding.view.Texture().Impl())->Bind();
-        GL_CALL(glUniform1i(index, textureCount_));
+        GL_CALL(glActiveTexture(GL_TEXTURE0 + entry_.binding));
+        auto texture = static_cast<const TextureImpl*>(binding.view.Texture().Impl());
+        texture->Bind(entry_.binding);
         textureCount_++;
         return false;
     }
