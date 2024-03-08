@@ -97,6 +97,7 @@ struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
     Buffer uniformBuffer;
+    Buffer colorBuffer;
     BindGroupLayout bindGroupLayout;
     Texture depth;
     TextureView depthView;
@@ -253,7 +254,6 @@ struct GPUMesh final {
     Buffer tanBuf;
     Buffer uvBuf;
     Buffer indicesBuf;
-    Buffer colorBuf;
     std::vector<Material> materials;
 
     std::vector<Primitive> primitives;
@@ -289,7 +289,6 @@ private:
         std::vector<unsigned char> positions;
         std::vector<unsigned char> normals;
         std::vector<unsigned char> uvs;
-        std::vector<unsigned char> colors;
         std::vector<unsigned char> indices;
         std::vector<unsigned char> tangents;
     };
@@ -321,13 +320,70 @@ private:
             ctx.samplers.emplace_back(spl);
         }
 
+        std::vector<unsigned char> baseColor;
+        for (auto& material : model_.materials) {
+            Material mat;
+            auto align = adapter.Limits().minUniformBufferOffsetAlignment;
+            mat.basicColorFactor.count = 4;
+            mat.basicColorFactor.offset =
+                std::ceil(baseColor.size() / (float)align) * align;
+            mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
+            auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
+            baseColor.resize(mat.basicColorFactor.offset +
+                             mat.basicColorFactor.size);
+            nickel::cgmath::Color color(colorFactor[0], colorFactor[1],
+                                        colorFactor[2], colorFactor[3]);
+            memcpy(baseColor.data() + mat.basicColorFactor.offset, color.data,
+                   sizeof(color));
+
+            uint32_t baseColorTextureIdx =
+                material.pbrMetallicRoughness.baseColorTexture.index;
+            if (baseColorTextureIdx != -1) {
+                Material::TextureInfo baseTextureInfo;
+                auto& info = model_.textures[baseColorTextureIdx];
+                if (info.source != -1) {
+                    baseTextureInfo.texture = info.source;
+                    if (info.sampler != -1) {
+                        baseTextureInfo.sampler = info.sampler;
+                    } else {
+                        ctx.samplers.emplace_back(device.CreateSampler({}));
+                        baseTextureInfo.sampler = ctx.samplers.size() - 1;
+                    }
+                }
+                mat.basicTexture = baseTextureInfo;
+            }
+
+            uint32_t normalTextureIdx = material.normalTexture.index;
+            if (normalTextureIdx != -1) {
+                Material::TextureInfo normalTextureInfo;
+                auto& info = model_.textures[normalTextureIdx];
+                if (info.source != -1) {
+                    normalTextureInfo.texture = info.source;
+                    if (info.sampler != -1) {
+                        normalTextureInfo.sampler = info.sampler;
+                    } else {
+                        ctx.samplers.emplace_back(device.CreateSampler({}));
+                        normalTextureInfo.sampler = ctx.samplers.size() - 1;
+                    }
+                }
+                mat.normalTexture = normalTextureInfo;
+            }
+
+            ctx.materials.emplace_back(mat);
+        }
+        ctx.colorBuffer = copyBuffer2GPU(device, baseColor, BufferUsage::Uniform);
+
+        for (auto& material : ctx.materials) {
+            material.bindGroup =
+                createBindGroup(device, ctx, ctx.colorBuffer, material);
+        }
+
         std::vector<Scene> scenes;
         for (auto& scene : model_.scenes) {
             for (auto& n : scene.nodes) {
                 auto node = std::make_unique<Node>();
                 preorderNodes(adapter, device, ctx, model_.nodes[n], model_,
                               *node);
-                initBindGroupRecur(device, ctx, *node);
                 Scene scene{std::move(node)};
                 scenes.emplace_back(std::move(scene));
             }
@@ -443,12 +499,11 @@ private:
             binding.sampler = ctx.whiteTextureSampler;
             binding.view = ctx.whiteTexture.view;
             binding.name = "mySampler";
-            samplerBinding.entry = binding;
-
             if (material.basicTexture) {
                 binding.sampler = ctx.samplers[material.basicTexture->sampler];
                 binding.view = ctx.images[material.basicTexture->texture].view;
             }
+            samplerBinding.entry = binding;
             desc.entries.push_back(samplerBinding);
         }
 
@@ -460,12 +515,11 @@ private:
             binding.sampler = ctx.normalTextureSampler;
             binding.view = ctx.normalTexture.view;
             binding.name = "normalMapSampler";
-            samplerBinding.entry = binding;
-
             if (material.normalTexture) {
                 binding.sampler = ctx.samplers[material.normalTexture->sampler];
                 binding.view = ctx.images[material.normalTexture->texture].view;
             }
+            samplerBinding.entry = binding;
             desc.entries.push_back(samplerBinding);
         }
 
@@ -501,8 +555,6 @@ private:
                 copyBuffer2GPU(device, data.normals, BufferUsage::Vertex);
             mesh.tanBuf =
                 copyBuffer2GPU(device, data.tangents, BufferUsage::Vertex);
-            mesh.colorBuf =
-                copyBuffer2GPU(device, data.colors, BufferUsage::Uniform);
         }
 
         newNode->mesh = std::move(mesh);
@@ -576,109 +628,60 @@ private:
             view.size = view.count * 4 * 4;
             view.offset = data.tangents.size();
             data.tangents.resize(data.tangents.size() + view.size, 0);
-            // TODO: calcualte correct tangent
-            for (int i = 0; i < view.count; i++) {
-                nickel::cgmath::Vec4 tan{1, 0, 0, 1};
-                memcpy((nickel::cgmath::Vec4*)(data.tangents.data() +
-                                               view.offset) +
-                           i,
-                       tan.data, sizeof(tan));
-            }
             primitive.tanBufView = view;
+
+            auto posPtr =
+                (const nickel::cgmath::Vec3*)(data.positions.data() +
+                                              primitive.posBufView.offset);
+            auto uvPtr =
+                (const nickel::cgmath::Vec2*)(data.uvs.data() +
+                                              primitive.uvBufView.offset);
+            auto tanPtr = (nickel::cgmath::Vec4*)(data.tangents.data() +
+                                                  primitive.tanBufView.offset);
+            if (indicesCount) {
+                auto indicesPtr =
+                    (const uint32_t*)(data.indices.data() +
+                                      primitive.indicesBufView.offset);
+                Assert(primitive.indicesBufView.count % 3 == 0,
+                       "indices can't be triangle list");
+                for (int i = 0; i < primitive.indicesBufView.count / 3; i++) {
+                    uint32_t idx1 = *(indicesPtr + i * 3);
+                    uint32_t idx2 = *(indicesPtr + i * 3 + 1);
+                    uint32_t idx3 = *(indicesPtr + i * 3 + 2);
+
+                    auto uv1 = *(uvPtr + idx1);
+                    auto uv2 = *(uvPtr + idx2);
+                    auto uv3 = *(uvPtr + idx3);
+
+                    auto pos1 = *(posPtr + idx1);
+                    auto pos2 = *(posPtr + idx2);
+                    auto pos3 = *(posPtr + idx3);
+
+                    nickel::cgmath::Vec4 tangent;
+
+                    if (uv1 == nickel::cgmath::Vec2{} &&
+                        uv2 == nickel::cgmath::Vec2{} &&
+                        uv3 == nickel::cgmath::Vec2{}) {
+                        tangent.Set(nickel::cgmath::Normalize(pos2 - pos1));
+                        tangent.w = 1;
+                    } else {
+                        auto [tan, _] = nickel::cgmath::GetNormalMapTB(
+                            pos1, pos2, pos3, uv1, uv2, uv3);
+
+                        tangent = nickel::cgmath::Vec4{tan.x, tan.y, tan.z, 1};
+                    }
+                    *(tanPtr + i * 3) = tangent;
+                    *(tanPtr + i * 3 + 1) = tangent;
+                    *(tanPtr + i * 3 + 2) = tangent;
+                }
+            } else {
+                // TODO:
+            }
         }
 
-        if (prim.material != -1) {
-            auto& material = model_.materials[prim.material];
-            Material mat;
-
-            // basic color factor
-            auto align = adapter.Limits().minUniformBufferOffsetAlignment;
-            mat.basicColorFactor.count = 4;
-            mat.basicColorFactor.offset =
-                std::ceil(data.colors.size() / (float)align) * align;
-            mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
-            auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
-            data.colors.resize(mat.basicColorFactor.offset +
-                               mat.basicColorFactor.size);
-            nickel::cgmath::Color color{0, 0, 0, 1};
-            for (int i = 0; i < colorFactor.size(); i++) {
-                color[i] = colorFactor[i];
-            }
-            BufferView view;
-            view.count = 4;
-            view.size = sizeof(nickel::cgmath::Color);
-            view.offset = data.colors.size();
-            primitive.colorBufView = view;
-            memcpy(data.colors.data() + mat.basicColorFactor.offset, color.data,
-                   sizeof(color.data));
-
-            if (material.pbrMetallicRoughness.baseColorTexture.index != -1) {
-                Material::TextureInfo texture;
-                auto& info = model_.textures[material.pbrMetallicRoughness
-                                                 .baseColorTexture.index];
-                texture.texture = info.source;
-                if (info.sampler == -1) {
-                    Sampler::Descriptor desc;
-                    desc.u = SamplerAddressMode::Repeat;
-                    desc.v = SamplerAddressMode::Repeat;
-                    desc.w = SamplerAddressMode::Repeat;
-                    desc.min = Filter::Linear;
-                    desc.mag = Filter::Linear;
-                    auto sampler =
-                        ctx.samplers.emplace_back(dev.CreateSampler(desc));
-                    texture.sampler = ctx.samplers.back() - 1;
-                } else {
-                    texture.sampler = info.sampler;
-                }
-                mat.basicTexture = texture;
-            }
-
-            if (material.normalTexture.index != -1) {
-                Material::TextureInfo texture;
-                auto& info = model_.textures[material.normalTexture.index];
-                texture.texture = info.source;
-                mat.normalTexture = texture;
-
-                if (info.sampler == -1) {
-                    Sampler::Descriptor desc;
-                    desc.u = SamplerAddressMode::Repeat;
-                    desc.v = SamplerAddressMode::Repeat;
-                    desc.w = SamplerAddressMode::Repeat;
-                    desc.min = Filter::Linear;
-                    desc.mag = Filter::Linear;
-                    auto sampler =
-                        ctx.samplers.emplace_back(dev.CreateSampler(desc));
-                    texture.sampler = ctx.samplers.back() - 1;
-                } else {
-                    texture.sampler = info.sampler;
-                }
-            }
-
-            ctx.materials.emplace_back(std::move(mat));
-        } else {
-            Material mat;
-            mat.basicColorFactor.count = 4;
-            mat.basicColorFactor.offset = 0;
-            mat.basicColorFactor.size = 4 * 4;
-            ctx.materials.emplace_back(std::move(mat));
-        }
-
-        primitive.material = ctx.materials.size() - 1;
+        primitive.material = prim.material;
 
         return primitive;
-    }
-
-    void initBindGroupRecur(Device dev, Context& ctx, Node& node) {
-        if (node.mesh) {
-            for (auto& prim : node.mesh.primitives) {
-                ctx.materials[prim.material].bindGroup = createBindGroup(
-                    dev, ctx, node.mesh.colorBuf, ctx.materials[prim.material]);
-            }
-        }
-
-        for (auto& child : node.children) {
-            initBindGroupRecur(dev, ctx, *child);
-        }
     }
 
     nickel::cgmath::Mat44 calcNodeTransform(const tinygltf::Node& node) {
@@ -967,7 +970,7 @@ void initWhiteTexture(Context& ctx, Device dev) {
 
 void initNormalTexture(Context& ctx, Device dev) {
     auto [bundle, sampler, bindGroup] = initSingleValueTexture(
-        "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF0000);
+        "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF7F7F);
     ctx.normalTextureSampler = sampler;
     ctx.normalTexture = bundle;
 }
@@ -988,11 +991,12 @@ void StartupSystem(gecs::commands cmds,
 
     GLTFLoader loader;
     cmds.emplace_resource<GLTFNode>(loader.Load(
-        std::filesystem::path{"external/glTF-Sample-Models/2.0/2CylinderEngine/"
-                              "glTF/2CylinderEngine.gltf"},
-        // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
-        // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
-        // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
+        std::filesystem::path{
+            // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
+            // "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
+            "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
+            // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
+            // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
         // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
         // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
         // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},
@@ -1080,7 +1084,8 @@ void StartupSystem(gecs::commands cmds,
 }
 
 void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
-                 gecs::resource<nickel::Mouse> mouse) {
+                 gecs::resource<nickel::Mouse> mouse,
+                 gecs::resource<nickel::Keyboard> keyboard) {
     constexpr float offset = 0.01;
     constexpr float scaleStep = 0.01;
     static float scale = 1;
@@ -1091,7 +1096,8 @@ void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
     }
 
     if (auto y = mouse->WheelOffset().y; y != 0) {
-        scale += scaleStep * nickel::cgmath::Sign(y);
+        scale += scaleStep * nickel::cgmath::Sign(y) *
+                 (keyboard->Key(nickel::Key::Lctrl).IsPress() ? 100 : 1);
     }
 
     if (scale < 0) {

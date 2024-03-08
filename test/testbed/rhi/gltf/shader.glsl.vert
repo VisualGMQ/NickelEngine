@@ -5,8 +5,10 @@ layout(location = 1) in vec2 inUV;
 layout(location = 2) in vec3 inNormal;
 layout(location = 3) in vec4 inTangent;
 
-out vec2 fragUV;
-out mat3 TBN;
+out VS_OUT {
+    vec2 fragUV;
+    mat3 TBN;
+} vs_out;
 
 layout(binding = 0) uniform MyUniform {
     mat4 model;
@@ -21,13 +23,15 @@ layout(binding = 16) uniform PushConstant {
 void main() {
     mat4 model = MVP.model * pushConstant.model;
     gl_Position = MVP.proj * MVP.view * model * vec4(inPosition, 1.0);
-    fragUV = inUV;
 
-    mat3 matForTBN = mat3(transpose(inverse(model)));
+    vs_out.fragUV = inUV;
 
-    vec3 T = matForTBN * inTangent.xyz;
-    vec3 N = matForTBN * inNormal;
-    vec3 B = cross(N, T) * inTangent.w;
+    mat3 normalMat = transpose(inverse(mat3(model)));
 
-    TBN = mat3(TBN);
+    vec3 T = normalize(normalMat * inTangent.xyz);
+    vec3 N = normalize(normalMat * inNormal);
+    vec3 B = normalize(cross(N, inTangent.xyz) * inTangent.w);
+    B = normalize(normalMat * B);
+
+    vs_out.TBN = mat3(T, B, N);
 }

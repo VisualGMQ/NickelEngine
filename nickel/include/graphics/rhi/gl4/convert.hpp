@@ -417,8 +417,6 @@ inline GLenum TextureFormat2GL(TextureFormat fmt) {
         case TextureFormat::RGBA8_SNORM:
         case TextureFormat::RGBA8_UINT:
         case TextureFormat::RGBA8_SINT:
-        case TextureFormat::BGRA8_UNORM:
-        case TextureFormat::BGRA8_UNORM_SRGB:
         case TextureFormat::RGB9E5_UFLOAT:
         case TextureFormat::RGB10A2_UINT:
         case TextureFormat::RGB10A2_UNORM:
@@ -433,6 +431,9 @@ inline GLenum TextureFormat2GL(TextureFormat fmt) {
         case TextureFormat::RGBA32_SINT:
         case TextureFormat::RGBA32_FLOAT:
             return GL_RGBA;
+        case TextureFormat::BGRA8_UNORM:
+        case TextureFormat::BGRA8_UNORM_SRGB:
+            return GL_BGRA;
         case TextureFormat::STENCIL8:
             return GL_STENCIL_INDEX;
         case TextureFormat::DEPTH16_UNORM:
