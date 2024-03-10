@@ -14,11 +14,12 @@ layout(binding = 1) uniform ColorUniform {
 layout(binding = 2) uniform sampler2D mySampler;
 layout(binding = 3) uniform sampler2D normalMapSampler;
 
-const vec3 lightDir = normalize(vec3(-1, -1, -1));
+const vec3 lightDir = normalize(vec3(-1, -1, 1));
 
 void main() {
-    vec3 normal = fs_in.TBN * normalize(texture(normalMapSampler, fs_in.fragUV).rgb * 2 - 1);
-    normal = normalize(normal);
+    vec3 normal = texture(normalMapSampler, fs_in.fragUV).rgb;
+    normal = normalize(normal * 2.0 - 1.0);
+    normal = normalize(fs_in.TBN * normal);
     float factor = max(dot(-lightDir, normal), 0);
     outColor = factor * vec4(texture(mySampler, fs_in.fragUV).rgb, 1.0) * colorUniform.color;
 }

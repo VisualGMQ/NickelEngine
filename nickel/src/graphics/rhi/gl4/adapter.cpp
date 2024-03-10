@@ -143,6 +143,7 @@ void AdapterImpl::querySupportLimits() {
     glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &value);
     limits_.minStorageBufferOffsetAlignment = value;
     limits_.maxPushConstantSize = _NICKEL_GL_MAX_PUSHCONSTANT_SIZE;
+    limits_.supportGeometryShader = true;
 }
 
 }  // namespace nickel::rhi::gl4

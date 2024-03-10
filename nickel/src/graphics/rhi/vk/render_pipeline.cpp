@@ -64,6 +64,14 @@ void RenderPipelineImpl::createRenderPipeline(
         .setModule(
             static_cast<const ShaderModuleImpl*>(desc.fragment.module.Impl())->module)
         .setPName(desc.fragment.entryPoint.c_str());
+    if (desc.geometry) {
+        shaderStages.resize(3);
+        shaderStages[2]
+            .setStage(vk::ShaderStageFlagBits::eGeometry)
+            .setModule(
+                static_cast<const ShaderModuleImpl*>(desc.geometry->module.Impl())->module)
+            .setPName(desc.fragment.entryPoint.c_str());
+    }
 
     // viewport
     vk::PipelineViewportStateCreateInfo viewportState;
@@ -182,6 +190,16 @@ void RenderPipelineImpl::createRenderPipeline(
         .setRenderPass(renderPass);
 
     VK_CALL(pipeline, dev.device.createGraphicsPipeline(nullptr, info));
+
+    // clear shader module
+    auto module = desc.vertex.module;
+    module.Destroy();
+    module = desc.fragment.module;
+    module.Destroy();
+    if (desc.geometry) {
+        module = desc.geometry->module;
+        module.Destroy();
+    }
 }
 
 void RenderPipelineImpl::createRenderPass(

@@ -14,6 +14,7 @@ struct GPUSupportLimits {
     uint32_t minStorageBufferOffsetAlignment;
     uint32_t nonCoherentAtomSize = 0;
     uint32_t maxPushConstantSize = 0;
+    bool supportGeometryShader;
 };
 
 class AdapterImpl;

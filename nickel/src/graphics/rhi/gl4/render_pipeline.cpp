@@ -33,6 +33,14 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
                         ->CreateShader(GL_FRAGMENT_SHADER);
     GL_CALL(glAttachShader(shaderId_, fragId));
 
+    GLuint geomId = 0;
+    if (desc.geometry) {
+        rhi::ShaderModuleImpl* geomModule = desc.geometry->module.Impl();
+        GLuint geomId = static_cast<ShaderModuleImpl*>(geomModule)
+                            ->CreateShader(GL_GEOMETRY_SHADER);
+        GL_CALL(glAttachShader(shaderId_, geomId));
+    }
+
     GL_CALL(glLinkProgram(shaderId_));
 
     int success;
@@ -45,6 +53,9 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
 
     GL_CALL(glDeleteShader(vertexId));
     GL_CALL(glDeleteShader(fragId));
+    if (desc.geometry) {
+        GL_CALL(glDeleteShader(geomId));
+    }
 }
 
 void RenderPipelineImpl::Apply() const {
@@ -151,7 +162,9 @@ void RenderPipelineImpl::Apply() const {
                        ->Descriptor()
                        .pushConstRanges;
     if (!ranges.empty()) {
-        GL_CALL(glBindBufferBase(GL_UNIFORM_BUFFER, _NICKEL_PUSHCONSTANT_BIND_SLOT, dev_.pushConstantBuf));
+        GL_CALL(glBindBufferBase(GL_UNIFORM_BUFFER,
+                                 _NICKEL_PUSHCONSTANT_BIND_SLOT,
+                                 dev_.pushConstantBuf));
     }
 }
 

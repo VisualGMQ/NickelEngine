@@ -17,10 +17,14 @@ public:
 
     ShaderModule() = default;
     ShaderModule(APIPreference, DeviceImpl&, const Descriptor&);
-    void Destroy(DeviceImpl&);
+    void Destroy();
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
+
+    operator bool() const {
+        return impl_;
+    }
 
 private:
     ShaderModuleImpl* impl_{};

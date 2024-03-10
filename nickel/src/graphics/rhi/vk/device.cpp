@@ -59,6 +59,9 @@ void DeviceImpl::createDevice(vk::Instance instance,
     }
 
     createInfo.setPEnabledExtensionNames(requireExtensions);
+    auto limits = phyDevice.getFeatures();
+    limits.setGeometryShader(true);
+    createInfo.setPEnabledFeatures(&limits);
 
     VK_CALL(device, phyDevice.createDevice(createInfo));
     graphicsQueue = new Queue(new QueueImpl{

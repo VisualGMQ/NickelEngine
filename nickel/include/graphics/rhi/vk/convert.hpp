@@ -434,6 +434,9 @@ inline vk::ShaderStageFlags ShaderStage2Vk(Flags<ShaderStage> stage) {
     if (stage & ShaderStage::Compute) {
         result |= static_cast<uint32_t>(vk::ShaderStageFlagBits::eCompute);
     }
+    if (stage & ShaderStage::Geometry) {
+        result |= static_cast<uint32_t>(vk::ShaderStageFlagBits::eGeometry);
+    }
     return static_cast<vk::ShaderStageFlags>(result);
 }
 

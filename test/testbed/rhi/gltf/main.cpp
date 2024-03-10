@@ -371,7 +371,8 @@ private:
 
             ctx.materials.emplace_back(mat);
         }
-        ctx.colorBuffer = copyBuffer2GPU(device, baseColor, BufferUsage::Uniform);
+        ctx.colorBuffer =
+            copyBuffer2GPU(device, baseColor, BufferUsage::Uniform);
 
         for (auto& material : ctx.materials) {
             material.bindGroup =
@@ -609,12 +610,49 @@ private:
                 data.normals, TINYGLTF_TYPE_VEC3, accessor, model_);
         } else {
             BufferView view;
+            view.count = indicesCount.value_or(primitive.posBufView.count);
             view.size = view.count * 4 * 3;
-            view.count = view.count;
             view.offset = data.normals.size();
-            // TODO: calculate normal
-            data.normals.resize(data.normals.size() + view.size, 0);
             primitive.normBufView = view;
+
+            nickel::cgmath::Vec3 v;
+            data.normals.resize(data.normals.size() + view.size, 0);
+            auto normPtr =
+                (nickel::cgmath::Vec3*)(data.normals.data() +
+                                        primitive.normBufView.offset);
+            auto posPtr =
+                (const nickel::cgmath::Vec3*)(data.positions.data() +
+                                              primitive.posBufView.offset);
+            if (indicesCount) {
+                auto indicesPtr =
+                    (const uint32_t*)(data.indices.data() +
+                                      primitive.indicesBufView.offset);
+                for (int i = 0; i < primitive.indicesBufView.count / 3; i++) {
+                    auto idx1 = indicesPtr[i * 3];
+                    auto idx2 = indicesPtr[i * 3 + 1];
+                    auto idx3 = indicesPtr[i * 3 + 2];
+
+                    auto pos1 = posPtr[idx1];
+                    auto pos2 = posPtr[idx2];
+                    auto pos3 = posPtr[idx3];
+                    auto normal = nickel::cgmath::Normalize(
+                        (pos2 - pos1).Cross(pos3 - pos1));
+                    normPtr[idx1] = normal;
+                    normPtr[idx2] = normal;
+                    normPtr[idx3] = normal;
+                }
+            } else {
+                for (int i = 0; i < primitive.posBufView.count / 3; i++) {
+                    auto pos1 = posPtr[i * 3];
+                    auto pos2 = posPtr[i * 3 + 1];
+                    auto pos3 = posPtr[i * 3 + 2];
+                    auto normal = nickel::cgmath::Normalize(
+                        (pos2 - pos1).Cross(pos3 - pos1));
+                    normPtr[i * 3] = normal;
+                    normPtr[i * 3 + 1] = normal;
+                    normPtr[i * 3 + 2] = normal;
+                }
+            }
         }
 
         if (auto it = attrs.find("TANGENT"); it != attrs.end()) {
@@ -624,10 +662,10 @@ private:
                 data.tangents, TINYGLTF_TYPE_VEC4, accessor, model_);
         } else {
             BufferView view;
-            view.count = indicesCount ? indicesCount.value() : positionCount;
+            view.count = indicesCount.value_or(primitive.posBufView.count);
             view.size = view.count * 4 * 4;
             view.offset = data.tangents.size();
-            data.tangents.resize(data.tangents.size() + view.size, 0);
+            data.tangents.resize(data.tangents.size() + view.size);
             primitive.tanBufView = view;
 
             auto posPtr =
@@ -670,9 +708,9 @@ private:
 
                         tangent = nickel::cgmath::Vec4{tan.x, tan.y, tan.z, 1};
                     }
-                    *(tanPtr + i * 3) = tangent;
-                    *(tanPtr + i * 3 + 1) = tangent;
-                    *(tanPtr + i * 3 + 2) = tangent;
+                    *(tanPtr + idx1) = tangent;
+                    *(tanPtr + idx2) = tangent;
+                    *(tanPtr + idx3) = tangent;
                 }
             } else {
                 // TODO:
@@ -908,7 +946,7 @@ std::tuple<TextureBundle, Sampler, BindGroup> initSingleValueTexture(
     std::string_view name, BindGroupLayout layout, Device dev, uint32_t color) {
     Texture::Descriptor desc;
     desc.dimension = TextureType::Dim2;
-    desc.format = TextureFormat::RGBA8_UNORM_SRGB;
+    desc.format = TextureFormat::RGBA8_UNORM;
     desc.usage = Flags<TextureUsage>(TextureUsage::TextureBinding) |
                  TextureUsage::CopyDst;
     desc.size.width = 1;
@@ -970,7 +1008,7 @@ void initWhiteTexture(Context& ctx, Device dev) {
 
 void initNormalTexture(Context& ctx, Device dev) {
     auto [bundle, sampler, bindGroup] = initSingleValueTexture(
-        "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF7F7F);
+        "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF8080);
     ctx.normalTextureSampler = sampler;
     ctx.normalTexture = bundle;
 }
@@ -984,6 +1022,7 @@ void StartupSystem(gecs::commands cmds,
 
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
+
     initUniformBuffer(ctx, adapter, device, window.get());
     initBindGroupLayout(ctx, device);
     initWhiteTexture(ctx, device);
@@ -994,9 +1033,10 @@ void StartupSystem(gecs::commands cmds,
         std::filesystem::path{
             // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
             // "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
-            "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
-            // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
-            // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/BoxTextured.gltf"},
+            // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
+            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
+            // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/"
+            // "BoxTextured.gltf"},
         // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
         // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
         // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},

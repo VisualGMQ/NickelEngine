@@ -235,6 +235,7 @@ enum class ShaderStage {
     Vertex = 0x01,
     Compute = 0x02,
     Fragment = 0x04,
+    Geometry = 0x08,
 };
 
 enum class DepthCompare {

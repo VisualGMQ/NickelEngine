@@ -121,6 +121,7 @@ void AdapterImpl::querySupportLimits() {
     limits_.minUniformBufferOffsetAlignment = limits.minUniformBufferOffsetAlignment;
     limits_.minStorageBufferOffsetAlignment = limits.minStorageBufferOffsetAlignment;
     limits_.maxPushConstantSize = limits.maxPushConstantsSize;
+    limits_.supportGeometryShader = limits.maxGeometryShaderInvocations != 0;
 }
 
 Device AdapterImpl::RequestDevice() {

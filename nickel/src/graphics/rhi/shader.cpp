@@ -31,7 +31,7 @@ ShaderModule::ShaderModule(APIPreference api, DeviceImpl& device,
     }
 }
 
-void ShaderModule::Destroy(DeviceImpl& dev) {
+void ShaderModule::Destroy() {
     if (impl_) {
         delete impl_;
         impl_ = nullptr;

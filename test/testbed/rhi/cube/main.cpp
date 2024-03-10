@@ -13,7 +13,7 @@ struct Context {
     Buffer indicesBuffer;
     Buffer uniformBuffer;
     BindGroupLayout bindGroupLayout;
-    BindGroup bindGroup;
+    BindGroup debugBindGroup;
     Texture depth;
     TextureView depthView;
 };
@@ -116,7 +116,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
 
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
-    ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
+    ctx.debugBindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
 void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
@@ -210,7 +210,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
     renderPass.SetIndexBuffer(ctx->indicesBuffer, IndexType::Uint32, 0, sizeof(gIndices));
-    renderPass.SetBindGroup(ctx->bindGroup);
+    renderPass.SetBindGroup(ctx->debugBindGroup);
     renderPass.DrawIndexed(gIndices.size(), 1, 0, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -242,7 +242,7 @@ void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
-    ctx->bindGroup.Destroy();
+    ctx->debugBindGroup.Destroy();
     ctx->bindGroupLayout.Destroy();
     ctx->uniformBuffer.Destroy();
     ctx->vertexBuffer.Destroy();

@@ -1,11 +1,14 @@
 #version 450
 
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec2 texCoord;
+layout(location = 1) in vec2 inUV;
 layout(location = 2) in vec3 inNormal;
+layout(location = 3) in vec4 inTangent;
 
-layout(location = 0) out vec2 fragUV;
-layout(location = 1) out vec3 fragNormal;
+layout (location = 0) out VS_OUT{
+    vec2 fragUV;
+    mat3 TBN;
+} vs_out;
 
 layout(binding = 0) uniform MyUniform {
     mat4 model;
@@ -13,13 +16,21 @@ layout(binding = 0) uniform MyUniform {
     mat4 proj;
 } MVP;
 
-layout(push_constant) uniform ModelMat {
+layout(push_constant) uniform PushConstant {
     mat4 model;
-} modelMat;
+} pushConstant;
 
 void main() {
-    mat4 model = MVP.model * modelMat.model;
+    mat4 model = MVP.model * pushConstant.model;
     gl_Position = MVP.proj * MVP.view * model * vec4(inPosition, 1.0);
-    fragUV = texCoord;
-    fragNormal = mat3(transpose(inverse(model))) * inNormal;
+
+    mat3 normalMat = mat3(transpose(inverse(model)));
+
+    vs_out.fragUV = inUV;
+
+    vec3 T = normalize(normalMat * normalize(inTangent.xyz));
+    vec3 N = normalize(normalMat * normalize(inNormal));
+    vec3 B = normalize(cross(N, T) * inTangent.w);
+
+    vs_out.TBN = mat3(T, B, N);
 }

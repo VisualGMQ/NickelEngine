@@ -15,6 +15,7 @@ inline GLenum ShaderStage2GL(ShaderStage stage) {
         CASE(ShaderStage::Vertex, GL_VERTEX_SHADER);
         CASE(ShaderStage::Compute, GL_COMPUTE_SHADER);
         CASE(ShaderStage::Fragment, GL_FRAGMENT_SHADER);
+        CASE(ShaderStage::Geometry, GL_GEOMETRY_SHADER);
     }
 }
 

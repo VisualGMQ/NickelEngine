@@ -105,10 +105,16 @@ public:
         Rect2D scissor;
     };
 
+    struct GeometryState {
+        ShaderModule module;
+        std::string entryPoint = "main";
+    };
+
     struct Descriptor final {
         std::optional<DepthStencilState> depthStencil;
         VertexState vertex;
         FragmentState fragment;
+        std::optional<GeometryState> geometry;
         MultisampleState multisample;
         PrimitiveState primitive;
         PipelineLayout layout;
