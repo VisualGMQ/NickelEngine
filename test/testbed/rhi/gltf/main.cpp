@@ -424,7 +424,7 @@ private:
                                STBI_rgb_alpha);
 
         Texture::Descriptor desc;
-        desc.format = TextureFormat::RGBA8_UNORM_SRGB;
+        desc.format = TextureFormat::RGBA8_UNORM;
         desc.size.width = w;
         desc.size.height = h;
         desc.size.depthOrArrayLayers = 1;
@@ -1032,9 +1032,9 @@ void StartupSystem(gecs::commands cmds,
     cmds.emplace_resource<GLTFNode>(loader.Load(
         std::filesystem::path{
             // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
-            // "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
+            "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
             // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
-            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
+           // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
             // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/"
             // "BoxTextured.gltf"},
         // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
