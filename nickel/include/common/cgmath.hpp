@@ -1100,6 +1100,22 @@ std::pair<Vec<T, 3>, Vec<T, 3>> GetNormalMapTB(Vec<T, 3> p1, Vec<T, 3> p2,
     return {nickel::cgmath::Normalize(t), nickel::cgmath::Normalize(b)};
 }
 
+template <typename T>
+Vec<T, 3> GetNormalMapTangent(Vec<T, 3> p1, Vec<T, 3> p2,
+                                               Vec<T, 3> p3, Vec<T, 2> uv1,
+                                               Vec<T, 2> uv2, Vec<T, 2> uv3) {
+    Assert(!(uv1 == Vec<T, 2>{} && uv2 == Vec<T, 2>{} && uv3 == Vec<T, 2>{}),
+           "uvs are (0, 0) will cause numerical error");
+    Vec<T, 3> e1{p2 - p1}, e2{p3 - p1};
+    Vec<T, 2> dUV1{uv2 - uv1}, dUV2{uv3 - uv1};
+    float denoInv = 1.0 / (dUV1.x * dUV2.y - dUV2.x * dUV1.y);
+
+    return nickel::cgmath::Vec<T, 3>{dUV2.y * e1.x - dUV1.y * e2.x,
+                                     dUV2.y * e1.y - dUV1.y * e2.y,
+                                     dUV2.y * e1.z - dUV1.y * e2.z} *
+           denoInv;
+}
+
 }  // namespace cgmath
 
 }  // namespace nickel

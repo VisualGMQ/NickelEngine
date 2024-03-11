@@ -1,0 +1,2 @@
+AddRHITest(rhi_normal_map)
+target_link_libraries(rhi_normal_map PRIVATE stb_image)
