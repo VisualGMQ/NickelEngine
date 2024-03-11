@@ -30,7 +30,7 @@ void main() {
 
     vec3 T = normalize(normalMat * normalize(inTangent.xyz));
     vec3 N = normalize(normalMat * normalize(inNormal));
-    vec3 B = normalize(cross(T, N) * inTangent.w);
+    vec3 B = normalize(cross(N, T) * inTangent.w);
 
     vs_out.TBN = mat3(T, B, N);
 }

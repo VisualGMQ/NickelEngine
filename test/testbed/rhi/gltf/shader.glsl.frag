@@ -14,7 +14,7 @@ layout(binding = 1) uniform ColorUniform {
 layout(binding = 2) uniform sampler2D mySampler;
 layout(binding = 3) uniform sampler2D normalMapSampler;
 
-const vec3 lightDir = normalize(vec3(-1, -1, 1));
+const vec3 lightDir = normalize(vec3(-1, -1, -1));
 
 void main() {
     vec3 normal = texture(normalMapSampler, fs_in.fragUV).rgb;

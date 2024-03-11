@@ -1118,7 +1118,7 @@ void StartupSystem(gecs::commands cmds,
     depthStencilState.depthCompare = CompareOp::Greater;
     desc.depthStencil = depthStencilState;
 
-    desc.primitive.cullMode = CullMode::Back;
+    // desc.primitive.cullMode = CullMode::Back;
 
     ctx.pipeline = device.CreateRenderPipeline(desc);
 }
@@ -1218,6 +1218,7 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
+    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

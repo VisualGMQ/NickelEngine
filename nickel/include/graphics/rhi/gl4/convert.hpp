@@ -538,7 +538,7 @@ inline GLenum TextureFormat2GLDataType(TextureFormat fmt) {
         case TextureFormat::RG16_FLOAT:
             return GL_FLOAT;
         case TextureFormat::RGBA8_UNORM:
-            return GL_BYTE;
+            return GL_UNSIGNED_BYTE;
         case TextureFormat::RGBA8_UNORM_SRGB:
             return GL_UNSIGNED_BYTE;
         case TextureFormat::RGBA8_SNORM:
