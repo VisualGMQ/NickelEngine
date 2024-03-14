@@ -67,11 +67,33 @@ struct CmdExecutor final {
         GL_CALL(glBindBuffer(
             GL_PIXEL_UNPACK_BUFFER,
             static_cast<const BufferImpl*>(cmd.src.buffer.Impl())->id));
-        GL_CALL(glTexSubImage2D(
-            texture->Type(), 0, 0, 0, texture->Extent().width,
-            texture->Extent().height, TextureFormat2GL(texture->Format()),
-            TextureFormat2GLDataType(texture->Format()),
-            (void*)cmd.src.offset));
+        if (texture->Type() == GL_TEXTURE_1D) {
+            GL_CALL(glTexSubImage1D(texture->Type(), cmd.dst.miplevel,
+                                    cmd.dst.origin.x, cmd.copySize.width,
+                                    TextureFormat2GL(texture->Format()),
+                                    TextureFormat2GLDataType(texture->Format()),
+                                    (void*)cmd.src.offset));
+        } else if (texture->Type() == GL_TEXTURE_1D_ARRAY ||
+                   texture->Type() == GL_TEXTURE_2D) {
+            GL_CALL(glTexSubImage2D(texture->Type(), cmd.dst.miplevel,
+                                    cmd.dst.origin.x, cmd.dst.origin.y,
+                                    cmd.copySize.width, cmd.copySize.height,
+                                    TextureFormat2GL(texture->Format()),
+                                    TextureFormat2GLDataType(texture->Format()),
+                                    (void*)cmd.src.offset));
+        } else if (texture->Type() == GL_TEXTURE_3D ||
+                   texture->Type() == GL_TEXTURE_2D_ARRAY) {
+            GL_CALL(glTexSubImage3D(
+                texture->Type(), cmd.dst.miplevel, cmd.dst.origin.x,
+                cmd.dst.origin.y, cmd.dst.origin.z, cmd.copySize.width,
+                cmd.copySize.height, cmd.copySize.depthOrArrayLayers,
+                TextureFormat2GL(texture->Format()),
+                TextureFormat2GLDataType(texture->Format()),
+                (void*)cmd.src.offset));
+        } else {
+            LOGE(log_tag::GL, "unsupport texture type");
+        }
+
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
@@ -151,7 +173,8 @@ struct CmdExecutor final {
         auto id = renderPipeline_->GetShaderID();
 
         GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, device_.pushConstantBuf));
-        GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, cmd.offset, cmd.size, cmd.data.data()));
+        GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, cmd.offset, cmd.size,
+                                cmd.data.data()));
     }
 
 private:
@@ -209,7 +232,8 @@ void CommandEncoderImpl::CopyBufferToTexture(
     const CommandEncoder::BufTexCopySrc& src,
     const CommandEncoder::BufTexCopyDst& dst, const Extent3D& copySize) {
     buffer_.cmds.push_back({
-        CmdType::CopyBuf2Texture, CmdCopyBuf2Texture{src, dst, copySize}
+        CmdType::CopyBuf2Texture,
+        CmdCopyBuf2Texture{dst.texture.Dimension(), src, dst, copySize}
     });
 }
 

@@ -11,6 +11,7 @@ class DeviceImpl;
 class CommandEncoderImpl;
 
 struct CmdCopyBuf2Texture final {
+    TextureType type;
     CommandEncoder::BufTexCopySrc src;
     CommandEncoder::BufTexCopyDst dst;
     Extent3D copySize;

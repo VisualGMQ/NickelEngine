@@ -225,6 +225,10 @@ struct Extent3D {
     bool operator!=(const Extent3D& e) const { return !(*this == e); }
 };
 
+struct Offset3D {
+    uint32_t x{}, y{}, z{};
+};
+
 enum class TextureAspect {
     All,
     DepthOnly,

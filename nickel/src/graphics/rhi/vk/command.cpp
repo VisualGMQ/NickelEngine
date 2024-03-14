@@ -297,7 +297,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
         .setMipLevel(dst.miplevel);
     vk::BufferImageCopy copyInfo;
     copyInfo.setBufferOffset(src.offset)
-        .setImageOffset(0)
+        .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, dst.origin.z))
         .setBufferImageHeight(src.rowsPerImage)
         .setBufferRowLength(src.bytesPerRow)
         .setImageExtent({image.Extent().width, image.Extent().height,

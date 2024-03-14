@@ -36,10 +36,22 @@ TextureImpl::TextureImpl(DeviceImpl& device, const Texture::Descriptor& desc)
     if (desc.format != TextureFormat::Presentation) {
         GL_CALL(glGenTextures(1, &id));
         Bind();
-        GL_CALL(glTexImage2D(type_, 0, TextureFormat2GLInternal(desc_.format),
-                             desc.size.width, desc.size.height, 0,
-                             TextureFormat2GL(desc_.format),
-                             TextureFormat2GLDataType(desc_.format), 0));
+        if (type_ == GL_TEXTURE_1D) {
+            GL_CALL(glTexStorage1D(type_, desc.mipmapLevelCount,
+                                    TextureFormat2GLInternal(desc.format),
+                                    desc.size.width));
+        } else if (type_ == GL_TEXTURE_1D_ARRAY || type_ == GL_TEXTURE_2D) {
+            GL_CALL(glTexStorage2D(type_, desc.mipmapLevelCount,
+                                    TextureFormat2GLInternal(desc.format),
+                                    desc.size.width, desc.size.height));
+        } else if (type_ == GL_TEXTURE_3D || type_ == GL_TEXTURE_2D_ARRAY) {
+                GL_CALL(glTexStorage3D(type_, desc.mipmapLevelCount,
+                                       TextureFormat2GLInternal(desc.format),
+                                       desc.size.width, desc.size.height,
+                                       desc.size.depthOrArrayLayers));
+        } else {
+            LOGE(log_tag::GL, "unsupport texture type");
+        }
     } else {
         id = device.swapchainTexture;
         desc_.dimension = TextureType::Dim2;

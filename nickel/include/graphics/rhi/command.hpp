@@ -60,7 +60,7 @@ public:
     struct BufTexCopyDst final {
         TextureAspect aspect = TextureAspect::All;
         uint32_t miplevel = 0;
-        // cgmath::Vec3 origin;
+        Offset3D origin;
         Texture texture;
     };
 

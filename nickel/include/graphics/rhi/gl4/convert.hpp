@@ -659,6 +659,23 @@ inline GLenum TextureFormat2GLDataType(TextureFormat fmt) {
     }
 }
 
+inline GLenum TextureViewType2GL(TextureViewType type) {
+    switch (type) {
+        case TextureViewType::Dim1:
+            return GL_TEXTURE_1D;
+        case TextureViewType::Dim2:
+            return GL_TEXTURE_2D;
+        case TextureViewType::Dim3:
+            return GL_TEXTURE_3D;
+        case TextureViewType::Dim2Array:
+            return GL_TEXTURE_2D_ARRAY;
+        case TextureViewType::Cube:
+            return GL_TEXTURE_CUBE_MAP;
+        case TextureViewType::CubeArray:
+            return GL_TEXTURE_CUBE_MAP_ARRAY;
+    }
+}
+
 inline GLenum GetVertexFormatGLType(VertexFormat fmt) {
     switch (fmt) {
         case VertexFormat::Uint8x2:

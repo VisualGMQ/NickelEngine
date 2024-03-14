@@ -13,6 +13,12 @@ class TextureImpl;
 class TextureViewImpl : public rhi::TextureViewImpl {
 public:
     explicit TextureViewImpl(TextureImpl&, const TextureView::Descriptor&);
+    ~TextureViewImpl();
+
+    void Bind(uint32_t slot = 0) const;
+
+    GLuint id_ = 0;
+    GLenum type_;
 };
 
 }  // namespace nickel::rhi::gl4

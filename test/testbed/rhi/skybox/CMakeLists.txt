@@ -1,0 +1,2 @@
+AddRHITest(rhi_skybox)
+target_link_libraries(rhi_skybox PRIVATE stb_image)

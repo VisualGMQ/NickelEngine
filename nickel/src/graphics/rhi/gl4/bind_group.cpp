@@ -4,6 +4,7 @@
 #include "graphics/rhi/gl4/render_pipeline.hpp"
 #include "graphics/rhi/gl4/sampler.hpp"
 #include "graphics/rhi/gl4/texture.hpp"
+#include "graphics/rhi/gl4/texture_view.hpp"
 
 namespace nickel::rhi::gl4 {
 
@@ -44,8 +45,8 @@ struct ResourceBindHelper final {
 
     bool operator()(const SamplerBinding& binding) {
         GL_CALL(glActiveTexture(GL_TEXTURE0 + entry_.binding));
-        auto texture = static_cast<const TextureImpl*>(binding.view.Texture().Impl());
-        texture->Bind(entry_.binding);
+        static_cast<const TextureViewImpl*>(binding.view.Impl())
+            ->Bind(entry_.binding);
 
         GL_CALL(glBindSampler(
             entry_.binding,
@@ -61,8 +62,8 @@ struct ResourceBindHelper final {
 
     bool operator()(const TextureBinding& binding) {
         GL_CALL(glActiveTexture(GL_TEXTURE0 + entry_.binding));
-        auto texture = static_cast<const TextureImpl*>(binding.view.Texture().Impl());
-        texture->Bind(entry_.binding);
+        auto view = static_cast<const TextureViewImpl*>(binding.view.Impl());
+        view->Bind(entry_.binding);
         textureCount_++;
         return false;
     }
