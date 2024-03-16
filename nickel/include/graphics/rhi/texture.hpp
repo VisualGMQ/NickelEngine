@@ -20,6 +20,7 @@ public:
         SampleCount sampleCount = SampleCount::Count1;
         Flags<TextureUsage> usage;
         std::optional<TextureFormat> viewFormat;
+        Flags<TextureFlagBits> flags = TextureFlagBits::None;
     };
 
     Texture() = default;

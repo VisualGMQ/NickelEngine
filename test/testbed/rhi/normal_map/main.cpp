@@ -7,25 +7,6 @@
 using namespace nickel::rhi;
 
 APIPreference API = APIPreference::GL;
-
-struct BufferView {
-    uint32_t offset{};
-    uint64_t size{};
-    uint32_t count{};
-};
-
-struct Material final {
-    struct TextureInfo {
-        uint32_t texture;
-        uint32_t sampler;
-    };
-
-    BufferView basicColorFactor;
-    std::optional<TextureInfo> basicTexture;
-    std::optional<TextureInfo> normalTexture;
-    BindGroup bindGroup;
-};
-
 struct TextureBundle {
     Texture texture;
     TextureView view;
@@ -208,13 +189,13 @@ void initMeshData(Device device, Context& ctx) {
 }
 
 TextureBundle loadTexture(const std::filesystem::path& filename, Context& ctx,
-                          Device& dev) {
+                          Device& dev, TextureFormat fmt) {
     int w, h;
     void* data =
         stbi_load(filename.string().c_str(), &w, &h, nullptr, STBI_rgb_alpha);
 
     Texture::Descriptor desc;
-    desc.format = TextureFormat::RGBA8_UNORM;
+    desc.format = fmt;
     desc.size.width = w;
     desc.size.height = h;
     desc.size.depthOrArrayLayers = 1;
@@ -269,9 +250,11 @@ void StartupSystem(gecs::commands cmds,
     initNormalTangentMeshData();
     initMeshData(device, ctx);
     ctx.colorTexture =
-        loadTexture("test/testbed/rhi/normal_map/brickwall.jpg", ctx, device);
+        loadTexture("test/testbed/rhi/normal_map/brickwall.jpg", ctx, device,
+                    TextureFormat::RGBA8_UNORM_SRGB);
     ctx.normalTexture =
-        loadTexture("test/testbed/rhi/normal_map/normal_map.png", ctx, device);
+        loadTexture("test/testbed/rhi/normal_map/normal_map.png", ctx, device,
+                    TextureFormat::RGBA8_UNORM);
     initUniformBuffer(ctx, adapter, device, window.get());
     initBindGroupLayout(ctx, device);
     BindGroup::Descriptor bindGroupDesc;
@@ -366,7 +349,8 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->pipeline);
-    renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0, ctx->vertexBuffer.Size());
+    renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
+                               ctx->vertexBuffer.Size());
     renderPass.SetBindGroup(ctx->bindGroup);
     renderPass.Draw(gVertices.size(), 1, 0, 0);
     renderPass.End();
@@ -411,7 +395,6 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

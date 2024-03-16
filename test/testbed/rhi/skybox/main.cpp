@@ -8,24 +8,6 @@ using namespace nickel::rhi;
 
 APIPreference API = APIPreference::GL;
 
-struct BufferView {
-    uint32_t offset{};
-    uint64_t size{};
-    uint32_t count{};
-};
-
-struct Material final {
-    struct TextureInfo {
-        uint32_t texture;
-        uint32_t sampler;
-    };
-
-    BufferView basicColorFactor;
-    std::optional<TextureInfo> basicTexture;
-    std::optional<TextureInfo> normalTexture;
-    BindGroup bindGroup;
-};
-
 struct TextureBundle {
     Texture texture;
     TextureView view;
@@ -179,11 +161,13 @@ TextureBundle loadTextures(
     Texture::Descriptor desc;
     constexpr uint32_t width = 2048, height = 2048;
     desc.format = TextureFormat::RGBA8_UNORM;
+    desc.dimension = TextureType::Dim2;
     desc.size.width = width;
     desc.size.height = height;
     desc.size.depthOrArrayLayers = 6;
     desc.usage = static_cast<uint32_t>(TextureUsage::TextureBinding) |
                  static_cast<uint32_t>(TextureUsage::CopyDst);
+    desc.flags = TextureFlagBits::CubeCompatible;
     auto texture = dev.CreateTexture(desc);
 
     Buffer::Descriptor bufferDesc;
@@ -387,9 +371,8 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "gltf", 1024, 720, API == APIPreference::Vulkan);
+        "skybox", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems

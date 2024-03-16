@@ -275,9 +275,9 @@ void CommandEncoderImpl::CopyBufferToTexture(
     auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
     vk::ImageSubresourceRange range;
     range.setAspectMask(aspect)
-        .setBaseArrayLayer(0)
+        .setBaseArrayLayer(dst.origin.z)
         .setLevelCount(1)
-        .setLayerCount(1)
+        .setLayerCount(copySize.depthOrArrayLayers)
         .setBaseMipLevel(dst.miplevel);
     vk::ImageMemoryBarrier barrier;
     barrier.setImage(image.GetImage())
@@ -292,16 +292,15 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
     vk::ImageSubresourceLayers layers;
     layers.setAspectMask(aspect)
-        .setBaseArrayLayer(0)
-        .setLayerCount(1)
+        .setBaseArrayLayer(dst.origin.z)
+        .setLayerCount(copySize.depthOrArrayLayers)
         .setMipLevel(dst.miplevel);
     vk::BufferImageCopy copyInfo;
     copyInfo.setBufferOffset(src.offset)
-        .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, dst.origin.z))
+        .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, 0))
         .setBufferImageHeight(src.rowsPerImage)
         .setBufferRowLength(src.bytesPerRow)
-        .setImageExtent({image.Extent().width, image.Extent().height,
-                         image.Extent().depthOrArrayLayers})
+        .setImageExtent({copySize.width, copySize.height, 1})
         .setImageSubresource(layers);
     buf_.copyBufferToImage(buffer, image.GetImage(),
                            vk::ImageLayout::eTransferDstOptimal, copyInfo);

@@ -407,6 +407,11 @@ enum class VertexFormat {
     Unorm10_10_10_2,
 };
 
+enum class TextureFlagBits {
+    None = 0x00,
+    CubeCompatible = 0x01,
+};
+
 template <typename T>
 struct Flags final {
 public:

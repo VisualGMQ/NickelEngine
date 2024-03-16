@@ -41,6 +41,7 @@ TextureViewImpl::TextureViewImpl(DeviceImpl& dev, TextureImpl& texture,
             DetermineTextureAspect(desc.aspect, format);
 
         TextureViewType dimension;
+
         if (!desc.dimension) {
             if (texture.Dimension() == TextureType::Dim1) {
                 dimension = TextureViewType::Dim1;
@@ -54,7 +55,7 @@ TextureViewImpl::TextureViewImpl(DeviceImpl& dev, TextureImpl& texture,
                 dimension = TextureViewType::Dim3;
             }
         } else {
-            TextureViewType viewType = desc.dimension.value();
+            dimension = desc.dimension.value();
         }
         uint32_t arrayLayerCount = 0;
         if (!desc.arrayLayerCount) {

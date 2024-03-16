@@ -4,7 +4,6 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/memory.hpp"
 
-
 namespace nickel::rhi::vulkan {
 
 TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
@@ -14,8 +13,8 @@ TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
     if (desc.format != TextureFormat::Presentation) {
         createImage(desc, queueIndices);
         allocMem(adapter.phyDevice,
-                desc.viewFormat ? desc.viewFormat.value() : desc.format,
-                desc.size);
+                 desc.viewFormat ? desc.viewFormat.value() : desc.format,
+                 desc.size);
         VK_CALL_NO_VALUE(dev_.device.bindImageMemory(image_, mem, 0));
     } else {
         desc_.size.width = dev.swapchain.ImageInfo().extent.width;
@@ -44,10 +43,12 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
         .setInitialLayout(vk::ImageLayout::eUndefined)
         .setMipLevels(desc.mipmapLevelCount)
         .setSamples(SampleCount2Vk(desc.sampleCount))
-        .setExtent(
-            {desc.size.width, desc.size.height, desc.size.depthOrArrayLayers})
+        .setExtent({desc.size.width, desc.size.height, 1})
         .setArrayLayers(desc.size.depthOrArrayLayers)
         .setUsage(TextureUsage2Vk(desc.usage, isDepthStencil(desc.format)));
+    if (desc.flags & TextureFlagBits::CubeCompatible) {
+        info.setFlags(vk::ImageCreateFlagBits::eCubeCompatible);
+    }
 
     if (queueIndices.size() > 1) {
         info.setQueueFamilyIndices(queueIndices)
