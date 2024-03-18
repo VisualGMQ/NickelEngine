@@ -1,0 +1,2 @@
+AddRHITest(rhi_specular_map)
+target_link_libraries(rhi_specular_map PRIVATE stb_image)

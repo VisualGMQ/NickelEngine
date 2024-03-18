@@ -3,8 +3,11 @@
 #include "graphics/rhi/vk/buffer.hpp"
 #include "graphics/rhi/vk/convert.hpp"
 #include "graphics/rhi/vk/device.hpp"
+#include "graphics/rhi/vk/queue.hpp"
 #include "graphics/rhi/vk/sampler.hpp"
+#include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
+#include "graphics/rhi/vk/util.hpp"
 
 namespace nickel::rhi::vulkan {
 
@@ -154,8 +157,7 @@ BindGroupLayoutImpl::~BindGroupLayoutImpl() {
 }
 
 BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
-    : device_{dev},
-      desc_{desc} {
+    : device_{dev}, desc_{desc} {
     auto layout = static_cast<BindGroupLayoutImpl*>(desc.layout.Impl());
     id_ = layout->RequireBindGroupID();
     sets = layout->RequireSets(id_);
@@ -173,7 +175,7 @@ BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
             }
         }
     }
-    
+
     writeDescriptors();
 }
 
@@ -182,13 +184,13 @@ BindGroupImpl::~BindGroupImpl() {
 }
 
 struct WriteDescriptorHelper final {
-    WriteDescriptorHelper(vk::DescriptorSet set, vk::Device dev,
+    WriteDescriptorHelper(vk::DescriptorSet set, DeviceImpl& dev,
                           const BindingPoint& binding)
         : set_{set}, dev_{dev}, binding_{binding} {}
 
     void operator()(const BufferBinding& binding) const {
         if (!binding.buffer) {
-            return ;
+            return;
         }
 
         vk::WriteDescriptorSet writeInfo;
@@ -207,12 +209,12 @@ struct WriteDescriptorHelper final {
             .setDstBinding(binding_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);
-        dev_.updateDescriptorSets(writeInfo, {});
+        dev_.device.updateDescriptorSets(writeInfo, {});
     }
 
     void operator()(const SamplerBinding& binding) const {
         if (!binding.sampler) {
-            return ;
+            return;
         }
 
         vk::WriteDescriptorSet writeInfo;
@@ -231,14 +233,14 @@ struct WriteDescriptorHelper final {
             .setDstBinding(binding_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);
-        dev_.updateDescriptorSets(writeInfo, {});
+        dev_.device.updateDescriptorSets(writeInfo, {});
     }
 
     void operator()(const StorageTextureBinding& binding) const {
         if (!binding.view) {
-            return ;
+            return;
         }
-        
+
         vk::WriteDescriptorSet writeInfo;
         vk::DescriptorImageInfo imageInfo;
 
@@ -253,12 +255,12 @@ struct WriteDescriptorHelper final {
             .setDstBinding(binding_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);
-        dev_.updateDescriptorSets(writeInfo, {});
+        dev_.device.updateDescriptorSets(writeInfo, {});
     }
 
     void operator()(const TextureBinding& binding) const {
         if (!binding.view) {
-            return ;
+            return;
         }
 
         vk::WriteDescriptorSet writeInfo;
@@ -275,14 +277,15 @@ struct WriteDescriptorHelper final {
             .setDstBinding(binding_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);
-        dev_.updateDescriptorSets(writeInfo, {});
+        dev_.device.updateDescriptorSets(writeInfo, {});
     }
 
 private:
     vk::DescriptorSet set_;
-    vk::Device dev_;
+    DeviceImpl& dev_;
     const BindingPoint& binding_;
 };
+
 
 void BindGroupImpl::writeDescriptors() {
     auto& layoutDesc =
@@ -290,9 +293,88 @@ void BindGroupImpl::writeDescriptors() {
             ->Descriptor();
     for (auto set : sets) {
         for (auto& entry : desc_.entries) {
-            WriteDescriptorHelper helper{set, device_.device, entry};
+            WriteDescriptorHelper helper{set, device_, entry};
             std::visit(helper, entry.entry);
         }
+    }
+}
+
+class LayoutTransformHelper final {
+public:
+    explicit LayoutTransformHelper(DeviceImpl& dev) : dev_{dev} {}
+
+    void operator()(const BufferBinding& binding) {
+        // TODO: maybe we need layout transform
+    }
+
+    void operator()(const SamplerBinding& binding) {
+        vk::ImageLayout dstLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        auto texture = static_cast<TextureImpl*>(binding.view.Texture().Impl());
+        auto view = static_cast<TextureViewImpl*>(binding.view.Impl());
+
+        if (texture->layout == dstLayout) {
+            return ;
+        }
+
+        if (dstLayout != texture->layout) {
+            auto aspect = DetermineTextureAspect(TextureAspect::All,
+                                                 binding.view.Format());
+            vk::ImageMemoryBarrier barrier;
+            vk::ImageSubresourceRange range;
+            range.setAspectMask(aspect)
+                .setBaseArrayLayer(0)
+                .setLayerCount(texture->Extent().depthOrArrayLayers)
+                .setBaseMipLevel(0)
+                .setLevelCount(1);
+
+            vk::ImageLayout dstLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            barrier.setOldLayout(texture->layout)
+                .setNewLayout(dstLayout)
+                .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+                .setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+                .setImage(texture->GetImage())
+                .setSubresourceRange(range);
+
+            vk::CommandBufferAllocateInfo allocInfo;
+            allocInfo.setCommandBufferCount(1)
+                .setCommandPool(dev_.cmdPool)
+                .setLevel(vk::CommandBufferLevel::ePrimary);
+            std::vector<vk::CommandBuffer> cmds;
+            VK_CALL(cmds, dev_.device.allocateCommandBuffers(allocInfo));
+            vk::CommandBufferBeginInfo beginInfo;
+            beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+            VK_CALL_NO_VALUE(cmds[0].begin(beginInfo));
+            cmds[0].pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                    vk::PipelineStageFlagBits::eFragmentShader,
+                                    vk::DependencyFlagBits::eByRegion, {}, {},
+                                    barrier);
+            VK_CALL_NO_VALUE(cmds[0].end());
+            vk::SubmitInfo info;
+            info.setCommandBuffers(cmds);
+            VK_CALL_NO_VALUE(static_cast<QueueImpl*>(dev_.graphicsQueue->Impl())
+                                 ->queue.submit(info));
+            dev_.WaitIdle();
+            dev_.device.freeCommandBuffers(dev_.cmdPool, cmds[0]);
+
+            texture->layout = dstLayout;
+        }
+    }
+
+    void operator()(const StorageTextureBinding& binding) {}
+
+    void operator()(const TextureBinding& binding) {}
+
+private:
+    DeviceImpl& dev_;
+};
+
+void BindGroupImpl::Transformlayouts() {
+    auto& layoutDesc =
+        static_cast<const BindGroupLayoutImpl*>(desc_.layout.Impl())
+            ->Descriptor();
+    for (auto& entry : desc_.entries) {
+        LayoutTransformHelper helper{device_};
+        std::visit(helper, entry.entry);
     }
 }
 

@@ -130,9 +130,9 @@ void RenderPipelineImpl::Apply() const {
     }
 
     if (desc_.primitive.unclippedDepth) {
-        GL_CALL(glDisable(GL_DEPTH_CLAMP));
-    } else {
         GL_CALL(glEnable(GL_DEPTH_CLAMP));
+    } else {
+        GL_CALL(glDisable(GL_DEPTH_CLAMP));
     }
 
     // color blend

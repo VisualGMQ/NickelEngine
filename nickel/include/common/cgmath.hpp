@@ -746,12 +746,12 @@ inline Mat44 CreatePersp(float fov, float aspect, float near, float far,
 }
 
 inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
-                         float near, float far) {
+                         float near, float far, bool GLCoord = false) {
     // clang-format off
     return Mat44::FromRow({
         2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
-                         0.0f, 2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
-                         0.0f,                  0.0f, 2.0f / (far - near),     (near + far) / (near - far),
+                         0.0f, (GLCoord ? 1.0f : -1.0f) * 2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
+                         0.0f,                  0.0f, 2.0f / (near - far),     (near + far) / (far - near),
                          0.0f,                  0.0f,                0.0f,                            1.0f,
     });
     // clang-format on

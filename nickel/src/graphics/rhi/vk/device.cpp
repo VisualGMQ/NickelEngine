@@ -107,6 +107,7 @@ void DeviceImpl::createCmdPool() {
 void DeviceImpl::createSyncObject() {
     for (int i = 0; i < swapchain.images.size(); i++) {
         vk::FenceCreateInfo info;
+        info.setFlags(vk::FenceCreateFlagBits::eSignaled);
         vk::Fence fence;
         VK_CALL(fence, device.createFence(info));
         fences.emplace_back(fence);
@@ -189,6 +190,8 @@ BindGroupLayout DeviceImpl::CreateBindGroupLayout(
 }
 
 void DeviceImpl::SwapContext() {
+    cmdCounter.Reset();
+
     vk::Queue graphics =
         static_cast<const vulkan::QueueImpl*>(graphicsQueue->Impl())->queue;
     vk::Queue present =
@@ -201,8 +204,6 @@ void DeviceImpl::SwapContext() {
     VK_CALL_NO_VALUE(present.presentKHR(info));
 
     VK_CALL_NO_VALUE(device.waitForFences(fences[curFrame], true, UINT64_MAX));
-
-    device.resetFences(fences[curFrame]);
 
     device.resetCommandPool(cmdPool);
 

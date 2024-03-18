@@ -32,67 +32,6 @@ struct TextureBundle {
     TextureView view;
 };
 
-struct Camera {
-public:
-    friend class SphericalCoordCameraProxy;
-
-    Camera(APIPreference api, const nickel::cgmath::Vec2& size)
-        : proj_{nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
-                                            size.w / size.h, 0.1, 100,
-                                            api == APIPreference::GL)} {}
-
-    auto& View() const { return view_; }
-
-    auto& Proj() const { return proj_; }
-
-    auto& Position() const { return pos_; }
-
-    void Move(const nickel::cgmath::Vec3& pos) { pos_ = pos; }
-
-private:
-    nickel::cgmath::Mat44 proj_;
-    nickel::cgmath::Mat44 view_;
-    nickel::cgmath::Vec3 pos_;
-};
-
-struct SphericalCoordCameraProxy final {
-public:
-    float radius;
-    float phi;
-    float theta;
-
-    SphericalCoordCameraProxy(Camera& camera,
-                              const nickel::cgmath::Vec3& center)
-        : camera_{camera}, center_{center} {
-        auto dir = camera_.pos_ - center_;
-        auto zAxis = nickel::cgmath::Vec3{0, 1, 0};
-        radius = dir.Length();
-        dir.Normalize();
-        Assert(radius != 0, "your camera too close to origin (distance = 0)");
-
-        auto xozVec = nickel::cgmath::Normalize(dir - (dir.Dot(zAxis) * zAxis));
-
-        theta = std::acos(dir.Dot(nickel::cgmath::Vec3{0, 1, 0}));
-        phi = nickel::cgmath::GetRadianIn180Signed(
-            nickel::cgmath::Vec2{1, 0},
-            nickel::cgmath::Vec2{xozVec.x, xozVec.z});
-    }
-
-    void Update2Camera() {
-        auto xoyAxis = nickel::cgmath::Vec2{std::cos(phi), std::sin(phi)} *
-                       std::sin(theta) * radius;
-        auto y = std::cos(theta) * radius;
-
-        camera_.pos_.Set(xoyAxis.x, y, xoyAxis.y);
-        camera_.view_ =
-            nickel::cgmath::LookAt(center_, camera_.pos_, {0, 1, 0});
-    }
-
-private:
-    Camera& camera_;
-    nickel::cgmath::Vec3 center_;
-};
-
 struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
@@ -108,7 +47,7 @@ struct Context final {
     TextureBundle whiteTexture;
     Sampler whiteTextureSampler;
 
-    TextureBundle normalTexture;
+    TextureBundle specularTexture;
     Sampler normalTextureSampler;
 
     std::vector<Material> materials;
@@ -514,7 +453,7 @@ private:
             samplerBinding.binding = 3;
             SamplerBinding binding;
             binding.sampler = ctx.normalTextureSampler;
-            binding.view = ctx.normalTexture.view;
+            binding.view = ctx.specularTexture.view;
             binding.name = "normalMapSampler";
             if (material.normalTexture) {
                 binding.sampler = ctx.samplers[material.normalTexture->sampler];
@@ -979,7 +918,7 @@ std::tuple<TextureBundle, Sampler, BindGroup> initSingleValueTexture(
     src.rowsPerImage = 1;
     CommandEncoder::BufTexCopyDst dst;
     dst.texture = bundle.texture;
-    encoder.CopyBufferToTexture(src, dst, {4, 1, 1});
+    encoder.CopyBufferToTexture(src, dst, {1, 1, 1});
     dev.GetQueue().Submit({encoder.Finish()});
     encoder.Destroy();
     buf.Destroy();
@@ -1010,7 +949,7 @@ void initNormalTexture(Context& ctx, Device dev) {
     auto [bundle, sampler, bindGroup] = initSingleValueTexture(
         "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF8080);
     ctx.normalTextureSampler = sampler;
-    ctx.normalTexture = bundle;
+    ctx.specularTexture = bundle;
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -1218,7 +1157,6 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-    API = APIPreference::GL;
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

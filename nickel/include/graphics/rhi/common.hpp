@@ -265,9 +265,9 @@ enum class StencilOp {
 };
 
 enum class CullMode {
-    Back,
-    Front,
-    None,
+    None = 0,
+    Back = 0x01,
+    Front = 0x02,
 };
 
 enum class FrontFace {

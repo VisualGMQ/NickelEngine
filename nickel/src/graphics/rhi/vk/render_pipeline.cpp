@@ -53,24 +53,31 @@ void RenderPipelineImpl::createRenderPipeline(
         .setTopology(Topology2Vk(desc.primitive.topology));
 
     // shader stage
-    std::vector<vk::PipelineShaderStageCreateInfo> shaderStages(2);
-    shaderStages[0]
-        .setStage(vk::ShaderStageFlagBits::eVertex)
-        .setModule(
-            static_cast<const ShaderModuleImpl*>(desc.vertex.module.Impl())->module)
-        .setPName(desc.vertex.entryPoint.c_str());
-    shaderStages[1]
-        .setStage(vk::ShaderStageFlagBits::eFragment)
-        .setModule(
-            static_cast<const ShaderModuleImpl*>(desc.fragment.module.Impl())->module)
-        .setPName(desc.fragment.entryPoint.c_str());
-    if (desc.geometry) {
-        shaderStages.resize(3);
-        shaderStages[2]
-            .setStage(vk::ShaderStageFlagBits::eGeometry)
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+    shaderStages.reserve(2);
+    if (desc.vertex.module) {
+        shaderStages.resize(1);
+        shaderStages[0]
+            .setStage(vk::ShaderStageFlagBits::eVertex)
             .setModule(
-                static_cast<const ShaderModuleImpl*>(desc.geometry->module.Impl())->module)
+                static_cast<const ShaderModuleImpl*>(desc.vertex.module.Impl())->module)
+            .setPName(desc.vertex.entryPoint.c_str());
+    }
+    if (desc.fragment.module) {
+        shaderStages.resize(2);
+        shaderStages[1]
+            .setStage(vk::ShaderStageFlagBits::eFragment)
+            .setModule(
+                static_cast<const ShaderModuleImpl*>(desc.fragment.module.Impl())->module)
             .setPName(desc.fragment.entryPoint.c_str());
+        if (desc.geometry) {
+            shaderStages.resize(3);
+            shaderStages[2]
+                .setStage(vk::ShaderStageFlagBits::eGeometry)
+                .setModule(
+                    static_cast<const ShaderModuleImpl*>(desc.geometry->module.Impl())->module)
+                .setPName(desc.fragment.entryPoint.c_str());
+        }
     }
 
     // viewport
@@ -251,20 +258,21 @@ void RenderPipelineImpl::createRenderPass(
 
         attachments.push_back(depthAttach);
 
-        vk::ImageLayout layout =
-            vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
         auto viewFmt = desc.depthStencil->depthFormat;
-        depthAttRef.setAttachment(desc.fragment.targets.size())
-            .setLayout(GetLayoutByFormat(
-                viewFmt, desc.depthStencil->stencilReadMask == 0,
-                !desc.depthStencil->depthWriteEnabled));
+        depthAttRef
+            .setAttachment(desc.fragment.targets.size())
+            //.setLayout(GetLayoutByFormat(
+            //    viewFmt, desc.depthStencil->stencilReadMask == 0,
+            //    !desc.depthStencil->depthWriteEnabled));
+            .setLayout(desc.depthStencil->depthWriteEnabled
+                           ? vk::ImageLayout::eDepthStencilAttachmentOptimal
+                           : vk::ImageLayout::eDepthStencilReadOnlyOptimal);
     }
 
     vk::SubpassDescription subpass;
     subpass.setColorAttachments(colorAttRefs)
         .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-    if (desc.depthStencil && !colorAttRefs.empty()) {
+    if (desc.depthStencil) {
         subpass.setPDepthStencilAttachment(&depthAttRef);
     }
 

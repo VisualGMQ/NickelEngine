@@ -9,6 +9,7 @@
 #include "graphics/rhi/vk/pch.hpp"
 #include "graphics/rhi/vk/renderpass.hpp"
 #include "graphics/rhi/vk/swapchain.hpp"
+#include "graphics/rhi/vk/command.hpp"
 
 
 namespace nickel::rhi::vulkan {
@@ -30,6 +31,21 @@ public:
         bool HasSeperateQueue() const {
             return graphicsIndex.value() != presentIndex.value();
         }
+    };
+
+    struct CommandCounter final {
+        CommandCounter() { counter_.fill(0); }
+
+        void Reset() { counter_.fill(0); }
+
+        void Add(CmdType type) { counter_[static_cast<uint32_t>(type)]++; }
+
+        uint32_t Get(CmdType type) {
+            return counter_[static_cast<uint32_t>(type)];
+        }
+
+    private:
+        std::array<int, static_cast<uint32_t>(CmdType::CmdTypeNumber)> counter_;
     };
 
     explicit DeviceImpl(AdapterImpl&);
@@ -69,6 +85,8 @@ public:
 
     std::vector<RenderPass> renderPasses;
     std::vector<Framebuffer> framebuffers;
+
+    CommandCounter cmdCounter;
 
 private:
     void createDevice(vk::Instance, vk::PhysicalDevice, vk::SurfaceKHR);

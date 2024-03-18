@@ -38,9 +38,12 @@ private:
 };
 
 enum class CmdType {
-    None,
+    None = 0,
     RenderPass,
     CopyData,
+
+    // use for number record, dont use
+    CmdTypeNumber,
 };
 
 class CommandEncoderImpl : public rhi::CommandEncoderImpl {
@@ -68,6 +71,11 @@ private:
     CmdType type_ = CmdType::None;
 };
 
+struct LayoutTransition final {
+    vk::ImageLayout& oldLayout;
+    vk::ImageLayout newLayout;
+};
+
 class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:
     friend class CommandEncoderImpl;
@@ -77,9 +85,20 @@ public:
     vk::CommandBuffer buf;
 
     CmdType Type() const { return type_; }
+    void AddLayoutTransition(vk::ImageLayout& layout, vk::ImageLayout newLayout) {
+        layoutTransition_.emplace_back(LayoutTransition{layout, newLayout});
+    }
+
+    void ApplyLayoutTransition() {
+        for (auto& trans : layoutTransition_) {
+            trans.oldLayout = trans.newLayout;
+        }
+        layoutTransition_.clear();
+    }
 
 private:
     CmdType type_ = CmdType::None;
+    std::vector<LayoutTransition> layoutTransition_;
 };
 
 }  // namespace nickel::rhi::vulkan

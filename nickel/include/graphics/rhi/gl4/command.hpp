@@ -70,6 +70,10 @@ struct CmdPushConstant final {
     uint32_t size;
 };
 
+struct CmdBeginRenderPass final {
+    RenderPass::Descriptor desc;
+};
+
 enum class CmdType {
     Unknown,
     SetBindGroup,
@@ -81,13 +85,15 @@ enum class CmdType {
     CopyBuf2Buf,
     CopyBuf2Texture,
     PushConstant,
+    BeginRenderPass,
 };
 
 struct Command final {
     using CmdUnion =
         std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw,
                      CmdDrawIndexed, CmdSetVertexBuffer, CmdSetIndexBuffer,
-                     CmdSetBindGroup, CmdSetRenderPipeline, CmdPushConstant>;
+                     CmdSetBindGroup, CmdSetRenderPipeline, CmdPushConstant,
+                     CmdBeginRenderPass>;
 
     CmdType type = CmdType::Unknown;
     CmdUnion cmd;
@@ -97,8 +103,6 @@ class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:
     std::vector<Command> cmds;
     std::unordered_map<uint32_t, BindGroup> bindGroups;
-    std::optional<RenderPass::Descriptor> renderPass;
-    Framebuffer framebuffer;
 
     void Execute(DeviceImpl&) const;
 };

@@ -1,29 +1,56 @@
+#include "../common/camera.hpp"
 #include "graphics/rhi/rhi.hpp"
+#include "graphics/rhi/util.hpp"
 #include "nickel.hpp"
 #include "stb_image.h"
 #include "vertex.hpp"
+
 
 using namespace nickel::rhi;
 
 APIPreference API = APIPreference::GL;
 
-struct Context {
-    PipelineLayout layout;
-    RenderPipeline pipeline;
-    Buffer vertexBuffer;
-    Buffer uniformBuffer;
-    BindGroupLayout bindGroupLayout;
-    BindGroup debugBindGroup;
-    Texture depth;
-    TextureView depthView;
-    Texture image;
-    TextureView imageView;
+struct TextureBundle {
+    Texture texture;
+    TextureView view;
     Sampler sampler;
 };
 
 struct MVP {
     nickel::cgmath::Mat44 model, view, proj;
 } mvp;
+
+struct Context final {
+    PipelineLayout layout;
+    RenderPipeline pipeline;
+    Buffer uniformBuffer;
+    Buffer vertexBuffer;
+    Buffer eyePosBuffer;
+    BindGroupLayout bindGroupLayout;
+    BindGroup bindGroup;
+    Texture depth;
+    TextureView depthView;
+
+    TextureBundle colorTexture;
+    TextureBundle specularTexture;
+
+    ~Context() {
+        layout.Destroy();
+        pipeline.Destroy();
+        uniformBuffer.Destroy();
+        eyePosBuffer.Destroy();
+        depth.Destroy();
+        depthView.Destroy();
+        colorTexture.view.Destroy();
+        colorTexture.texture.Destroy();
+        colorTexture.sampler.Destroy();
+        specularTexture.view.Destroy();
+        specularTexture.texture.Destroy();
+        specularTexture.sampler.Destroy();
+        bindGroup.Destroy();
+        bindGroupLayout.Destroy();
+    }
+};
 
 void initShaders(APIPreference api, Device device,
                  RenderPipeline::Descriptor& desc) {
@@ -32,64 +59,59 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/vert.spv", std::ios::binary)
+                "test/testbed/rhi/specular_map/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/frag.spv", std::ios::binary)
+                "test/testbed/rhi/specular_map/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/shader.glsl.vert")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/specular_map/shader.glsl.vert")
+                              .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/shader.glsl.frag")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/specular_map/shader.glsl.frag")
+                              .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     }
 }
 
-void initVertexBuffer(Context& ctx, Device& device) {
-    Buffer::Descriptor bufferDesc;
-    bufferDesc.size = sizeof(gVertices);
-    bufferDesc.mappedAtCreation = true;
-    bufferDesc.usage = BufferUsage::Vertex;
-    ctx.vertexBuffer = device.CreateBuffer(bufferDesc);
-    auto data = ctx.vertexBuffer.GetMappedRange();
-    memcpy(data, gVertices.data(), sizeof(gVertices));
-    ctx.vertexBuffer.Unmap();
-}
-
-void initUniformBuffer(Context& ctx, Adapter adapter, Device device, nickel::Window& window) {
-    mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
-                                           window.Size().w / window.Size().h,
-                                           0.1, 100, adapter.RequestAdapterInfo().api == APIPreference::GL);
-    mvp.view =
-        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 0});
-    mvp.model = nickel::cgmath::Mat44::Identity();
-
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
+                       nickel::Window& window, const Camera& camera) {
     Buffer::Descriptor bufferDesc;
     bufferDesc.usage = BufferUsage::Uniform;
     bufferDesc.mappedAtCreation = true;
     bufferDesc.size = 4 * 4 * 4 * 3;
     ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
-    void* data = ctx.uniformBuffer.GetMappedRange();
-    memcpy(data, &mvp, sizeof(mvp));
+
+    char* data = (char*)ctx.uniformBuffer.GetMappedRange();
+    auto model = nickel::cgmath::Mat44::Identity();
+    uint32_t matSize = sizeof(nickel::cgmath::Mat44);
+    memcpy(data, model.data, matSize);
+    memcpy(data + matSize, camera.View().data, matSize);
+    memcpy(data + matSize * 2, camera.Proj().data, matSize);
     if (!ctx.uniformBuffer.IsMappingCoherence()) {
         ctx.uniformBuffer.Flush();
     }
 }
 
-void initSampler(Context& ctx, Device& device) {
-    Sampler::Descriptor desc;
-    ctx.sampler = device.CreateSampler(desc);
+void initEyePosBuffer(Context& ctx, Device device, const Camera& camera) {
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.usage = BufferUsage::Uniform;
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.size = sizeof(nickel::cgmath::Vec3);
+    ctx.eyePosBuffer = device.CreateBuffer(bufferDesc);
+
+    char* data = (char*)ctx.eyePosBuffer.GetMappedRange();
+    memcpy(data, camera.Position().data, bufferDesc.size);
+    if (!ctx.eyePosBuffer.IsMappingCoherence()) {
+        ctx.eyePosBuffer.Flush();
+    }
 }
 
 void initPipelineLayout(Context& ctx, Device& device) {
@@ -101,35 +123,59 @@ void initPipelineLayout(Context& ctx, Device& device) {
 void initBindGroupLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
-    // uniform buffer
+    // MVP uniform buffer
+    BufferBinding bufferBinding1;
+    bufferBinding1.buffer = ctx.uniformBuffer;
+    bufferBinding1.hasDynamicOffset = false;
+    bufferBinding1.type = BufferType::Uniform;
+
     Entry entry;
     entry.arraySize = 1;
     entry.binding.binding = 0;
+    entry.binding.entry = bufferBinding1;
     entry.visibility = ShaderStage::Vertex;
-    BufferBinding bufferBinding;
-    bufferBinding.buffer = ctx.uniformBuffer;
-    bufferBinding.hasDynamicOffset = false;
-    bufferBinding.type = BufferType::Uniform;
-    entry.binding.entry = bufferBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
-    // sampler
+    // color texture sampler
+    SamplerBinding colorTextureBinding;
+    colorTextureBinding.type = SamplerBinding::SamplerType::Filtering;
+    colorTextureBinding.name = "mySampler";
+    colorTextureBinding.sampler = ctx.colorTexture.sampler;
+    colorTextureBinding.view = ctx.colorTexture.view;
+
     entry.arraySize = 1;
     entry.binding.binding = 1;
+    entry.binding.entry = colorTextureBinding;
     entry.visibility = ShaderStage::Fragment;
-    SamplerBinding samplerBinding;
-    samplerBinding.type = SamplerBinding::SamplerType::Filtering;
-    samplerBinding.name = "mySampler";
-    samplerBinding.sampler = ctx.sampler;
-    samplerBinding.view = ctx.imageView;
-    entry.binding.entry = samplerBinding;
     bindGroupLayoutDesc.entries.emplace_back(entry);
 
-    ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
+    // specular map sampler
+    SamplerBinding specularTextureBinding;
+    specularTextureBinding.type = SamplerBinding::SamplerType::Filtering;
+    specularTextureBinding.name = "specularSampler";
+    specularTextureBinding.sampler = ctx.specularTexture.sampler;
+    specularTextureBinding.view = ctx.specularTexture.view;
 
-    BindGroup::Descriptor bindGroupDesc;
-    bindGroupDesc.layout = ctx.bindGroupLayout;
-    ctx.debugBindGroup = device.CreateBindGroup(bindGroupDesc);
+    entry.arraySize = 1;
+    entry.binding.binding = 2;
+    entry.binding.entry = specularTextureBinding;
+    entry.visibility = ShaderStage::Fragment;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+    // EyePos uniform buffer
+    BufferBinding bufferBinding2;
+    bufferBinding2.buffer = ctx.eyePosBuffer;
+    bufferBinding2.hasDynamicOffset = false;
+    bufferBinding2.type = BufferType::Uniform;
+
+    entry.arraySize = 1;
+    entry.binding.binding = 3;
+    entry.binding.entry = bufferBinding2;
+    entry.visibility = ShaderStage::Fragment;
+    bindGroupLayoutDesc.entries.emplace_back(entry);
+
+
+    ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 }
 
 void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
@@ -144,19 +190,31 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
     ctx.depthView = ctx.depth.CreateView();
 }
 
-void initImage(Context& ctx, Device& dev) {
+void initMeshData(Device device, Context& ctx) {
+    Buffer::Descriptor desc;
+    desc.mappedAtCreation = true;
+    desc.usage = BufferUsage::Vertex;
+    desc.size = sizeof(gVertices);
+    ctx.vertexBuffer = device.CreateBuffer(desc);
+    void* data = ctx.vertexBuffer.GetMappedRange();
+    memcpy(data, gVertices.data(), sizeof(gVertices));
+    ctx.vertexBuffer.Unmap();
+}
+
+TextureBundle loadTexture(const std::filesystem::path& filename, Context& ctx,
+                          Device& dev, TextureFormat fmt) {
     int w, h;
-    void* data = stbi_load("test/testbed/rhi/texture_cube/texture.jpg", &w,
-                           &h, nullptr, STBI_rgb_alpha);
+    void* data =
+        stbi_load(filename.string().c_str(), &w, &h, nullptr, STBI_rgb_alpha);
 
     Texture::Descriptor desc;
-    desc.format = TextureFormat::RGBA8_UNORM_SRGB;
+    desc.format = fmt;
     desc.size.width = w;
     desc.size.height = h;
     desc.size.depthOrArrayLayers = 1;
     desc.usage = static_cast<uint32_t>(TextureUsage::TextureBinding) |
                  static_cast<uint32_t>(TextureUsage::CopyDst);
-    ctx.image = dev.CreateTexture(desc);
+    auto texture = dev.CreateTexture(desc);
 
     Buffer::Descriptor bufferDesc;
     bufferDesc.mappedAtCreation = true;
@@ -175,7 +233,7 @@ void initImage(Context& ctx, Device& dev) {
     src.bytesPerRow = w;
     src.rowsPerImage = h;
     CommandEncoder::BufTexCopyDst dst;
-    dst.texture = ctx.image;
+    dst.texture = texture;
     dst.aspect = TextureAspect::All;
     dst.miplevel = 0;
     encoder.CopyBufferToTexture(src, dst,
@@ -185,10 +243,12 @@ void initImage(Context& ctx, Device& dev) {
     dev.WaitIdle();
     encoder.Destroy();
 
-    ctx.imageView = ctx.image.CreateView();
+    auto view = texture.CreateView();
 
     stbi_image_free(data);
     copyBuffer.Destroy();
+
+    return {texture, view, dev.CreateSampler({})};
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -197,15 +257,36 @@ void StartupSystem(gecs::commands cmds,
         cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
+    auto& camera = cmds.emplace_resource<Camera>(
+        adapter.RequestAdapterInfo().api, window->Size());
+    camera.Move({0, 0, 50});
+    SphericalCoordCameraProxy proxy(camera, {});
+    proxy.Update2Camera();
 
     RenderPipeline::Descriptor desc;
+    initShaders(adapter.RequestAdapterInfo().api, device, desc);
+    initMeshData(device, ctx);
+    ctx.colorTexture =
+        loadTexture("test/testbed/rhi/specular_map/crate.png", ctx, device,
+                    TextureFormat::RGBA8_UNORM_SRGB);
+    ctx.specularTexture =
+        loadTexture("test/testbed/rhi/specular_map/specular_map.png", ctx,
+                    device, TextureFormat::RGBA8_UNORM);
+    initUniformBuffer(ctx, adapter, device, window.get(), camera);
+    initEyePosBuffer(ctx, device, camera);
+    initBindGroupLayout(ctx, device);
+    BindGroup::Descriptor bindGroupDesc;
+    bindGroupDesc.layout = ctx.bindGroupLayout;
+    ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
+    initPipelineLayout(ctx, device);
+    initDepthTexture(ctx, device, window.get());
 
     RenderPipeline::VertexState vertexState;
     RenderPipeline::BufferState bufferState;
 
     bufferState.attributes.push_back({VertexFormat::Float32x3, 0, 0});
-    bufferState.attributes.push_back({VertexFormat::Float32x3, 12, 1});
-    bufferState.attributes.push_back({VertexFormat::Float32x2, 24, 2});
+    bufferState.attributes.push_back({VertexFormat::Float32x3, 3 * 4, 1});
+    bufferState.attributes.push_back({VertexFormat::Float32x2, 6 * 4, 2});
     bufferState.arrayStride = 8 * 4;
     desc.vertex.buffers.emplace_back(bufferState);
 
@@ -218,16 +299,6 @@ void StartupSystem(gecs::commands cmds,
     desc.viewport.scissor.extent.width = window->Size().w;
     desc.viewport.scissor.extent.height = window->Size().h;
 
-    initShaders(adapter.RequestAdapterInfo().api, device, desc);
-
-    initSampler(ctx, device);
-    initImage(ctx, device);
-    initVertexBuffer(ctx, device);
-    initUniformBuffer(ctx, adapter, device, window.get());
-    initBindGroupLayout(ctx, device);
-    initPipelineLayout(ctx, device);
-    initDepthTexture(ctx, device, window.get());
-
     RenderPipeline::FragmentTarget target;
     target.format = TextureFormat::Presentation;
     desc.layout = ctx.layout;
@@ -239,7 +310,36 @@ void StartupSystem(gecs::commands cmds,
     depthStencilState.depthCompare = CompareOp::Greater;
     desc.depthStencil = depthStencilState;
 
+    // desc.primitive.cullMode = CullMode::Back;
+
     ctx.pipeline = device.CreateRenderPipeline(desc);
+}
+
+void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
+                 gecs::resource<nickel::Mouse> mouse,
+                 gecs::resource<nickel::Keyboard> keyboard,
+                 gecs::resource<gecs::mut<Camera>> camera) {
+    constexpr float offset = 0.01;
+    constexpr float rStep = 0.5;
+    static float x = nickel::cgmath::PI * 0.5, y = nickel::cgmath::PI * 0.5;
+    if (mouse->LeftBtn().IsPress()) {
+        y -= mouse->Offset().y * offset;
+        x += mouse->Offset().x * offset;
+    }
+
+    SphericalCoordCameraProxy proxy(camera.get(), {});
+
+    if (auto y = mouse->WheelOffset().y; y != 0) {
+        proxy.radius -= rStep * y;
+        if (proxy.radius < 0.0001) {
+            proxy.radius = 0.0001;
+        }
+    }
+
+    proxy.theta = y;
+    proxy.phi = x;
+
+    proxy.Update2Camera();
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
@@ -248,7 +348,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = AttachmentLoadOp::Clear;
     colorAtt.storeOp = AttachmentStoreOp::Store;
-    colorAtt.clearValue.fill(1);
+    colorAtt.clearValue = {0.3, 0.3, 0.3, 1};
 
     Texture::Descriptor textureDesc;
     textureDesc.format = TextureFormat::Presentation;
@@ -271,7 +371,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     renderPass.SetPipeline(ctx->pipeline);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
-    renderPass.SetBindGroup(ctx->debugBindGroup);
+    renderPass.SetBindGroup(ctx->bindGroup);
     renderPass.Draw(gVertices.size(), 1, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -286,30 +386,26 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     texture.Destroy();
 }
 
-void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
-    static float x = 0, y = 0;
-
-    void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateTranslation({0, 0, -5}) * nickel::cgmath::CreateXYZRotation({x, y, 0});
-    memcpy(data, mvp.model.data, sizeof(mvp.model));
+void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
+                 gecs::resource<Camera> camera) {
+    char* data = (char*)ctx->uniformBuffer.GetMappedRange();
+    uint32_t matSize = sizeof(nickel::cgmath::Mat44);
+    memcpy(data + matSize, camera->View().data, matSize);
+    memcpy(data + matSize * 2, camera->Proj().data, matSize);
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
-        ctx->uniformBuffer.Flush();
+        ctx->uniformBuffer.Flush(matSize, matSize * 2);
     }
-    x += 0.001;
-    y += 0.002;
+
+    data = (char*)ctx->eyePosBuffer.GetMappedRange();
+    memcpy(data, camera->Position().data, sizeof(nickel::cgmath::Vec3));
+    if (!ctx->eyePosBuffer.IsMappingCoherence()) {
+        ctx->eyePosBuffer.Flush();
+    }
 }
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
-    ctx->sampler.Destroy();
-    ctx->depthView.Destroy();
-    ctx->depth.Destroy();
-    ctx->debugBindGroup.Destroy();
-    ctx->bindGroupLayout.Destroy();
-    ctx->uniformBuffer.Destroy();
-    ctx->vertexBuffer.Destroy();
-    ctx->layout.Destroy();
-    ctx->pipeline.Destroy();
+    cmds.remove_resource<Context>();
     cmds.remove_resource<Device>();
     cmds.remove_resource<Adapter>();
 }
@@ -320,16 +416,16 @@ void BootstrapSystem(gecs::world& world,
 #ifdef NICKEL_HAS_VULKAN
     bool isVulkanBackend =
         args.size() == 1 ? true : (args[1] == "--api=gl" ? false : true);
+#else
+    bool isVulkanBackend = false;
+#endif
     if (isVulkanBackend) {
         API = APIPreference::Vulkan;
     } else {
         API = APIPreference::GL;
     }
-#else
-    bool isVulkanBackend = true;
-#endif
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
-        "04 texture cube", 1024, 720, API == APIPreference::Vulkan);
+        "specular", 1024, 720, API == APIPreference::Vulkan);
 
     reg
         // startup systems
@@ -342,10 +438,12 @@ void BootstrapSystem(gecs::world& world,
         .regist_shutdown_system<nickel::EngineShutdown>()
         // update systems
         .regist_update_system<nickel::VideoSystemUpdate>()
-        // other input handle event must put here(after mouse/keyboard update)
+        // other input handle event must put here(after mouse/keyboard
+        // update)
         .regist_update_system<nickel::Mouse::Update>()
         .regist_update_system<nickel::Keyboard::Update>()
         .regist_update_system<nickel::HandleInputEvents>()
         .regist_update_system<UpdateSystem>()
+        .regist_update_system<HandleEvent>()
         .regist_update_system<LogicUpdate>();
 }

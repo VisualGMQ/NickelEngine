@@ -21,6 +21,7 @@ public:
     vk::Image GetImage() const;
 
     vk::DeviceMemory mem;
+    vk::ImageLayout layout = vk::ImageLayout::eUndefined;
 
 private:
     vk::Image image_;

@@ -44,12 +44,15 @@ public:
 
     BindGroupLayout GetLayout() const { return desc_.layout; }
 
+    void Transformlayouts();
+
     std::vector<vk::DescriptorSet> sets;
 
 private:
     uint32_t id_;
     DeviceImpl& device_;
     BindGroup::Descriptor desc_;
+    std::vector<std::function<void(void)>> layoutTransfers_;
 
     void writeDescriptors();
 };

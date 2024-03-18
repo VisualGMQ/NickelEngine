@@ -16,41 +16,7 @@ namespace nickel::rhi::gl4 {
 
 struct CmdExecutor final {
     CmdExecutor(DeviceImpl& dev, const CommandBufferImpl& buffer)
-        : buffer_{buffer}, device_{dev} {
-        if (buffer.renderPass) {
-            auto renderPass = buffer.renderPass;
-
-            if (buffer.framebuffer) {
-                static_cast<const FramebufferImpl*>(buffer.framebuffer.Impl())
-                    ->Bind();
-            } else {
-                GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-            }
-
-            for (int i = 0; i < renderPass->colorAttachments.size(); i++) {
-                auto attachment = renderPass->colorAttachments[i];
-
-                if (attachment.loadOp == AttachmentLoadOp::Clear) {
-                    GLenum index = GL_COLOR_ATTACHMENT0 + i;
-                    GL_CALL(glDrawBuffer(index));
-                    GL_CALL(glClearBufferfv(GL_COLOR, 0,
-                                            attachment.clearValue.data()));
-                }
-            }
-
-            if (renderPass->depthStencilAttachment) {
-                auto attachment = renderPass->depthStencilAttachment.value();
-                if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
-                    GL_CALL(glClearBufferfv(GL_DEPTH, 0,
-                                            &attachment.depthClearValue));
-                }
-                if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
-                    int value = attachment.stencilClearValue;
-                    GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
-                }
-            }
-        }
-    }
+        : buffer_{buffer}, device_{dev} {}
 
     void operator()(const CmdCopyBuf2Buf& cmd) const {
         auto src = static_cast<const BufferImpl*>(cmd.src.Impl());
@@ -177,6 +143,57 @@ struct CmdExecutor final {
                                 cmd.data.data()));
     }
 
+    void operator()(const CmdBeginRenderPass& cmd) {
+        std::vector<uint32_t> attachments;
+        for (auto& colorAtt : cmd.desc.colorAttachments) {
+            attachments.emplace_back(
+                static_cast<const TextureViewImpl*>(colorAtt.view.Impl())->id);
+        }
+        if (cmd.desc.depthStencilAttachment) {
+            attachments.emplace_back(static_cast<const TextureViewImpl*>(
+                                        cmd.desc.depthStencilAttachment->view.Impl())
+                                        ->id);
+        }
+
+        Framebuffer framebuffer;
+
+        for (auto fbo : device_.framebuffers) {
+            if (static_cast<const FramebufferImpl*>(fbo.Impl())
+                    ->GetAttachmentIDs() == attachments) {
+                framebuffer = fbo;
+                break;
+            }
+        }
+
+        if (!framebuffer) {
+            framebuffer = device_.framebuffers.emplace_back(new FramebufferImpl(cmd.desc));
+        }
+
+        static_cast<FramebufferImpl*>(framebuffer.Impl())->Bind();
+        for (int i = 0; i < cmd.desc.colorAttachments.size(); i++) {
+            auto attachment = cmd.desc.colorAttachments[i];
+
+            if (attachment.loadOp == AttachmentLoadOp::Clear) {
+                GLenum index = GL_COLOR_ATTACHMENT0 + i;
+                GL_CALL(glDrawBuffer(index));
+                GL_CALL(glClearBufferfv(GL_COLOR, 0,
+                                        attachment.clearValue.data()));
+            }
+        }
+
+        if (cmd.desc.depthStencilAttachment) {
+            auto attachment = cmd.desc.depthStencilAttachment.value();
+            if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
+                GL_CALL(glClearBufferfv(GL_DEPTH, 0,
+                                        &attachment.depthClearValue));
+            }
+            if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
+                int value = attachment.stencilClearValue;
+                GL_CALL(glClearBufferiv(GL_STENCIL, 0, &value));
+            }
+        }
+    }
+
 private:
     DeviceImpl& device_;
     const CommandBufferImpl& buffer_;
@@ -239,47 +256,9 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
 RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     const RenderPass::Descriptor& desc) {
-    std::vector<uint32_t> attachments;
-    for (auto& colorAtt : desc.colorAttachments) {
-        attachments.emplace_back(
-            static_cast<const TextureImpl*>(
-                static_cast<const TextureViewImpl*>(colorAtt.view.Impl())
-                    ->Texture()
-                    .Impl())
-                ->id);
-    }
-    if (desc.depthStencilAttachment) {
-        attachments.emplace_back(
-            static_cast<const TextureImpl*>(
-                static_cast<const TextureViewImpl*>(
-                    desc.depthStencilAttachment->view.Impl())
-                    ->Texture()
-                    .Impl())
-                ->id);
-    }
-
-    for (auto fbo : device_->framebuffers) {
-        if (static_cast<const FramebufferImpl*>(fbo.Impl())
-                ->GetAttachmentIDs() == attachments) {
-            buffer_.framebuffer = fbo;
-            break;
-        }
-    }
-
-    if (!buffer_.framebuffer) {
-        Framebuffer::Descriptor fboDesc;
-        for (auto att : desc.colorAttachments) {
-            fboDesc.views.emplace_back(att.view);
-        }
-        if (desc.depthStencilAttachment) {
-            fboDesc.views.emplace_back(desc.depthStencilAttachment->view);
-        }
-        fboDesc.extent = desc.colorAttachments.at(0).view.Texture().Extent();
-        buffer_.framebuffer = device_->framebuffers.emplace_back(
-            new FramebufferImpl(fboDesc, desc));
-    }
-
-    buffer_.renderPass = desc;
+    CmdBeginRenderPass cmd;
+    cmd.desc = desc;
+    buffer_.cmds.emplace_back(Command{CmdType::BeginRenderPass, std::move(cmd)});
 
     return RenderPassEncoder{new RenderPassEncoderImpl(*device_, buffer_)};
 }

@@ -4,12 +4,12 @@
 #include "graphics/rhi/vk/util.hpp"
 #include "graphics/rhi/impl/framebuffer.hpp"
 #include "graphics/rhi/framebuffer.hpp"
+#include "graphics/rhi/renderpass.hpp"
 
 namespace nickel::rhi::vulkan {
 
 class FramebufferImpl : public rhi::FramebufferImpl {
 public:
-    FramebufferImpl(vk::Device, const Framebuffer::Descriptor&);
     FramebufferImpl(vk::Device dev, const std::vector<vk::ImageView>& views,
                     const Extent3D& extent, vk::RenderPass);
     ~FramebufferImpl();

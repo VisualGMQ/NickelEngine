@@ -11,12 +11,6 @@ class FramebufferImpl;
 
 class Framebuffer final {
 public:
-    struct Descriptor final {
-        std::vector<TextureView> views;
-        Extent3D extent;
-        RenderPass renderPass;
-    };
-
     Framebuffer() = default;
     Framebuffer(FramebufferImpl*);
     void Destroy();

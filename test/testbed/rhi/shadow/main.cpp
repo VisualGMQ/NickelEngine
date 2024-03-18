@@ -8,31 +8,42 @@ using namespace nickel::rhi;
 APIPreference API = APIPreference::GL;
 
 struct Context final {
-    PipelineLayout layout;
+    PipelineLayout renderPipelineLayout;
+    PipelineLayout shadowPipelineLayout;
     RenderPipeline pipeline;
+    RenderPipeline shadowPipeline;
     Buffer uniformBuffer;
-    Buffer colorBuffer;
-    Buffer vertexBuffer;
-    BindGroupLayout bindGroupLayout;
+    Buffer cubeVertexBuffer;
+    Buffer planeVertexBuffer;
+    BindGroupLayout renderBindGroupLayout;
+    BindGroupLayout shadowBindGroupLayout;
     BindGroup bindGroup;
+    BindGroup shadowBindGroup;
     Texture depth;
     TextureView depthView;
+    Texture shadowDepth;
+    TextureView shadowDepthView;
+    Sampler shadowDepthSampler;
 
     ~Context() {
-        layout.Destroy();
+        renderPipelineLayout.Destroy();
         pipeline.Destroy();
         uniformBuffer.Destroy();
-        colorBuffer.Destroy();
         depth.Destroy();
         depthView.Destroy();
         bindGroup.Destroy();
-        bindGroupLayout.Destroy();
+        renderBindGroupLayout.Destroy();
+        cubeVertexBuffer.Destroy();
+        planeVertexBuffer.Destroy();
     }
 };
 
 struct MVP {
-    nickel::cgmath::Mat44 model, view, proj;
+    nickel::cgmath::Mat44 model, view, proj, lightMatrix;
 } mvp;
+
+const auto LightDir =
+    nickel::cgmath::Normalize(nickel::cgmath::Vec3{-1, -1, -0.4});
 
 void initShaders(APIPreference api, Device device,
                  RenderPipeline::Descriptor& desc) {
@@ -63,13 +74,45 @@ void initShaders(APIPreference api, Device device,
     }
 }
 
+void initShadowShaders(APIPreference api, Device device,
+                 RenderPipeline::Descriptor& desc) {
+    ShaderModule::Descriptor shaderDesc;
+
+    if (api == APIPreference::Vulkan) {
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/shadow/vert.shadow.spv", std::ios::binary)
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/shadow/frag.shadow.spv", std::ios::binary)
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    } else if (api == APIPreference::GL) {
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/shadow/shader.shadow.vert")
+                              .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/shadow/shader.shadow.frag")
+                              .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+    }
+}
+
 void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
                        nickel::Window& window) {
     mvp.proj = nickel::cgmath::CreatePersp(
         nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
-        10000, adapter.RequestAdapterInfo().api == APIPreference::GL);
+        1000, adapter.RequestAdapterInfo().api == APIPreference::GL);
     mvp.view = nickel::cgmath::CreateTranslation({0, 0, -5});
     mvp.model = nickel::cgmath::Mat44::Identity();
+    mvp.lightMatrix = nickel::cgmath::CreateOrtho(-10, 10, -10, 10, 5.5, -20.5) *
+                      nickel::cgmath::LookAt({}, -LightDir, {0, 1, 0});
+    uint32_t offset = offsetof(MVP, lightMatrix);
 
     Buffer::Descriptor bufferDesc;
     bufferDesc.usage = BufferUsage::Uniform;
@@ -83,21 +126,13 @@ void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
     }
 }
 
-void initColorBuffer(Context& ctx, Device device) {
-    Buffer::Descriptor bufferDesc;
-    bufferDesc.usage = BufferUsage::Uniform;
-    bufferDesc.mappedAtCreation = true;
-    bufferDesc.size = sizeof(nickel::cgmath::Color);
-    ctx.colorBuffer = device.CreateBuffer(bufferDesc);
-}
-
-void initPipelineLayout(Context& ctx, Device& device) {
+PipelineLayout initPipelineLayout(BindGroupLayout layout, Device& device) {
     PipelineLayout::Descriptor layoutDesc;
-    layoutDesc.layouts.emplace_back(ctx.bindGroupLayout);
-    ctx.layout = device.CreatePipelineLayout(layoutDesc);
+    layoutDesc.layouts.emplace_back(layout);
+    return device.CreatePipelineLayout(layoutDesc);
 }
 
-void initBindGroupLayout(Context& ctx, Device& device) {
+BindGroupLayout initShadowPipelineBindGroupLayout(Context& ctx, Device& device) {
     BindGroupLayout::Descriptor bindGroupLayoutDesc;
 
     // MVP uniform buffer
@@ -115,45 +150,153 @@ void initBindGroupLayout(Context& ctx, Device& device) {
         bindGroupLayoutDesc.entries.emplace_back(entry);
     }
 
-    // color uniform buffer
+    return device.CreateBindGroupLayout(bindGroupLayoutDesc);
+}
+
+BindGroupLayout initPipelineBindGroupLayout(Context& ctx, Device& device) {
+    BindGroupLayout::Descriptor bindGroupLayoutDesc;
+
+    // MVP uniform buffer
     {
         BufferBinding binding;
-        binding.buffer = ctx.colorBuffer;
+        binding.buffer = ctx.uniformBuffer;
         binding.hasDynamicOffset = false;
         binding.type = BufferType::Uniform;
 
         Entry entry;
         entry.arraySize = 1;
-        entry.binding.binding = 1;
+        entry.binding.binding = 0;
         entry.binding.entry = binding;
         entry.visibility = ShaderStage::Vertex;
         bindGroupLayoutDesc.entries.emplace_back(entry);
     }
 
-    ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
+    // sampler uniform buffer
+    {
+        SamplerBinding binding;
+        binding.sampler = ctx.shadowDepthSampler;
+        binding.view = ctx.shadowDepthView;
+        binding.name = "mySampler";
+
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 1;
+        entry.binding.entry = binding;
+        entry.visibility = ShaderStage::Fragment;
+        bindGroupLayoutDesc.entries.emplace_back(entry);
+    }
+
+    return device.CreateBindGroupLayout(bindGroupLayoutDesc);
 }
 
-void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
+std::tuple<Texture, TextureView> initDepthTexture(Device& dev, nickel::Window& window) {
     Texture::Descriptor desc;
-    desc.format = TextureFormat::DEPTH24_PLUS_STENCIL8;
+    desc.format = TextureFormat::DEPTH32_FLOAT;
     desc.size.width = window.Size().w;
     desc.size.height = window.Size().h;
     desc.size.depthOrArrayLayers = 1;
-    desc.usage = TextureUsage::RenderAttachment;
-    ctx.depth = dev.CreateTexture(desc);
-
-    ctx.depthView = ctx.depth.CreateView();
+    desc.usage = Flags<TextureUsage>(TextureUsage::RenderAttachment) | TextureUsage::TextureBinding;
+    auto texture = dev.CreateTexture(desc);
+    return {texture, texture.CreateView()};
 }
 
 void initMeshData(Device device, Context& ctx) {
     Buffer::Descriptor desc;
     desc.mappedAtCreation = true;
     desc.usage = BufferUsage::Vertex;
-    desc.size = sizeof(gVertices);
-    ctx.vertexBuffer = device.CreateBuffer(desc);
-    void* data = ctx.vertexBuffer.GetMappedRange();
-    memcpy(data, gVertices.data(), sizeof(gVertices));
-    ctx.vertexBuffer.Unmap();
+    desc.size = sizeof(gCubeVertices);
+    ctx.cubeVertexBuffer= device.CreateBuffer(desc);
+    void* data = ctx.cubeVertexBuffer.GetMappedRange();
+    memcpy(data, gCubeVertices.data(), sizeof(gCubeVertices));
+    ctx.cubeVertexBuffer.Unmap();
+
+    desc.size = sizeof(gPlaneVertices);
+    ctx.planeVertexBuffer = device.CreateBuffer(desc);
+    data = ctx.planeVertexBuffer.GetMappedRange();
+    memcpy(data, gPlaneVertices.data(), sizeof(gPlaneVertices));
+    ctx.planeVertexBuffer.Unmap();
+}
+
+RenderPipeline createRenderPipeline(Device device, APIPreference api,
+                                    nickel::Window& window,
+                                    PipelineLayout layout,
+                                    Texture depthTexture) {
+    RenderPipeline::Descriptor desc;
+
+    initShaders(api, device, desc);
+
+    RenderPipeline::VertexState vertexState;
+    RenderPipeline::BufferState bufferState;
+
+    bufferState.attributes.push_back({VertexFormat::Float32x3, 0, 0});
+    bufferState.attributes.push_back(
+        {VertexFormat::Float32x3, 3 * sizeof(float), 1});
+    bufferState.attributes.push_back(
+        {VertexFormat::Float32x2, 6 * sizeof(float), 2});
+    bufferState.arrayStride = 8 * 4;
+    desc.vertex.buffers.emplace_back(bufferState);
+
+    desc.viewport.viewport.x = 0;
+    desc.viewport.viewport.y = 0;
+    desc.viewport.viewport.w = window.Size().w;
+    desc.viewport.viewport.h = window.Size().h;
+    desc.viewport.scissor.offset.x = 0;
+    desc.viewport.scissor.offset.y = 0;
+    desc.viewport.scissor.extent.width = window.Size().w;
+    desc.viewport.scissor.extent.height = window.Size().h;
+
+    RenderPipeline::FragmentTarget target;
+    target.format = TextureFormat::Presentation;
+    desc.layout = layout;
+    desc.fragment.targets.emplace_back(target);
+
+    RenderPipeline::DepthStencilState depthStencilState;
+    depthStencilState.depthFormat = depthTexture.Format();
+    depthStencilState.depthWriteEnabled = true;
+    depthStencilState.depthCompare = CompareOp::Greater;
+    desc.depthStencil = depthStencilState;
+    desc.primitive.cullMode = CullMode::Back;
+
+    return device.CreateRenderPipeline(desc);
+}
+
+RenderPipeline createShadowRenderPipeline(Device device, APIPreference api,
+                                    nickel::Window& window,
+                                    PipelineLayout layout,
+                                    Texture depthTexture) {
+    RenderPipeline::Descriptor desc;
+
+    initShadowShaders(api, device, desc);
+
+    RenderPipeline::VertexState vertexState;
+    RenderPipeline::BufferState bufferState;
+
+    bufferState.attributes.push_back({VertexFormat::Float32x3, 0, 0});
+    bufferState.attributes.push_back(
+        {VertexFormat::Float32x3, 3 * sizeof(float), 1});
+    bufferState.attributes.push_back( {VertexFormat::Float32x2, 6 * sizeof(float), 2});
+    bufferState.arrayStride = 8 * 4;
+    desc.vertex.buffers.emplace_back(bufferState);
+
+    desc.viewport.viewport.x = 0;
+    desc.viewport.viewport.y = 0;
+    desc.viewport.viewport.w = window.Size().w;
+    desc.viewport.viewport.h = window.Size().h;
+    desc.viewport.scissor.offset.x = 0;
+    desc.viewport.scissor.offset.y = 0;
+    desc.viewport.scissor.extent.width = window.Size().w;
+    desc.viewport.scissor.extent.height = window.Size().h;
+
+    desc.layout = layout;
+
+    RenderPipeline::DepthStencilState depthStencilState;
+    depthStencilState.depthFormat = depthTexture.Format();
+    depthStencilState.depthWriteEnabled = true;
+    depthStencilState.depthCompare = CompareOp::Greater;
+    desc.depthStencil = depthStencilState;
+    desc.primitive.cullMode = CullMode::Front;
+
+    return device.CreateRenderPipeline(desc);
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -163,47 +306,36 @@ void StartupSystem(gecs::commands cmds,
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
-    RenderPipeline::Descriptor desc;
-    initShaders(adapter.RequestAdapterInfo().api, device, desc);
     initMeshData(device, ctx);
     initUniformBuffer(ctx, adapter, device, window.get());
-    initColorBuffer(ctx, device);
-    initBindGroupLayout(ctx, device);
+    {
+        auto [texture, view] = initDepthTexture(device, window.get());
+        ctx.depth = texture;
+        ctx.depthView = view;
+    }
+    {
+        auto [texture, view] = initDepthTexture(device, window.get());
+        ctx.shadowDepth = texture;
+        ctx.shadowDepthView = view;
+        Sampler::Descriptor desc;
+        ctx.shadowDepthSampler = device.CreateSampler({});
+    }
+    ctx.renderBindGroupLayout = initPipelineBindGroupLayout(ctx, device);
+    ctx.shadowBindGroupLayout = initShadowPipelineBindGroupLayout(ctx, device);
     BindGroup::Descriptor bindGroupDesc;
-    bindGroupDesc.layout = ctx.bindGroupLayout;
+    bindGroupDesc.layout = ctx.renderBindGroupLayout;
     ctx.bindGroup = device.CreateBindGroup(bindGroupDesc);
-    initPipelineLayout(ctx, device);
-    initDepthTexture(ctx, device, window.get());
+    bindGroupDesc.layout = ctx.shadowBindGroupLayout;
+    ctx.shadowBindGroup = device.CreateBindGroup(bindGroupDesc);
+    ctx.renderPipelineLayout = initPipelineLayout(ctx.renderBindGroupLayout, device);
+    ctx.shadowPipelineLayout = initPipelineLayout(ctx.shadowBindGroupLayout, device);
 
-    RenderPipeline::VertexState vertexState;
-    RenderPipeline::BufferState bufferState;
-
-    bufferState.attributes.push_back({VertexFormat::Float32x3, 0, 0});
-    bufferState.attributes.push_back({VertexFormat::Float32x3, 3 * sizeof(float), 1});
-    bufferState.arrayStride = 6 * 4;
-    desc.vertex.buffers.emplace_back(bufferState);
-
-    desc.viewport.viewport.x = 0;
-    desc.viewport.viewport.y = 0;
-    desc.viewport.viewport.w = window->Size().w;
-    desc.viewport.viewport.h = window->Size().h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = window->Size().w;
-    desc.viewport.scissor.extent.height = window->Size().h;
-
-    RenderPipeline::FragmentTarget target;
-    target.format = TextureFormat::Presentation;
-    desc.layout = ctx.layout;
-    desc.fragment.targets.emplace_back(target);
-
-    RenderPipeline::DepthStencilState depthStencilState;
-    depthStencilState.depthFormat = ctx.depth.Format();
-    depthStencilState.depthWriteEnabled = true;
-    depthStencilState.depthCompare = CompareOp::Greater;
-    desc.depthStencil = depthStencilState;
-
-    ctx.pipeline = device.CreateRenderPipeline(desc);
+    ctx.pipeline =
+        createRenderPipeline(device, adapter.RequestAdapterInfo().api,
+                             window.get(), ctx.renderPipelineLayout, ctx.shadowDepth);
+    ctx.shadowPipeline =
+        createShadowRenderPipeline(device, adapter.RequestAdapterInfo().api,
+                             window.get(), ctx.shadowPipelineLayout, ctx.depth);
 }
 
 void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
@@ -235,48 +367,74 @@ void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
                   gecs::resource<gecs::mut<Context>> ctx) {
     RenderPass::Descriptor desc;
-    RenderPass::Descriptor::ColorAttachment colorAtt;
-    colorAtt.loadOp = AttachmentLoadOp::Clear;
-    colorAtt.storeOp = AttachmentStoreOp::Store;
-    colorAtt.clearValue = {0.0, 0.0, 0.0, 1};
 
     Texture::Descriptor textureDesc;
     textureDesc.format = TextureFormat::Presentation;
     auto texture = device->CreateTexture(textureDesc);
 
-    auto view = texture.CreateView();
-    colorAtt.view = view;
-    desc.colorAttachments.emplace_back(colorAtt);
-
     desc.depthStencilAttachment =
         RenderPass::Descriptor::DepthStencilAttachment{};
-    desc.depthStencilAttachment->view = ctx->depthView;
+    desc.depthStencilAttachment->view = ctx->shadowDepthView;
     desc.depthStencilAttachment->depthLoadOp = AttachmentLoadOp::Clear;
-    desc.depthStencilAttachment->depthStoreOp = AttachmentStoreOp::Discard;
+    desc.depthStencilAttachment->depthStoreOp = AttachmentStoreOp::Store;
     desc.depthStencilAttachment->depthReadOnly = false;
     desc.depthStencilAttachment->depthClearValue = 0.0;
 
-    nickel::cgmath::Color color{0, 1, 1, 1};
-    memcpy(ctx->colorBuffer.GetMappedRange(), color.data, sizeof(color));
-    if (!ctx->colorBuffer.IsMappingCoherence()) {
-        ctx->colorBuffer.Flush();
+    // render shadow map
+    auto encoder1 = device->CreateCommandEncoder();
+    {
+        auto renderPass = encoder1.BeginRenderPass(desc);
+        renderPass.SetPipeline(ctx->shadowPipeline);
+        renderPass.SetBindGroup(ctx->shadowBindGroup);
+        renderPass.SetVertexBuffer(0, ctx->cubeVertexBuffer, 0,
+                                ctx->cubeVertexBuffer.Size());
+        renderPass.Draw(gCubeVertices.size(), 1, 0, 0);
+        renderPass.SetVertexBuffer(0, ctx->planeVertexBuffer, 0,
+                                ctx->planeVertexBuffer.Size());
+        renderPass.Draw(gPlaneVertices.size(), 1, 0, 0);
+        renderPass.End();
+    }
+    auto cmd1 = encoder1.Finish();
+    Queue queue = device->GetQueue();
+    queue.Submit({cmd1});
+
+    auto view = texture.CreateView();
+    RenderPass::Descriptor::ColorAttachment colorAtt;
+    colorAtt.loadOp = AttachmentLoadOp::Clear;
+    colorAtt.storeOp = AttachmentStoreOp::Store;
+    colorAtt.clearValue = {0.0, 0.0, 0.0, 1};
+    colorAtt.view = view;
+
+    // render scene
+    auto encoder2 = device->CreateCommandEncoder();
+    {
+        desc.colorAttachments.emplace_back(colorAtt);
+
+        desc.depthStencilAttachment =
+            RenderPass::Descriptor::DepthStencilAttachment{};
+        desc.depthStencilAttachment->view = ctx->depthView;
+        desc.depthStencilAttachment->depthLoadOp = AttachmentLoadOp::Clear;
+        desc.depthStencilAttachment->depthStoreOp = AttachmentStoreOp::Store;
+
+        auto renderPass = encoder2.BeginRenderPass(desc);
+        renderPass.SetPipeline(ctx->pipeline);
+        renderPass.SetBindGroup(ctx->bindGroup);
+        renderPass.SetVertexBuffer(0, ctx->cubeVertexBuffer, 0,
+                                ctx->cubeVertexBuffer.Size());
+        renderPass.Draw(gCubeVertices.size(), 1, 0, 0);
+        renderPass.SetVertexBuffer(0, ctx->planeVertexBuffer, 0,
+                                ctx->planeVertexBuffer.Size());
+        renderPass.Draw(gPlaneVertices.size(), 1, 0, 0);
+        renderPass.End();
     }
 
-    auto encoder = device->CreateCommandEncoder();
-    auto renderPass = encoder.BeginRenderPass(desc);
-    renderPass.SetPipeline(ctx->pipeline);
-    renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0, ctx->vertexBuffer.Size());
-    renderPass.SetBindGroup(ctx->bindGroup);
-    renderPass.Draw(gVertices.size(), 1, 0, 0);
-    renderPass.End();
-    auto cmd = encoder.Finish();
+    auto cmd2 = encoder2.Finish();
 
-    Queue queue = device->GetQueue();
-
-    queue.Submit({cmd});
+    queue.Submit({cmd2});
     device->SwapContext();
 
-    encoder.Destroy();
+    encoder1.Destroy();
+    encoder2.Destroy();
     view.Destroy();
     texture.Destroy();
 }

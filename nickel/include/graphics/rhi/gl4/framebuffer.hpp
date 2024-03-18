@@ -8,7 +8,7 @@ namespace nickel::rhi::gl4 {
 
 class FramebufferImpl: public rhi::FramebufferImpl {
 public:
-    FramebufferImpl(const Framebuffer::Descriptor&, const RenderPass::Descriptor&);
+    explicit FramebufferImpl(const RenderPass::Descriptor&);
     ~FramebufferImpl();
 
     void Bind() const;
@@ -16,10 +16,10 @@ public:
 
     GLuint id = 0;
 
-    auto& GetAttachmentIDs() const { return attachments; }
+    auto& GetAttachmentIDs() const { return attachments_; }
 
 private:
-    std::vector<uint32_t> attachments;
+    std::vector<uint32_t> attachments_;
 };
 
 }

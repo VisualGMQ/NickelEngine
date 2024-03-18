@@ -8,7 +8,7 @@ struct Vertex {
 };
 
 // clang-format off
-static std::array gCubeVertices = {
+static const std::array gVertices = {
     // Back face
     Vertex{{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}}, // Bottom-left
     Vertex{{1.0f, 1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}}, // top-right
@@ -51,15 +51,6 @@ static std::array gCubeVertices = {
     Vertex{{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // bottom-right
     Vertex{{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},// top-left
     Vertex{{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}} // bottom-left        
-};
-
-static std::array gPlaneVertices = {
-    Vertex{{-5.0f, -1.f, -5.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},// top-left
-    Vertex{{5.0f, -1.f, 5.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // bottom-right
-    Vertex{{5.0f, -1.f, -5.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}}, // top-right     
-    Vertex{{5.0f, -1.f, 5.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // bottom-right
-    Vertex{{-5.0f, -1.f, -5.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},// top-left
-    Vertex{{-5.0f, -1.f, 5.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}} // bottom-left        
 };
 
 // clang-format on

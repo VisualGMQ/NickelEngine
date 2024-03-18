@@ -9,6 +9,16 @@
 
 namespace nickel::rhi::vulkan {
 
+inline vk::ImageLayout GetDepthStencilLayoutAfterSubpass(const RenderPass::Descriptor& desc) {
+    return GetLayoutByFormat(desc.depthStencilAttachment->view.Format(),
+                             desc.depthStencilAttachment->stencilReadOnly,
+                             desc.depthStencilAttachment->depthReadOnly);
+}
+
+inline vk::ImageLayout GetImageLayoutAfterSubpass(TextureFormat viewFmt) {
+    return GetLayoutByFormat(viewFmt);
+}
+
 class DeviceImpl;
 
 class RenderPassImpl : public rhi::RenderPassImpl {

@@ -17,8 +17,8 @@ public:
 
     void Bind(uint32_t slot = 0) const;
 
-    GLuint id_ = 0;
-    GLenum type_;
+    GLuint id = 0;
+    GLenum type;
 };
 
 }  // namespace nickel::rhi::gl4

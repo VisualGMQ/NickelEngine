@@ -40,7 +40,8 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType type,
 }
 
 void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
-    auto bindGroup = static_cast<const BindGroupImpl*>(group.Impl());
+    auto bindGroup = static_cast<BindGroupImpl*>(group.Impl());
+    bindGroup->Transformlayouts();
     cmd_.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         static_cast<const PipelineLayoutImpl*>(pipeline_.GetLayout().Impl())
@@ -143,8 +144,14 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         LOGE(log_tag::Vulkan, "record non-compatible commands");
     }
     type_ = CmdType::RenderPass;
+    auto cmdBuf = static_cast<CommandBufferImpl*>(cmdBuf_->Impl());
 
     std::vector<vk::ImageView> views;
+    const TextureViewImpl* view =
+        desc.colorAttachments.empty()
+            ? nullptr
+            : static_cast<const TextureViewImpl*>(
+                  desc.colorAttachments[0].view.Impl());
 
     for (auto& colorAtt : desc.colorAttachments) {
         views.push_back(
@@ -152,9 +159,13 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
                 ->GetView());
     }
     if (desc.depthStencilAttachment) {
-        views.push_back(static_cast<const vulkan::TextureViewImpl*>(
-                            desc.depthStencilAttachment->view.Impl())
-                            ->GetView());
+        auto depthView = static_cast<const vulkan::TextureViewImpl*>(
+            desc.depthStencilAttachment->view.Impl());
+        views.push_back(depthView->GetView());
+
+        if (!view) {
+            view = depthView;
+        }
     }
 
     std::vector<vk::ClearValue> clearValues;
@@ -162,6 +173,11 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         vk::ClearValue value;
         value.setColor(colorAtt.clearValue);
         clearValues.emplace_back(value);
+
+        // record layout transition
+        cmdBuf->AddLayoutTransition(
+            static_cast<TextureImpl*>(colorAtt.view.Texture().Impl())->layout,
+            GetImageLayoutAfterSubpass(colorAtt.view.Format()));
     }
 
     if (desc.depthStencilAttachment) {
@@ -170,6 +186,13 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
             .setDepth(desc.depthStencilAttachment->depthClearValue)
             .setStencil(desc.depthStencilAttachment->stencilClearValue);
         clearValues.emplace_back(value);
+
+        // record layout transition
+        cmdBuf->AddLayoutTransition(
+            static_cast<TextureImpl*>(
+                desc.depthStencilAttachment->view.Texture().Impl())
+                ->layout,
+            GetDepthStencilLayoutAfterSubpass(desc));
     }
 
     RenderPass renderPass;
@@ -196,8 +219,7 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         fbo = static_cast<const FramebufferImpl*>(
                   dev_.framebuffers
                       .emplace_back(new FramebufferImpl(
-                          dev_.device, views,
-                          desc.colorAttachments[0].view.Texture().Extent(),
+                          dev_.device, views, view->Texture().Extent(),
                           static_cast<const RenderPassImpl*>(renderPass.Impl())
                               ->renderPass))
                       .Impl())
@@ -270,7 +292,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
     auto& buffer =
         static_cast<const vulkan::BufferImpl*>(src.buffer.Impl())->buffer;
-    auto& image = *static_cast<const vulkan::TextureImpl*>(dst.texture.Impl());
+    auto& image = *static_cast<vulkan::TextureImpl*>(dst.texture.Impl());
 
     auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
     vk::ImageSubresourceRange range;
@@ -281,7 +303,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
         .setBaseMipLevel(dst.miplevel);
     vk::ImageMemoryBarrier barrier;
     barrier.setImage(image.GetImage())
-        .setOldLayout(vk::ImageLayout::eUndefined)
+        .setOldLayout(image.layout)
         .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
         .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
         .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
@@ -312,6 +334,10 @@ void CommandEncoderImpl::CopyBufferToTexture(
     buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
                          vk::PipelineStageFlagBits::eFragmentShader,
                          vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+
+    // record layout transition
+    static_cast<CommandBufferImpl*>(cmdBuf_->Impl())
+        ->AddLayoutTransition(image.layout, barrier.newLayout);
 }
 
 CommandBuffer CommandEncoderImpl::Finish() {

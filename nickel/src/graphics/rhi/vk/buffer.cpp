@@ -15,6 +15,8 @@ BufferImpl::BufferImpl(DeviceImpl& dev, vk::PhysicalDevice phyDev,
     } else {
         indices.emplace_back(dev.queueIndices.graphicsIndex.value());
     }
+
+    size_ = desc.size;
     createBuffer(desc.size, BufferUsage2Vk(desc.usage), indices,
                  desc.mappedAtCreation);
     allocateMem(phyDev, getMemoryProperty(phyDev, desc));
@@ -53,7 +55,6 @@ void BufferImpl::allocateMem(vk::PhysicalDevice phyDevice,
         allocInfo.setAllocationSize(requirements.size)
             .setMemoryTypeIndex(type.value());
         VK_CALL(mem, device_.allocateMemory(allocInfo));
-        size_ = requirements.size;
     }
 }
 

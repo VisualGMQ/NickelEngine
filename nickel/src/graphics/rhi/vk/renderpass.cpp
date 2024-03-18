@@ -1,6 +1,7 @@
 #include "graphics/rhi/vk/renderpass.hpp"
 #include "graphics/rhi/vk/convert.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
+#include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/device.hpp"
 
 namespace nickel::rhi::vulkan {
@@ -24,7 +25,7 @@ void RenderPassImpl::createRenderPass(DeviceImpl& dev, const RenderPass::Descrip
         auto& colorAtt = desc.colorAttachments[i];
         vk::AttachmentDescription attDesc;
         attDesc.setInitialLayout(vk::ImageLayout::eUndefined)
-            .setFinalLayout(GetLayoutByFormat(colorAtt.view.Format()))
+            .setFinalLayout(GetImageLayoutAfterSubpass(colorAtt.view.Format()))
             .setFormat(colorAtt.view.Format() == TextureFormat::Presentation
                            ? dev.swapchain.imageInfo.format.format
                            : TextureFormat2Vk(colorAtt.view.Format()))
@@ -46,12 +47,18 @@ void RenderPassImpl::createRenderPass(DeviceImpl& dev, const RenderPass::Descrip
     if (desc.depthStencilAttachment) {
         vk::AttachmentDescription depthAttach;
 
-        depthAttach.setInitialLayout(vk::ImageLayout::eUndefined)
-            .setFinalLayout(
-                GetLayoutByFormat(desc.depthStencilAttachment->view.Format(),
-                                  desc.depthStencilAttachment->stencilReadOnly,
-                                  desc.depthStencilAttachment->depthReadOnly))
-            .setFormat(TextureFormat2Vk(desc.depthStencilAttachment->view.Format()))
+        auto texture = static_cast<const TextureImpl*>(
+            desc.depthStencilAttachment->view.Texture().Impl());
+
+        depthAttach
+            .setInitialLayout(texture->layout)
+            /*
+                TODO: currently we don't enable separateDepthStencilLayouts, so
+                depth & stencil will use one layout
+            */
+            .setFinalLayout(GetDepthStencilLayoutAfterSubpass(desc))
+            .setFormat(
+                TextureFormat2Vk(desc.depthStencilAttachment->view.Format()))
             .setLoadOp(
                 AttachmentLoadOp2Vk(desc.depthStencilAttachment->depthLoadOp))
             .setStoreOp(
@@ -65,13 +72,14 @@ void RenderPassImpl::createRenderPass(DeviceImpl& dev, const RenderPass::Descrip
 
         attachments.push_back(depthAttach);
 
-        depthAttRef.setAttachment(attCount - 1).setLayout(depthAttach.finalLayout);
+        depthAttRef.setAttachment(attCount - 1)
+            .setLayout(depthAttach.finalLayout);
     }
 
     vk::SubpassDescription subpass;
-    subpass.setColorAttachments(colorAttRefs).setPipelineBindPoint(
-        vk::PipelineBindPoint::eGraphics);
-    if (desc.depthStencilAttachment && !colorAttRefs.empty()) {
+    subpass.setColorAttachments(colorAttRefs)
+        .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+    if (desc.depthStencilAttachment) {
         subpass.setPDepthStencilAttachment(&depthAttRef);
     }
 

@@ -25,7 +25,7 @@ struct Context final {
 
     TextureBundle colorTexture;
 
-    TextureBundle normalTexture;
+    TextureBundle specularTexture;
 
     ~Context() {
         layout.Destroy();
@@ -36,9 +36,9 @@ struct Context final {
         colorTexture.view.Destroy();
         colorTexture.texture.Destroy();
         colorTexture.sampler.Destroy();
-        normalTexture.view.Destroy();
-        normalTexture.texture.Destroy();
-        normalTexture.sampler.Destroy();
+        specularTexture.view.Destroy();
+        specularTexture.texture.Destroy();
+        specularTexture.sampler.Destroy();
         bindGroup.Destroy();
         bindGroupLayout.Destroy();
     }
@@ -137,8 +137,8 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     SamplerBinding normalTextureBinding;
     normalTextureBinding.type = SamplerBinding::SamplerType::Filtering;
     normalTextureBinding.name = "normalMapSampler";
-    normalTextureBinding.sampler = ctx.normalTexture.sampler;
-    normalTextureBinding.view = ctx.normalTexture.view;
+    normalTextureBinding.sampler = ctx.specularTexture.sampler;
+    normalTextureBinding.view = ctx.specularTexture.view;
 
     entry.arraySize = 1;
     entry.binding.binding = 2;
@@ -252,7 +252,7 @@ void StartupSystem(gecs::commands cmds,
     ctx.colorTexture =
         loadTexture("test/testbed/rhi/normal_map/brickwall.jpg", ctx, device,
                     TextureFormat::RGBA8_UNORM_SRGB);
-    ctx.normalTexture =
+    ctx.specularTexture =
         loadTexture("test/testbed/rhi/normal_map/normal_map.png", ctx, device,
                     TextureFormat::RGBA8_UNORM);
     initUniformBuffer(ctx, adapter, device, window.get());
