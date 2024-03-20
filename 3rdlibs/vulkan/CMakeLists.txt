@@ -1,4 +1,4 @@
-find_package(Vulkan REQUIRED)
+find_package(Vulkan QUIET)
 
 if (Vulkan_FOUND)
     message("found vulkan:")
