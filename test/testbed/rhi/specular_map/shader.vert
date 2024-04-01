@@ -22,6 +22,6 @@ void main() {
     mat3 normalMat = transpose(inverse(mat3(MVP.model)));
 
     vs_out.fragUV = inUV;
-    vs_out.normal = normalMat * inNormal;
+    vs_out.normal = normalize(normalMat * inNormal);
     vs_out.fragPos = vec3(MVP.model * vec4(inPosition, 1.0));
 }
