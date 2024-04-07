@@ -51,7 +51,7 @@ void RenderPassImpl::createRenderPass(DeviceImpl& dev, const RenderPass::Descrip
             desc.depthStencilAttachment->view.Texture().Impl());
 
         depthAttach
-            .setInitialLayout(texture->layout)
+            .setInitialLayout(texture->layouts[0])
             /*
                 TODO: currently we don't enable separateDepthStencilLayouts, so
                 depth & stencil will use one layout

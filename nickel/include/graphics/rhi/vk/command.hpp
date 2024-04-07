@@ -85,8 +85,10 @@ public:
     vk::CommandBuffer buf;
 
     CmdType Type() const { return type_; }
+
     void AddLayoutTransition(vk::ImageLayout& layout, vk::ImageLayout newLayout) {
-        layoutTransition_.emplace_back(LayoutTransition{layout, newLayout});
+        layoutTransition_.emplace_back(
+            LayoutTransition{layout, newLayout});
     }
 
     void ApplyLayoutTransition() {

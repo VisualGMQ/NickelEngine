@@ -23,7 +23,7 @@ struct MVP {
 struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
-    Buffer uniformBuffer;
+    Buffer MVPBuffer;
     Buffer vertexBuffer;
     Buffer eyePosBuffer;
     BindGroupLayout bindGroupLayout;
@@ -32,21 +32,21 @@ struct Context final {
     TextureView depthView;
 
     TextureBundle colorTexture;
-    TextureBundle specularTexture;
+    TextureBundle defaultNormalTexture;
 
     ~Context() {
         layout.Destroy();
         pipeline.Destroy();
-        uniformBuffer.Destroy();
+        MVPBuffer.Destroy();
         eyePosBuffer.Destroy();
         depth.Destroy();
         depthView.Destroy();
         colorTexture.view.Destroy();
         colorTexture.texture.Destroy();
         colorTexture.sampler.Destroy();
-        specularTexture.view.Destroy();
-        specularTexture.texture.Destroy();
-        specularTexture.sampler.Destroy();
+        defaultNormalTexture.view.Destroy();
+        defaultNormalTexture.texture.Destroy();
+        defaultNormalTexture.sampler.Destroy();
         bindGroup.Destroy();
         bindGroupLayout.Destroy();
     }
@@ -87,16 +87,16 @@ void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
     bufferDesc.usage = BufferUsage::Uniform;
     bufferDesc.mappedAtCreation = true;
     bufferDesc.size = 4 * 4 * 4 * 3;
-    ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
+    ctx.MVPBuffer = device.CreateBuffer(bufferDesc);
 
-    char* data = (char*)ctx.uniformBuffer.GetMappedRange();
+    char* data = (char*)ctx.MVPBuffer.GetMappedRange();
     auto model = nickel::cgmath::Mat44::Identity();
     uint32_t matSize = sizeof(nickel::cgmath::Mat44);
     memcpy(data, model.data, matSize);
     memcpy(data + matSize, camera.View().data, matSize);
     memcpy(data + matSize * 2, camera.Proj().data, matSize);
-    if (!ctx.uniformBuffer.IsMappingCoherence()) {
-        ctx.uniformBuffer.Flush();
+    if (!ctx.MVPBuffer.IsMappingCoherence()) {
+        ctx.MVPBuffer.Flush();
     }
 }
 
@@ -125,7 +125,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
 
     // MVP uniform buffer
     BufferBinding bufferBinding1;
-    bufferBinding1.buffer = ctx.uniformBuffer;
+    bufferBinding1.buffer = ctx.MVPBuffer;
     bufferBinding1.hasDynamicOffset = false;
     bufferBinding1.type = BufferType::Uniform;
 
@@ -153,8 +153,8 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     SamplerBinding specularTextureBinding;
     specularTextureBinding.type = SamplerBinding::SamplerType::Filtering;
     specularTextureBinding.name = "specularSampler";
-    specularTextureBinding.sampler = ctx.specularTexture.sampler;
-    specularTextureBinding.view = ctx.specularTexture.view;
+    specularTextureBinding.sampler = ctx.defaultNormalTexture.sampler;
+    specularTextureBinding.view = ctx.defaultNormalTexture.view;
 
     entry.arraySize = 1;
     entry.binding.binding = 2;
@@ -269,7 +269,7 @@ void StartupSystem(gecs::commands cmds,
     ctx.colorTexture =
         loadTexture("test/testbed/rhi/specular_map/crate.png", ctx, device,
                     TextureFormat::RGBA8_UNORM_SRGB);
-    ctx.specularTexture =
+    ctx.defaultNormalTexture =
         loadTexture("test/testbed/rhi/specular_map/specular_map.png", ctx,
                     device, TextureFormat::RGBA8_UNORM);
     initUniformBuffer(ctx, adapter, device, window.get(), camera);
@@ -321,23 +321,20 @@ void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
                  gecs::resource<gecs::mut<Camera>> camera) {
     constexpr float offset = 0.01;
     constexpr float rStep = 0.5;
-    static float x = nickel::cgmath::PI * 0.5, y = nickel::cgmath::PI * 0.5;
+
+    SphericalCoordCameraProxy proxy(camera.get(), {});
+    float x = proxy.GetPhi(), y = proxy.GetTheta();
     if (mouse->LeftBtn().IsPress()) {
         y -= mouse->Offset().y * offset;
         x += mouse->Offset().x * offset;
     }
 
-    SphericalCoordCameraProxy proxy(camera.get(), {});
-
     if (auto y = mouse->WheelOffset().y; y != 0) {
-        proxy.radius -= rStep * y;
-        if (proxy.radius < 0.0001) {
-            proxy.radius = 0.0001;
-        }
+        proxy.SetRadius(proxy.GetRadius() - rStep * y);
     }
 
-    proxy.theta = y;
-    proxy.phi = x;
+    proxy.SetTheta(y);
+    proxy.SetPhi(x);
 
     proxy.Update2Camera();
 }
@@ -388,12 +385,12 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
                  gecs::resource<Camera> camera) {
-    char* data = (char*)ctx->uniformBuffer.GetMappedRange();
+    char* data = (char*)ctx->MVPBuffer.GetMappedRange();
     uint32_t matSize = sizeof(nickel::cgmath::Mat44);
     memcpy(data + matSize, camera->View().data, matSize);
     memcpy(data + matSize * 2, camera->Proj().data, matSize);
-    if (!ctx->uniformBuffer.IsMappingCoherence()) {
-        ctx->uniformBuffer.Flush(matSize, matSize * 2);
+    if (!ctx->MVPBuffer.IsMappingCoherence()) {
+        ctx->MVPBuffer.Flush(matSize, matSize * 2);
     }
 
     data = (char*)ctx->eyePosBuffer.GetMappedRange();

@@ -174,10 +174,13 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         value.setColor(colorAtt.clearValue);
         clearValues.emplace_back(value);
 
+        auto texture =  static_cast<TextureImpl*>(colorAtt.view.Texture().Impl());
         // record layout transition
-        cmdBuf->AddLayoutTransition(
-            static_cast<TextureImpl*>(colorAtt.view.Texture().Impl())->layout,
-            GetImageLayoutAfterSubpass(colorAtt.view.Format()));
+        for (int i = 0; i < texture->Extent().depthOrArrayLayers; i++) {
+            cmdBuf->AddLayoutTransition(
+                texture->layouts[0],
+                GetImageLayoutAfterSubpass(colorAtt.view.Format()));
+        }
     }
 
     if (desc.depthStencilAttachment) {
@@ -187,12 +190,13 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
             .setStencil(desc.depthStencilAttachment->stencilClearValue);
         clearValues.emplace_back(value);
 
+        auto texture = static_cast<TextureImpl*>(
+            desc.depthStencilAttachment->view.Texture().Impl());
         // record layout transition
-        cmdBuf->AddLayoutTransition(
-            static_cast<TextureImpl*>(
-                desc.depthStencilAttachment->view.Texture().Impl())
-                ->layout,
-            GetDepthStencilLayoutAfterSubpass(desc));
+        for (int i = 0; i < texture->Extent().depthOrArrayLayers; i++) {
+            cmdBuf->AddLayoutTransition(
+                texture->layouts[0], GetDepthStencilLayoutAfterSubpass(desc));
+        }
     }
 
     RenderPass renderPass;
@@ -294,50 +298,122 @@ void CommandEncoderImpl::CopyBufferToTexture(
         static_cast<const vulkan::BufferImpl*>(src.buffer.Impl())->buffer;
     auto& image = *static_cast<vulkan::TextureImpl*>(dst.texture.Impl());
 
-    auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
-    vk::ImageSubresourceRange range;
-    range.setAspectMask(aspect)
-        .setBaseArrayLayer(dst.origin.z)
-        .setLevelCount(1)
-        .setLayerCount(copySize.depthOrArrayLayers)
-        .setBaseMipLevel(dst.miplevel);
-    vk::ImageMemoryBarrier barrier;
-    barrier.setImage(image.GetImage())
-        .setOldLayout(image.layout)
-        .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
-        .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
-        .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
-        .setSubresourceRange(range);
-    buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                         vk::PipelineStageFlagBits::eTransfer,
-                         vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+    bool shouldCopySplit = false;
 
-    vk::ImageSubresourceLayers layers;
-    layers.setAspectMask(aspect)
-        .setBaseArrayLayer(dst.origin.z)
-        .setLayerCount(copySize.depthOrArrayLayers)
-        .setMipLevel(dst.miplevel);
-    vk::BufferImageCopy copyInfo;
-    copyInfo.setBufferOffset(src.offset)
-        .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, 0))
-        .setBufferImageHeight(src.rowsPerImage)
-        .setBufferRowLength(src.bytesPerRow)
-        .setImageExtent({copySize.width, copySize.height, 1})
-        .setImageSubresource(layers);
-    buf_.copyBufferToImage(buffer, image.GetImage(),
-                           vk::ImageLayout::eTransferDstOptimal, copyInfo);
+    for (int i = dst.origin.z; i < (int)copySize.depthOrArrayLayers - 1; i++) {
+        if (image.layouts[i] != image.layouts[i + 1]) {
+            shouldCopySplit = true;
+            break;
+        }
+    }
 
-    barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
-        .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-        .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
-        .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-    buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                         vk::PipelineStageFlagBits::eFragmentShader,
-                         vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+    if (shouldCopySplit) {
+        for (int i = dst.origin.z; i < copySize.depthOrArrayLayers; i++) {
+            auto oldLayout = image.layouts[i];
 
-    // record layout transition
-    static_cast<CommandBufferImpl*>(cmdBuf_->Impl())
-        ->AddLayoutTransition(image.layout, barrier.newLayout);
+            auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
+            vk::ImageSubresourceRange range;
+            range.setAspectMask(aspect)
+                .setBaseArrayLayer(i)
+                .setLevelCount(1)
+                .setLayerCount(1)
+                .setBaseMipLevel(dst.miplevel);
+            vk::ImageMemoryBarrier barrier;
+            barrier.setImage(image.GetImage())
+                .setOldLayout(oldLayout)
+                .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
+                .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
+                .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
+                .setSubresourceRange(range);
+            buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+                                 vk::PipelineStageFlagBits::eTransfer,
+                                 vk::DependencyFlagBits::eByRegion, {}, {},
+                                 barrier);
+
+            vk::ImageSubresourceLayers layers;
+            layers.setAspectMask(aspect)
+                .setBaseArrayLayer(i)
+                .setLayerCount(1)
+                .setMipLevel(dst.miplevel);
+            vk::BufferImageCopy copyInfo;
+            copyInfo
+                .setBufferOffset(src.offset + dst.texture.Extent().width *
+                                                  dst.texture.Extent().height *
+                                                  (i - dst.origin.z))
+                .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, 0))
+                .setBufferImageHeight(src.rowsPerImage)
+                .setBufferRowLength(src.bytesPerRow)
+                .setImageExtent({copySize.width, copySize.height, 1})
+                .setImageSubresource(layers);
+            buf_.copyBufferToImage(buffer, image.GetImage(),
+                                   vk::ImageLayout::eTransferDstOptimal,
+                                   copyInfo);
+
+            barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
+                .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+                .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+                .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+            buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                 vk::PipelineStageFlagBits::eFragmentShader,
+                                 vk::DependencyFlagBits::eByRegion, {}, {},
+                                 barrier);
+
+            // record layout transition
+            static_cast<CommandBufferImpl*>(cmdBuf_->Impl())
+                ->AddLayoutTransition(oldLayout, barrier.newLayout);
+        }
+    } else {
+        auto oldLayout = image.layouts[dst.origin.z];
+
+        auto aspect = DetermineTextureAspect(dst.aspect, image.Format());
+        vk::ImageSubresourceRange range;
+        range.setAspectMask(aspect)
+            .setBaseArrayLayer(dst.origin.z)
+            .setLevelCount(1)
+            .setLayerCount(copySize.depthOrArrayLayers)
+            .setBaseMipLevel(dst.miplevel);
+        vk::ImageMemoryBarrier barrier;
+        barrier.setImage(image.GetImage())
+            .setOldLayout(oldLayout)
+            .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
+            .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
+            .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
+            .setSubresourceRange(range);
+        buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+                             vk::PipelineStageFlagBits::eTransfer,
+                             vk::DependencyFlagBits::eByRegion, {}, {},
+                             barrier);
+
+        vk::ImageSubresourceLayers layers;
+        layers.setAspectMask(aspect)
+            .setBaseArrayLayer(dst.origin.z)
+            .setLayerCount(copySize.depthOrArrayLayers)
+            .setMipLevel(dst.miplevel);
+        vk::BufferImageCopy copyInfo;
+        copyInfo.setBufferOffset(src.offset)
+            .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, 0))
+            .setBufferImageHeight(src.rowsPerImage)
+            .setBufferRowLength(src.bytesPerRow)
+            .setImageExtent({copySize.width, copySize.height, 1})
+            .setImageSubresource(layers);
+        buf_.copyBufferToImage(buffer, image.GetImage(),
+                               vk::ImageLayout::eTransferDstOptimal, copyInfo);
+
+        barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
+            .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+            .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+            .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+        buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                             vk::PipelineStageFlagBits::eFragmentShader,
+                             vk::DependencyFlagBits::eByRegion, {}, {},
+                             barrier);
+
+        // record layout transition
+        for (int i = dst.origin.z; i < copySize.depthOrArrayLayers; i++) {
+            static_cast<CommandBufferImpl*>(cmdBuf_->Impl())
+                ->AddLayoutTransition(image.layouts[i], barrier.newLayout);
+        }
+    }
 }
 
 CommandBuffer CommandEncoderImpl::Finish() {

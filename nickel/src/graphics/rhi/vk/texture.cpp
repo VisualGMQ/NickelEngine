@@ -24,6 +24,7 @@ TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
         desc_.sampleCount = SampleCount::Count1;
         desc_.mipmapLevelCount = 1;
         desc_.dimension = TextureType::Dim2;
+        layouts.push_back(vk::ImageLayout::eUndefined);
     }
 }
 
@@ -56,6 +57,8 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
     } else {
         info.setSharingMode(vk::SharingMode::eExclusive);
     }
+
+    layouts.resize(desc.size.depthOrArrayLayers, vk::ImageLayout::eUndefined);
 
     VK_CALL(image_, dev_.device.createImage(info));
 }

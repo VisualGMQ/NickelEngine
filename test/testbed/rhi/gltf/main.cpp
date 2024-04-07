@@ -1,3 +1,4 @@
+#include "../common/camera.hpp"
 #include "graphics/rhi/rhi.hpp"
 #include "graphics/rhi/util.hpp"
 #include "nickel.hpp"
@@ -15,15 +16,22 @@ struct BufferView {
     uint32_t count{};
 };
 
+struct PBRParameters {
+    nickel::cgmath::Vec4 baseColor;
+    float metalness = 1.0f;
+    float roughness = 1.0f;
+};
+
 struct Material final {
     struct TextureInfo {
         uint32_t texture;
         uint32_t sampler;
     };
 
-    BufferView basicColorFactor;
+    BufferView pbrParameters;
     std::optional<TextureInfo> basicTexture;
     std::optional<TextureInfo> normalTexture;
+    std::optional<TextureInfo> metalicRoughnessTexture;
     BindGroup bindGroup;
 };
 
@@ -35,27 +43,32 @@ struct TextureBundle {
 struct Context final {
     PipelineLayout layout;
     RenderPipeline pipeline;
-    Buffer uniformBuffer;
-    Buffer colorBuffer;
+    Buffer MVPBuffer;
+    Buffer pbrParamsBuffer;
+    Buffer cameraBuffer;
     BindGroupLayout bindGroupLayout;
     Texture depth;
     TextureView depthView;
     std::vector<TextureBundle> images;
     std::vector<Sampler> samplers;
 
+    // sky box related
+    TextureBundle skyboxTexture;
+    Sampler skyboxSampler;
+
     // gltf related
     TextureBundle whiteTexture;
     Sampler whiteTextureSampler;
 
-    TextureBundle specularTexture;
-    Sampler normalTextureSampler;
+    TextureBundle defaultNormalTexture;
+    Sampler defaultNormalTextureSampler;
 
     std::vector<Material> materials;
 
     ~Context() {
         layout.Destroy();
         pipeline.Destroy();
-        uniformBuffer.Destroy();
+        MVPBuffer.Destroy();
         depth.Destroy();
         depthView.Destroy();
         for (auto elem : images) {
@@ -69,6 +82,9 @@ struct Context final {
         whiteTexture.texture.Destroy();
         whiteTextureSampler.Destroy();
         bindGroupLayout.Destroy();
+        skyboxTexture.view.Destroy();
+        skyboxTexture.texture.Destroy();
+        skyboxSampler.Destroy();
     }
 };
 
@@ -177,6 +193,24 @@ inline SamplerAddressMode GLTFWrapper2RHI(int type) {
     return SamplerAddressMode::ClampToEdge;
 }
 
+inline std::filesystem::path ParseURI2Path(std::string_view str) {
+    std::string path;
+    path.reserve(str.size());
+    int idx = 0;
+    while (idx < str.size()) {
+        if (str[idx] == '%') {
+            if (str[idx + 1] == '2' && str[idx + 2] == '0') {
+                path.push_back(' ');
+                idx += 3;
+            }
+            // TODO?: other encode parse
+        } else {
+            path.push_back(str[idx++]);
+        }
+    }
+    return path;
+}
+
 struct Primitive final {
     BufferView posBufView;
     BufferView normBufView;
@@ -217,6 +251,68 @@ struct GLTFNode final {
     std::vector<Scene> scenes;
 };
 
+TextureBundle LoadSkybox(const std::array<std::filesystem::path, 6>& filenames,
+                         Context& ctx, Device& dev) {
+    Texture::Descriptor desc;
+    constexpr uint32_t width = 2048, height = 2048;
+    desc.format = TextureFormat::RGBA8_UNORM;
+    desc.dimension = TextureType::Dim2;
+    desc.size.width = width;
+    desc.size.height = height;
+    desc.size.depthOrArrayLayers = 6;
+    desc.usage = static_cast<uint32_t>(TextureUsage::TextureBinding) |
+                 static_cast<uint32_t>(TextureUsage::CopyDst);
+    desc.flags = TextureFlagBits::CubeCompatible;
+    auto texture = dev.CreateTexture(desc);
+
+    Buffer::Descriptor bufferDesc;
+    bufferDesc.mappedAtCreation = true;
+    bufferDesc.usage = BufferUsage::CopySrc;
+    bufferDesc.size = 4 * width * height;
+    Buffer copyBuffer = dev.CreateBuffer(bufferDesc);
+
+    void* bufData = copyBuffer.GetMappedRange();
+    for (int i = 0; i < filenames.size(); i++) {
+        int x, y;
+        void* data = stbi_load(filenames[i].string().c_str(), &x, &y, nullptr,
+                               STBI_rgb_alpha);
+
+        memcpy(bufData, data, bufferDesc.size);
+        if (!copyBuffer.IsMappingCoherence()) {
+            copyBuffer.Flush();
+        }
+
+        auto encoder = dev.CreateCommandEncoder();
+        CommandEncoder::BufTexCopySrc src;
+        src.buffer = copyBuffer;
+        src.offset = 0;
+        src.bytesPerRow = width;
+        src.rowsPerImage = height;
+        CommandEncoder::BufTexCopyDst dst;
+        dst.texture = texture;
+        dst.aspect = TextureAspect::All;
+        dst.miplevel = 0;
+        dst.origin.x = 0;
+        dst.origin.y = 0;
+        dst.origin.z = i;
+        encoder.CopyBufferToTexture(src, dst, Extent3D{width, height, 1});
+        auto buf = encoder.Finish();
+        dev.GetQueue().Submit({buf});
+        dev.WaitIdle();
+        encoder.Destroy();
+        stbi_image_free(data);
+    }
+    copyBuffer.Unmap();
+
+    TextureView::Descriptor viewDesc;
+    viewDesc.dimension = TextureViewType::Cube;
+    auto view = texture.CreateView(viewDesc);
+
+    copyBuffer.Destroy();
+
+    return {texture, view};
+}
+
 struct GLTFLoader {
     GLTFNode Load(const std::filesystem::path& filename, Adapter adapter,
                   Device device, Context& ctx) {
@@ -245,7 +341,8 @@ private:
         auto rootDir = filename.parent_path();
 
         for (auto& image : model_.images) {
-            auto [texture, view] = loadTexture(device, rootDir / image.uri);
+            auto [texture, view] =
+                loadTexture(device, rootDir / ParseURI2Path(image.uri));
             TextureBundle bundle;
             bundle.texture = texture;
             bundle.view = view;
@@ -259,21 +356,27 @@ private:
             ctx.samplers.emplace_back(spl);
         }
 
-        std::vector<unsigned char> baseColor;
+        std::vector<unsigned char> pbrParams;
         for (auto& material : model_.materials) {
             Material mat;
             auto align = adapter.Limits().minUniformBufferOffsetAlignment;
-            mat.basicColorFactor.count = 4;
-            mat.basicColorFactor.offset =
-                std::ceil(baseColor.size() / (float)align) * align;
-            mat.basicColorFactor.size = sizeof(nickel::cgmath::Color);
+            mat.pbrParameters.count = 6;
+            mat.pbrParameters.offset =
+                std::ceil(pbrParams.size() / (float)align) * align;
+            mat.pbrParameters.size = sizeof(PBRParameters);
+            pbrParams.resize(mat.pbrParameters.offset + mat.pbrParameters.size);
+
+            PBRParameters pbrParam;
+
             auto& colorFactor = material.pbrMetallicRoughness.baseColorFactor;
-            baseColor.resize(mat.basicColorFactor.offset +
-                             mat.basicColorFactor.size);
-            nickel::cgmath::Color color(colorFactor[0], colorFactor[1],
-                                        colorFactor[2], colorFactor[3]);
-            memcpy(baseColor.data() + mat.basicColorFactor.offset, color.data,
-                   sizeof(color));
+            pbrParam.baseColor.Set(colorFactor[0], colorFactor[1],
+                                   colorFactor[2], colorFactor[3]);
+
+            pbrParam.metalness = material.pbrMetallicRoughness.metallicFactor;
+            pbrParam.roughness = material.pbrMetallicRoughness.roughnessFactor;
+
+            memcpy(pbrParams.data() + mat.pbrParameters.offset, &pbrParam,
+                   sizeof(PBRParameters));
 
             uint32_t baseColorTextureIdx =
                 material.pbrMetallicRoughness.baseColorTexture.index;
@@ -290,6 +393,24 @@ private:
                     }
                 }
                 mat.basicTexture = baseTextureInfo;
+            }
+
+            uint32_t metalicRoughnessTextureIdx =
+                material.pbrMetallicRoughness.metallicRoughnessTexture.index;
+            if (metalicRoughnessTextureIdx != -1) {
+                Material::TextureInfo metalicRoughnessTextureInfo;
+                auto& info = model_.textures[metalicRoughnessTextureIdx];
+                if (info.source != -1) {
+                    metalicRoughnessTextureInfo.texture = info.source;
+                    if (info.sampler != -1) {
+                        metalicRoughnessTextureInfo.sampler = info.sampler;
+                    } else {
+                        ctx.samplers.emplace_back(device.CreateSampler({}));
+                        metalicRoughnessTextureInfo.sampler =
+                            ctx.whiteTextureSampler;
+                    }
+                }
+                mat.metalicRoughnessTexture = metalicRoughnessTextureInfo;
             }
 
             uint32_t normalTextureIdx = material.normalTexture.index;
@@ -310,12 +431,13 @@ private:
 
             ctx.materials.emplace_back(mat);
         }
-        ctx.colorBuffer =
-            copyBuffer2GPU(device, baseColor, BufferUsage::Uniform);
+
+        ctx.pbrParamsBuffer =
+            copyBuffer2GPU(device, pbrParams, BufferUsage::Uniform);
 
         for (auto& material : ctx.materials) {
             material.bindGroup =
-                createBindGroup(device, ctx, ctx.colorBuffer, material);
+                createBindGroup(device, ctx, ctx.pbrParamsBuffer, material);
         }
 
         std::vector<Scene> scenes;
@@ -361,6 +483,10 @@ private:
         int w, h;
         void* data = stbi_load(filename.string().c_str(), &w, &h, nullptr,
                                STBI_rgb_alpha);
+        if (!data) {
+            LOGW(nickel::log_tag::Vulkan, "load texture ", filename, " failed");
+            return {};
+        }
 
         Texture::Descriptor desc;
         desc.format = TextureFormat::RGBA8_UNORM;
@@ -432,33 +558,37 @@ private:
         desc.entries.push_back(bufferBinding);
 
         // color texture
-        {
+        if (material.basicTexture) {
             BindingPoint samplerBinding;
             samplerBinding.binding = 2;
             SamplerBinding binding;
-            binding.sampler = ctx.whiteTextureSampler;
-            binding.view = ctx.whiteTexture.view;
             binding.name = "mySampler";
-            if (material.basicTexture) {
-                binding.sampler = ctx.samplers[material.basicTexture->sampler];
-                binding.view = ctx.images[material.basicTexture->texture].view;
-            }
+            binding.sampler = ctx.samplers[material.basicTexture->sampler];
+            binding.view = ctx.images[material.basicTexture->texture].view;
             samplerBinding.entry = binding;
             desc.entries.push_back(samplerBinding);
         }
 
         // normal texture
-        {
+        if (material.normalTexture) {
             BindingPoint samplerBinding;
             samplerBinding.binding = 3;
             SamplerBinding binding;
-            binding.sampler = ctx.normalTextureSampler;
-            binding.view = ctx.specularTexture.view;
             binding.name = "normalMapSampler";
-            if (material.normalTexture) {
-                binding.sampler = ctx.samplers[material.normalTexture->sampler];
-                binding.view = ctx.images[material.normalTexture->texture].view;
-            }
+            binding.sampler = ctx.samplers[material.normalTexture->sampler];
+            binding.view = ctx.images[material.normalTexture->texture].view;
+            samplerBinding.entry = binding;
+            desc.entries.push_back(samplerBinding);
+        }
+
+        // metalicRoughtness texture
+        if (material.metalicRoughnessTexture) {
+            BindingPoint samplerBinding;
+            samplerBinding.binding = 4;
+            SamplerBinding binding;
+            binding.name = "metalroughnessSampler";
+            binding.sampler = ctx.samplers[material.metalicRoughnessTexture->sampler];
+            binding.view = ctx.images[material.metalicRoughnessTexture->texture].view;
             samplerBinding.entry = binding;
             desc.entries.push_back(samplerBinding);
         }
@@ -728,7 +858,7 @@ void renderNodeRecursive(Node& node, Context& ctx,
                                        prim.tanBufView.size);
 
             renderPass.SetBindGroup(material.bindGroup,
-                                    {material.basicColorFactor.offset});
+                                    {material.pbrParameters.offset});
 
             if (prim.indicesBufView.size > 0) {
                 renderPass.DrawIndexed(prim.indicesBufView.count, 1, 0, 0, 0);
@@ -786,22 +916,39 @@ void initShaders(APIPreference api, Device device,
 
 void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
                        nickel::Window& window) {
-    mvp.proj = nickel::cgmath::CreatePersp(
-        nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
-        10000, adapter.RequestAdapterInfo().api == APIPreference::GL);
-    mvp.view =
-        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -30});
-    mvp.model = nickel::cgmath::Mat44::Identity();
+    // MVP buffer
+    {
+        mvp.proj = nickel::cgmath::CreatePersp(
+            nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h,
+            0.1, 10000, adapter.RequestAdapterInfo().api == APIPreference::GL);
+        mvp.view =
+            nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -30});
+        mvp.model = nickel::cgmath::Mat44::Identity();
 
-    Buffer::Descriptor bufferDesc;
-    bufferDesc.usage = BufferUsage::Uniform;
-    bufferDesc.mappedAtCreation = true;
-    bufferDesc.size = 4 * 4 * 4 * 3;
-    ctx.uniformBuffer = device.CreateBuffer(bufferDesc);
-    void* data = ctx.uniformBuffer.GetMappedRange();
-    memcpy(data, &mvp, sizeof(mvp));
-    if (!ctx.uniformBuffer.IsMappingCoherence()) {
-        ctx.uniformBuffer.Flush();
+        Buffer::Descriptor bufferDesc;
+        bufferDesc.usage = BufferUsage::Uniform;
+        bufferDesc.mappedAtCreation = true;
+        bufferDesc.size = 4 * 4 * 4 * 3;
+        ctx.MVPBuffer = device.CreateBuffer(bufferDesc);
+        void* data = ctx.MVPBuffer.GetMappedRange();
+        memcpy(data, &mvp, sizeof(mvp));
+        if (!ctx.MVPBuffer.IsMappingCoherence()) {
+            ctx.MVPBuffer.Flush();
+        }
+    }
+
+    // CameraInfo Buffer
+    {
+        Buffer::Descriptor bufferDesc;
+        bufferDesc.usage = BufferUsage::Uniform;
+        bufferDesc.mappedAtCreation = true;
+        bufferDesc.size = 3 * 4;
+        ctx.cameraBuffer = device.CreateBuffer(bufferDesc);
+        void* data = ctx.cameraBuffer.GetMappedRange();
+        memcpy(data, &mvp, sizeof(mvp));
+        if (!ctx.MVPBuffer.IsMappingCoherence()) {
+            ctx.MVPBuffer.Flush();
+        }
     }
 }
 
@@ -817,56 +964,116 @@ void initPipelineLayout(Context& ctx, Device& device) {
 }
 
 void initBindGroupLayout(Context& ctx, Device& device) {
-    BindGroupLayout::Descriptor bindGroupLayoutDesc;
+    BindGroupLayout::Descriptor desc;
 
     // MVP uniform buffer
-    BufferBinding bufferBinding1;
-    bufferBinding1.buffer = ctx.uniformBuffer;
-    bufferBinding1.hasDynamicOffset = false;
-    bufferBinding1.type = BufferType::Uniform;
+    {
+        BufferBinding bufferBinding1;
+        bufferBinding1.buffer = ctx.MVPBuffer;
+        bufferBinding1.hasDynamicOffset = false;
+        bufferBinding1.type = BufferType::Uniform;
 
-    Entry entry;
-    entry.arraySize = 1;
-    entry.binding.binding = 0;
-    entry.binding.entry = bufferBinding1;
-    entry.visibility = ShaderStage::Vertex;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 0;
+        entry.binding.entry = bufferBinding1;
+        entry.visibility = ShaderStage::Vertex;
+        desc.entries.emplace_back(entry);
+    }
 
-    // color uniform buffer
-    BufferBinding bufferBinding2;
-    bufferBinding2.hasDynamicOffset = true;
-    bufferBinding2.type = BufferType::Uniform;
-    bufferBinding2.minBindingSize = sizeof(nickel::cgmath::Color);
+    // material uniform buffer
+    {
+        BufferBinding bufferBinding2;
+        bufferBinding2.hasDynamicOffset = true;
+        bufferBinding2.type = BufferType::Uniform;
+        bufferBinding2.minBindingSize = sizeof(nickel::cgmath::Color);
 
-    entry.arraySize = 1;
-    entry.binding.binding = 1;
-    entry.binding.entry = bufferBinding2;
-    entry.visibility = ShaderStage::Fragment;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 1;
+        entry.binding.entry = bufferBinding2;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
 
-    // color texture sampler
-    SamplerBinding colorTextureBinding;
-    colorTextureBinding.type = SamplerBinding::SamplerType::Filtering;
-    colorTextureBinding.name = "mySampler";
+    // base color texture sampler
+    {
+        SamplerBinding colorTextureBinding;
+        colorTextureBinding.type = SamplerBinding::SamplerType::Filtering;
+        colorTextureBinding.name = "mySampler";
+        colorTextureBinding.view = ctx.whiteTexture.view;
+        colorTextureBinding.sampler = ctx.whiteTextureSampler;
 
-    entry.arraySize = 1;
-    entry.binding.binding = 2;
-    entry.binding.entry = colorTextureBinding;
-    entry.visibility = ShaderStage::Fragment;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 2;
+        entry.binding.entry = colorTextureBinding;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
 
     // normal map sampler
-    SamplerBinding normalTextureBinding;
-    normalTextureBinding.type = SamplerBinding::SamplerType::Filtering;
-    normalTextureBinding.name = "normalMapSampler";
+    {
+        SamplerBinding normalTextureBinding;
+        normalTextureBinding.type = SamplerBinding::SamplerType::Filtering;
+        normalTextureBinding.name = "normalMapSampler";
+        normalTextureBinding.view = ctx.defaultNormalTexture.view;
+        normalTextureBinding.sampler = ctx.defaultNormalTextureSampler;
 
-    entry.arraySize = 1;
-    entry.binding.binding = 3;
-    entry.binding.entry = normalTextureBinding;
-    entry.visibility = ShaderStage::Fragment;
-    bindGroupLayoutDesc.entries.emplace_back(entry);
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 3;
+        entry.binding.entry = normalTextureBinding;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
 
-    ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
+    // metalic roughness sampler
+    {
+        SamplerBinding binding;
+        binding.type = SamplerBinding::SamplerType::Filtering;
+        binding.name = "metalroughnessSampler";
+
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 4;
+        entry.binding.entry = binding;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
+
+    // skybox sampler
+    {
+        SamplerBinding binding;
+        binding.sampler = ctx.skyboxSampler;
+        binding.view = ctx.skyboxTexture.view;
+        binding.name = "skyboxSampler";
+
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 5;
+        entry.binding.entry = binding;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
+
+    // camera uniform buffer
+    {
+        BufferBinding bufferBinding;
+        bufferBinding.hasDynamicOffset = false;
+        bufferBinding.type = BufferType::Uniform;
+        bufferBinding.minBindingSize = sizeof(nickel::cgmath::Vec3);
+        bufferBinding.buffer = ctx.cameraBuffer;
+
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 6;
+        entry.binding.entry = bufferBinding;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
+
+    ctx.bindGroupLayout = device.CreateBindGroupLayout(desc);
 }
 
 void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
@@ -881,7 +1088,7 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
     ctx.depthView = ctx.depth.CreateView();
 }
 
-std::tuple<TextureBundle, Sampler, BindGroup> initSingleValueTexture(
+std::tuple<TextureBundle, Sampler> initSingleValueTexture(
     std::string_view name, BindGroupLayout layout, Device dev, uint32_t color) {
     Texture::Descriptor desc;
     desc.dimension = TextureType::Dim2;
@@ -923,33 +1130,21 @@ std::tuple<TextureBundle, Sampler, BindGroup> initSingleValueTexture(
     encoder.Destroy();
     buf.Destroy();
 
-    BindGroup::Descriptor bindGroupDesc;
-    bindGroupDesc.layout = layout;
-    BindingPoint entry;
-    entry.binding = 2;
-    SamplerBinding binding;
-    binding.sampler = sampler;
-    binding.view = bundle.view;
-    binding.name = name;
-    entry.entry = binding;
-    bindGroupDesc.entries.emplace_back(entry);
-    auto bindGroup = dev.CreateBindGroup(bindGroupDesc);
-
-    return {bundle, sampler, bindGroup};
+    return {bundle, sampler};
 }
 
 void initWhiteTexture(Context& ctx, Device dev) {
-    auto [bundle, sampler, bindGroup] = initSingleValueTexture(
+    auto [bundle, sampler] = initSingleValueTexture(
         "mySampler", ctx.bindGroupLayout, dev, 0xFFFFFFFF);
     ctx.whiteTextureSampler = sampler;
     ctx.whiteTexture = bundle;
 }
 
-void initNormalTexture(Context& ctx, Device dev) {
-    auto [bundle, sampler, bindGroup] = initSingleValueTexture(
+void initDefaultNormalTexture(Context& ctx, Device dev) {
+    auto [bundle, sampler] = initSingleValueTexture(
         "normalMapSampler", ctx.bindGroupLayout, dev, 0xFFFF8080);
-    ctx.normalTextureSampler = sampler;
-    ctx.specularTexture = bundle;
+    ctx.defaultNormalTextureSampler = sampler;
+    ctx.defaultNormalTexture = bundle;
 }
 
 void StartupSystem(gecs::commands cmds,
@@ -958,26 +1153,47 @@ void StartupSystem(gecs::commands cmds,
         cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
+    auto& camera = cmds.emplace_resource<Camera>(
+        adapter.RequestAdapterInfo().api, window->Size());
+    camera.Move({0, 0, 50});
+    SphericalCoordCameraProxy proxy(camera, {});
+    proxy.Update2Camera();
+
+    ctx.skyboxTexture = LoadSkybox(
+        {
+            "test/testbed/rhi/gltf/skybox/right.jpg",
+            "test/testbed/rhi/gltf/skybox/left.jpg",
+            "test/testbed/rhi/gltf/skybox/top.jpg",
+            "test/testbed/rhi/gltf/skybox/bottom.jpg",
+            "test/testbed/rhi/gltf/skybox/front.jpg",
+            "test/testbed/rhi/gltf/skybox/back.jpg",
+        },
+        ctx, device);
+    ctx.skyboxSampler = device.CreateSampler({});
+    initWhiteTexture(ctx, device);
+    initDefaultNormalTexture(ctx, device);
 
     RenderPipeline::Descriptor desc;
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
 
     initUniformBuffer(ctx, adapter, device, window.get());
     initBindGroupLayout(ctx, device);
-    initWhiteTexture(ctx, device);
-    initNormalTexture(ctx, device);
 
     GLTFLoader loader;
     cmds.emplace_resource<GLTFNode>(loader.Load(
         std::filesystem::path{
             // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
-            "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
+            // "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
             // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
-           // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
+            // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
             // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/"
             // "BoxTextured.gltf"},
-        // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
-        // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
+            // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
+            // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
+            // "external/glTF-Sample-Models/2.0/Box With Spaces/glTF/Box With Spaces.gltf"},
+            // "external/glTF-Sample-Models/2.0/Corset/glTF/Corset.gltf"},
+            // "external/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"},
+            "external/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"},
         // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},
         // "external/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"},
         // "external/glTF-Sample-Models/2.0/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"},
@@ -1064,26 +1280,26 @@ void StartupSystem(gecs::commands cmds,
 
 void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
                  gecs::resource<nickel::Mouse> mouse,
-                 gecs::resource<nickel::Keyboard> keyboard) {
+                 gecs::resource<nickel::Keyboard> keyboard,
+                 gecs::resource<gecs::mut<Camera>> camera) {
     constexpr float offset = 0.01;
-    constexpr float scaleStep = 0.01;
-    static float scale = 1;
-    static float x = 0, y = 0;
+    constexpr float rStep = 0.5;
+
+    SphericalCoordCameraProxy proxy(camera.get(), {});
+    float x = proxy.GetPhi(), y = proxy.GetTheta();
     if (mouse->LeftBtn().IsPress()) {
-        y += mouse->Offset().x * offset;
-        x += mouse->Offset().y * offset;
+        y -= mouse->Offset().y * offset;
+        x += mouse->Offset().x * offset;
     }
 
     if (auto y = mouse->WheelOffset().y; y != 0) {
-        scale += scaleStep * nickel::cgmath::Sign(y) *
-                 (keyboard->Key(nickel::Key::Lctrl).IsPress() ? 100 : 1);
+        proxy.SetRadius(proxy.GetRadius() - rStep * y);
     }
 
-    if (scale < 0) {
-        scale = 0.001;
-    }
-    mvp.model = nickel::cgmath::CreateScale({scale, scale, scale}) *
-                nickel::cgmath::CreateXYZRotation({x, y, 0});
+    proxy.SetTheta(y);
+    proxy.SetPhi(x);
+
+    proxy.Update2Camera();
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
@@ -1128,11 +1344,20 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     texture.Destroy();
 }
 
-void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
-    void* data = ctx->uniformBuffer.GetMappedRange();
-    memcpy(data, mvp.model.data, sizeof(mvp.model));
-    if (!ctx->uniformBuffer.IsMappingCoherence()) {
-        ctx->uniformBuffer.Flush();
+void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
+                 gecs::resource<Camera> camera) {
+    char* data = (char*)ctx->MVPBuffer.GetMappedRange();
+    uint32_t matSize = sizeof(nickel::cgmath::Mat44);
+    memcpy(data + matSize, camera->View().data, matSize);
+    memcpy(data + matSize * 2, camera->Proj().data, matSize);
+    if (!ctx->MVPBuffer.IsMappingCoherence()) {
+        ctx->MVPBuffer.Flush(matSize, matSize * 2);
+    }
+
+    data = (char*)ctx->cameraBuffer.GetMappedRange();
+    memcpy(data, camera->Position().data, sizeof(nickel::cgmath::Vec3));
+    if (!ctx->cameraBuffer.IsMappingCoherence()) {
+        ctx->cameraBuffer.Flush();
     }
 }
 

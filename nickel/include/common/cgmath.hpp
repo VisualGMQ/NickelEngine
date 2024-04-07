@@ -992,6 +992,22 @@ T GetRadianIn360(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
 }
 
 /**
+ * @brief Get degree between v1 & v2 in [0, 2 * PI)
+ * @note v1 & v2 are both normalized
+ */
+template <typename T>
+T GetRadianIn360(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>& rightAxis) {
+    auto cos = Dot(v1, v2);
+    auto sin = Dot(Cross(v1, v2), rightAxis);
+
+    if (Sign(sin) >= 0) {
+        return std::acos(cos);
+    } else {
+        return 2 * PI - std::acos(cos);
+    }
+}
+
+/**
  * @brief Get degree between v1 & v2 in [-PI, PI)
  * @note v1 & v2 are both normalized
  */

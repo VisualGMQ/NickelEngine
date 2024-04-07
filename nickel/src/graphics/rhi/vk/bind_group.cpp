@@ -157,7 +157,7 @@ BindGroupLayoutImpl::~BindGroupLayoutImpl() {
 }
 
 BindGroupImpl::BindGroupImpl(DeviceImpl& dev, const BindGroup::Descriptor& desc)
-    : device_{dev}, desc_{desc} {
+    : device_{dev} {
     auto layout = static_cast<BindGroupLayoutImpl*>(desc.layout.Impl());
     id_ = layout->RequireBindGroupID();
     sets = layout->RequireSets(id_);
@@ -312,23 +312,24 @@ public:
         auto texture = static_cast<TextureImpl*>(binding.view.Texture().Impl());
         auto view = static_cast<TextureViewImpl*>(binding.view.Impl());
 
-        if (texture->layout == dstLayout) {
-            return ;
-        }
+        for (int i = 0; i < texture->Extent().depthOrArrayLayers; i++) {
+            auto& curLayout = texture->layouts[i];
+            if (curLayout == dstLayout) {
+                continue;
+            }
 
-        if (dstLayout != texture->layout) {
             auto aspect = DetermineTextureAspect(TextureAspect::All,
                                                  binding.view.Format());
             vk::ImageMemoryBarrier barrier;
             vk::ImageSubresourceRange range;
             range.setAspectMask(aspect)
-                .setBaseArrayLayer(0)
-                .setLayerCount(texture->Extent().depthOrArrayLayers)
+                .setBaseArrayLayer(i)
+                .setLayerCount(1)
                 .setBaseMipLevel(0)
                 .setLevelCount(1);
 
             vk::ImageLayout dstLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            barrier.setOldLayout(texture->layout)
+            barrier.setOldLayout(curLayout)
                 .setNewLayout(dstLayout)
                 .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
                 .setDstAccessMask(vk::AccessFlagBits::eShaderRead)
@@ -356,7 +357,7 @@ public:
             dev_.WaitIdle();
             dev_.device.freeCommandBuffers(dev_.cmdPool, cmds[0]);
 
-            texture->layout = dstLayout;
+            curLayout = dstLayout;
         }
     }
 

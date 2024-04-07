@@ -7,6 +7,8 @@ layout(location = 3) in vec4 inTangent;
 
 layout (location = 0) out VS_OUT{
     vec2 fragUV;
+    vec3 inPos;
+    vec3 fragPos;
     mat3 TBN;
 } vs_out;
 
@@ -21,8 +23,13 @@ layout(push_constant) uniform PushConstant {
 } pushConstant;
 
 void main() {
+    vs_out.inPos = inPosition;
+
     mat4 model = MVP.model * pushConstant.model;
-    gl_Position = MVP.proj * MVP.view * model * vec4(inPosition, 1.0);
+    vec4 fragPos = model * vec4(inPosition, 1.0);
+    gl_Position = MVP.proj * MVP.view * fragPos;
+
+    vs_out.fragPos = vec3(fragPos);
 
     mat3 normalMat = mat3(transpose(inverse(model)));
 
