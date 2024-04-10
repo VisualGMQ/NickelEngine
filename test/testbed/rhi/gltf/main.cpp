@@ -32,6 +32,7 @@ struct Material final {
     std::optional<TextureInfo> basicTexture;
     std::optional<TextureInfo> normalTexture;
     std::optional<TextureInfo> metalicRoughnessTexture;
+    std::optional<TextureInfo> occlusionTexture;
     BindGroup bindGroup;
 };
 
@@ -395,38 +396,51 @@ private:
                 mat.basicTexture = baseTextureInfo;
             }
 
-            uint32_t metalicRoughnessTextureIdx =
-                material.pbrMetallicRoughness.metallicRoughnessTexture.index;
-            if (metalicRoughnessTextureIdx != -1) {
-                Material::TextureInfo metalicRoughnessTextureInfo;
-                auto& info = model_.textures[metalicRoughnessTextureIdx];
+            if (auto idx = material.pbrMetallicRoughness
+                                   .metallicRoughnessTexture.index;
+                idx != -1) {
+                Material::TextureInfo textureInfo;
+                auto& info = model_.textures[idx];
                 if (info.source != -1) {
-                    metalicRoughnessTextureInfo.texture = info.source;
+                    textureInfo.texture = info.source;
                     if (info.sampler != -1) {
-                        metalicRoughnessTextureInfo.sampler = info.sampler;
+                        textureInfo.sampler = info.sampler;
                     } else {
                         ctx.samplers.emplace_back(device.CreateSampler({}));
-                        metalicRoughnessTextureInfo.sampler =
-                            ctx.whiteTextureSampler;
+                        textureInfo.sampler = ctx.whiteTextureSampler;
                     }
                 }
-                mat.metalicRoughnessTexture = metalicRoughnessTextureInfo;
+                mat.metalicRoughnessTexture = textureInfo;
             }
 
-            uint32_t normalTextureIdx = material.normalTexture.index;
-            if (normalTextureIdx != -1) {
-                Material::TextureInfo normalTextureInfo;
-                auto& info = model_.textures[normalTextureIdx];
+            if (auto idx = material.normalTexture.index; idx != -1) {
+                Material::TextureInfo textureInfo;
+                auto& info = model_.textures[idx];
                 if (info.source != -1) {
-                    normalTextureInfo.texture = info.source;
+                    textureInfo.texture = info.source;
                     if (info.sampler != -1) {
-                        normalTextureInfo.sampler = info.sampler;
+                        textureInfo.sampler = info.sampler;
                     } else {
                         ctx.samplers.emplace_back(device.CreateSampler({}));
-                        normalTextureInfo.sampler = ctx.samplers.size() - 1;
+                        textureInfo.sampler = ctx.samplers.size() - 1;
                     }
                 }
-                mat.normalTexture = normalTextureInfo;
+                mat.normalTexture = textureInfo;
+            }
+
+            if (auto idx = material.occlusionTexture.index; idx != -1) {
+                Material::TextureInfo textureInfo;
+                auto& info = model_.textures[idx];
+                if (info.source != -1) {
+                    textureInfo.texture = info.source;
+                    if (info.sampler != -1) {
+                        textureInfo.sampler = info.sampler;
+                    } else {
+                        ctx.samplers.emplace_back(device.CreateSampler({}));
+                        textureInfo.sampler = ctx.samplers.size() - 1;
+                    }
+                }
+                mat.occlusionTexture = textureInfo;
             }
 
             ctx.materials.emplace_back(mat);
@@ -547,15 +561,17 @@ private:
         desc.layout = ctx.bindGroupLayout;
 
         // color uniform buffer
-        BindingPoint bufferBinding;
-        BufferBinding entry;
-        entry.hasDynamicOffset = true;
-        entry.type = BufferType::Uniform;
-        entry.minBindingSize = sizeof(nickel::cgmath::Color);
-        entry.buffer = colorBuf;
-        bufferBinding.binding = 1;
-        bufferBinding.entry = entry;
-        desc.entries.push_back(bufferBinding);
+        {
+            BindingPoint bufferBinding;
+            BufferBinding entry;
+            entry.hasDynamicOffset = true;
+            entry.type = BufferType::Uniform;
+            entry.minBindingSize = sizeof(nickel::cgmath::Color);
+            entry.buffer = colorBuf;
+            bufferBinding.binding = 1;
+            bufferBinding.entry = entry;
+            desc.entries.push_back(bufferBinding);
+        }
 
         // color texture
         if (material.basicTexture) {
@@ -583,14 +599,28 @@ private:
 
         // metalicRoughtness texture
         if (material.metalicRoughnessTexture) {
-            BindingPoint samplerBinding;
-            samplerBinding.binding = 4;
+            BindingPoint bindingPoint;
+            bindingPoint.binding = 4;
             SamplerBinding binding;
             binding.name = "metalroughnessSampler";
-            binding.sampler = ctx.samplers[material.metalicRoughnessTexture->sampler];
-            binding.view = ctx.images[material.metalicRoughnessTexture->texture].view;
-            samplerBinding.entry = binding;
-            desc.entries.push_back(samplerBinding);
+            binding.sampler =
+                ctx.samplers[material.metalicRoughnessTexture->sampler];
+            binding.view =
+                ctx.images[material.metalicRoughnessTexture->texture].view;
+            bindingPoint.entry = binding;
+            desc.entries.push_back(bindingPoint);
+        }
+
+        // occlusion texture
+        if (material.occlusionTexture) {
+            BindingPoint bindingPoint;
+            bindingPoint.binding = 6;
+            SamplerBinding binding;
+            binding.name = "occlusionSampler";
+            binding.sampler = ctx.samplers[material.occlusionTexture->sampler];
+            binding.view = ctx.images[material.occlusionTexture->texture].view;
+            bindingPoint.entry = binding;
+            desc.entries.push_back(bindingPoint);
         }
 
         return device.CreateBindGroup(desc);
@@ -1033,6 +1063,8 @@ void initBindGroupLayout(Context& ctx, Device& device) {
         SamplerBinding binding;
         binding.type = SamplerBinding::SamplerType::Filtering;
         binding.name = "metalroughnessSampler";
+        binding.sampler = ctx.whiteTextureSampler;
+        binding.view = ctx.whiteTexture.view;
 
         Entry entry;
         entry.arraySize = 1;
@@ -1057,6 +1089,21 @@ void initBindGroupLayout(Context& ctx, Device& device) {
         desc.entries.emplace_back(entry);
     }
 
+    // occlusion sampler
+    {
+        SamplerBinding binding;
+        binding.sampler = ctx.whiteTextureSampler;
+        binding.view = ctx.whiteTexture.view;
+        binding.name = "occlusionSampler";
+
+        Entry entry;
+        entry.arraySize = 1;
+        entry.binding.binding = 6;
+        entry.binding.entry = binding;
+        entry.visibility = ShaderStage::Fragment;
+        desc.entries.emplace_back(entry);
+    }
+
     // camera uniform buffer
     {
         BufferBinding bufferBinding;
@@ -1067,7 +1114,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
 
         Entry entry;
         entry.arraySize = 1;
-        entry.binding.binding = 6;
+        entry.binding.binding = 7;
         entry.binding.entry = bufferBinding;
         entry.visibility = ShaderStage::Fragment;
         desc.entries.emplace_back(entry);
@@ -1190,10 +1237,12 @@ void StartupSystem(gecs::commands cmds,
             // "BoxTextured.gltf"},
             // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
             // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
-            // "external/glTF-Sample-Models/2.0/Box With Spaces/glTF/Box With Spaces.gltf"},
-            // "external/glTF-Sample-Models/2.0/Corset/glTF/Corset.gltf"},
-            // "external/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"},
-            "external/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"},
+            "external/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"},
+        // "external/glTF-Sample-Models/2.0/Box With Spaces/glTF/Box With
+        // Spaces.gltf"},
+        // "external/glTF-Sample-Models/2.0/Corset/glTF/Corset.gltf"},
+        // "external/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"},
+        // "external/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf"},
         // "external/glTF-Sample-Models/2.0/Triangle/glTF/Triangle.gltf"},
         // "external/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"},
         // "external/glTF-Sample-Models/2.0/TextureCoordinateTest/glTF/TextureCoordinateTest.gltf"},
