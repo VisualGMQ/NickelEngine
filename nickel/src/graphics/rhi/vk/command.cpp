@@ -160,7 +160,7 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         LOGE(log_tag::Vulkan, "record non-compatible commands");
     }
     type_ = CmdType::RenderPass;
-    auto cmdBuf = static_cast<CommandBufferImpl*>(cmdBuf_->Impl());
+    auto cmdBuf = static_cast<CommandBufferImpl*>(cmdBuf_.Impl());
 
     std::vector<vk::ImageView> views;
     const TextureViewImpl* view =
@@ -272,7 +272,7 @@ CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
     VK_CALL(cmds, dev.device.allocateCommandBuffers(info));
     buf_ = cmds[0];
 
-    cmdBuf_ = new CommandBuffer(new CommandBufferImpl(buf_));
+    cmdBuf_ = CommandBuffer(new CommandBufferImpl(buf_));
 
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -281,7 +281,7 @@ CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
 
 CommandEncoderImpl::~CommandEncoderImpl() {
     if (pool_) {
-        delete cmdBuf_;
+        cmdBuf_.Destroy();
         dev_.device.freeCommandBuffers(pool_, buf_);
         dev_.device.resetCommandPool(pool_);
     }
@@ -377,7 +377,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
                                  barrier);
 
             // record layout transition
-            static_cast<CommandBufferImpl*>(cmdBuf_->Impl())
+            static_cast<CommandBufferImpl*>(cmdBuf_.Impl())
                 ->AddLayoutTransition(oldLayout, barrier.newLayout);
         }
     } else {
@@ -428,7 +428,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
         // record layout transition
         for (int i = dst.origin.z; i < copySize.depthOrArrayLayers; i++) {
-            static_cast<CommandBufferImpl*>(cmdBuf_->Impl())
+            static_cast<CommandBufferImpl*>(cmdBuf_.Impl())
                 ->AddLayoutTransition(image.layouts[i], barrier.newLayout);
         }
     }
@@ -436,8 +436,8 @@ void CommandEncoderImpl::CopyBufferToTexture(
 
 CommandBuffer CommandEncoderImpl::Finish() {
     VK_CALL_NO_VALUE(buf_.end());
-    static_cast<CommandBufferImpl*>(cmdBuf_->Impl())->type_ = type_;
-    return *cmdBuf_;
+    static_cast<CommandBufferImpl*>(cmdBuf_.Impl())->type_ = type_;
+    return cmdBuf_;
 }
 
 }  // namespace nickel::rhi::vulkan

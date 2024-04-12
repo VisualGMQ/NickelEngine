@@ -54,6 +54,10 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 ## Features
 
 - [x] 2D renderer based on OpenGL4
+- [ ] 3D renderer(currently only in rhi example)
+    - [x] gltf2.0 load&display(not full support)
+    - [x] defered rendering
+    - [x] skybox
 - [x] Data Oriented based on ECS
 - [x] Animation applyed on arbitary properties
 - [x] Text render with UTF8 encoding
@@ -62,7 +66,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [ ] Game physics(WIP)
 - [x] RHI covered OpenGL4 and Vulkan
     - [x] vulkan layer
-    - [x] GL4.3 layer
+    - [x] GL4.3 layer(Only For Fun)
 - [ ] Game sound playing(WIP)
 - [x] 3D rendering
     - [x] glTF2.0 support(not full support yet)
@@ -96,4 +100,10 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
         - [x] asset save/load
         - [x] scene(entities) save/load
 
+## snapshots
+
 ![editor](./snapshot/editor.png)
+
+![gltf](./snapshot/gltf.png)
+
+

@@ -69,7 +69,7 @@ public:
 
 private:
     vk::CommandPool pool_;
-    CommandBuffer* cmdBuf_{};
+    CommandBuffer cmdBuf_;
     vk::CommandBuffer buf_;
     DeviceImpl& dev_;
     CmdType type_ = CmdType::None;

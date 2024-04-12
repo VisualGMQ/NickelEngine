@@ -14,10 +14,16 @@ class RenderPassEncoderImpl;
 
 class CommandBuffer final {
 public:
+    CommandBuffer() = default;
     explicit CommandBuffer(CommandBufferImpl*);
+    void Destroy();
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
+
+    operator bool() const {
+        return impl_;
+    }
 
 private:
     CommandBufferImpl* impl_{};
