@@ -8,9 +8,32 @@ namespace nickel::rhi::vulkan {
 
 RenderPipelineImpl::RenderPipelineImpl(DeviceImpl& dev,
                                        const RenderPipeline::Descriptor& desc)
-    : dev_{dev.device}, layout_{desc.layout} {
+    : dev_{dev.device}, layout_{desc.layout}, desc_{desc} {
     createRenderPass(dev, desc);
     createRenderPipeline(dev, desc);
+}
+
+RenderPipelineImpl::RenderPipelineImpl(DeviceImpl& dev,
+                                       const RenderPipeline::Descriptor& desc,
+                                       vk::RenderPass renderPass)
+    : renderPass{renderPass},
+      dev_{dev.device},
+      layout_{desc.layout},
+      desc_{desc} {
+    createRenderPipeline(dev, desc);
+}
+
+RenderPipelineImpl::RenderPipelineImpl(RenderPipelineImpl&& o) {
+    swap(*this, o);
+}
+
+RenderPipelineImpl& RenderPipelineImpl::operator=(RenderPipelineImpl&& o) {
+    swap(*this, o);
+    return *this;
+}
+
+const RenderPipeline::Descriptor& RenderPipelineImpl::GetDescriptor() const {
+    return desc_;
 }
 
 void RenderPipelineImpl::createRenderPipeline(
@@ -59,23 +82,26 @@ void RenderPipelineImpl::createRenderPipeline(
         shaderStages.resize(1);
         shaderStages[0]
             .setStage(vk::ShaderStageFlagBits::eVertex)
-            .setModule(
-                static_cast<const ShaderModuleImpl*>(desc.vertex.module.Impl())->module)
+            .setModule(static_cast<const ShaderModuleImpl*>(
+                           desc.vertex.module.Impl().get())
+                           ->module)
             .setPName(desc.vertex.entryPoint.c_str());
     }
     if (desc.fragment.module) {
         shaderStages.resize(2);
         shaderStages[1]
             .setStage(vk::ShaderStageFlagBits::eFragment)
-            .setModule(
-                static_cast<const ShaderModuleImpl*>(desc.fragment.module.Impl())->module)
+            .setModule(static_cast<const ShaderModuleImpl*>(
+                           desc.fragment.module.Impl().get())
+                           ->module)
             .setPName(desc.fragment.entryPoint.c_str());
         if (desc.geometry) {
             shaderStages.resize(3);
             shaderStages[2]
                 .setStage(vk::ShaderStageFlagBits::eGeometry)
-                .setModule(
-                    static_cast<const ShaderModuleImpl*>(desc.geometry->module.Impl())->module)
+                .setModule(static_cast<const ShaderModuleImpl*>(
+                               desc.geometry->module.Impl().get())
+                               ->module)
                 .setPName(desc.fragment.entryPoint.c_str());
         }
     }
@@ -172,7 +198,8 @@ void RenderPipelineImpl::createRenderPipeline(
                 StencilOp2Vk(desc.depthStencil->stencilBack.depthFailOp))
             .setReference(0);
 
-        depthStencilState.sType = vk::StructureType::ePipelineDepthStencilStateCreateInfo;
+        depthStencilState.sType =
+            vk::StructureType::ePipelineDepthStencilStateCreateInfo;
         depthStencilState.setDepthBoundsTestEnable(false)
             .setDepthTestEnable(true)
             .setStencilTestEnable(true)
@@ -297,6 +324,9 @@ void RenderPipelineImpl::createRenderPass(
 }
 
 RenderPipelineImpl::~RenderPipelineImpl() {
+    for (auto module : shaderModules_) {
+        dev_.destroyShaderModule(module);
+    }
     if (renderPass) {
         dev_.destroyRenderPass(renderPass);
     }

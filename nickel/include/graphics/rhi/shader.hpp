@@ -23,11 +23,11 @@ public:
     auto Impl() { return impl_; }
 
     operator bool() const {
-        return impl_;
+        return impl_ != nullptr;
     }
 
 private:
-    ShaderModuleImpl* impl_{};
+    std::shared_ptr<ShaderModuleImpl> impl_{};
 };
 
 }

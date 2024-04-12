@@ -9,8 +9,9 @@
 namespace nickel::rhi::vulkan {
 
 RenderPassEncoderImpl::RenderPassEncoderImpl(DeviceImpl& dev,
-                                             vk::CommandBuffer cmd)
-    : dev_{dev}, cmd_{cmd} {}
+                                             vk::CommandBuffer cmd,
+                                             RenderPassImpl& renderPass)
+    : dev_{dev}, cmd_{cmd}, renderPass_{renderPass} {}
 
 void RenderPassEncoderImpl::Draw(uint32_t vertexCount, uint32_t instanceCount,
                                  uint32_t firstVertex, uint32_t firstInstance) {
@@ -49,7 +50,8 @@ void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
         0, bindGroup->sets[dev_.curImageIndex], {});
 }
 
-void RenderPassEncoderImpl::SetBindGroup(BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
+void RenderPassEncoderImpl::SetBindGroup(
+    BindGroup group, const std::vector<uint32_t>& dynamicOffset) {
     auto bindGroup = static_cast<const BindGroupImpl*>(group.Impl());
     cmd_.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
@@ -60,12 +62,22 @@ void RenderPassEncoderImpl::SetBindGroup(BindGroup group, const std::vector<uint
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     pipeline_ = pipeline;
+
+    auto impl = static_cast<RenderPipelineImpl*>(pipeline.Impl());
+
+    // TODO: change this to renderpass compatible check
+    if (impl->renderPass != GetRenderPass().renderPass) {
+        *impl = RenderPipelineImpl{dev_, impl->GetDescriptor(),
+                                   renderPass_.renderPass};
+    }
+
     cmd_.bindPipeline(
         vk::PipelineBindPoint::eGraphics,
         static_cast<const RenderPipelineImpl*>(pipeline.Impl())->pipeline);
 }
 
-void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size) {
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value,
+                                            uint32_t offset, uint32_t size) {
     cmd_.pushConstants(
         static_cast<const PipelineLayoutImpl*>(
             static_cast<const RenderPipelineImpl*>(pipeline_.Impl())
@@ -77,6 +89,10 @@ void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value, uint
 
 void RenderPassEncoderImpl::End() {
     cmd_.endRenderPass();
+}
+
+RenderPassImpl& RenderPassEncoderImpl::GetRenderPass() const {
+    return renderPass_;
 }
 
 bool isSameRenderPass(const RenderPass::Descriptor& desc1,
@@ -99,7 +115,7 @@ bool isSameRenderPass(const RenderPass::Descriptor& desc1,
         auto& att2 = desc2.colorAttachments[i];
 
         if (att1.loadOp != att2.loadOp || att1.storeOp != att2.storeOp ||
-            att1.view != att2.view || att1.clearValue != att2.clearValue ||
+            /*att1.view != att2.view ||*/ att1.clearValue != att2.clearValue ||
             att1.resolveTarget != att2.resolveTarget) {
             return false;
         }
@@ -174,7 +190,8 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         value.setColor(colorAtt.clearValue);
         clearValues.emplace_back(value);
 
-        auto texture =  static_cast<TextureImpl*>(colorAtt.view.Texture().Impl());
+        auto texture =
+            static_cast<TextureImpl*>(colorAtt.view.Texture().Impl());
         // record layout transition
         for (int i = 0; i < texture->Extent().depthOrArrayLayers; i++) {
             cmdBuf->AddLayoutTransition(
@@ -230,6 +247,7 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
                   ->fbo;
     }
 
+    auto renderPassImpl = static_cast<RenderPassImpl*>(renderPass.Impl());
     vk::RenderPassBeginInfo info;
     info.setRenderArea(desc.renderArea ?
                         vk::Rect2D{{desc.renderArea->offset.x, desc.renderArea->offset.y},
@@ -237,12 +255,12 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
                         vk::Rect2D{{0, 0},
                                     {dev_.swapchain.ImageInfo().extent.width, dev_.swapchain.ImageInfo().extent.height}})
         .setClearValues(clearValues)
-        .setRenderPass(static_cast<const RenderPassImpl*>(renderPass.Impl())->renderPass)
+        .setRenderPass(renderPassImpl->renderPass)
         .setFramebuffer(fbo);
     buf_.beginRenderPass(info, vk::SubpassContents::eInline);
 
     return RenderPassEncoder{
-        new RenderPassEncoderImpl{dev_, buf_}
+        new RenderPassEncoderImpl{dev_, buf_, *renderPassImpl}
     };
 }
 

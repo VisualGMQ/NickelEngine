@@ -23,19 +23,19 @@ RenderPipelineImpl::~RenderPipelineImpl() {
 void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
     shaderId_ = glCreateProgram();
 
-    rhi::ShaderModuleImpl* vertexModule = desc.vertex.module.Impl();
+    rhi::ShaderModuleImpl* vertexModule = desc.vertex.module.Impl().get();
     GLuint vertexId = static_cast<ShaderModuleImpl*>(vertexModule)
                           ->CreateShader(GL_VERTEX_SHADER);
     GL_CALL(glAttachShader(shaderId_, vertexId));
 
-    rhi::ShaderModuleImpl* fragModule = desc.fragment.module.Impl();
+    rhi::ShaderModuleImpl* fragModule = desc.fragment.module.Impl().get();
     GLuint fragId = static_cast<ShaderModuleImpl*>(fragModule)
                         ->CreateShader(GL_FRAGMENT_SHADER);
     GL_CALL(glAttachShader(shaderId_, fragId));
 
     GLuint geomId = 0;
     if (desc.geometry) {
-        rhi::ShaderModuleImpl* geomModule = desc.geometry->module.Impl();
+        rhi::ShaderModuleImpl* geomModule = desc.geometry->module.Impl().get();
         GLuint geomId = static_cast<ShaderModuleImpl*>(geomModule)
                             ->CreateShader(GL_GEOMETRY_SHADER);
         GL_CALL(glAttachShader(shaderId_, geomId));

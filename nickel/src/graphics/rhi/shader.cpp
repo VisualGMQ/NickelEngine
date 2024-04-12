@@ -17,25 +17,22 @@ ShaderModule::ShaderModule(APIPreference api, DeviceImpl& device,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::ShaderModuleImpl(desc);
+            impl_ = std::shared_ptr<ShaderModuleImpl>(new gl4::ShaderModuleImpl(desc));
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN
-            impl_ = new vulkan::ShaderModuleImpl(
-                static_cast<vulkan::DeviceImpl&>(device).device, desc.code);
+            impl_ = std::shared_ptr<ShaderModuleImpl>(new vulkan::ShaderModuleImpl(
+                static_cast<vulkan::DeviceImpl&>(device).device, desc.code));
 #endif
             break;
         case APIPreference::Null:
-            impl_ = new null::ShaderModuleImpl{};
+            impl_ = std::shared_ptr<ShaderModuleImpl>(new null::ShaderModuleImpl{});
             break;
     }
 }
 
 void ShaderModule::Destroy() {
-    if (impl_) {
-        delete impl_;
-        impl_ = nullptr;
-    }
+    impl_.reset();
 }
 
 }  // namespace nickel::rhi

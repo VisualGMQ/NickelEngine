@@ -10,10 +10,11 @@
 namespace nickel::rhi::vulkan {
 
 class DeviceImpl;
+class RenderPassImpl;
 
 class RenderPassEncoderImpl : public rhi::RenderPassEncoderImpl {
 public:
-    RenderPassEncoderImpl(DeviceImpl&, vk::CommandBuffer cmd);
+    RenderPassEncoderImpl(DeviceImpl&, vk::CommandBuffer, RenderPassImpl&);
 
     void Draw(uint32_t vertexCount, uint32_t instanceCount,
               uint32_t firstVertex, uint32_t firstInstance) override;
@@ -31,10 +32,13 @@ public:
 
     void End() override;
 
+    RenderPassImpl& GetRenderPass() const;
+
 private:
     DeviceImpl& dev_;
     vk::CommandBuffer cmd_;
     RenderPipeline pipeline_;
+    RenderPassImpl& renderPass_;
 };
 
 enum class CmdType {
