@@ -68,12 +68,12 @@ jobs:
     - name: Download SDL2(Windows MSVC Only)
       if: ${{ (matrix.os == 'windows-latest') && ((matrix.cpp_compiler == 'cl') || ( matrix.cpp_compiler == 'clang' )) }}
       run: |
-        Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip" -o C:\SDL.zip
+        Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip" -OutFile C:\SDL.zip
 
     - name: Download SDL2(Windows MinGW Only)
       if: ${{ (matrix.os == 'windows-latest') && ( matrix.cpp_compiler == 'gcc' ) }}
       run: |
-        Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip" -o C:\SDL.zip
+        Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip" -OutFile C:\SDL.zip
     
     - name: Unzip SDL2(Windows Only)
       if: ${{ (matrix.os == 'windows-latest') }}
