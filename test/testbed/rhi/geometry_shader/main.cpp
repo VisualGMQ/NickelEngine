@@ -7,7 +7,7 @@ APIPreference API = APIPreference::GL;
 
 struct Context {
     PipelineLayout layout;
-    RenderPipeline pipeline;
+    RenderPipeline renderPipeline;
     Buffer vertexBuffer;
 };
 
@@ -112,7 +112,7 @@ void StartupSystem(gecs::commands cmds,
 
     desc.primitive.topology = Topology::PointList;
 
-    ctx.pipeline = device.CreateRenderPipeline(desc);
+    ctx.renderPipeline = device.CreateRenderPipeline(desc);
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
@@ -133,7 +133,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
-    renderPass.SetPipeline(ctx->pipeline);
+    renderPass.SetPipeline(ctx->renderPipeline);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
     renderPass.Draw(3, 1, 0, 0);
@@ -155,7 +155,7 @@ void ShutdownSystem(gecs::commands cmds, gecs::resource<gecs::mut<Context>> ctx,
                     gecs::resource<gecs::mut<Adapter>> adapter) {
     ctx->vertexBuffer.Destroy();
     ctx->layout.Destroy();
-    ctx->pipeline.Destroy();
+    ctx->renderPipeline.Destroy();
     device->Destroy();
     adapter->Destroy();
     cmds.remove_resource<Device>();

@@ -191,7 +191,7 @@ TextureBundle loadTextures(
         CommandEncoder::BufTexCopySrc src;
         src.buffer = copyBuffer;
         src.offset = 0;
-        src.bytesPerRow = width;
+        src.rowLength = width;
         src.rowsPerImage = height;
         CommandEncoder::BufTexCopyDst dst;
         dst.texture = texture;

@@ -287,7 +287,7 @@ TextureBundle LoadSkybox(const std::array<std::filesystem::path, 6>& filenames,
         CommandEncoder::BufTexCopySrc src;
         src.buffer = copyBuffer;
         src.offset = 0;
-        src.bytesPerRow = width;
+        src.rowLength = width;
         src.rowsPerImage = height;
         CommandEncoder::BufTexCopyDst dst;
         dst.texture = texture;
@@ -525,7 +525,7 @@ private:
         CommandEncoder::BufTexCopySrc src;
         src.buffer = copyBuffer;
         src.offset = 0;
-        src.bytesPerRow = w;
+        src.rowLength = w;
         src.rowsPerImage = h;
         CommandEncoder::BufTexCopyDst dst;
         dst.texture = texture;
@@ -1168,7 +1168,7 @@ std::tuple<TextureBundle, Sampler> initSingleValueTexture(
     CommandEncoder::BufTexCopySrc src;
     src.buffer = buf;
     src.offset = 0;
-    src.bytesPerRow = 4;
+    src.rowLength = 4;
     src.rowsPerImage = 1;
     CommandEncoder::BufTexCopyDst dst;
     dst.texture = bundle.texture;

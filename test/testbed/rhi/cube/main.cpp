@@ -8,12 +8,12 @@ APIPreference API = APIPreference::GL;
 
 struct Context {
     PipelineLayout layout;
-    RenderPipeline pipeline;
+    RenderPipeline renderPipeline;
     Buffer vertexBuffer;
     Buffer indicesBuffer;
     Buffer uniformBuffer;
     BindGroupLayout bindGroupLayout;
-    BindGroup debugBindGroup;
+    BindGroup cubeBindGroup;
     Texture depth;
     TextureView depthView;
 };
@@ -116,7 +116,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
 
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.bindGroupLayout;
-    ctx.debugBindGroup = device.CreateBindGroup(bindGroupDesc);
+    ctx.cubeBindGroup = device.CreateBindGroup(bindGroupDesc);
 }
 
 void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
@@ -177,7 +177,7 @@ void StartupSystem(gecs::commands cmds,
     depthStencilState.depthCompare = CompareOp::Greater;
     desc.depthStencil = depthStencilState;
 
-    ctx.pipeline = device.CreateRenderPipeline(desc);
+    ctx.renderPipeline = device.CreateRenderPipeline(desc);
 }
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
@@ -206,11 +206,11 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
-    renderPass.SetPipeline(ctx->pipeline);
+    renderPass.SetPipeline(ctx->renderPipeline);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
     renderPass.SetIndexBuffer(ctx->indicesBuffer, IndexType::Uint32, 0, sizeof(gIndices));
-    renderPass.SetBindGroup(ctx->debugBindGroup);
+    renderPass.SetBindGroup(ctx->cubeBindGroup);
     renderPass.DrawIndexed(gIndices.size(), 1, 0, 0, 0);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -242,13 +242,13 @@ void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
-    ctx->debugBindGroup.Destroy();
+    ctx->cubeBindGroup.Destroy();
     ctx->bindGroupLayout.Destroy();
     ctx->uniformBuffer.Destroy();
     ctx->vertexBuffer.Destroy();
     ctx->indicesBuffer.Destroy();
     ctx->layout.Destroy();
-    ctx->pipeline.Destroy();
+    ctx->renderPipeline.Destroy();
     cmds.remove_resource<Device>();
     cmds.remove_resource<Adapter>();
 }

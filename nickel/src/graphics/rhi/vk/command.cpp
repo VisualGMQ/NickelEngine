@@ -342,7 +342,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
                                                   (i - dst.origin.z))
                 .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, 0))
                 .setBufferImageHeight(src.rowsPerImage)
-                .setBufferRowLength(src.bytesPerRow)
+                .setBufferRowLength(src.rowLength)
                 .setImageExtent({copySize.width, copySize.height, 1})
                 .setImageSubresource(layers);
             buf_.copyBufferToImage(buffer, image.GetImage(),
@@ -393,7 +393,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
         copyInfo.setBufferOffset(src.offset)
             .setImageOffset(vk::Offset3D(dst.origin.x, dst.origin.y, 0))
             .setBufferImageHeight(src.rowsPerImage)
-            .setBufferRowLength(src.bytesPerRow)
+            .setBufferRowLength(src.rowLength)
             .setImageExtent({copySize.width, copySize.height, 1})
             .setImageSubresource(layers);
         buf_.copyBufferToImage(buffer, image.GetImage(),

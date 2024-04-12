@@ -35,7 +35,7 @@ public:
     Extent3D Extent() const;
     enum TextureFormat Format() const;
     uint32_t MipLevelCount() const;
-    SampleCount SampleCount() const;
+    enum SampleCount SampleCount() const;
     TextureUsage Usage() const;
     TextureView CreateView(const TextureView::Descriptor& = {});
     const Descriptor& GetDescriptor() const;

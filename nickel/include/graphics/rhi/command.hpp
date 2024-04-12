@@ -53,7 +53,7 @@ public:
     struct BufTexCopySrc final {
         Buffer buffer;
         uint64_t offset;
-        uint64_t bytesPerRow = 0;   // 0 means whole buffer
+        uint64_t rowLength = 0;   // 0 means whole buffer, in texel
         uint64_t rowsPerImage = 0;  // 0 means whole buffer
     };
 

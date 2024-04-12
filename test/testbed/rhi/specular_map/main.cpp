@@ -230,7 +230,7 @@ TextureBundle loadTexture(const std::filesystem::path& filename, Context& ctx,
     CommandEncoder::BufTexCopySrc src;
     src.buffer = copyBuffer;
     src.offset = 0;
-    src.bytesPerRow = w;
+    src.rowLength = w;
     src.rowsPerImage = h;
     CommandEncoder::BufTexCopyDst dst;
     dst.texture = texture;

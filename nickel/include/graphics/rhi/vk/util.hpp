@@ -147,6 +147,15 @@ void RemoveUnexistsElems(std::vector<T>& requires,
     }
 }
 
+inline bool IsDepthStencilFormat(TextureFormat fmt) {
+    return fmt == TextureFormat::STENCIL8 ||
+           fmt == TextureFormat::DEPTH16_UNORM ||
+           fmt == TextureFormat::DEPTH24_PLUS ||
+           fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+           fmt == TextureFormat::DEPTH32_FLOAT ||
+           fmt == TextureFormat::DEPTH32_FLOAT_STENCIL8;
+}
+
 inline vk::ImageLayout GetLayoutByFormat(
     TextureFormat fmt, bool stencilReadOnly = false, bool depthReadOnly = false,
     bool stencilDepthLayoutSperate = false) {
@@ -154,32 +163,37 @@ inline vk::ImageLayout GetLayoutByFormat(
         return vk::ImageLayout::ePresentSrcKHR;
     }
 
-    if (stencilDepthLayoutSperate) {
-        if (fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
-            fmt == TextureFormat::DEPTH32_FLOAT_STENCIL8) {
-            if (depthReadOnly) {
-                return vk::ImageLayout::eDepthReadOnlyStencilAttachmentOptimal;
+    if (IsDepthStencilFormat(fmt)) {
+        if (stencilDepthLayoutSperate) {
+            if (fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+                fmt == TextureFormat::DEPTH32_FLOAT_STENCIL8) {
+                if (depthReadOnly) {
+                    return vk::ImageLayout::
+                        eDepthReadOnlyStencilAttachmentOptimal;
+                }
+                if (stencilReadOnly) {
+                    return vk::ImageLayout::
+                        eDepthAttachmentStencilReadOnlyOptimal;
+                }
+                if (depthReadOnly && stencilReadOnly) {
+                    return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+                }
+                return vk::ImageLayout::eDepthStencilAttachmentOptimal;
+            } else if (fmt == TextureFormat::DEPTH32_FLOAT ||
+                       fmt == TextureFormat::DEPTH16_UNORM ||
+                       fmt == TextureFormat::DEPTH24_PLUS) {
+                return depthReadOnly ? vk::ImageLayout::eDepthReadOnlyOptimal
+                                     : vk::ImageLayout::eDepthAttachmentOptimal;
+            } else if (fmt == TextureFormat::STENCIL8) {
+                return stencilReadOnly
+                           ? vk::ImageLayout::eStencilReadOnlyOptimal
+                           : vk::ImageLayout::eStencilAttachmentOptimal;
             }
-            if (stencilReadOnly) {
-                return vk::ImageLayout::eDepthAttachmentStencilReadOnlyOptimal;
-            }
-            if (depthReadOnly && stencilReadOnly) {
-                return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
-            }
-            return vk::ImageLayout::eDepthStencilAttachmentOptimal;
-        } else if (fmt == TextureFormat::DEPTH32_FLOAT ||
-                   fmt == TextureFormat::DEPTH16_UNORM ||
-                   fmt == TextureFormat::DEPTH24_PLUS) {
-            return depthReadOnly ? vk::ImageLayout::eDepthReadOnlyOptimal
-                                 : vk::ImageLayout::eDepthAttachmentOptimal;
-        } else if (fmt == TextureFormat::STENCIL8) {
-            return stencilReadOnly ? vk::ImageLayout::eStencilReadOnlyOptimal
-                                   : vk::ImageLayout::eStencilAttachmentOptimal;
+        } else {
+            return (stencilReadOnly && depthReadOnly)
+                       ? vk::ImageLayout::eDepthStencilReadOnlyOptimal
+                       : vk::ImageLayout::eDepthStencilAttachmentOptimal;
         }
-    } else {
-        return (stencilReadOnly && depthReadOnly)
-                   ? vk::ImageLayout::eDepthStencilReadOnlyOptimal
-                   : vk::ImageLayout::eDepthStencilAttachmentOptimal;
     }
     return vk::ImageLayout::eColorAttachmentOptimal;
 }
