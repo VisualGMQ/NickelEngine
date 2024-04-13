@@ -5,7 +5,12 @@
 class Sequence {
 public:
     Sequence()
-        : animMgr{*nickel::ECS::Instance().World().res_mut<nickel::AnimationManager>()} {}
+        : player{*nickel::ECS::Instance()
+                      .World()
+                      .res_mut<nickel::AnimationManager>()},
+          animMgr{*nickel::ECS::Instance()
+                       .World()
+                       .res_mut<nickel::AnimationManager>()} {}
 
     int GetItemCount() const {
         if (!animMgr.Has(player.Anim())) {

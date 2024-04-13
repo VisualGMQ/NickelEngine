@@ -1,4 +1,5 @@
 #include "graphics/tilesheet.hpp"
+#include "misc/asset_manager.hpp"
 
 #define RAPIDXML_NO_EXCEPTIONS
 #include "rapidxml.hpp"
@@ -110,15 +111,14 @@ std::unique_ptr<Tilesheet> LoadAssetFromMeta(const toml::table& tbl) {
 TilesheetHandle TilesheetManager::Create(TextureHandle handle, uint32_t col,
                                          uint32_t row, const Margin& margin,
                                          const Spacing& spacing) {
-    // auto elem =
-    //     std::make_unique<Tilesheet>(gWorld->res<AssetManager>()->TextureMgr(),
-    //                                 handle, col, row, margin, spacing);
-    // if (elem && *elem) {
-    //     auto handle = TilesheetHandle::Create();
-    //     storeNewItem(handle, std::move(elem));
-    //     return handle;
-    // }
-    return TilesheetHandle::Null();
+    auto elem = std::make_unique<Tilesheet>(
+        ECS::Instance().World().res<AssetManager>()->TextureMgr(), handle, col,
+        row, margin, spacing);
+    if (elem && *elem) {
+        auto handle = TilesheetHandle::Create();
+        storeNewItem(handle, std::move(elem));
+        return handle;
+    }
 }
 
 TilesheetHandle TilesheetManager::Load(const std::filesystem::path& filename) {

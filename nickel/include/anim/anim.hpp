@@ -322,8 +322,6 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer() = default;
-
     explicit AnimationPlayer(AnimationManager& mgr) : mgr_(&mgr) {}
 
     AnimationPlayer(const AnimationPlayer&) = delete;
