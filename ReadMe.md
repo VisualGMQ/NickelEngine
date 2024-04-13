@@ -69,7 +69,9 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
     - [ ] multiple scene
     - [ ] scene change
 - [ ] script
-    - [ ] luau (WIP)
+    - [ ] luau
+        - [ ] C++ binding(WIP)
+        - [x] script component
 
 ## Editor
 

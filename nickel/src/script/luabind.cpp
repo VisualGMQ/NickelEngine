@@ -742,21 +742,19 @@ void bindInput(luabridge::Namespace& scope) {
 }
 
 template <typename T>
-bool hasComponent(lua_State* L) {
-    gecs::entity ent;
+bool hasComponent(std::underlying_type_t<gecs::entity> ent) {
     auto reg = ECS::Instance().World().cur_registry();
     if (reg) {
-        return  reg->has<T>(ent);
+        return  reg->has<T>(static_cast<gecs::entity>(ent));
     }
     return false;
 }
 
 template <typename T>
-T* getComponent(lua_State* L) {
-    gecs::entity ent;
+T* getComponent(std::underlying_type_t<gecs::entity> ent) {
     auto reg = ECS::Instance().World().cur_registry();
     if (reg) {
-        return  &reg->get_mut<T>(ent);
+        return  &reg->get_mut<T>(static_cast<gecs::entity>(ent));
     }
     return nullptr;
 }
@@ -768,12 +766,17 @@ void bindECS(luabridge::Namespace& scope) {
         .addFunction("GetSprite", getComponent<Sprite>)
         .addFunction("HasTransform", hasComponent<Transform>)
         .addFunction("GetTransform", getComponent<Transform>)
+        .beginNamespace("res")
+            .addProperty("Keyboard", +[]()->const Keyboard& { return ECS::Instance().World().res<nickel::Keyboard>().get(); })
+        .endNamespace()
     .endNamespace();
 }
 
 // clang-format on
 
 void BindLua(lua_State* L) {
+    auto key = ECS::Instance().World().res<nickel::Keyboard>();
+
     auto scope = luabridge::getGlobalNamespace(L).beginNamespace("nickel");
     bindMath(scope);
     bindCommon(scope);

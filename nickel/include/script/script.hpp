@@ -7,9 +7,13 @@ struct lua_State;
 
 namespace nickel {
 
+class Script;
+class ScriptManager;
+
 class LuaScript : public Asset {
 public:
-    friend void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>>);
+    friend void ScriptUpdateSystem(gecs::querier<gecs::mut<Script>> scripts,
+                        gecs::resource<gecs::mut<ScriptManager>> mgr);
 
     static LuaScript Null;
 
@@ -71,9 +75,12 @@ public:
 class Script final {
 public:
     ScriptHandle handle;
+    gecs::entity entity;
 };
 
-void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>>);
+
+void ScriptUpdateSystem(gecs::querier<gecs::mut<Script>> scripts,
+                        gecs::resource<gecs::mut<ScriptManager>> mgr);
 void ScriptShutdownSystem(gecs::querier<LuaScript>);
 
 }  // namespace nickel

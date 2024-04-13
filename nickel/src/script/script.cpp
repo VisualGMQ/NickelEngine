@@ -43,22 +43,24 @@ LuaScript::~LuaScript() {
     }
 }
 
-void LuaScript::OnInit(gecs::entity) const {
+void LuaScript::OnInit(gecs::entity ent) const {
     if (!state_) {
         return;
     }
 
     if (auto ref = luabridge::getGlobal(state_, "on_init"); ref) {
-        LUAU_CALL(ref());
+        auto entity = std::underlying_type_t<gecs::entity>(ent);
+        LUAU_CALL(ref(entity));
     }
 }
 
-void LuaScript::OnUpdate(gecs::entity) const {
+void LuaScript::OnUpdate(gecs::entity ent) const {
     if (!state_) {
         return;
     }
     if (auto ref = luabridge::getGlobal(state_, "on_update"); ref) {
-        LUAU_CALL(ref());
+        auto entity = std::underlying_type_t<gecs::entity>(ent);
+        LUAU_CALL(ref(entity));
     }
 }
 
@@ -98,7 +100,7 @@ toml::table LuaScript::Save2Toml() const {
 
 ScriptHandle ScriptManager::Load(const std::filesystem::path& path) {
     auto data = std::make_unique<LuaScript>(path);
-    if (!data) {
+    if (data) {
         auto handle = ScriptHandle::Create();
         storeNewItem(handle, std::move(data));
         return handle;
@@ -106,13 +108,19 @@ ScriptHandle ScriptManager::Load(const std::filesystem::path& path) {
     return ScriptHandle::Null();
 }
 
-void ScriptUpdateSystem(gecs::querier<gecs::mut<LuaScript>> scripts) {
+void ScriptUpdateSystem(gecs::querier<gecs::mut<Script>> scripts,
+                        gecs::resource<gecs::mut<ScriptManager>> mgr) {
     for (auto&& [entity, script] : scripts) {
-        if (!script.isInited_) {
-            script.OnInit(entity);
-            script.isInited_ = true;
+        if (!mgr->Has(script.handle)) {
+            continue;
         }
-        script.OnUpdate(entity);
+
+        auto& luaScript = mgr->Get(script.handle);
+        if (!luaScript.isInited_) {
+            luaScript.OnInit(entity);
+            luaScript.isInited_ = true;
+        }
+        luaScript.OnUpdate(entity);
     }
 }
 
