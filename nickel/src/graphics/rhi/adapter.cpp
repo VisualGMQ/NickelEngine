@@ -8,8 +8,9 @@
 
 namespace nickel::rhi {
 
-Adapter::Adapter(void* window, Option option) {
-    APIPreference api = option.api;
+APIPreference GetSupportRenderAPI(APIPreference desired) {
+    APIPreference api = desired;
+
     if (api == APIPreference::Undefine) {
 #ifdef NICKEL_HAS_VULKAN
         api = APIPreference::Vulkan;
@@ -23,6 +24,12 @@ Adapter::Adapter(void* window, Option option) {
         api = APIPreference::GL;
 #endif
     }
+
+    return api;
+}
+
+Adapter::Adapter(void* window, Option option) {
+    auto api = GetSupportRenderAPI(option.api);
 
     switch (api) {
         case APIPreference::Undefine:
@@ -54,7 +61,7 @@ Device Adapter::RequestDevice() {
     return impl_->RequestDevice();
 }
 
-Adapter::Info Adapter::RequestAdapterInfo() {
+Adapter::Info Adapter::RequestAdapterInfo() const {
     return impl_->RequestAdapterInfo();
 }
 

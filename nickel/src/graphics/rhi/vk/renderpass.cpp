@@ -1,8 +1,9 @@
 #include "graphics/rhi/vk/renderpass.hpp"
 #include "graphics/rhi/vk/convert.hpp"
-#include "graphics/rhi/vk/texture_view.hpp"
-#include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/device.hpp"
+#include "graphics/rhi/vk/texture.hpp"
+#include "graphics/rhi/vk/texture_view.hpp"
+
 
 namespace nickel::rhi::vulkan {
 
@@ -12,7 +13,8 @@ RenderPassImpl::RenderPassImpl(DeviceImpl& dev,
     createRenderPass(dev, desc);
 }
 
-void RenderPassImpl::createRenderPass(DeviceImpl& dev, const RenderPass::Descriptor& desc) {
+void RenderPassImpl::createRenderPass(DeviceImpl& dev,
+                                      const RenderPass::Descriptor& desc) {
     vk::RenderPassCreateInfo info;
     std::vector<vk::AttachmentDescription> attachments;
     size_t attCount = desc.colorAttachments.size() +
@@ -24,7 +26,10 @@ void RenderPassImpl::createRenderPass(DeviceImpl& dev, const RenderPass::Descrip
     for (int i = 0; i < desc.colorAttachments.size(); i++) {
         auto& colorAtt = desc.colorAttachments[i];
         vk::AttachmentDescription attDesc;
-        attDesc.setInitialLayout(vk::ImageLayout::eUndefined)
+        attDesc
+            .setInitialLayout(static_cast<vulkan::TextureImpl*>(
+                                  colorAtt.view.Texture().Impl())
+                                  ->layouts[0])
             .setFinalLayout(GetImageLayoutAfterSubpass(colorAtt.view.Format()))
             .setFormat(colorAtt.view.Format() == TextureFormat::Presentation
                            ? dev.swapchain.imageInfo.format.format

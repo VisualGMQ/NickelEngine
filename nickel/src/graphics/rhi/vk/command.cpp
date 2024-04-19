@@ -66,7 +66,7 @@ void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     auto impl = static_cast<RenderPipelineImpl*>(pipeline.Impl());
 
     // TODO: change this to renderpass compatible check
-    if (impl->renderPass != GetRenderPass().renderPass) {
+    if (impl->defaultRenderPass != GetRenderPass().renderPass) {
         *impl = RenderPipelineImpl{dev_, impl->GetDescriptor(),
                                    renderPass_.renderPass};
     }
@@ -76,7 +76,7 @@ void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
         static_cast<const RenderPipelineImpl*>(pipeline.Impl())->pipeline);
 }
 
-void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value,
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value,
                                             uint32_t offset, uint32_t size) {
     cmd_.pushConstants(
         static_cast<const PipelineLayoutImpl*>(
@@ -160,7 +160,7 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         LOGE(log_tag::Vulkan, "record non-compatible commands");
     }
     type_ = CmdType::RenderPass;
-    auto cmdBuf = static_cast<CommandBufferImpl*>(cmdBuf_.Impl());
+    auto cmdBuf = static_cast<CommandBufferImpl*>(cmdBuf_);
 
     std::vector<vk::ImageView> views;
     const TextureViewImpl* view =
@@ -186,9 +186,11 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
 
     std::vector<vk::ClearValue> clearValues;
     for (auto& colorAtt : desc.colorAttachments) {
-        vk::ClearValue value;
-        value.setColor(colorAtt.clearValue);
-        clearValues.emplace_back(value);
+        if (colorAtt.loadOp == AttachmentLoadOp::Clear) {
+            vk::ClearValue value;
+            value.setColor(colorAtt.clearValue);
+            clearValues.emplace_back(value);
+        }
 
         auto texture =
             static_cast<TextureImpl*>(colorAtt.view.Texture().Impl());
@@ -201,11 +203,13 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     }
 
     if (desc.depthStencilAttachment) {
-        vk::ClearValue value;
-        value.depthStencil
-            .setDepth(desc.depthStencilAttachment->depthClearValue)
-            .setStencil(desc.depthStencilAttachment->stencilClearValue);
-        clearValues.emplace_back(value);
+        if (desc.depthStencilAttachment->depthLoadOp == AttachmentLoadOp::Clear) {
+            vk::ClearValue value;
+            value.depthStencil
+                .setDepth(desc.depthStencilAttachment->depthClearValue)
+                .setStencil(desc.depthStencilAttachment->stencilClearValue);
+            clearValues.emplace_back(value);
+        }
 
         auto texture = static_cast<TextureImpl*>(
             desc.depthStencilAttachment->view.Texture().Impl());
@@ -257,33 +261,33 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
         .setClearValues(clearValues)
         .setRenderPass(renderPassImpl->renderPass)
         .setFramebuffer(fbo);
-    buf_.beginRenderPass(info, vk::SubpassContents::eInline);
+    buf.beginRenderPass(info, vk::SubpassContents::eInline);
 
     return RenderPassEncoder{
-        new RenderPassEncoderImpl{dev_, buf_, *renderPassImpl}
+        new RenderPassEncoderImpl{dev_, buf, *renderPassImpl}
     };
 }
 
 CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& dev, vk::CommandPool pool)
-    : dev_{dev}, pool_{pool} {
+    : dev_{dev}, pool{pool} {
     vk::CommandBufferAllocateInfo info;
     info.setCommandPool(pool).setCommandBufferCount(1);
     std::vector<vk::CommandBuffer> cmds;
     VK_CALL(cmds, dev.device.allocateCommandBuffers(info));
-    buf_ = cmds[0];
+    buf = cmds[0];
 
-    cmdBuf_ = CommandBuffer(new CommandBufferImpl(buf_));
+    cmdBuf_ = new CommandBufferImpl(buf);
 
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    VK_CALL_NO_VALUE(buf_.begin(beginInfo));
+    VK_CALL_NO_VALUE(buf.begin(beginInfo));
 }
 
 CommandEncoderImpl::~CommandEncoderImpl() {
-    if (pool_) {
-        cmdBuf_.Destroy();
-        dev_.device.freeCommandBuffers(pool_, buf_);
-        dev_.device.resetCommandPool(pool_);
+    if (pool) {
+        delete cmdBuf_;
+        dev_.device.freeCommandBuffers(pool, buf);
+        dev_.device.resetCommandPool(pool);
     }
 }
 
@@ -299,7 +303,7 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
     // maybe we need barrier
     vk::BufferCopy region;
     region.setSize(size).setSrcOffset(srcOffset).setDstOffset(dstOffset);
-    buf_.copyBuffer(static_cast<const vulkan::BufferImpl*>(src.Impl())->buffer,
+    buf.copyBuffer(static_cast<const vulkan::BufferImpl*>(src.Impl())->buffer,
                     static_cast<const vulkan::BufferImpl*>(dst.Impl())->buffer,
                     region);
 }
@@ -343,7 +347,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
                 .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
                 .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
                 .setSubresourceRange(range);
-            buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+            buf.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
                                  vk::PipelineStageFlagBits::eTransfer,
                                  vk::DependencyFlagBits::eByRegion, {}, {},
                                  barrier);
@@ -363,7 +367,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
                 .setBufferRowLength(src.rowLength)
                 .setImageExtent({copySize.width, copySize.height, 1})
                 .setImageSubresource(layers);
-            buf_.copyBufferToImage(buffer, image.GetImage(),
+            buf.copyBufferToImage(buffer, image.GetImage(),
                                    vk::ImageLayout::eTransferDstOptimal,
                                    copyInfo);
 
@@ -371,13 +375,13 @@ void CommandEncoderImpl::CopyBufferToTexture(
                 .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
                 .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
                 .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-            buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+            buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
                                  vk::PipelineStageFlagBits::eFragmentShader,
                                  vk::DependencyFlagBits::eByRegion, {}, {},
                                  barrier);
 
             // record layout transition
-            static_cast<CommandBufferImpl*>(cmdBuf_.Impl())
+            static_cast<CommandBufferImpl*>(cmdBuf_)
                 ->AddLayoutTransition(oldLayout, barrier.newLayout);
         }
     } else {
@@ -397,7 +401,7 @@ void CommandEncoderImpl::CopyBufferToTexture(
             .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
             .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
             .setSubresourceRange(range);
-        buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+        buf.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
                              vk::PipelineStageFlagBits::eTransfer,
                              vk::DependencyFlagBits::eByRegion, {}, {},
                              barrier);
@@ -414,30 +418,30 @@ void CommandEncoderImpl::CopyBufferToTexture(
             .setBufferRowLength(src.rowLength)
             .setImageExtent({copySize.width, copySize.height, 1})
             .setImageSubresource(layers);
-        buf_.copyBufferToImage(buffer, image.GetImage(),
+        buf.copyBufferToImage(buffer, image.GetImage(),
                                vk::ImageLayout::eTransferDstOptimal, copyInfo);
 
         barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
             .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
             .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
             .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-        buf_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+        buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
                              vk::PipelineStageFlagBits::eFragmentShader,
                              vk::DependencyFlagBits::eByRegion, {}, {},
                              barrier);
 
         // record layout transition
         for (int i = dst.origin.z; i < copySize.depthOrArrayLayers; i++) {
-            static_cast<CommandBufferImpl*>(cmdBuf_.Impl())
+            static_cast<CommandBufferImpl*>(cmdBuf_)
                 ->AddLayoutTransition(image.layouts[i], barrier.newLayout);
         }
     }
 }
 
 CommandBuffer CommandEncoderImpl::Finish() {
-    VK_CALL_NO_VALUE(buf_.end());
-    static_cast<CommandBufferImpl*>(cmdBuf_.Impl())->type_ = type_;
-    return cmdBuf_;
+    VK_CALL_NO_VALUE(buf.end());
+    static_cast<CommandBufferImpl*>(cmdBuf_)->type_ = type_;
+    return CommandBuffer{cmdBuf_};
 }
 
 }  // namespace nickel::rhi::vulkan

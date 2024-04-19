@@ -327,7 +327,7 @@ void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     buffer_->cmds.push_back({CmdType::SetRenderPipeline, cmd});
 }
 
-void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value,
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value,
                                             uint32_t offset, uint32_t size) {
     CmdPushConstant cmd;
     cmd.stage = stage;

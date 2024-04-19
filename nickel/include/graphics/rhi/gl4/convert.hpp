@@ -282,9 +282,7 @@ inline GLenum TextureFormat2GLInternal(TextureFormat fmt) {
         case TextureFormat::RGBA8_UNORM:
             return GL_RGBA8;
         case TextureFormat::RGBA8_UNORM_SRGB:
-            // don't know why srgb seems different from Vulkan.
-            // use RGBA instead
-            return GL_RGBA;
+            return GL_SRGB8_ALPHA8;
         case TextureFormat::RGBA8_SNORM:
             return GL_RGBA8_SNORM;
         case TextureFormat::RGBA8_UINT:

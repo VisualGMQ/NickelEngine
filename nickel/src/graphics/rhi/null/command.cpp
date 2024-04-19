@@ -23,7 +23,7 @@ void RenderPassEncoderImpl::SetBindGroup(BindGroup, const std::vector<uint32_t>&
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline) {}
 
-void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, void* value,
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value,
                                             uint32_t offset, uint32_t size) {}
 
 void RenderPassEncoderImpl::End() {}

@@ -25,3 +25,4 @@ AddConsoleTest(csv_iterator)
 AddVisualableTest(gjk)
 
 add_subdirectory(testbed)
+add_subdirectory(graphics)

@@ -10,17 +10,14 @@ RenderPipelineImpl::RenderPipelineImpl(DeviceImpl& dev,
                                        const RenderPipeline::Descriptor& desc)
     : dev_{dev.device}, layout_{desc.layout}, desc_{desc} {
     createRenderPass(dev, desc);
-    createRenderPipeline(dev, desc);
+    createRenderPipeline(dev, desc, defaultRenderPass);
 }
 
 RenderPipelineImpl::RenderPipelineImpl(DeviceImpl& dev,
                                        const RenderPipeline::Descriptor& desc,
                                        vk::RenderPass renderPass)
-    : renderPass{renderPass},
-      dev_{dev.device},
-      layout_{desc.layout},
-      desc_{desc} {
-    createRenderPipeline(dev, desc);
+    : dev_{dev.device}, layout_{desc.layout}, desc_{desc} {
+    createRenderPipeline(dev, desc, renderPass);
 }
 
 RenderPipelineImpl::RenderPipelineImpl(RenderPipelineImpl&& o) {
@@ -37,7 +34,8 @@ const RenderPipeline::Descriptor& RenderPipelineImpl::GetDescriptor() const {
 }
 
 void RenderPipelineImpl::createRenderPipeline(
-    DeviceImpl& dev, const RenderPipeline::Descriptor& desc) {
+    DeviceImpl& dev, const RenderPipeline::Descriptor& desc,
+    vk::RenderPass renderPass) {
     vk::GraphicsPipelineCreateInfo info;
 
     // vertex input state
@@ -320,15 +318,15 @@ void RenderPipelineImpl::createRenderPass(
 
     info.setAttachments(attachments).setSubpasses(subpass).setDependencies(dep);
 
-    VK_CALL(renderPass, dev.device.createRenderPass(info));
+    VK_CALL(defaultRenderPass, dev.device.createRenderPass(info));
 }
 
 RenderPipelineImpl::~RenderPipelineImpl() {
     for (auto module : shaderModules_) {
         dev_.destroyShaderModule(module);
     }
-    if (renderPass) {
-        dev_.destroyRenderPass(renderPass);
+    if (defaultRenderPass) {
+        dev_.destroyRenderPass(defaultRenderPass);
     }
     if (pipeline) {
         dev_.destroyPipeline(pipeline);

@@ -21,7 +21,8 @@ public:
     vk::Image GetImage() const;
 
     vk::DeviceMemory mem;
-    std::vector<vk::ImageLayout> layouts;
+    std::vector<vk::ImageLayout>
+        layouts;  // if image is array, they layout will store separatly
 
 private:
     vk::Image image_;

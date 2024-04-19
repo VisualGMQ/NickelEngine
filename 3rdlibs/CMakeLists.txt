@@ -1,4 +1,9 @@
 add_subdirectory(sdl2)
+
+if (NICKEL_RHI_ENABLE_VULKAN)
+    add_subdirectory(vulkan)
+endif()
+
 add_subdirectory(gecs)
 add_subdirectory(glad)
 add_subdirectory(imgui)
@@ -22,10 +27,6 @@ add_subdirectory(efsw)
 
 set(EASY_PROFILER_NO_GUI ON)
 add_subdirectory(easy_profiler)
-
-if (NICKEL_RHI_ENABLE_VULKAN)
-    add_subdirectory(vulkan)
-endif()
 
 set(TINYGLTF_HEADER_ONLY ON)
 add_subdirectory(tinygltf)

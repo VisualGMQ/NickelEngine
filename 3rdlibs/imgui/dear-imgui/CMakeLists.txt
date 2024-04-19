@@ -1,8 +1,15 @@
 aux_source_directory(./ imgui_src)
-aux_source_directory(./backends imgui_backends)
 
 add_library(imgui STATIC)
-target_sources(imgui PRIVATE ${imgui_src} ${imgui_backends})
+target_sources(imgui PRIVATE ${imgui_src})
 
-target_include_directories(imgui PUBLIC ./ backends)
-target_link_libraries(imgui PUBLIC SDL2)
+add_subdirectory(backends/sdl2)
+add_subdirectory(backends/gl3)
+if (TARGET Vulkan)
+    add_subdirectory(backends/vk)
+    target_link_libraries(imgui PUBLIC imgui_backend_gl3 imgui_backend_vk)
+endif()
+
+target_link_libraries(imgui PUBLIC imgui_backend_gl3 imgui_backend_sdl2)
+target_include_directories(imgui PUBLIC ./)
+

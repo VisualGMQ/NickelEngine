@@ -91,15 +91,34 @@ public:
 
     BindGroupLayout() = default;
     BindGroupLayout(APIPreference api, DeviceImpl&, const Descriptor&);
+    BindGroupLayout(const BindGroupLayout& o) = default;
+    BindGroupLayout& operator=(const BindGroupLayout& o) = default;
+
+    BindGroupLayout(BindGroupLayout&& o) { swap(o, *this); }
+
+    BindGroupLayout& operator=(BindGroupLayout&& o) noexcept {
+        if (&o != this) {
+            swap(*this, o);
+        }
+        return *this;
+    }
+
     void Destroy();
 
     operator bool() const { return impl_; }
 
     auto Impl() const { return impl_; }
+
     auto Impl() { return impl_; }
 
 private:
     BindGroupLayoutImpl* impl_{};
+
+    friend void swap(BindGroupLayout& o1, BindGroupLayout& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 class BindGroupImpl;
@@ -113,15 +132,32 @@ public:
 
     BindGroup() = default;
     BindGroup(APIPreference, DeviceImpl&, const Descriptor&);
+    BindGroup(const BindGroup& o) = default;
+    BindGroup& operator=(const BindGroup& o) = default;
+    BindGroup(BindGroup&& o) noexcept { swap(o, *this); }
+
+    BindGroup& operator=(BindGroup&& o) noexcept {
+        if (&o != this) swap(o, *this);
+        return *this;
+    }
     BindGroupLayout GetLayout() const;
+
     auto Impl() const { return impl_; }
+
     auto Impl() { return impl_; }
+
     void Destroy();
 
     operator bool() const { return impl_; }
 
 private:
     BindGroupImpl* impl_{};
+
+    friend void swap(BindGroup& o1, BindGroup& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }  // namespace nickel::rhi

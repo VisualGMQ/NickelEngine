@@ -1,2 +1,2 @@
 AddRHITest(rhi_gltf)
-target_link_libraries(rhi_gltf PRIVATE tinygltf)
+target_link_libraries(rhi_gltf PRIVATE stb_image tinygltf)

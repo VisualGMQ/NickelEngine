@@ -31,12 +31,14 @@ public:
     Window(const std::string& title, int width, int height, bool supportVulkan = false);
     ~Window();
 
-    void SwapBuffer() const;
     void Resize(int w, int h);
     void SetTitle(const std::string& title);
 
     void SetFullScreen(bool b);
     void SetResizable(bool b);
+
+    bool IsMinimized() const;
+    bool IsMaximized() const;
 
     std::string_view Title() const { return title_; }
 
@@ -70,9 +72,9 @@ public:
 
     static WindowBuilder Default();
 
-    Window Build() {
+    Window Build(bool supportVulkan) {
         return Window(buildData_.title, static_cast<int>(buildData_.size.x),
-                      static_cast<int>(buildData_.size.y));
+                      static_cast<int>(buildData_.size.y), supportVulkan);
     }
 
 private:

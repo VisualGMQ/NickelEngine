@@ -6,7 +6,6 @@
 #include "common/timer.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/font.hpp"
-#include "graphics/renderer2d.hpp"
 #include "graphics/texture.hpp"
 #include "video/event.hpp"
 #include "video/window.hpp"

@@ -39,6 +39,14 @@ public:
 
     RenderPass() = default;
     RenderPass(APIPreference, DeviceImpl&, const Descriptor&);
+    RenderPass(RenderPass&& o) { swap(o, *this); }
+    RenderPass(const RenderPass& o) = default;
+    RenderPass& operator=(const RenderPass& o) = default;
+
+    RenderPass& operator=(RenderPass&& o) {
+        if (&o != this) swap(o, *this);
+        return *this;
+    }
     auto& GetDescriptor() const { return desc_; }
     void Destroy();
 
@@ -52,6 +60,13 @@ public:
 private:
     Descriptor desc_;
     RenderPassImpl* impl_{};
+
+    friend void swap(RenderPass& o1, RenderPass& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+        swap(o1.desc_, o2.desc_);
+    }
 };
 
 }  // namespace nickel::rhi

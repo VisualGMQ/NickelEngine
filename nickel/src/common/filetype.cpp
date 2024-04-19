@@ -18,6 +18,9 @@ std::unordered_map<std::string, FileType> gFileTypeMap = {
     {    ".timer",     FileType::Timer},
     {     ".anim", FileType::Animation},
     {".tilesheet", FileType::Tilesheet},
+// 3d model
+    {".gltf", FileType::GLTF},
+// meta
     {".meta", FileType::Meta},
 };
 
@@ -41,9 +44,10 @@ std::string_view GetMetaFileExtension(FileType filetype) {
         case FileType::Font:
         case FileType::Audio:
         case FileType::Unknown:
-        case FileType::FileTypeCount:
+        case FileType::GLTF:
             return ".meta";
         case FileType::Meta:
+        case FileType::FileTypeCount:
             return "";
     }
 }
@@ -57,6 +61,7 @@ bool HasMetaFile(FileType filetype) {
         case FileType::Image:
         case FileType::Font:
         case FileType::Audio:
+        case FileType::GLTF:
             return true;
         case FileType::Unknown:
         case FileType::FileTypeCount:

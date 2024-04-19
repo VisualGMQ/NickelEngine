@@ -9,22 +9,22 @@
 
 namespace nickel::rhi::vulkan {
 
-#define VK_CALL(return_value, expr)                                           \
-    do {                                                                      \
-        if (auto result = (expr); result.result != vk::Result::eSuccess) {    \
-            LOGE(nickel::log_tag::Vulkan, "call ", #expr,                     \
-                 " failed: ", VkError2String(result.result)); \
-        } else {                                                              \
-            return_value = result.value;                                      \
-        }                                                                     \
+#define VK_CALL(return_value, expr)                                        \
+    do {                                                                   \
+        if (auto result = (expr); result.result != vk::Result::eSuccess) { \
+            LOGE(nickel::log_tag::Vulkan, "call ", #expr, " failed: ",     \
+                 nickel::rhi::vulkan::VkError2String(result.result));      \
+        } else {                                                           \
+            return_value = result.value;                                   \
+        }                                                                  \
     } while (0)
 
-#define VK_CALL_NO_VALUE(expr)                                         \
-    do {                                                               \
-        if (auto result = (expr); result != vk::Result::eSuccess) {    \
-            LOGE(nickel::log_tag::Vulkan, "call ", #expr,              \
-                 " failed: ", VkError2String(result)); \
-        }                                                              \
+#define VK_CALL_NO_VALUE(expr)                                              \
+    do {                                                                    \
+        if (auto result = (expr); result != vk::Result::eSuccess) {         \
+            LOGE(nickel::log_tag::Vulkan, "call ", #expr,                   \
+                 " failed: ", nickel::rhi::vulkan::VkError2String(result)); \
+        }                                                                   \
     } while (0)
 
 #define RETURN_ENUM_NAME(e) \
@@ -160,7 +160,8 @@ inline vk::ImageLayout GetLayoutByFormat(
     TextureFormat fmt, bool stencilReadOnly = false, bool depthReadOnly = false,
     bool stencilDepthLayoutSperate = false) {
     if (fmt == TextureFormat::Presentation) {
-        return vk::ImageLayout::ePresentSrcKHR;
+        // return vk::ImageLayout::ePresentSrcKHR;
+        return vk::ImageLayout::eColorAttachmentOptimal;
     }
 
     if (IsDepthStencilFormat(fmt)) {

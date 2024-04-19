@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/cgmath.hpp"
-#include "graphics/renderer2d.hpp"
 #include "ui/context.hpp"
 #include "common/hierarchy.hpp"
 

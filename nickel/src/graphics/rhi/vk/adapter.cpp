@@ -128,7 +128,7 @@ Device AdapterImpl::RequestDevice() {
     return Device(*this);
 }
 
-Adapter::Info AdapterImpl::RequestAdapterInfo() {
+Adapter::Info AdapterImpl::RequestAdapterInfo() const {
     return info_;
 }
 

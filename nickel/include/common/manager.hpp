@@ -3,6 +3,7 @@
 #include "common/asset.hpp"
 #include "common/handle.hpp"
 #include "common/filetype.hpp"
+#include "common/util.hpp"
 
 namespace nickel {
 
@@ -297,7 +298,8 @@ protected:
     std::unordered_map<AssetHandle, AssetStoreType, typename AssetHandle::Hash,
                        typename AssetHandle::Eq>
         datas_;
-    std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
+
+    std::unordered_map<std::filesystem::path, AssetHandle, PathHasher> pathHandleMap_;
 };
 
 

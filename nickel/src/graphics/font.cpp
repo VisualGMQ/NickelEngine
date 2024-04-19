@@ -1,6 +1,5 @@
 #include "graphics/font.hpp"
 #include "common/profile.hpp"
-#include "graphics/gogl.hpp"
 
 #include "ft2build.h"
 #include FT_FREETYPE_H
@@ -66,14 +65,15 @@ Character::Character(const FT_GlyphSlot& g)
 
     auto mgr =
         ECS::Instance().World().cur_registry()->res_mut<TextureManager>();
-    gogl::Sampler sampler = gogl::Sampler::CreateLinearRepeat();
-    sampler.wrapper.s = gogl::TextureWrapperType::ClampToEdge;
-    sampler.wrapper.t = gogl::TextureWrapperType::ClampToEdge;
-    GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
-    texture =
-        mgr->CreateSolitary(bitmap.buffer, bitmap.width, bitmap.rows, sampler,
-                            gogl::Format::Red, gogl::Format::Red);
-    GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
+    // TODO: implement it by rhi
+    // gogl::Sampler sampler = gogl::Sampler::CreateLinearRepeat();
+    // sampler.wrapper.s = gogl::TextureWrapperType::ClampToEdge;
+    // sampler.wrapper.t = gogl::TextureWrapperType::ClampToEdge;
+    // GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+    // texture =
+    //     mgr->CreateSolitary(bitmap.buffer, bitmap.width, bitmap.rows, sampler,
+    //                         gogl::Format::Red, gogl::Format::Red);
+    // GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
 }
 
 FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {

@@ -17,11 +17,12 @@ struct GPUSupportLimits {
     bool supportGeometryShader;
 };
 
+APIPreference GetSupportRenderAPI(APIPreference desired);
+
 class AdapterImpl;
 
 class Adapter final {
 public:
-
     struct Option final {
         APIPreference api = APIPreference::Undefine;
     };
@@ -33,17 +34,36 @@ public:
     };
 
     Adapter(void* window, Option option = {APIPreference::Undefine});
+
+    Adapter(Adapter&& o) { swap(*this, o); }
+    Adapter(const Adapter& o) = default;
+    Adapter& operator=(const Adapter& o) = default;
+
+    Adapter& operator=(Adapter&& o) noexcept {
+        if (&o != this) {
+            swap(*this, o);
+        }
+        return *this;
+    }
+
     GPUSupportFeatures Features();
     const GPUSupportLimits& Limits() const;
     Device RequestDevice();
-    Info RequestAdapterInfo();
+    Info RequestAdapterInfo() const;
     void Destroy();
 
     auto Impl() const { return impl_; }
+
     auto Impl() { return impl_; }
 
 private:
     AdapterImpl* impl_{};
+
+    friend void swap(Adapter& o1, Adapter& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }  // namespace nickel::rhi

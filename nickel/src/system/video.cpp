@@ -21,9 +21,7 @@ void VideoSystemUpdate(gecs::resource<EventPoller> poller,
     PROFILE_BEGIN();
 
     poller->Poll();
-    window->SwapBuffer();
 }
-
 
 void EventPollerInit(gecs::commands cmds, gecs::registry reg) {
     PROFILE_BEGIN();

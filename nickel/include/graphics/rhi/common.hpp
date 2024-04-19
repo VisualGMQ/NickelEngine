@@ -26,14 +26,14 @@ enum class BufferUsage {
 };
 
 enum class SamplerAddressMode {
-    ClampToEdge,
-    Repeat,
-    MirrorRepeat,
+    ClampToEdge = 0,
+    Repeat = 1,
+    MirrorRepeat = 2,
 };
 
 enum class Filter {
-    Nearest,
-    Linear,
+    Nearest = 0,
+    Linear = 1,
 };
 
 enum class CompareOp {

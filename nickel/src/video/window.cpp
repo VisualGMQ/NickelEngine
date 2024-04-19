@@ -2,7 +2,6 @@
 #include "config/config.hpp"
 #include "common/log_tag.hpp"
 #include "common/profile.hpp"
-#include "graphics/renderer2d.hpp"
 #include "video/event.hpp"
 
 #include "SDL.h"
@@ -19,10 +18,6 @@ Window::Window(const std::string& title, int width, int height, bool supportVulk
     if (!window_) {
         LOGE(log_tag::SDL2, "create window failed");
     }
-}
-
-void Window::SwapBuffer() const {
-    // SDL_GL_SwapWindow(window_);
 }
 
 cgmath::Vec2 Window::Size() const {
@@ -50,6 +45,16 @@ void Window::SetFullScreen(bool b) {
 
 void Window::SetResizable(bool b) {
     SDL_SetWindowResizable(window_, static_cast<SDL_bool>(b));
+}
+
+bool Window::IsMinimized() const {
+    auto flags = SDL_GetWindowFlags(window_);
+    return flags & SDL_WINDOW_MINIMIZED;
+}
+
+bool Window::IsMaximized() const {
+    auto flags = SDL_GetWindowFlags(window_);
+    return flags & SDL_WINDOW_MAXIMIZED;
 }
 
 Window::~Window() {

@@ -14,6 +14,16 @@ class Device {
 public:
     Device() = default;
     explicit Device(AdapterImpl& adapter);
+    Device(Device&& o) noexcept { swap(o, *this); }
+    Device(const Device& o) = default;
+    Device& operator=(const Device& o) = default;
+
+    Device& operator=(Device&& o) noexcept {
+        if (&o != this) {
+            swap(o, *this);
+        }
+        return *this;
+    }
 
     Texture CreateTexture(const Texture::Descriptor& desc);
     RenderPipeline CreateRenderPipeline(const RenderPipeline::Descriptor&);
@@ -31,8 +41,16 @@ public:
 
     void Destroy();
 
+    DeviceImpl* Impl() const { return impl_; }
+
 private:
     DeviceImpl* impl_{};
+
+    friend void swap(Device& o1, Device& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }

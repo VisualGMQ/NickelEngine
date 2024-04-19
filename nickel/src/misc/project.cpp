@@ -1,5 +1,6 @@
 #include "misc/project.hpp"
 #include "common/log_tag.hpp"
+#include "graphics/gltf.hpp"
 #include "mirrow/drefl/make_any.hpp"
 #include "nickel.hpp"
 #include "refl/drefl.hpp"
@@ -176,25 +177,31 @@ void ErrorCallback(int error, const char* description) {
     LOGE(log_tag::SDL2, description);
 }
 
-void suitCanvas2Window(const WindowResizeEvent& event,
-                       gecs::resource<gecs::mut<Camera>> camera,
-                       gecs::resource<gecs::mut<ui::Context>> uiCtx,
-                       gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    camera->SetProject(cgmath::CreateOrtho(0.0, event.size.w, 0.0, event.size.h,
-                                           1000.0, -1000.0));
-    renderer2d->SetViewport(cgmath::Vec2{0, 0},
-                            cgmath::Vec2(event.size.w, event.size.h));
-
-    uiCtx->camera.SetProject(cgmath::CreateOrtho(
-        0.0, event.size.w, 0.0, event.size.h, 1000.0, -1000.0));
-}
+// void suitCanvas2Window(const WindowResizeEvent& event,
+//                        gecs::resource<gecs::mut<Camera>> camera,
+//                        gecs::resource<gecs::mut<ui::Context>> uiCtx,
+//                        gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
+//     camera->SetProject(cgmath::CreateOrtho(0.0, event.size.w, 0.0, event.size.h,
+//                                            1000.0, -1000.0));
+//     renderer2d->SetViewport(cgmath::Vec2{0, 0},
+//                             cgmath::Vec2(event.size.w, event.size.h));
+// 
+//     uiCtx->camera.SetProject(cgmath::CreateOrtho(
+//         0.0, event.size.w, 0.0, event.size.h, 1000.0, -1000.0));
+// }
 
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds) {
-    InitDynamicReflect();
+    RegistReflectInfos();
 
-    Window* window =
-        &cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build());
+    auto renderAPI = rhi::GetSupportRenderAPI(rhi::APIPreference::Vulkan);
+    Window& window = cmds.emplace_resource<Window>(
+        WindowBuilder{info.windowData}.Build(renderAPI ==
+                                             rhi::APIPreference::Vulkan));
+
+    auto& adapter = cmds.emplace_resource<rhi::Adapter>(
+        window.Raw(), rhi::Adapter::Option{renderAPI});
+    auto& device = cmds.emplace_resource<rhi::Device>(adapter.RequestDevice());
 
     cmds.emplace_resource<Time>();
     auto& textureMgr = cmds.emplace_resource<TextureManager>();
@@ -203,20 +210,20 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     auto& tilesheetMgr = cmds.emplace_resource<TilesheetManager>();
     auto& animMgr = cmds.emplace_resource<AnimationManager>();
     auto& audioMgr = cmds.emplace_resource<AudioManager>();
+    auto& gltfMgr = cmds.emplace_resource<GLTFManager>();
     cmds.emplace_resource<AssetManager>(textureMgr, fontMgr, timerMgr,
-                                        tilesheetMgr, animMgr, audioMgr);
-    cmds.emplace_resource<RenderContext>();
+                                        tilesheetMgr, animMgr, audioMgr, gltfMgr);
+    cmds.emplace_resource<RenderContext>(renderAPI, device, window.Size());
 
-    auto windowSize = window->Size();
+    auto windowSize = window.Size();
 
-    auto& renderer2d = cmds.emplace_resource<Renderer2D>();
     cmds.emplace_resource<Camera>(
-        Camera::CreateOrthoByWindowRegion(window->Size()));
-    renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
-    world.cur_registry()
-        ->event_dispatcher<WindowResizeEvent>()
-        .sink()
-        .add<suitCanvas2Window>();
+        Camera::CreateOrthoByWindowRegion(window.Size()));
+    // renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
+    // world.cur_registry()
+    //     ->event_dispatcher<WindowResizeEvent>()
+    //     .sink()
+    //     .add<suitCanvas2Window>();
 
     // init animation serialize method
     AnimTrackLoadMethods::Instance()
@@ -232,15 +239,20 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
 void EngineShutdown() {
     PROFILE_BEGIN();
 
-    ECS::Instance().World().destroy_all_entities();
-    ECS::Instance().World().remove_res<TilesheetManager>();
-    ECS::Instance().World().remove_res<TextureManager>();
-    ECS::Instance().World().remove_res<FontManager>();
-    ECS::Instance().World().remove_res<TimerManager>();
-    ECS::Instance().World().remove_res<AnimationManager>();
-    ECS::Instance().World().remove_res<AudioManager>();
+    auto& world = ECS::Instance().World();
+
+    world.destroy_all_entities();
+    world.remove_res<TilesheetManager>();
+    world.remove_res<TextureManager>();
+    world.remove_res<FontManager>();
+    world.remove_res<TimerManager>();
+    world.remove_res<AnimationManager>();
+    world.remove_res<AudioManager>();
+    world.remove_res<GLTFManager>();
     FontSystemShutdown();
-    ECS::Instance().World().remove_res<Renderer2D>();
+    world.remove_res<RenderContext>();
+    world.res_mut<rhi::Device>()->Destroy();
+    world.res_mut<rhi::Adapter>()->Destroy();
 }
 
 void RegistEngineSystem(typename gecs::world::registry_type& reg) {
@@ -250,7 +262,7 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_startup_system<FontSystemInit>()
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
-        .regist_startup_system<ui::InitSystem>()
+        // .regist_startup_system<ui::InitSystem>()
         .regist_startup_system<InitAudioSystem>()
         // shutdown systems
         .regist_shutdown_system<EngineShutdown>()
@@ -262,16 +274,18 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_update_system<Keyboard::Update>()
         .regist_update_system<HandleInputEvents>()
         .regist_update_system<UpdateGlobalTransform>()
-        .regist_update_system<ui::UpdateGlobalPosition>()
-        .regist_update_system<ui::HandleEventSystem>()
+        .regist_update_system<UpdateGLTFModelTransform>()
+        .regist_update_system<UpdateCamera2GPU>()
+        // .regist_update_system<ui::UpdateGlobalPosition>()
+        // .regist_update_system<ui::HandleEventSystem>()
         // start render pipeline
-        .regist_update_system<BeginRenderPipeline>()
-        // 2D sprite render
-        .regist_update_system<CollectSpriteRenderInfo>()
-        .regist_update_system<RenderElements>()
+        .regist_update_system<BeginRender>()
+        .regist_update_system<RenderGLTFModel>()
+        .regist_update_system<RenderSprite2D>()
+        .regist_update_system<EndRender>()
+        .regist_update_system<SwapContext>()
         // 2D UI render
-        .regist_update_system<ui::RenderUI>()
-        .regist_update_system<EndRenderPipeline>()
+        // .regist_update_system<ui::RenderUI>()
         // time update
         .regist_update_system<Time::Update>();
 }

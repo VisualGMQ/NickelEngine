@@ -70,8 +70,8 @@ void reflectSprite() {
         .property("customSize", &Sprite::customSize)
         .property("flip", &Sprite::flip)
         .property("visiable", &Sprite::visiable)
-        .property("texture", &Sprite::texture)
-        .property("z-index", &Sprite::zIndex);
+        .property("texture", &Sprite::material)
+        .property("z-index", &Sprite::orderInLayer);
 
     mirrow::drefl::registrar<Flip>::instance()
         .regist("Flip")
@@ -119,44 +119,6 @@ void reflectUI() {
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Style>();
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Button>();
     PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Label>();
-}
-
-void reflectRenderRelate() {
-    mirrow::drefl::registrar<gogl::Sampler>::instance()
-        .regist("Sampler")
-        .property("filter", &gogl::Sampler::filter)
-        .property("mipmap", &gogl::Sampler::mipmap)
-        .property("wrapper", &gogl::Sampler::wrapper);
-
-    mirrow::drefl::registrar<gogl::Sampler::Wrapper>::instance()
-        .regist("Wrapper")
-        .property("borderColor", &gogl::Sampler::Wrapper::borderColor)
-        .property("r", &gogl::Sampler::Wrapper::r)
-        .property("s", &gogl::Sampler::Wrapper::s)
-        .property("t", &gogl::Sampler::Wrapper::t);
-
-    mirrow::drefl::registrar<gogl::Sampler::Filter>::instance()
-        .regist("Filter")
-        .property("min", &gogl::Sampler::Filter::min)
-        .property("mag", &gogl::Sampler::Filter::mag);
-
-    mirrow::drefl::registrar<gogl::TextureFilterType>::instance()
-        .regist("TextureFilterType")
-        .add("Linear", gogl::TextureFilterType::Linear)
-        .add("Nearest", gogl::TextureFilterType::Nearest);
-        // TODO: add Other filter type enum
-
-    mirrow::drefl::registrar<gogl::TextureWrapperType>::instance()
-        .regist("TextureWrapperType")
-        .add("Repeat", gogl::TextureWrapperType::Repeat)
-        .add("MirrowRepeat", gogl::TextureWrapperType::MirroredRepeat)
-        .add("ClampToBorder", gogl::TextureWrapperType::ClampToBorder)
-        .add("ClampToEdge", gogl::TextureWrapperType::ClampToEdge);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::Sampler>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::Sampler::Wrapper>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::TextureFilterType>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::TextureWrapperType>();
 }
 
 void reflectWindow() {
@@ -220,7 +182,8 @@ void deserializeTextureHandle(const toml::node& node, mirrow::drefl::any& elem) 
         if (mgr->Has(filename)) {
             handle = mgr->GetHandle(filename);
         } else {
-            handle = mgr->Load(filename, gogl::Sampler::CreateLinearRepeat());
+            // TODO: add format & sampler descriptor here
+            handle = mgr->Load(filename);
         }
     }
 }
@@ -337,7 +300,20 @@ void reflectAudio() {
     mirrow::drefl::registrar<SoundPlayer>::instance().regist("SoundPlayer");
 }
 
-void InitDynamicReflect() {
+void reflectRHI() {
+    mirrow::drefl::registrar<rhi::SamplerAddressMode>::instance()
+        .regist("SamplerAddressMode")
+        .add("ClampToEdge", rhi::SamplerAddressMode::ClampToEdge)
+        .add("MirrowRepeat", rhi::SamplerAddressMode::MirrorRepeat)
+        .add("Repeat", rhi::SamplerAddressMode::Repeat);
+
+    mirrow::drefl::registrar<rhi::Filter>::instance()
+        .regist("Filter")
+        .add("Linear", rhi::Filter::Linear)
+        .add("Nearest", rhi::Filter::Nearest);
+}
+
+void RegistReflectInfos() {
     reflectVec2();
     reflectVec3();
     reflectVec4();
@@ -347,12 +323,12 @@ void InitDynamicReflect() {
     reflectAnimation();
     reflectSprite();
     reflectUI();
-    reflectRenderRelate();
     reflectWindow();
     reflectTilesheet();
     reflectHierarchy();
     reflectMisc();
     reflectAudio();
+    reflectRHI();
 
     registTextureHandleSerd();
     registSoundPlayerSerd();

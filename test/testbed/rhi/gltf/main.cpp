@@ -2,7 +2,6 @@
 #include "graphics/rhi/rhi.hpp"
 #include "graphics/rhi/util.hpp"
 #include "nickel.hpp"
-#define TINYGLTF_IMPLEMENTATION
 #include "stb_image.h"
 #include "tiny_gltf.h"
 
@@ -70,6 +69,8 @@ struct Context final {
         layout.Destroy();
         pipeline.Destroy();
         MVPBuffer.Destroy();
+        pbrParamsBuffer.Destroy();
+        cameraBuffer.Destroy();
         depth.Destroy();
         depthView.Destroy();
         for (auto elem : images) {
@@ -82,10 +83,16 @@ struct Context final {
         whiteTexture.view.Destroy();
         whiteTexture.texture.Destroy();
         whiteTextureSampler.Destroy();
-        bindGroupLayout.Destroy();
+        defaultNormalTexture.view.Destroy();
+        defaultNormalTexture.texture.Destroy();
+        defaultNormalTextureSampler.Destroy();
         skyboxTexture.view.Destroy();
         skyboxTexture.texture.Destroy();
         skyboxSampler.Destroy();
+        for (auto& mat : materials) {
+            mat.bindGroup.Destroy();
+        }
+        bindGroupLayout.Destroy();
     }
 };
 
@@ -228,9 +235,20 @@ struct GPUMesh final {
     Buffer tanBuf;
     Buffer uvBuf;
     Buffer indicesBuf;
-    std::vector<Material> materials;
 
     std::vector<Primitive> primitives;
+
+    GPUMesh() = default;
+    GPUMesh(GPUMesh&& o) = default;
+    GPUMesh& operator=(GPUMesh&& o) = default;
+
+    ~GPUMesh() {
+        posBuf.Destroy();
+        normBuf.Destroy();
+        tanBuf.Destroy();
+        uvBuf.Destroy();
+        indicesBuf.Destroy();
+    }
 
     operator bool() const {
         // at least we need position information
@@ -912,7 +930,7 @@ void RenderScenes(const GLTFNode& node, Context& ctx,
 }
 
 struct MVP {
-    nickel::cgmath::Mat44 model, view, proj;
+    nickel::cgmath::Mat44 view, proj;
 } mvp;
 
 void initShaders(APIPreference api, Device device,
@@ -953,12 +971,11 @@ void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
             0.1, 10000, adapter.RequestAdapterInfo().api == APIPreference::GL);
         mvp.view =
             nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, -30});
-        mvp.model = nickel::cgmath::Mat44::Identity();
 
         Buffer::Descriptor bufferDesc;
         bufferDesc.usage = BufferUsage::Uniform;
         bufferDesc.mappedAtCreation = true;
-        bufferDesc.size = 4 * 4 * 4 * 3;
+        bufferDesc.size = sizeof(nickel::cgmath::Mat44) * 2;
         ctx.MVPBuffer = device.CreateBuffer(bufferDesc);
         void* data = ctx.MVPBuffer.GetMappedRange();
         memcpy(data, &mvp, sizeof(mvp));
@@ -1232,12 +1249,12 @@ void StartupSystem(gecs::commands cmds,
             // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
             // "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
             // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
-            // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
+            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
             // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/"
             // "BoxTextured.gltf"},
             // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
             // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
-            "external/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"},
+            // "external/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"},
         // "external/glTF-Sample-Models/2.0/Box With Spaces/glTF/Box With
         // Spaces.gltf"},
         // "external/glTF-Sample-Models/2.0/Corset/glTF/Corset.gltf"},
@@ -1397,8 +1414,8 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
                  gecs::resource<Camera> camera) {
     char* data = (char*)ctx->MVPBuffer.GetMappedRange();
     uint32_t matSize = sizeof(nickel::cgmath::Mat44);
-    memcpy(data + matSize, camera->View().data, matSize);
-    memcpy(data + matSize * 2, camera->Proj().data, matSize);
+    memcpy(data, camera->View().data, matSize);
+    memcpy(data + matSize, camera->Proj().data, matSize);
     if (!ctx->MVPBuffer.IsMappingCoherence()) {
         ctx->MVPBuffer.Flush(matSize, matSize * 2);
     }
@@ -1412,9 +1429,8 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
+    cmds.remove_resource<GLTFNode>();
     cmds.remove_resource<Context>();
-    cmds.remove_resource<Device>();
-    cmds.remove_resource<Adapter>();
 }
 
 void BootstrapSystem(gecs::world& world,

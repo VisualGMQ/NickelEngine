@@ -16,7 +16,6 @@ class CommandBuffer final {
 public:
     CommandBuffer() = default;
     explicit CommandBuffer(CommandBufferImpl*);
-    void Destroy();
 
     auto Impl() const { return impl_; }
     auto Impl() { return impl_; }
@@ -32,6 +31,7 @@ private:
 
 class RenderPassEncoder final {
 public:
+    RenderPassEncoder() = default;
     RenderPassEncoder(RenderPassEncoderImpl* impl) : impl_{impl} {}
 
     void Draw(uint32_t vertexCount, uint32_t instanceCount,
@@ -46,7 +46,7 @@ public:
     void SetBindGroup(BindGroup);
     void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset);
     void SetPipeline(RenderPipeline);
-    void SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size);
+    void SetPushConstant(ShaderStage stage, const void* value, uint32_t offset, uint32_t size);
 
     void End();
 
@@ -70,7 +70,18 @@ public:
         Texture texture;
     };
 
+    CommandEncoder() = default;
     explicit CommandEncoder(CommandEncoderImpl*);
+    CommandEncoder(CommandEncoder&& o) noexcept { swap(o, *this); }
+    CommandEncoder(const CommandEncoder& o) = default;
+    CommandEncoder& operator=(const CommandEncoder& o) = default;
+
+    CommandEncoder& operator=(CommandEncoder&& o) noexcept {
+        if (&o != this) {
+            swap(o, *this);
+        }
+        return *this;
+    }
 
     void CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                             const Buffer& dst, uint64_t dstOffset,
@@ -78,13 +89,21 @@ public:
     void CopyBufferToTexture(const CommandEncoder::BufTexCopySrc& src,
                              const CommandEncoder::BufTexCopyDst& dst,
                              const Extent3D& copySize);
-    RenderPassEncoder BeginRenderPass(const RenderPass::Descriptor&);
-    CommandBuffer Finish();
+    [[nodiscard]] RenderPassEncoder BeginRenderPass(const RenderPass::Descriptor&);
+    [[nodiscard]] CommandBuffer Finish();
 
     void Destroy();
 
+   CommandEncoderImpl* Impl() const;
+
 private:
     CommandEncoderImpl* impl_{};
+
+    friend void swap(CommandEncoder& o1, CommandEncoder& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }  // namespace nickel::rhi

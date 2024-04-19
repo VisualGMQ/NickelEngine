@@ -2,11 +2,10 @@
 
 #include "common/asset.hpp"
 #include "common/cgmath.hpp"
-#include "graphics/gogl.hpp"
+#include "common/filetype.hpp"
 #include "common/handle.hpp"
 #include "common/manager.hpp"
-#include "common/filetype.hpp"
-
+#include "rhi/rhi.hpp"
 
 /**
  * @addtogroup resource-manager
@@ -15,28 +14,23 @@
 
 namespace nickel {
 
-class Renderer2D;
 class Texture;
 
 using TextureHandle = Handle<Texture>;
 
 class Texture final : public Asset {
 public:
-    friend class Renderer2D;
     friend class TextureManager;
-    friend class Material2D;
 
     static Texture Null;
 
-    explicit Texture(const toml::table& tbl);
-    explicit Texture(const std::filesystem::path& filename,
-                     const gogl::Sampler&,
-                     gogl::Format fmt = gogl::Format::RGBA,
-                     gogl::Format gpuFmt = gogl::Format::RGBA);
-    Texture(void*, int w, int h, const gogl::Sampler& sampler,
-            gogl::Format fmt = gogl::Format::RGBA,
-            gogl::Format gpuFmt = gogl::Format::RGBA);
+    explicit Texture(rhi::Device, const toml::table&);
+    Texture(rhi::Device, const std::filesystem::path& filename,
+        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
+    Texture(rhi::Device, void*, int w, int h,
+            rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     Texture() = default;
+    ~Texture();
 
     Texture(const Texture&) = delete;
     Texture(Texture&&) = default;
@@ -44,7 +38,7 @@ public:
 
     Texture& operator=(const Texture&) = delete;
 
-    explicit operator bool() const { return texture_ != nullptr; }
+    explicit operator bool() const { return texture_ && view_; }
 
     int Width() const { return w_; }
 
@@ -54,19 +48,19 @@ public:
         return cgmath::Vec2{static_cast<float>(w_), static_cast<float>(h_)};
     }
 
-    void* Raw() const {
-        return texture_ ? reinterpret_cast<void*>(texture_->Id()) : 0;
-    }
-
-    auto& Sampler() const { return sampler_; }
+    rhi::Texture Raw() const { return texture_; }
+    rhi::TextureView View() const { return view_; }
 
     toml::table Save2Toml() const override;
 
 private:
-    std::unique_ptr<gogl::Texture> texture_ = nullptr;
-    gogl::Sampler sampler_;
+    rhi::Texture texture_;
+    rhi::TextureView view_;
     int w_ = 0;
     int h_ = 0;
+
+    rhi::Texture loadTexture(rhi::Device, void* data, uint32_t w, uint32_t h,
+                             rhi::TextureFormat gpuFmt);
 };
 
 template <>
@@ -78,20 +72,17 @@ public:
 
     TextureHandle Load(
         const std::filesystem::path& filename,
-        const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat());
+        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     TextureHandle Create(
-        const std::filesystem::path& name,
-        void* data, uint32_t w, uint32_t h,
-        const gogl::Sampler& = gogl::Sampler::CreateLinearRepeat());
+        const std::filesystem::path& name, void* data, uint32_t w, uint32_t h,
+        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     TextureHandle LoadSVG(const std::filesystem::path& filename,
-                          const gogl::Sampler&,
                           std::optional<cgmath::Vec2> size = std::nullopt);
     bool Replace(TextureHandle, const std::filesystem::path& filename,
-                 const gogl::Sampler&);
+                rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     std::unique_ptr<Texture> CreateSolitary(
-        void* data, int w, int h, const gogl::Sampler&,
-        gogl::Format fmt = gogl::Format::RGBA,
-        gogl::Format gpuFmt = gogl::Format::RGBA);
+        void* data, int w, int h,
+        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
 };
 
 }  // namespace nickel

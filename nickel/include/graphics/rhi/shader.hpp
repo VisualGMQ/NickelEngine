@@ -17,6 +17,15 @@ public:
 
     ShaderModule() = default;
     ShaderModule(APIPreference, DeviceImpl&, const Descriptor&);
+    ShaderModule(const ShaderModule& o) = default;
+    ShaderModule& operator=(const ShaderModule& o) = default;
+
+    ShaderModule(ShaderModule&& o) noexcept { swap(o, *this); }
+
+    ShaderModule& operator=(ShaderModule&& o) noexcept {
+        if (&o != this) swap(o, *this);
+        return *this;
+    }
     void Destroy();
 
     auto Impl() const { return impl_; }
@@ -28,6 +37,12 @@ public:
 
 private:
     std::shared_ptr<ShaderModuleImpl> impl_{};
+
+    friend void swap(ShaderModule& o1, ShaderModule& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }

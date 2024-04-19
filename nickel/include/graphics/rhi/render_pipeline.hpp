@@ -4,7 +4,6 @@
 #include "graphics/rhi/pipeline_layout.hpp"
 #include "graphics/rhi/renderpass.hpp"
 #include "graphics/rhi/shader.hpp"
-#include <array>
 #include <string>
 #include <vector>
 
@@ -123,6 +122,14 @@ public:
 
     RenderPipeline() = default;
     RenderPipeline(APIPreference api, DeviceImpl&, const Descriptor& desc);
+    RenderPipeline(RenderPipeline&& o) noexcept { swap(o, *this); }
+    RenderPipeline(const RenderPipeline& o) = default;
+    RenderPipeline& operator=(const RenderPipeline& o) = default;
+
+    RenderPipeline& operator=(RenderPipeline&& o) noexcept {
+        if (&o != this) swap(o, *this);
+        return *this;
+    }
     PipelineLayout GetLayout() const;
 
     operator bool() const { return impl_; }
@@ -135,6 +142,12 @@ public:
 
 private:
     RenderPipelineImpl* impl_{};
+
+    friend void swap(RenderPipeline & o1, RenderPipeline& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }  // namespace nickel::rhi

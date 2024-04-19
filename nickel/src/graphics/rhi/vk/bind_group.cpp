@@ -12,22 +12,22 @@
 namespace nickel::rhi::vulkan {
 
 struct getDescriptorTypeHelper {
-    vk::DescriptorType operator()(const BufferBinding& layout) const {
-        switch (layout.type) {
+    vk::DescriptorType operator()(const BufferBinding& binding) const {
+        switch (binding.type) {
             case BufferType::ReadOnlyStorage:
-                if (layout.hasDynamicOffset) {
+                if (binding.hasDynamicOffset) {
                     return vk::DescriptorType::eStorageBufferDynamic;
                 } else {
                     return vk::DescriptorType::eStorageBuffer;
                 }
             case BufferType::Storage:
-                if (layout.hasDynamicOffset) {
+                if (binding.hasDynamicOffset) {
                     return vk::DescriptorType::eStorageBufferDynamic;
                 } else {
                     return vk::DescriptorType::eStorageBuffer;
                 }
             case BufferType::Uniform:
-                if (layout.hasDynamicOffset) {
+                if (binding.hasDynamicOffset) {
                     return vk::DescriptorType::eUniformBufferDynamic;
                 } else {
                     return vk::DescriptorType::eUniformBuffer;
@@ -35,31 +35,19 @@ struct getDescriptorTypeHelper {
         }
     }
 
-    vk::DescriptorType operator()(const SamplerBinding& layout) const {
-        return vk::DescriptorType::eCombinedImageSampler;
+    vk::DescriptorType operator()(const SamplerBinding& binding) const {
+        return binding.view ? vk::DescriptorType::eCombinedImageSampler
+                           : vk::DescriptorType::eSampler;
     }
 
-    vk::DescriptorType operator()(const StorageTextureBinding& layout) const {
+    vk::DescriptorType operator()(const StorageTextureBinding& binding) const {
         return vk::DescriptorType::eStorageImage;
     }
 
-    vk::DescriptorType operator()(const TextureBinding& layout) const {
+    vk::DescriptorType operator()(const TextureBinding& binding) const {
         return vk::DescriptorType::eSampledImage;
     }
 };
-
-vk::DescriptorType BindingType2Vk(BindingType type) {
-    switch (type) {
-        case BindingType::Buffer:
-            return vk::DescriptorType::eUniformBuffer;
-        case BindingType::Sampler:
-            return vk::DescriptorType::eCombinedImageSampler;
-        case BindingType::Texture:
-            return vk::DescriptorType::eSampledImage;
-        case BindingType::StorageTexture:
-            return vk::DescriptorType::eStorageImage;
-    }
-}
 
 vk::DescriptorType getDescriptorType(const BindingPoint& entry) {
     return std::visit(getDescriptorTypeHelper{}, entry.entry);
@@ -223,13 +211,17 @@ struct WriteDescriptorHelper final {
         imageInfo
             .setSampler(static_cast<const SamplerImpl*>(binding.sampler.Impl())
                             ->sampler)
-            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-            .setImageView(
+            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+        if (binding.view) {
+            imageInfo.setImageView(
                 static_cast<const TextureViewImpl*>(binding.view.Impl())
                     ->GetView());
+        }
         writeInfo.setImageInfo(imageInfo)
             .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+            .setDescriptorType(binding.view
+                                   ? vk::DescriptorType::eCombinedImageSampler
+                                   : vk::DescriptorType::eSampler)
             .setDstBinding(binding_.binding)
             .setDstArrayElement(0)
             .setDstSet(set_);
@@ -286,7 +278,6 @@ private:
     const BindingPoint& binding_;
 };
 
-
 void BindGroupImpl::writeDescriptors() {
     auto& layoutDesc =
         static_cast<const BindGroupLayoutImpl*>(desc_.layout.Impl())
@@ -308,9 +299,30 @@ public:
     }
 
     void operator()(const SamplerBinding& binding) {
+        if (!binding.view) {
+            return;
+        }
+
+        transformTextureLayout(binding.view);
+    }
+
+    void operator()(const StorageTextureBinding& binding) {}
+
+    void operator()(const TextureBinding& binding) {
+        if (!binding.view) {
+            return;
+        }
+
+        transformTextureLayout(binding.view);
+    }
+
+private:
+    DeviceImpl& dev_;
+
+    void transformTextureLayout(TextureView v) {
         vk::ImageLayout dstLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        auto texture = static_cast<TextureImpl*>(binding.view.Texture().Impl());
-        auto view = static_cast<TextureViewImpl*>(binding.view.Impl());
+        auto texture = static_cast<TextureImpl*>(v.Texture().Impl());
+        auto view = static_cast<TextureViewImpl*>(v.Impl());
 
         for (int i = 0; i < texture->Extent().depthOrArrayLayers; i++) {
             auto& curLayout = texture->layouts[i];
@@ -318,8 +330,8 @@ public:
                 continue;
             }
 
-            auto aspect = DetermineTextureAspect(TextureAspect::All,
-                                                 binding.view.Format());
+            auto aspect =
+                DetermineTextureAspect(TextureAspect::All, v.Format());
             vk::ImageMemoryBarrier barrier;
             vk::ImageSubresourceRange range;
             range.setAspectMask(aspect)
@@ -360,13 +372,6 @@ public:
             curLayout = dstLayout;
         }
     }
-
-    void operator()(const StorageTextureBinding& binding) {}
-
-    void operator()(const TextureBinding& binding) {}
-
-private:
-    DeviceImpl& dev_;
 };
 
 void BindGroupImpl::Transformlayouts() {

@@ -28,7 +28,7 @@ public:
     void SetBindGroup(BindGroup) override;
     void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset) override;
     void SetPipeline(RenderPipeline) override;
-    void SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size) override;
+    void SetPushConstant(ShaderStage stage, const void* value, uint32_t offset, uint32_t size) override;
 
     void End() override;
 
@@ -67,10 +67,11 @@ public:
 
     CmdType Type() const { return type_; }
 
+    vk::CommandPool pool;
+    vk::CommandBuffer buf;
+
 private:
-    vk::CommandPool pool_;
-    CommandBuffer cmdBuf_;
-    vk::CommandBuffer buf_;
+    CommandBufferImpl* cmdBuf_{};
     DeviceImpl& dev_;
     CmdType type_ = CmdType::None;
 };

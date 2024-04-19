@@ -4,6 +4,7 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <filesystem>
 
 #include "common/singlton.hpp"
 
@@ -25,7 +26,7 @@ inline std::optional<T> ReadWholeFile(
     std::ios_base::openmode openmode = std::ios_base::in) {
     std::ifstream file(filename, openmode);
     if (file.fail()) {
-        LOGE("file %s open failed", filename);
+        LOGE("file ", filename, " open failed");
         return std::nullopt;
     }
     T content(std::istreambuf_iterator<char>(file),
@@ -148,6 +149,12 @@ template <typename F, typename... Args>
 void VisitTuple(const std::tuple<Args...>& t, F f) {
     doVisitTuple(t, std::make_index_sequence<sizeof...(Args)>(), f);
 }
+
+struct PathHasher {
+    size_t operator()(const std::filesystem::path& path) const {
+        return std::filesystem::hash_value(path);
+    }
+};
 
 /**
  * @}

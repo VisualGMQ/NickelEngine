@@ -9,7 +9,7 @@ public:
     GPUSupportFeatures Features() override;
     const GPUSupportLimits& Limits() const override;
     Device RequestDevice() override;
-    Adapter::Info RequestAdapterInfo() override;
+    Adapter::Info RequestAdapterInfo() const override;
 
 private:
     GPUSupportLimits limits_;

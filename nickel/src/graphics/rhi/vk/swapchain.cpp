@@ -71,7 +71,7 @@ struct Swapchain::ImageInfo Swapchain::queryImageInfo(
     VK_CALL(formats, dev.getSurfaceFormatsKHR(surface));
     vk::SurfaceFormatKHR* chooseFormat = &formats[0];
     for (auto& format : formats) {
-        if (format.format == vk::Format::eR8G8B8A8Srgb &&
+        if (format.format == vk::Format::eR8G8B8A8Unorm &&
             format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
             chooseFormat = &format;
             break;

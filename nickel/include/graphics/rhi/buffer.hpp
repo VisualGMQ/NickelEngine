@@ -30,6 +30,15 @@ public:
     
     Buffer() = default;
     Buffer(AdapterImpl&, DeviceImpl&, const Buffer::Descriptor&);
+    Buffer(Buffer&& o) { swap(o, *this); }
+    Buffer(const Buffer& o) = default;
+    Buffer& operator=(const Buffer& o) = default;
+    Buffer& operator=(Buffer&& o) noexcept {
+        if (&o != this) {
+            swap(o, *this);
+        }
+        return *this;
+    }
     void Destroy();
     enum MapState MapState() const;
     uint64_t Size() const;
@@ -49,6 +58,12 @@ public:
 
 private:
     BufferImpl* impl_{};
+
+    friend void swap(Buffer& o1, Buffer& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }

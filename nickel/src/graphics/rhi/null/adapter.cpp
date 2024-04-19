@@ -15,7 +15,7 @@ Device AdapterImpl::RequestDevice() {
     return Device{*this};
 }
 
-Adapter::Info AdapterImpl::RequestAdapterInfo() {
+Adapter::Info AdapterImpl::RequestAdapterInfo() const {
     Adapter::Info info;
     info.device = "null";
     info.vendorID = 0;

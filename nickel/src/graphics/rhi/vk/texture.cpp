@@ -28,10 +28,10 @@ TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
     }
 }
 
-bool isDepthStencil(TextureFormat fmt) {
-    return fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+bool isDepthOrStencil(TextureFormat fmt) {
+    return fmt == TextureFormat::DEPTH32_FLOAT_STENCIL8 ||
            fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
-           fmt == TextureFormat::DEPTH24_PLUS_STENCIL8 ||
+           fmt == TextureFormat::DEPTH24_PLUS ||
            fmt == TextureFormat::DEPTH16_UNORM ||
            fmt == TextureFormat::DEPTH32_FLOAT;
 }
@@ -46,7 +46,7 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
         .setSamples(SampleCount2Vk(desc.sampleCount))
         .setExtent({desc.size.width, desc.size.height, 1})
         .setArrayLayers(desc.size.depthOrArrayLayers)
-        .setUsage(TextureUsage2Vk(desc.usage, isDepthStencil(desc.format)));
+        .setUsage(TextureUsage2Vk(desc.usage, isDepthOrStencil(desc.format)));
     if (desc.flags & TextureFlagBits::CubeCompatible) {
         info.setFlags(vk::ImageCreateFlagBits::eCubeCompatible);
     }

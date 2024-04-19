@@ -192,10 +192,47 @@ BindGroupLayout DeviceImpl::CreateBindGroupLayout(
 void DeviceImpl::SwapContext() {
     cmdCounter.Reset();
 
+    // transform present image barrier
+    vk::CommandBufferAllocateInfo allocInfo;
+    allocInfo.setCommandBufferCount(1).setCommandPool(cmdPool).setLevel(
+        vk::CommandBufferLevel::ePrimary);
+    std::vector<vk::CommandBuffer> cmdBufs;
+    VK_CALL(cmdBufs, device.allocateCommandBuffers(allocInfo));
+    vk::ImageMemoryBarrier barrier;
+    vk::ImageSubresourceRange range;
+    range.setAspectMask(vk::ImageAspectFlagBits::eColor)
+        .setBaseArrayLayer(0)
+        .setLayerCount(1)
+        .setBaseMipLevel(0)
+        .setLevelCount(1);
+
+    barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal)
+        .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
+        .setSrcAccessMask(vk::AccessFlagBits::eNone)
+        .setDstAccessMask(vk::AccessFlagBits::eNone)
+        .setImage(swapchain.Images()[curImageIndex])
+        .setSubresourceRange(range);
+
+    vk::CommandBufferBeginInfo beginInfo;
+    beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    VK_CALL_NO_VALUE(cmdBufs[0].begin(beginInfo));
+    cmdBufs[0].pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe,
+                               vk::PipelineStageFlagBits::eBottomOfPipe,
+                               vk::DependencyFlagBits::eByRegion, {}, {},
+                               barrier);
+    VK_CALL_NO_VALUE(cmdBufs[0].end());
+
     vk::Queue graphics =
         static_cast<const vulkan::QueueImpl*>(graphicsQueue->Impl())->queue;
     vk::Queue present =
         static_cast<const vulkan::QueueImpl*>(presentQueue->Impl())->queue;
+
+    vk::SubmitInfo submit;
+    submit.setCommandBuffers(cmdBufs);
+    VK_CALL_NO_VALUE(graphics.submit(submit));
+    VK_CALL_NO_VALUE(device.waitIdle());
+
+    device.freeCommandBuffers(cmdPool, cmdBufs);
 
     vk::PresentInfoKHR info;
     info.setImageIndices(curImageIndex)

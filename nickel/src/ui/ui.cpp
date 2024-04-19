@@ -49,13 +49,14 @@ void renderStyle(const Style& style, Renderer2D& renderer,
                  const Context& context) {
     auto rect = cgmath::Rect::FromCenter(style.GlobalCenter(),
                                          (style.size + style.padding) * 0.5);
-    renderer.FillRect(rect, style.backgroundColor);
+    // TODO: implement it by RHI
+    //renderer.FillRect(rect, style.backgroundColor);
     // TODO: draw border with style.borderSize
-    rect.position.x -= 1.0;
-    rect.position.y -= 1.0;
-    rect.size.w += 1.0;
-    rect.size.h += 1.0;
-    renderer.DrawRect(rect, style.borderColor);
+    // rect.position.x -= 1.0;
+    // rect.position.y -= 1.0;
+    // rect.size.w += 1.0;
+    // rect.size.h += 1.0;
+    // renderer.DrawRect(rect, style.borderColor);
 }
 
 void renderButton(gecs::entity ent, const Button& btn,

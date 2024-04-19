@@ -22,7 +22,17 @@ public:
     };
 
     TextureView() = default;
-    TextureView(APIPreference api, DeviceImpl&, TextureImpl&, const TextureView::Descriptor&);
+    TextureView(APIPreference api, DeviceImpl&, TextureImpl&,
+                const TextureView::Descriptor&);
+    TextureView(const TextureView& o) = default;
+    TextureView& operator=(const TextureView& o) = default;
+
+    TextureView(TextureView&& o) noexcept { swap(o, *this); }
+
+    TextureView& operator==(TextureView&& o) noexcept {
+        if (&o != this) swap(o, *this);
+        return *this;
+    }
     explicit TextureView(TextureViewImpl*);
     enum TextureFormat Format() const;
     class Texture Texture() const;
@@ -45,6 +55,12 @@ public:
 
 private:
     TextureViewImpl* impl_{};
+
+    friend void swap(TextureView& o1, TextureView& o2) noexcept {
+        using std::swap;
+
+        swap(o1.impl_, o2.impl_);
+    }
 };
 
 }

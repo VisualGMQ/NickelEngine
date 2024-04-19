@@ -5,7 +5,6 @@
 #include "common/transform.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/context.hpp"
-#include "graphics/renderer2d.hpp"
 #include "graphics/texture.hpp"
 
 namespace nickel {
@@ -18,10 +17,10 @@ struct Sprite final {
     std::optional<cgmath::Rect> region;
     std::optional<cgmath::Vec2> customSize;
     cgmath::Vec2 anchor;
-    TextureHandle texture;
+    std::unique_ptr<Material2D> material;
     Flip flip = Flip::None;
     bool visiable = true;
-    int zIndex = 0;
+    int orderInLayer = 0;
 
     static Sprite FromTexture(TextureHandle texture);
     static Sprite FromRegion(TextureHandle texture,

@@ -11,13 +11,6 @@ CommandEncoder::CommandEncoder(CommandEncoderImpl* impl) : impl_{impl} {}
 
 CommandBuffer::CommandBuffer(CommandBufferImpl* impl) : impl_{impl} {}
 
-void CommandBuffer::Destroy() {
-    if (impl_) {
-        delete impl_;
-        impl_ = nullptr;
-    }
-}
-
 void CommandEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                                         const Buffer& dst, uint64_t dstOffset,
                                         uint64_t size) {
@@ -44,6 +37,10 @@ void CommandEncoder::Destroy() {
         delete impl_;
         impl_ = nullptr;
     }
+}
+
+CommandEncoderImpl* CommandEncoder::Impl() const {
+    return impl_;
 }
 
 void RenderPassEncoder::Draw(uint32_t vertexCount, uint32_t instanceCount,
@@ -80,7 +77,7 @@ void RenderPassEncoder::SetPipeline(RenderPipeline pipeline) {
     impl_->SetPipeline(pipeline);
 }
 
-void RenderPassEncoder::SetPushConstant(ShaderStage stage, void* value, uint32_t offset, uint32_t size) {
+void RenderPassEncoder::SetPushConstant(ShaderStage stage, const void* value, uint32_t offset, uint32_t size) {
     impl_->SetPushConstant(stage, value, offset, size);
 }
 

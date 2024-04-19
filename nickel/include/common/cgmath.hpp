@@ -732,7 +732,7 @@ using Mat33 = Mat<CGMATH_NUMERIC_TYPE, 3, 3>;
 using Mat44 = Mat<CGMATH_NUMERIC_TYPE, 4, 4>;
 
 inline Mat44 CreatePersp(float fov, float aspect, float near, float far,
-                         bool GLCoord = false) {
+                         bool GLCoord) {
     float focal = 1.0 / std::tan(fov * 0.5);
 
     // clang-format off
@@ -746,14 +746,23 @@ inline Mat44 CreatePersp(float fov, float aspect, float near, float far,
 }
 
 inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
-                         float near, float far, bool GLCoord = false) {
+                         float near, float far, bool GLCoord) {
     // clang-format off
-    return Mat44::FromRow({
-        2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
-                         0.0f, (GLCoord ? 1.0f : -1.0f) * 2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
-                         0.0f,                  0.0f, 2.0f / (near - far),     (near + far) / (far - near),
-                         0.0f,                  0.0f,                0.0f,                            1.0f,
-    });
+    if (GLCoord) {
+        return Mat44::FromRow({
+            2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
+                            0.0f,  2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
+                            0.0f,                  0.0f, 2.0f / (near - far),     (near + far) / (far - near),
+                            0.0f,                  0.0f,                0.0f,                            1.0f,
+        });
+    } else {
+        return Mat44::FromRow({
+            2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
+                             0.0f,-2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
+                             0.0f,                  0.0f,1.0f / (near - far),              far/ (far - near),
+                            0.0f,                 0.0f,               0.0f,                           1.0f,
+        });
+    }
     // clang-format on
 }
 
