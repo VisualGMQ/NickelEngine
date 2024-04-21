@@ -6,14 +6,12 @@
 
 namespace nickel::rhi::vulkan {
 
-void Swapchain::Init(vk::PhysicalDevice phyDev, DeviceImpl& dev,
-                     vk::SurfaceKHR surface, void* window) {
+Swapchain::Swapchain(vk::PhysicalDevice phyDev, DeviceImpl& dev,
+                     vk::SurfaceKHR surface, const cgmath::Vec2& windowSize) {
     vk::SurfaceCapabilitiesKHR capacities;
     VK_CALL(capacities, phyDev.getSurfaceCapabilitiesKHR(surface));
 
-    int w, h;
-    SDL_GetWindowSize((SDL_Window*)(window), &w, &h);
-    imageInfo = queryImageInfo(phyDev, cgmath::Vec2(w, h), surface);
+    imageInfo = queryImageInfo(phyDev, windowSize, surface);
     auto [extent, imageCount, format] = imageInfo;
     auto presentMode = queryPresentMode(phyDev, surface);
 

@@ -9,7 +9,7 @@ class RenderPassImpl: public rhi::RenderPassImpl {
 public:
     explicit RenderPassImpl(const RenderPass::Descriptor&);
 
-    const RenderPass::Descriptor& Descriptor() const;
+    const RenderPass::Descriptor& GetDescriptor() const override;
 
 private:
     RenderPass::Descriptor desc_;

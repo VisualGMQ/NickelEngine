@@ -47,7 +47,7 @@ public:
         if (&o != this) swap(o, *this);
         return *this;
     }
-    auto& GetDescriptor() const { return desc_; }
+    const RenderPass::Descriptor& GetDescriptor() const;
     void Destroy();
 
     auto Impl() const { return impl_; }
@@ -58,14 +58,12 @@ public:
     }
 
 private:
-    Descriptor desc_;
     RenderPassImpl* impl_{};
 
     friend void swap(RenderPass& o1, RenderPass& o2) noexcept {
         using std::swap;
 
         swap(o1.impl_, o2.impl_);
-        swap(o1.desc_, o2.desc_);
     }
 };
 

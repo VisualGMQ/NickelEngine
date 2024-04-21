@@ -18,6 +18,13 @@ Render2DContext::Render2DContext(rhi::APIPreference api, rhi::Device device,
     pipeline = createPipeline(api, viewport, ctx);
 }
 
+void Render2DContext::RecreatePipeline(rhi::APIPreference api,
+                                       const cgmath::Vec2& size,
+                                       RenderContext& ctx) {
+    pipeline.Destroy();
+    pipeline = createPipeline(api, {0, 0, size.w, size.h}, ctx);
+}
+
 rhi::PipelineLayout Render2DContext::createPipelineLayout() {
     rhi::PipelineLayout::Descriptor layoutDesc;
     layoutDesc.layouts.emplace_back(bindGroupLayout);
@@ -251,6 +258,13 @@ Render3DContext::~Render3DContext() {
     pipeline.Destroy();
     pipelineLayout.Destroy();
     bindGroupLayout.Destroy();
+}
+
+void Render3DContext::RecreatePipeline(rhi::APIPreference api,
+                                       const cgmath::Vec2& size,
+                                       RenderContext& ctx) {
+    pipeline.Destroy();
+    pipeline = createPipeline(api, {0, 0, size.w, size.h}, ctx);
 }
 
 rhi::PipelineLayout Render3DContext::createPipelineLayout() {
@@ -568,6 +582,25 @@ RenderContext::~RenderContext() {
     mvpBuffer.Destroy();
     ctx2D.reset();
     ctx3D.reset();
+}
+
+void RenderContext::RecreatePipeline(const cgmath::Vec2& size) {
+    auto api =
+        ECS::Instance().World().res<rhi::Adapter>()->RequestAdapterInfo().api;
+    ctx2D->RecreatePipeline(api, size, *this);
+    ctx3D->RecreatePipeline(api, size, *this);
+
+    depthTextureView.Destroy();
+    depthTexture.Destroy();
+
+    auto device = ECS::Instance().World().res<rhi::Device>().get();
+    initDepthTexture(device, size);
+}
+
+void RenderContext::OnWindowResize(
+    const WindowResizeEvent& event,
+    gecs::resource<gecs::mut<RenderContext>> ctx) {
+    ctx->RecreatePipeline(event.size);
 }
 
 void RenderContext::initDepthTexture(rhi::Device device,

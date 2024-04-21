@@ -7,11 +7,9 @@ ContentBrowserWindow::ContentBrowserWindow(EditorContext* ctx) : ctx_(ctx) {
     initExtensionIconMap();
     dirIconHandle_ = textureMgr_.LoadSVG(
         ctx_->Convert2EditorRelatePath(
-            "editor/resources/icons/folder-windows.svg"),
-        nickel::gogl::Sampler::CreateLinearRepeat(), iconSize);
+            "editor/resources/icons/folder-windows.svg"));
     unknownFileIconHandle_ = textureMgr_.LoadSVG(
-        ctx_->Convert2EditorRelatePath("editor/resources/icons/assembly.svg"),
-        nickel::gogl::Sampler::CreateLinearRepeat(), iconSize);
+        ctx_->Convert2EditorRelatePath("editor/resources/icons/assembly.svg"));
 }
 
 void ContentBrowserWindow::initExtensionIconMap() {
@@ -133,7 +131,7 @@ void ContentBrowserWindow::showOneIcon(
     auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
     ImGui::BeginGroup();
     {
-        if (ImGui::ImageButton(entry.path().string().c_str(), (ImTextureID)texture.Raw(),
+        if (ImGui::ImageButton(entry.path().string().c_str(), texture,
                                ImVec2{thumbnailSize_.w, thumbnailSize_.h})) {
             if (entry.is_directory()) {
                 path_ /= entry.path().filename();
@@ -263,7 +261,6 @@ nickel::Texture& ContentBrowserWindow::FindTextureOrGen(
             it2 != extensionIconMap_.end()) {
             auto handle =
                 textureMgr_.LoadSVG(it2->second.string(),
-                                    nickel::gogl::Sampler::CreateLinearRepeat(),
                                     nickel::cgmath::Vec2{IconSize, IconSize});
             extensionHandleMap_.insert_or_assign(extension, handle);
             return textureMgr_.Get(handle);

@@ -15,7 +15,7 @@ public:
         imageViewer_.ChangeTexture(handle);
         auto assetMgr = nickel::ECS::Instance().World().res<nickel::AssetManager>();
         if (assetMgr->Has(handle_)) {
-            sampler_ = assetMgr->Get(handle_).Sampler();
+            // TODO: not finish
         }
     }
 
@@ -23,14 +23,8 @@ protected:
     void update() override;
 
 private:
-    nickel::gogl::Sampler sampler_ =
-        nickel::gogl::Sampler::CreateLinearRepeat();
     nickel::TextureHandle handle_;
     ImageViewCanva imageViewer_;
-
-    void showWrapper(nickel::gogl::Sampler::Wrapper& wrapper,
-                     gecs::registry reg);
-    void showSampler(nickel::gogl::Sampler& sampler, gecs::registry reg);
 };
 
 class SoundPropertyPopupWindow : public PopupWindow {

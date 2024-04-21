@@ -5,11 +5,11 @@
 #include "graphics/rhi/render_pipeline.hpp"
 #include "graphics/rhi/renderpass.hpp"
 #include "graphics/rhi/vk/adapter.hpp"
+#include "graphics/rhi/vk/command.hpp"
 #include "graphics/rhi/vk/framebuffer.hpp"
 #include "graphics/rhi/vk/pch.hpp"
 #include "graphics/rhi/vk/renderpass.hpp"
 #include "graphics/rhi/vk/swapchain.hpp"
-#include "graphics/rhi/vk/command.hpp"
 
 
 namespace nickel::rhi::vulkan {
@@ -63,6 +63,8 @@ public:
         const BindGroupLayout::Descriptor& desc) override;
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor&) override;
     Buffer CreateBuffer(const Buffer::Descriptor&) override;
+
+    void OnWindowResize(const cgmath::Vec2&);
 
     void SwapContext() override;
     void WaitIdle() override;

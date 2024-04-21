@@ -14,6 +14,7 @@ struct GLTFModel final: public Asset {
     static GLTFModel Null;
 
     GLTFModel() = default;
+    GLTFModel(const toml::table&);
     GLTFModel(std::vector<Scene>&& scenes, std::vector<rhi::Sampler>&& samplers,
               std::vector<std::unique_ptr<Material3D>>&& materials, rhi::Buffer buffers);
     GLTFModel(GLTFModel&&) = default;
@@ -30,7 +31,7 @@ private:
 };
 
 template <>
-std::unique_ptr<GLTFModel> LoadAssetFromMeta<GLTFModel>(class toml::v3::table const &);
+std::unique_ptr<GLTFModel> LoadAssetFromMetaTable(const toml::table&);
 
 using GLTFHandle = Handle<GLTFModel>;
 

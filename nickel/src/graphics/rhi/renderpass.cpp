@@ -3,17 +3,19 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/renderpass.hpp"
 #endif
+#include "graphics/rhi/gl4/renderpass.hpp"
 #include "graphics/rhi/null/renderpass.hpp"
+
 
 namespace nickel::rhi {
 
 RenderPass::RenderPass(APIPreference api, DeviceImpl& dev,
-                       const Descriptor& desc)
-    : desc_{desc} {
+                       const Descriptor& desc) {
     switch (api) {
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
+            impl_ = new gl4::RenderPassImpl(desc);
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN
@@ -25,6 +27,10 @@ RenderPass::RenderPass(APIPreference api, DeviceImpl& dev,
             impl_ = new null::RenderPassImpl{};
             break;
     }
+}
+
+const RenderPass::Descriptor& RenderPass::GetDescriptor() const {
+    return impl_->GetDescriptor();
 }
 
 void RenderPass::Destroy() {

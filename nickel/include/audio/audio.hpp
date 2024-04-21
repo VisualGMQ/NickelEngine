@@ -15,7 +15,6 @@ public:
     static Sound Null;
 
     Sound(const std::filesystem::path& filename);
-    Sound(const toml::table&);
     Sound(const Sound&) = delete;
     Sound(Sound&&) = default;
     Sound& operator=(const Sound&) = delete;
@@ -126,6 +125,6 @@ void InitAudioSystem();
 void ShutdownAudioSystem();
 
 template <>
-std::unique_ptr<Sound> LoadAssetFromMeta(const toml::table&);
+std::unique_ptr<Sound> LoadAssetFromMetaTable(const toml::table&);
 
 }  // namespace nickel

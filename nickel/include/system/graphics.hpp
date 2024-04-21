@@ -5,6 +5,7 @@
 #include "graphics/context.hpp"
 #include "graphics/gltf.hpp"
 #include "graphics/sprite.hpp"
+#include "video/window.hpp"
 
 
 namespace nickel {
@@ -20,7 +21,8 @@ void BeginRender(gecs::resource<gecs::mut<rhi::Device>>,
                  gecs::resource<gecs::mut<RenderContext>>);
 
 void EndRender(gecs::resource<gecs::mut<rhi::Device>>,
-               gecs::resource<gecs::mut<RenderContext>>);
+               gecs::resource<gecs::mut<RenderContext>>,
+               gecs::resource<Window>);
 
 void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>>,
                     gecs::resource<gecs::mut<RenderContext>>,
@@ -35,5 +37,6 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>>,
                      gecs::querier<GLTFHandle, Transform>);
 
 void SwapContext(gecs::resource<gecs::mut<rhi::Device>>,
-                 gecs::resource<gecs::mut<RenderContext>>);
+                 gecs::resource<gecs::mut<RenderContext>>,
+                 gecs::resource<Window>);
 }  // namespace nickel

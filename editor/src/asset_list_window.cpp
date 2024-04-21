@@ -6,7 +6,7 @@ template <>
 void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
                                 const nickel::Texture& texture) {
     if (ImGui::BeginTooltip()) {
-        ImGui::Image(texture.Raw(), {texture.Size().w, texture.Size().h});
+        ImGui::Image(texture, {texture.Size().w, texture.Size().h});
         ImGui::EndTooltip();
     }
 }
@@ -30,7 +30,7 @@ void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
     if (ImGui::BeginTooltip()) {
         if (mgr.Has(tilesheet.Handle())) {
             auto& texture = mgr.Get(tilesheet.Handle());
-            ImGui::Image(texture.Raw(), {texture.Size().w, texture.Size().h});
+            ImGui::Image(texture, {texture.Size().w, texture.Size().h});
         }
         ImGui::EndTooltip();
     }

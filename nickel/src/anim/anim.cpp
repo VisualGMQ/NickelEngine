@@ -50,7 +50,7 @@ void Animation::Save(const std::filesystem::path& path) const {
 }
 
 template <>
-std::unique_ptr<Animation> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Animation> LoadAssetFromMetaTable(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
         return std::make_unique<Animation>(path->as_string()->get());
     }

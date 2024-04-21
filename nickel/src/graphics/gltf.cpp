@@ -674,8 +674,7 @@ GLTFModel::operator bool() const {
 }
 
 template <>
-std::unique_ptr<GLTFModel> LoadAssetFromMeta<GLTFModel>(
-    const toml::table& tbl) {
+std::unique_ptr<GLTFModel> LoadAssetFromMetaTable(const toml::table& tbl) {
     if (auto node = tbl.get("path"); node && node->is_string()) {
         GLTFLoader loader;
         auto& world = ECS::Instance().World();

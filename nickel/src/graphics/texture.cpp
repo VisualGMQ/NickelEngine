@@ -118,7 +118,7 @@ Texture::~Texture() {
 }
 
 template <>
-std::unique_ptr<Texture> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Texture> LoadAssetFromMetaTable(const toml::table& tbl) {
     return std::make_unique<Texture>(
         ECS::Instance().World().res<rhi::Device>().get(), tbl);
 }
@@ -131,18 +131,25 @@ toml::table Texture::Save2Toml() const {
 
 TextureHandle TextureManager::Load(const std::filesystem::path& filename,
                                    rhi::TextureFormat gpuFmt) {
+    auto [handle, _] = LoadAndGet(filename, gpuFmt);
+    return handle;
+}
+
+std::tuple<TextureHandle, Texture&> TextureManager::LoadAndGet(
+    const std::filesystem::path& filename, rhi::TextureFormat gpuFmt) {
     if (Has(filename)) {
-        return GetHandle(filename);
+        auto handle = GetHandle(filename);
+        auto& texture = Get(handle);
+        return {handle, texture};
     }
 
     auto texture = std::make_unique<Texture>(
         ECS::Instance().World().res<rhi::Device>().get(), filename, gpuFmt);
     if (texture && *texture) {
         TextureHandle handle = TextureHandle::Create();
-        storeNewItem(handle, std::move(texture));
-        return handle;
+        return {handle, storeNewItem(handle, std::move(texture))};
     } else {
-        return TextureHandle::Null();
+        return {TextureHandle::Null(), Texture::Null};
     }
 }
 

@@ -141,7 +141,8 @@ public:
                 LOGW(log_tag::Asset, "load asset from ", filename, " failed");
                 return;
             }
-            AssetType newElem(parse.table());
+            auto ptr = LoadAssetFromMetaTable<AssetType>(parse.table());
+            AssetType newElem(std::move(*ptr));
             newElem.AssociateFile(filename);
             elem = std::move(newElem);
         }
@@ -152,16 +153,14 @@ public:
     }
 
     AssetHandle GetHandle(const std::filesystem::path& path) const {
-        if (auto it = pathHandleMap_.find(path);
-            it != pathHandleMap_.end()) {
+        if (auto it = pathHandleMap_.find(path); it != pathHandleMap_.end()) {
             return it->second;
         }
         return {};
     }
 
     const AssetType& Get(const std::filesystem::path& path) const {
-        if (auto it = pathHandleMap_.find(path);
-            it != pathHandleMap_.end()) {
+        if (auto it = pathHandleMap_.find(path); it != pathHandleMap_.end()) {
             return Get(it->second);
         }
         return AssetType::Null;
@@ -228,8 +227,8 @@ public:
     void LoadFromToml(const std::filesystem::path& filename) {
         auto parse = toml::parse_file(filename.string());
         if (!parse) {
-            LOGW(nickel::log_tag::Asset, "load manager from config file ", filename,
-                 " failed:", parse.error());
+            LOGW(nickel::log_tag::Asset, "load manager from config file ",
+                 filename, " failed:", parse.error());
         } else {
             LoadFromToml(parse.table());
         }
@@ -256,7 +255,7 @@ public:
             LOGW(nickel::log_tag::Asset, "load asset from meta file ", filename,
                  " failed:", parse.error());
         } else {
-            if (auto asset = ::nickel::LoadAssetFromMeta<T>(parse.table());
+            if (auto asset = ::nickel::LoadAssetFromMetaTable<T>(parse.table());
                 asset && *asset) {
                 asset->AssociateFile(StripMetaExtension(filename));
                 storeNewItem(AssetHandle::Create(), std::move(asset));
@@ -275,14 +274,15 @@ public:
     }
 
 protected:
-    void storeNewItem(AssetHandle handle, AssetStoreType&& item) {
+    AssetType& storeNewItem(AssetHandle handle, AssetStoreType&& item) {
         if (handle) {
             auto& relativePath = item->RelativePath();
             if (!relativePath.empty()) {
                 pathHandleMap_.emplace(relativePath, handle);
             }
-            datas_.emplace(handle, std::move(item));
+            return *datas_.emplace(handle, std::move(item)).first->second;
         }
+        return AssetType::Null;
     }
 
     std::filesystem::path attachMetafileExt(const T& asset) const {
@@ -299,8 +299,8 @@ protected:
                        typename AssetHandle::Eq>
         datas_;
 
-    std::unordered_map<std::filesystem::path, AssetHandle, PathHasher> pathHandleMap_;
+    std::unordered_map<std::filesystem::path, AssetHandle, PathHasher>
+        pathHandleMap_;
 };
-
 
 }  // namespace nickel

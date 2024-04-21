@@ -2,7 +2,6 @@
 
 #include "nickel.hpp"
 #include "widget.hpp"
-#include "gizmos.hpp"
 
 class GameWindow final: public Window {
 public:
@@ -17,10 +16,4 @@ private:
 
     float scale_ = 1.0;
     nickel::cgmath::Vec2 offset_;
-
-    std::unique_ptr<nickel::gogl::RenderBuffer> rbo_;
-    std::unique_ptr<nickel::gogl::Framebuffer> fbo_;
-    std::unique_ptr<nickel::gogl::Texture> texture_;
-
-    SRTGizmos srtGizmos_;
 };

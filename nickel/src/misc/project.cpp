@@ -1,6 +1,7 @@
 #include "misc/project.hpp"
 #include "common/log_tag.hpp"
 #include "graphics/gltf.hpp"
+#include "graphics/system.hpp"
 #include "mirrow/drefl/make_any.hpp"
 #include "nickel.hpp"
 #include "refl/drefl.hpp"
@@ -198,6 +199,7 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     Window& window = cmds.emplace_resource<Window>(
         WindowBuilder{info.windowData}.Build(renderAPI ==
                                              rhi::APIPreference::Vulkan));
+    window.SetResizable(true);
 
     auto& adapter = cmds.emplace_resource<rhi::Adapter>(
         window.Raw(), rhi::Adapter::Option{renderAPI});
@@ -259,6 +261,7 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
     reg
         // startup systems
         .regist_startup_system<VideoSystemInit>()
+        .regist_startup_system<RenderSystemInit>()
         .regist_startup_system<FontSystemInit>()
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
@@ -266,7 +269,6 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_startup_system<InitAudioSystem>()
         // shutdown systems
         .regist_shutdown_system<EngineShutdown>()
-        .regist_shutdown_system<InitAudioSystem>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()
         // other input handle event must put here(after mouse/keyboard update)

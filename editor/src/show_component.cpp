@@ -339,11 +339,11 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
     auto& sprite = *mirrow::drefl::try_cast<nickel::Sprite>(obj);
     auto mgr = reg.res_mut<nickel::AssetManager>();
 
-    auto changeHandle = [&](nickel::TextureHandle h) { sprite.texture = h; };
+    auto changeHandle = [&](nickel::TextureHandle h) { sprite.material->ChangeTexture(h); };
     auto& ctx = *reg.res_mut<EditorContext>();
 
     if (BeginDisplayHandle<nickel::TextureHandle>(*reg.res_mut<EditorContext>(),
-                                                  name, *mgr, sprite.texture,
+                                                  name, *mgr, sprite.material->GetTexture(),
                                                   changeHandle)) {
         if (ImGui::Selectable("load tilesheet")) {
             ctx.tilesheetAssetListWindow.Show();
@@ -353,7 +353,7 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
                     ctx.tilesheetEditor.ChangeTilesheet(h);
                     ctx.tilesheetEditor.SetSelectCallback(
                         [&](nickel::Tile tile) {
-                            sprite.texture = tile.handle;
+                            sprite.material->ChangeTexture(tile.handle);
                             sprite.region = tile.region;
                             sprite.customSize = tile.region.size;
                         });
@@ -378,7 +378,7 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
                         ctx.tilesheetEditor.ChangeTilesheet(handle);
                         ctx.tilesheetEditor.SetSelectCallback(
                             [&](nickel::Tile tile) {
-                                sprite.texture = tile.handle;
+                                sprite.material->ChangeTexture(tile.handle);
                                 sprite.region = tile.region;
                                 sprite.customSize = tile.region.size;
                             });
@@ -431,6 +431,7 @@ void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
     }
 }
 
+/*
 void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
                   mirrow::drefl::any& value, gecs::registry reg) {
     auto& label = *mirrow::drefl::try_cast<nickel::ui::Label>(value);
@@ -469,6 +470,7 @@ void DisplayLabel(const mirrow::drefl::type* parent, std::string_view name,
         label.SetPtSize(size);
     }
 }
+*/
 
 void DisplaySoundPlayer(const mirrow::drefl::type* parent,
                         std::string_view name, mirrow::drefl::any& value,

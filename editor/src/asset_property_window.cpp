@@ -3,41 +3,6 @@
 #include "image_view_canva.hpp"
 #include "show_component.hpp"
 
-void TexturePropertyPopupWindow::showWrapper(
-    nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
-    if (ImGui::TreeNode("wrapper")) {
-        // show texture wrapper info
-        auto textureWrapperTypeInfo =
-            mirrow::drefl::typeinfo<nickel::gogl::TextureWrapperType>();
-        if (auto f =
-                ComponentShowMethods::Instance().Find(textureWrapperTypeInfo);
-            f) {
-            auto ref = mirrow::drefl::any_make_ref(wrapper.s);
-            f(nullptr, "s", ref, reg);
-            ref = mirrow::drefl::any_make_ref(wrapper.t);
-            f(nullptr, "t", ref, reg);
-            // TODO: if texture is 3D, show r component
-            // ref = mirrow::drefl::any_make_ref(wrapper.r);
-            // f(textureWrapperTypeInfo, "r", ref, reg, {});
-        }
-
-        // show border color
-        if (wrapper.NeedBorderColor()) {
-            ImGui::ColorEdit4("border color", wrapper.borderColor);
-        }
-        ImGui::TreePop();
-    }
-}
-
-void TexturePropertyPopupWindow::showSampler(nickel::gogl::Sampler& sampler,
-                                             gecs::registry reg) {
-    if (ImGui::TreeNode("sampler")) {
-        DisplayComponent("filter", sampler.filter);
-        showWrapper(sampler.wrapper, reg);
-        ImGui::TreePop();
-    }
-}
-
 void TexturePropertyPopupWindow::update() {
     auto& reg = *nickel::ECS::Instance().World().cur_registry();
     auto& textureMgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>()->TextureMgr();
@@ -65,22 +30,6 @@ void TexturePropertyPopupWindow::update() {
 
     imageViewer_.Resize({size, size});
     imageViewer_.Update();
-
-    showSampler(sampler_, reg);
-    DisplayComponent("mipmap", sampler_.mipmap);
-
-    // show reimport button
-    if (sampler_ != texture.Sampler()) {
-        if (ImGui::Button("re-import")) {
-            textureMgr.Replace(handle_, texture.RelativePath(), sampler_);
-        }
-        ImGui::SameLine();
-    }
-
-    // show cancel button
-    if (ImGui::Button("cancel")) {
-        Hide();
-    }
 }
 
 void SoundPropertyPopupWindow::update() {
@@ -158,8 +107,7 @@ void FontPropertyPopupWindow::update() {
     auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
     auto& preview = ctx->FindOrGenFontPrewview(handle_);
     for (auto& ch : preview.Texts()) {
-        ImGui::Image(ch.texture->Raw(),
-                     {ch.texture->Size().w, ch.texture->Size().h});
+        ImGui::Image(*ch.texture, {ch.texture->Size().w, ch.texture->Size().h});
         ImGui::SameLine();
     }
 }

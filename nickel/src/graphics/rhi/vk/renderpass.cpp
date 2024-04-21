@@ -4,12 +4,11 @@
 #include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
 
-
 namespace nickel::rhi::vulkan {
 
 RenderPassImpl::RenderPassImpl(DeviceImpl& dev,
                                const RenderPass::Descriptor& desc)
-    : dev_{dev.device}, desc_{desc} {
+    : desc{desc}, dev_{dev.device} {
     createRenderPass(dev, desc);
 }
 
@@ -106,6 +105,10 @@ void RenderPassImpl::createRenderPass(DeviceImpl& dev,
     info.setAttachments(attachments).setSubpasses(subpass).setDependencies(dep);
 
     VK_CALL(renderPass, dev_.createRenderPass(info));
+}
+
+const RenderPass::Descriptor& RenderPassImpl::GetDescriptor() const {
+    return desc;
 }
 
 RenderPassImpl::~RenderPassImpl() {

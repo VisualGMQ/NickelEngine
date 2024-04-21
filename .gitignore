@@ -3,4 +3,3 @@
 cmake-build*
 compile_commands.json
 sandbox
-imgui.ini

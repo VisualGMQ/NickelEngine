@@ -7,7 +7,6 @@
 #include "content_browser.hpp"
 #include "dialog.hpp"
 #include "entity_list_window.hpp"
-#include "gizmos.hpp"
 #include "inspector.hpp"
 #include "show_component.hpp"
 #include "spawn_component.hpp"
@@ -85,7 +84,7 @@ void RegistComponentShowMethods() {
                     DisplayAnimationPlayer);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::SoundPlayer>(),
                     DisplaySoundPlayer);
-    instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), DisplayLabel);
+    // instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), DisplayLabel);
 }
 
 template <typename T>
@@ -117,9 +116,9 @@ void RegistSpawnMethods() {
         GeneralSpawnMethod<nickel::GlobalTransform>);
     instance.Regist<nickel::Sprite>(GeneralSpawnMethod<nickel::Sprite>);
     instance.Regist<nickel::AnimationPlayer>(SpawnAnimationPlayer);
-    instance.Regist<nickel::ui::Style>(GeneralSpawnMethod<nickel::ui::Style>);
-    instance.Regist<nickel::ui::Button>(GeneralSpawnMethod<nickel::ui::Button>);
-    instance.Regist<nickel::ui::Label>(GeneralSpawnMethod<nickel::ui::Label>);
+    // instance.Regist<nickel::ui::Style>(GeneralSpawnMethod<nickel::ui::Style>);
+    // instance.Regist<nickel::ui::Button>(GeneralSpawnMethod<nickel::ui::Button>);
+    // instance.Regist<nickel::ui::Label>(GeneralSpawnMethod<nickel::ui::Label>);
     instance.Regist<nickel::SoundPlayer>(
         GeneralSpawnMethod<nickel::SoundPlayer>);
 }
@@ -142,7 +141,6 @@ void dropFileEventHandle(const nickel::DropFileEvent& event,
 void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
                  gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
                  gecs::resource<gecs::mut<nickel::FontManager>> fontMgr,
-                 gecs::resource<gecs::mut<nickel::Renderer2D>> renderer,
                  gecs::resource<gecs::mut<EditorContext>> editorCtx,
                  gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
                  gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
@@ -182,8 +180,8 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
     }
     contentBrowserWindow.RescanDir();
 
-    renderer->SetViewport(
-        {0, 0}, nickel::cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
+    // renderer->SetViewport(
+    //     {0, 0}, nickel::cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
 
     RegistComponentShowMethods();
     RegistSpawnMethods();
@@ -243,32 +241,65 @@ void EditorExit() {
     nickel::ECS::Instance().World().remove_res<EditorContext>();
 }
 
+void RegistSystems(gecs::world& world) {
+    world
+        .cur_registry()
+        // startup systems
+        ->regist_startup_system<nickel::VideoSystemInit>()
+        .regist_startup_system<nickel::FontSystemInit>()
+        .regist_startup_system<nickel::EventPollerInit>()
+        .regist_startup_system<nickel::InputSystemInit>()
+        // .regist_startup_system<ui::InitSystem>()
+        .regist_startup_system<nickel::InitAudioSystem>()
+        .regist_startup_system<plugin::ImGuiInit>()
+        // shutdown systems
+        .regist_shutdown_system<plugin::ImGuiShutdown>()
+        // update systems
+        .regist_update_system<nickel::VideoSystemUpdate>()
+        // other input handle event must put here(after mouse/keyboard update)
+        .regist_update_system<nickel::Mouse::Update>()
+        .regist_update_system<nickel::Keyboard::Update>()
+        .regist_update_system<nickel::HandleInputEvents>()
+        .regist_update_system<nickel::UpdateGlobalTransform>()
+        .regist_update_system<nickel::UpdateGLTFModelTransform>()
+        .regist_update_system<nickel::UpdateCamera2GPU>()
+        // .regist_update_system<ui::UpdateGlobalPosition>()
+        // .regist_update_system<ui::HandleEventSystem>()
+        // start render pipeline
+        .regist_update_system<nickel::BeginRender>()
+        .regist_update_system<nickel::RenderGLTFModel>()
+        .regist_update_system<nickel::RenderSprite2D>()
+        .regist_update_system<plugin::ImGuiStart>()
+        .regist_update_system<plugin::ImGuiEnd>()
+        .regist_update_system<nickel::EndRender>()
+        .regist_update_system<nickel::SwapContext>()
+        // 2D UI render
+        // .regist_update_system<ui::RenderUI>()
+        // time update
+        .regist_update_system<nickel::Time::Update>()
+        .add_state(EditorScene::ProjectManager)
+        .regist_enter_system_to_state<InitEditorContext>(
+            EditorScene::ProjectManager)
+        .regist_update_system_to_state_after<ProjectManagerUpdate,
+                                             plugin::ImGuiStart>(
+            EditorScene::ProjectManager)
+        .add_state(EditorScene::Editor)
+        .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
+        .regist_exit_system_to_state<EditorExit>(EditorScene::Editor)
+        .regist_update_system_to_state_after<EditorImGuiUpdate,
+                                             plugin::ImGuiStart>(
+            EditorScene::Editor);
+
+    world.cur_registry()->switch_state_immediatly(EditorScene::ProjectManager);
+}
+
 void BootstrapSystem(gecs::world& world,
                      typename gecs::world::registry_type& reg) {
     nickel::ProjectInitInfo initInfo;
     initInfo.windowData.title = "Project Manager";
     initInfo.windowData.size.Set(ProjectMgrWindowWidth, ProjectMgrWindowHeight);
     InitSystem(world, initInfo, reg.commands());
-    nickel::RegistEngineSystem(*world.cur_registry());
+    RegistSystems(world);
 
-    reg.add_state(EditorScene::ProjectManager)
-        .regist_startup_system<InitEditorContext>()
-        .regist_startup_system<plugin::ImGuiInit>()
-        .regist_shutdown_system<plugin::ImGuiShutdown>()
-        // ProjectManager state
-        .regist_update_system_to_state<plugin::ImGuiStart>(
-            EditorScene::ProjectManager)
-        .regist_update_system_to_state<ProjectManagerUpdate>(
-            EditorScene::ProjectManager)
-        .regist_update_system_to_state<plugin::ImGuiEnd>(
-            EditorScene::ProjectManager)
-        // Editor state
-        .add_state(EditorScene::Editor)
-        .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
-        .regist_exit_system_to_state<EditorExit>(EditorScene::Editor)
-        .regist_update_system_to_state<plugin::ImGuiStart>(EditorScene::Editor)
-        .regist_update_system_to_state<EditorImGuiUpdate>(EditorScene::Editor)
-        .regist_update_system_to_state<plugin::ImGuiEnd>(EditorScene::Editor)
-        // start with
-        .start_with_state(EditorScene::ProjectManager);
+    world.switch_registry("ProjectManage");
 }

@@ -5,6 +5,7 @@
 #include "graphics/material.hpp"
 #include "graphics/texture.hpp"
 #include "graphics/vertex.hpp"
+#include "video/event.hpp"
 
 namespace nickel {
 
@@ -42,6 +43,9 @@ struct Render2DContext {
                             rhi::SamplerAddressMode v, rhi::Filter min,
                             rhi::Filter mag);
 
+    void RecreatePipeline(rhi::APIPreference api, const cgmath::Vec2& size,
+                          RenderContext& ctx);
+
 private:
     rhi::Device device_;
     std::unordered_map<uint32_t, rhi::Sampler> samplers_;
@@ -67,6 +71,9 @@ struct Render3DContext {
                     const cgmath::Rect& viewport, RenderContext&);
     ~Render3DContext();
 
+    void RecreatePipeline(rhi::APIPreference api, const cgmath::Vec2& size,
+                          RenderContext& ctx);
+
 private:
     rhi::Device device_;
 
@@ -83,9 +90,14 @@ private:
  * @brief [resource][inner] render context
  */
 struct RenderContext final {
+    static void OnWindowResize(const WindowResizeEvent&,
+                               gecs::resource<gecs::mut<RenderContext>>);
+
     RenderContext(rhi::APIPreference, rhi::Device,
                   const cgmath::Vec2& windowSize);
     ~RenderContext();
+
+    void RecreatePipeline(const cgmath::Vec2& size);
 
     std::unique_ptr<Render2DContext> ctx2D;
     std::unique_ptr<Render3DContext> ctx3D;

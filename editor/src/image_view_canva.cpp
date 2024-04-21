@@ -51,8 +51,8 @@ void ImageViewCanva::Update() {
 
             minPt = transformPt(minPt, -texture.Size() * 0.5) + canvasMin;
             maxPt = transformPt(maxPt, -texture.Size() * 0.5) + canvasMin;
-            drawList->AddImage(texture.Raw(), {minPt.x, minPt.y},
-                               {maxPt.x, maxPt.y});
+            // drawList->AddImage(texture.Raw(), {minPt.x, minPt.y},
+            //                    {maxPt.x, maxPt.y});
 
             additionalDraw(drawList, texture, canvasMin);
         }

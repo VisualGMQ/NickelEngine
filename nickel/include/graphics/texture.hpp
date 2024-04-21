@@ -48,7 +48,7 @@ public:
         return cgmath::Vec2{static_cast<float>(w_), static_cast<float>(h_)};
     }
 
-    rhi::Texture Raw() const { return texture_; }
+    rhi::Texture RawTexture() const { return texture_; }
     rhi::TextureView View() const { return view_; }
 
     toml::table Save2Toml() const override;
@@ -64,7 +64,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Texture> LoadAssetFromMeta(const toml::table&);
+std::unique_ptr<Texture> LoadAssetFromMetaTable(const toml::table&);
 
 class TextureManager final : public Manager<Texture> {
 public:
@@ -73,13 +73,16 @@ public:
     TextureHandle Load(
         const std::filesystem::path& filename,
         rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
+    std::tuple<TextureHandle, Texture&> LoadAndGet(
+        const std::filesystem::path& filename,
+        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     TextureHandle Create(
         const std::filesystem::path& name, void* data, uint32_t w, uint32_t h,
         rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     TextureHandle LoadSVG(const std::filesystem::path& filename,
                           std::optional<cgmath::Vec2> size = std::nullopt);
     bool Replace(TextureHandle, const std::filesystem::path& filename,
-                rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
+                 rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);
     std::unique_ptr<Texture> CreateSolitary(
         void* data, int w, int h,
         rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM);

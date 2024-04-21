@@ -27,10 +27,12 @@ public:
     ~RenderPassImpl();
 
     vk::RenderPass renderPass;
+    RenderPass::Descriptor desc;
+
+    const RenderPass::Descriptor& GetDescriptor() const override;
 
 private:
     vk::Device dev_;
-    RenderPass::Descriptor desc_;
 
     void createRenderPass(DeviceImpl&, const RenderPass::Descriptor& desc);
 };

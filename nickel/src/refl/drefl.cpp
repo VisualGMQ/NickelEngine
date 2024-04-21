@@ -1,4 +1,5 @@
 #include "refl/drefl.hpp"
+#include "graphics/gltf.hpp"
 #include "mirrow/drefl/cast_any.hpp"
 #include "mirrow/drefl/factory.hpp"
 #include "common/transform.hpp"
@@ -313,6 +314,20 @@ void reflectRHI() {
         .add("Nearest", rhi::Filter::Nearest);
 }
 
+void reflectTexture() {
+    mirrow::drefl::registrar<Texture>::instance().regist("Texture");
+}
+
+void reflectMaterial() {
+    mirrow::drefl::registrar<Material2D>::instance().regist("Material2D");
+
+    // mirrow::drefl::registrar<Material3D>::instance().regist("Material3D");
+}
+
+void reflectGLTFModel() {
+    mirrow::drefl::registrar<GLTFModel>::instance().regist("GLTFModel");
+}
+
 void RegistReflectInfos() {
     reflectVec2();
     reflectVec3();
@@ -329,6 +344,9 @@ void RegistReflectInfos() {
     reflectMisc();
     reflectAudio();
     reflectRHI();
+    reflectTexture();
+    reflectMaterial();
+    reflectGLTFModel();
 
     registTextureHandleSerd();
     registSoundPlayerSerd();

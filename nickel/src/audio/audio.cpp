@@ -27,12 +27,6 @@ Sound::Sound(const std::filesystem::path& filename) : Asset(filename) {
     }
 }
 
-Sound::Sound(const toml::table& tbl) {
-    if (auto node = tbl.get("path"); node && node->is_string()) {
-        *this = Sound(node->as_string()->get());
-    }
-}
-
 void* Sound::GetAudioData() {
     return data_;
 }
@@ -168,9 +162,9 @@ void ShutdownAudioSystem() {
 }
 
 template <>
-std::unique_ptr<Sound> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Sound> LoadAssetFromMetaTable(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Sound>(tbl);
+        return std::make_unique<Sound>(path->as_string()->get());
     }
     return nullptr;
 }

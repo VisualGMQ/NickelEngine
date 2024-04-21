@@ -7,7 +7,10 @@ namespace nickel::rhi::vulkan {
 
 DeviceImpl::DeviceImpl(AdapterImpl& adapter) : adapter{adapter} {
     createDevice(adapter.instance, adapter.phyDevice, adapter.surface);
-    swapchain.Init(adapter.phyDevice, *this, adapter.surface, adapter.window);
+    int w, h;
+    SDL_GetWindowSize((SDL_Window*)adapter.window, &w, &h);
+    swapchain = Swapchain(adapter.phyDevice, *this, adapter.surface,
+                          cgmath::Vec2(w, h));
     createSyncObject();
     createCmdPool();
     VK_CALL(curFrame,
@@ -189,8 +192,54 @@ BindGroupLayout DeviceImpl::CreateBindGroupLayout(
     return BindGroupLayout{APIPreference::Vulkan, *this, desc};
 }
 
+void DeviceImpl::OnWindowResize(const cgmath::Vec2& size) {
+    swapchain.Destroy(device);
+    swapchain = Swapchain(adapter.phyDevice, *this, adapter.surface, size);
+
+    // remove renderPass which contains swapchain image
+    {
+        auto it = std::remove_if(
+            renderPasses.begin(), renderPasses.end(),
+            [](RenderPass& renderPass) {
+                for (auto& att : renderPass.GetDescriptor().colorAttachments) {
+                    if (att.view.Format() == rhi::TextureFormat::Presentation) {
+                        renderPass.Destroy();
+                        return true;
+                    }
+                }
+                return false;
+            });
+        renderPasses.erase(it, renderPasses.end());
+    }
+
+    // remove framebuffer which contains swapchain image
+    {
+        auto it = std::remove_if(
+            framebuffers.begin(), framebuffers.end(), [&](Framebuffer& fbo) {
+                auto impl = static_cast<FramebufferImpl*>(fbo.Impl());
+                for (auto& att : impl->Views()) {
+                    for (auto& image : swapchain.ImageViews()) {
+                        if (att == image) {
+                            fbo.Destroy();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
+        framebuffers.erase(it, framebuffers.end());
+    }
+}
+
 void DeviceImpl::SwapContext() {
     cmdCounter.Reset();
+
+    auto window = (SDL_Window*)adapter.window;
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
+        VK_CALL_NO_VALUE(
+            device.waitForFences(fences[curFrame], true, UINT64_MAX));
+        return;
+    }
 
     // transform present image barrier
     vk::CommandBufferAllocateInfo allocInfo;
@@ -244,8 +293,7 @@ void DeviceImpl::SwapContext() {
 
     device.resetCommandPool(cmdPool);
 
-    curFrame++;
-    curFrame = curFrame >= swapchain.imageInfo.imagCount ? 0 : curFrame;
+    curFrame = (curFrame + 1) % swapchain.imageInfo.imagCount;
 
     VK_CALL(curImageIndex,
             device.acquireNextImageKHR(swapchain.swapchain, UINT64_MAX,

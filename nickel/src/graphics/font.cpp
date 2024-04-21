@@ -28,12 +28,6 @@ void FontSystemShutdown() {
 
 Font Font::Null;
 
-Font::Font(const toml::table& tbl) {
-    if (auto node = tbl.get("path"); node && node->is_string()) {
-        *this = Font{node->as_string()->get()};
-    }
-}
-
 Font::Font(const std::filesystem::path& filename) : Asset(filename) {
     if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &face_);
         err) {
@@ -50,7 +44,7 @@ Font::Font(const std::filesystem::path& filename) : Asset(filename) {
 }
 
 template <>
-std::unique_ptr<Font> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Font> LoadAssetFromMetaTable(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
         return std::make_unique<Font>(path->as_string()->get());
     }

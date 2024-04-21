@@ -235,18 +235,22 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
 }
 
 void EndRender(gecs::resource<gecs::mut<rhi::Device>> device,
-               gecs::resource<gecs::mut<RenderContext>> ctx) {
+               gecs::resource<gecs::mut<RenderContext>> ctx,
+               gecs::resource<Window> window) {
     PROFILE_BEGIN();
 
     auto cmd = ctx->encoder.Finish();
 
-    rhi::Queue queue = device->GetQueue();
+    if (!window->IsMinimized()) {
+        rhi::Queue queue = device->GetQueue();
 
-    queue.Submit({cmd});
+        queue.Submit({cmd});
+    }
 }
 
 void SwapContext(gecs::resource<gecs::mut<rhi::Device>> device,
-                 gecs::resource<gecs::mut<RenderContext>> ctx) {
+                 gecs::resource<gecs::mut<RenderContext>> ctx,
+                 gecs::resource<Window> window) {
     PROFILE_BEGIN();
 
     device->SwapContext();
