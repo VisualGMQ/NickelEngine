@@ -14,10 +14,10 @@ namespace nickel {
 
 class AssetManager final {
 public:
-    AssetManager(TextureManager& texture, FontManager& font,
+    AssetManager(TextureManager& texture, Material2DManager& mtl, FontManager& font,
                  TimerManager& timer, TilesheetManager& tilesheet,
                  AnimationManager& anim, AudioManager& audio, GLTFManager& gltf)
-        : mgrs_{texture, font, timer, tilesheet, anim, audio, gltf} {}
+        : mgrs_{texture, mtl, font, timer, tilesheet, anim, audio, gltf} {}
 
     auto& TextureMgr() { return std::get<TextureManager&>(mgrs_); }
 
@@ -44,6 +44,8 @@ public:
     auto& AudioMgr() const { return std::get<AudioManager&>(mgrs_); }
 
     auto& GLTFMgr() const { return std::get<GLTFManager&>(mgrs_); }
+
+    auto& Material2DMgr() const { return std::get<Material2DManager&>(mgrs_); }
 
     bool Load(const std::filesystem::path& path) {
         auto filetype = DetectFileType(path);
@@ -120,6 +122,13 @@ public:
         return {};
     }
 
+    Material2DHandle LoadMaterial2D(const std::filesystem::path& path) {
+        if (auto filetype = DetectFileType(path); filetype == FileType::Material2D) {
+            return Material2DMgr().Load(path);
+        }
+        return {};
+    }
+
     template <typename T>
     void Destroy(Handle<T> handle) {
         return SwitchManager<T>().Destroy(handle);
@@ -181,6 +190,7 @@ public:
 
     void SaveAssets2File() const {
         TextureMgr().SaveAssets2File();
+        Material2DMgr().SaveAssets2File();
         FontMgr().SaveAssets2File();
         AnimationMgr().SaveAssets2File();
         TilesheetMgr().SaveAssets2File();
@@ -193,6 +203,7 @@ public:
         toml::table tbl;
 
         tbl.emplace("texture", TextureMgr().Save2Toml(rootDir));
+        tbl.emplace("material2d", Material2DMgr().Save2Toml(rootDir));
         tbl.emplace("font", FontMgr().Save2Toml(rootDir));
         tbl.emplace("anim", AnimationMgr().Save2Toml(rootDir));
         tbl.emplace("tilesheet", TilesheetMgr().Save2Toml(rootDir));
@@ -223,7 +234,10 @@ public:
             AudioMgr().LoadFromToml(*node->as_table());
         }
         if (auto node = tbl.get("gltf"); node && node->is_table()) {
-            GLTFManager().LoadFromToml(*node->as_table());
+            GLTFMgr().LoadFromToml(*node->as_table());
+        }
+        if (auto node = tbl.get("material2d"); node && node->is_table()) {
+            Material2DMgr().LoadFromToml(*node->as_table());
         }
     }
 
@@ -247,6 +261,8 @@ public:
             return std::get<AudioManager&>(mgrs_);
         } else if constexpr (std::is_same_v<T, GLTFModel>) {
             return std::get<GLTFManager&>(mgrs_);
+        } else if constexpr (std::is_same_v<T, Material2D>) {
+            return std::get<Material2DManager&>(mgrs_);
         }
     }
 
@@ -261,7 +277,7 @@ public:
     }
 
 private:
-    std::tuple<TextureManager&, FontManager&, TimerManager&, TilesheetManager&,
+    std::tuple<TextureManager&, Material2DManager&, FontManager&, TimerManager&, TilesheetManager&,
                AnimationManager&, AudioManager&, GLTFManager&>
         mgrs_;
 };

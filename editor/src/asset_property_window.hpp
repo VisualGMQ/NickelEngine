@@ -52,3 +52,16 @@ protected:
 private:
     nickel::FontHandle handle_;
 };
+
+class Material2DPropertyPopupWindow : public PopupWindow {
+public:
+    Material2DPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+
+    void ChangeMaterial(nickel::Material2DHandle handle) { handle_ = handle; }
+
+protected:
+    void update() override;
+
+private:
+    nickel::Material2DHandle handle_;
+};

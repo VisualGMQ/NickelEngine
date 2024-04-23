@@ -38,7 +38,11 @@ void drawMesh2D(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
                                sizeof(model));
     renderPass.SetVertexBuffer(0, mesh.verticesBuffer, 0,
                                mesh.verticesBuffer.Size());
-    renderPass.SetBindGroup(material.GetBindGroup());
+    if (material) {
+        renderPass.SetBindGroup(material.GetBindGroup());
+    } else {
+        renderPass.SetBindGroup(ctx.ctx2D->defaultBindGroup);
+    }
     if (mesh.indicesBuffer) {
         renderPass.SetIndexBuffer(mesh.indicesBuffer, rhi::IndexType::Uint32, 0,
                                   mesh.indicesBuffer.Size());
@@ -74,9 +78,8 @@ void drawTexture(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
         color
     };
 
-    if (!mgr.Has(material.GetTexture())) {
-        drawMesh2D(ctx, renderPass, *ctx.ctx2D->identityRectMesh_,
-                   *ctx.ctx2D->defaultMaterial_, model);
+    if (!material) {
+        drawMesh2D(ctx, renderPass, *ctx.ctx2D->identityRectMesh_, material, model);
     } else {
         auto size = mgr.Get(material.GetTexture()).Size();
         cgmath::Rect rect = region.value_or(cgmath::Rect{
@@ -113,7 +116,8 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
                     gecs::resource<gecs::mut<RenderContext>> ctx,
                     gecs::resource<gecs::mut<Camera>> camera,
                     gecs::resource<TextureManager> mgr,
-                    gecs::querier<Sprite, Transform> querier) {
+                    gecs::resource<Material2DManager> mtl2dMgr,
+                    gecs::querier<Transform, Sprite, SpriteMaterial> querier) {
     PROFILE_BEGIN();
 
     rhi::RenderPass::Descriptor desc;
@@ -130,16 +134,21 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
         return sprite1.orderInLayer < sprite2.orderInLayer;
     });
 
-    for (auto&& [_, sprite, transform] : querier) {
-        if (!mgr->Has(sprite.material->GetTexture())) {
+    for (auto&& [_, transform, sprite, material] : querier) {
+        if (!mtl2dMgr->Has(material.material)) {
             continue;
         }
 
-        auto& texture = mgr->Get(sprite.material->GetTexture());
+        auto& mtl = mtl2dMgr->Get(material.material);
+
+        if (!mgr->Has(mtl.GetTexture())) {
+            continue;
+        }
+
+        auto& texture = mgr->Get(mtl.GetTexture());
 
         drawTexture(
-            ctx.get(), renderPass, mgr.get(), *sprite.material, sprite.region,
-            sprite.color,
+            ctx.get(), renderPass, mgr.get(), mtl, sprite.region, sprite.color,
             transform.ToMat() * calcMatFromRenderInfo(
                                     sprite.flip,
                                     sprite.customSize.value_or(texture.Size()),
@@ -151,7 +160,8 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
 }
 
 void renderNodeRecursive(const GLTFModel& gltfModel, Node& node,
-                         RenderContext& ctx, rhi::RenderPassEncoder& renderPass) {
+                         RenderContext& ctx,
+                         rhi::RenderPassEncoder& renderPass) {
     auto& mesh = node.mesh;
     if (mesh) {
         for (auto& prim : node.mesh.primitives) {
@@ -163,8 +173,9 @@ void renderNodeRecursive(const GLTFModel& gltfModel, Node& node,
                     prim.indicesBufView.offset, prim.indicesBufView.size);
             }
 
-            renderPass.SetPushConstant(rhi::ShaderStage::Vertex, node.modelMat.data,
-                                       0, sizeof(nickel::cgmath::Mat44));
+            renderPass.SetPushConstant(rhi::ShaderStage::Vertex,
+                                       node.modelMat.data, 0,
+                                       sizeof(nickel::cgmath::Mat44));
             renderPass.SetVertexBuffer(0, mesh.posBuf, prim.posBufView.offset,
                                        prim.posBufView.size);
             renderPass.SetVertexBuffer(1, mesh.uvBuf, prim.uvBufView.offset,
@@ -248,21 +259,22 @@ void EndRender(gecs::resource<gecs::mut<rhi::Device>> device,
     }
 }
 
-void SwapContext(gecs::resource<gecs::mut<rhi::Device>> device,
-                 gecs::resource<gecs::mut<RenderContext>> ctx,
-                 gecs::resource<Window> window) {
+void BeginFrame(gecs::resource<gecs::mut<rhi::Device>> device) {
+    device->BeginFrame();
+}
+
+void EndFrame(gecs::resource<gecs::mut<rhi::Device>> device,
+              gecs::resource<gecs::mut<RenderContext>> ctx) {
     PROFILE_BEGIN();
 
-    device->SwapContext();
+    device->EndFrame();
 
     ctx->encoder.Destroy();
     ctx->presentTextureView.Destroy();
     ctx->presentTexture.Destroy();
 }
 
-void updateGLTFNodeTransformRecur(
-    const cgmath::Mat44& parentMat,
-    Node& node) {
+void updateGLTFNodeTransformRecur(const cgmath::Mat44& parentMat, Node& node) {
     node.modelMat = parentMat * node.localModelMat;
 
     for (auto& child : node.children) {

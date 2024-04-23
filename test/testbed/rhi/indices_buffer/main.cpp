@@ -119,6 +119,8 @@ void StartupSystem(gecs::commands cmds,
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
                   gecs::resource<gecs::mut<Context>> ctx) {
+    device->BeginFrame();
+
     RenderPass::Descriptor desc;
     RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = AttachmentLoadOp::Clear;
@@ -147,7 +149,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     Queue queue = device->GetQueue();
 
     queue.Submit({cmd});
-    device->SwapContext();
+    device->EndFrame();
 
     encoder.Destroy();
     view.Destroy();
@@ -161,10 +163,6 @@ void ShutdownSystem(gecs::commands cmds, gecs::resource<gecs::mut<Context>> ctx,
     ctx->indicesBuffer.Destroy();
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
-    device->Destroy();
-    adapter->Destroy();
-    cmds.remove_resource<Device>();
-    cmds.remove_resource<Adapter>();
 }
 
 void BootstrapSystem(gecs::world& world,

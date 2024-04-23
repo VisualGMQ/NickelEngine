@@ -12,8 +12,9 @@ Render2DContext::Render2DContext(rhi::APIPreference api, rhi::Device device,
                                  RenderContext& ctx)
     : device_{device} {
     identityRectMesh_ = createIdentityRectMesh();
-    defaultMaterial_ = createDefaultMaterial();
+    initPipelineShader(api);
     bindGroupLayout = createBindGroupLayout(ctx);
+    defaultBindGroup = createDefaultBindGroup();
     pipelineLayout = createPipelineLayout();
     pipeline = createPipeline(api, viewport, ctx);
 }
@@ -136,16 +137,21 @@ std::unique_ptr<GPUMesh2D> Render2DContext::createIdentityRectMesh() {
     return std::unique_ptr<GPUMesh2D>(new GPUMesh2D{buf, {}, 6});
 }
 
-std::unique_ptr<Material2D> Render2DContext::createDefaultMaterial() {
-    return std::make_unique<Material2D>();
+rhi::BindGroup Render2DContext::createDefaultBindGroup() {
+    rhi::BindGroup::Descriptor desc;
+    desc.layout = bindGroupLayout;
+    return device_.CreateBindGroup(desc);
 }
 
 Render2DContext::~Render2DContext() {
+    vertexShader.Destroy();
+    fragmentShader.Destroy();
     for (auto& [_, sampler] : samplers_) {
         sampler.Destroy();
     }
     pipeline.Destroy();
     pipelineLayout.Destroy();
+    defaultBindGroup.Destroy();
     bindGroupLayout.Destroy();
 }
 
@@ -191,7 +197,8 @@ rhi::RenderPipeline Render2DContext::createPipeline(
     RenderContext& ctx) {
     rhi::RenderPipeline::Descriptor desc;
 
-    initPipelineShader(desc, api);
+    desc.vertex.module = vertexShader;
+    desc.fragment.module = fragmentShader;
 
     auto& bufferState = Vertex2D::Layout();
     desc.vertex.buffers.emplace_back(bufferState);
@@ -218,30 +225,29 @@ rhi::RenderPipeline Render2DContext::createPipeline(
     return device_.CreateRenderPipeline(desc);
 }
 
-void Render2DContext::initPipelineShader(rhi::RenderPipeline::Descriptor& desc,
-                                         rhi::APIPreference api) {
+void Render2DContext::initPipelineShader(rhi::APIPreference api) {
     rhi::ShaderModule::Descriptor shaderDesc;
 
     if (api == rhi::APIPreference::GL) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>("shader/gl/shader.vert")
                 .value();
-        desc.vertex.module = device_.CreateShaderModule(shaderDesc);
+        vertexShader = device_.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>("shader/gl/shader.frag")
                 .value();
-        desc.fragment.module = device_.CreateShaderModule(shaderDesc);
+        fragmentShader = device_.CreateShaderModule(shaderDesc);
     } else if (api == rhi::APIPreference::Vulkan) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "nickel/shader/vk/vert2d.spv", std::ios::binary)
                               .value();
-        desc.vertex.module = device_.CreateShaderModule(shaderDesc);
+        vertexShader = device_.CreateShaderModule(shaderDesc);
 
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "nickel/shader/vk/frag2d.spv", std::ios::binary)
                               .value();
-        desc.fragment.module = device_.CreateShaderModule(shaderDesc);
+        fragmentShader = device_.CreateShaderModule(shaderDesc);
     }
 }
 
@@ -249,12 +255,15 @@ Render3DContext::Render3DContext(rhi::APIPreference api, rhi::Device device,
                                  const cgmath::Rect& viewport,
                                  RenderContext& ctx)
     : device_{device} {
+    initPipelineShader(api);
     bindGroupLayout = createBindGroupLayout(ctx);
     pipelineLayout = createPipelineLayout();
     pipeline = createPipeline(api, viewport, ctx);
 }
 
 Render3DContext::~Render3DContext() {
+    vertexShader.Destroy();
+    fragmentShader.Destroy();
     pipeline.Destroy();
     pipelineLayout.Destroy();
     bindGroupLayout.Destroy();
@@ -278,30 +287,29 @@ rhi::PipelineLayout Render3DContext::createPipelineLayout() {
     return device_.CreatePipelineLayout(layoutDesc);
 }
 
-void Render3DContext::initPipelineShader(rhi::RenderPipeline::Descriptor& desc,
-                                         rhi::APIPreference api) {
+void Render3DContext::initPipelineShader(rhi::APIPreference api) {
     rhi::ShaderModule::Descriptor shaderDesc;
 
     if (api == rhi::APIPreference::GL) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>("shader/gl/pbr.vert")
                 .value();
-        desc.vertex.module = device_.CreateShaderModule(shaderDesc);
+        vertexShader = device_.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>("shader/gl/pbr.frag")
                 .value();
-        desc.fragment.module = device_.CreateShaderModule(shaderDesc);
+        fragmentShader = device_.CreateShaderModule(shaderDesc);
     } else if (api == rhi::APIPreference::Vulkan) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "nickel/shader/vk/pbr_vert.spv", std::ios::binary)
                               .value();
-        desc.vertex.module = device_.CreateShaderModule(shaderDesc);
+        vertexShader = device_.CreateShaderModule(shaderDesc);
 
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "nickel/shader/vk/pbr_frag.spv", std::ios::binary)
                               .value();
-        desc.fragment.module = device_.CreateShaderModule(shaderDesc);
+        fragmentShader = device_.CreateShaderModule(shaderDesc);
     }
 }
 
@@ -475,7 +483,9 @@ rhi::RenderPipeline Render3DContext::createPipeline(
     rhi::APIPreference api, const nickel::cgmath::Rect& viewport,
     RenderContext& ctx) {
     rhi::RenderPipeline::Descriptor desc;
-    initPipelineShader(desc, api);
+
+    desc.vertex.module = vertexShader;
+    desc.fragment.module = fragmentShader;
 
     // position buffer
     {

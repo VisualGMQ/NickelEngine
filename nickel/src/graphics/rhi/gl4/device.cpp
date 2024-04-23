@@ -86,7 +86,9 @@ Queue DeviceImpl::GetQueue() {
     return queue;
 }
 
-void DeviceImpl::SwapContext() {
+void DeviceImpl::BeginFrame() {}
+
+void DeviceImpl::EndFrame() {
     GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, swapchainFramebuffer));
     GL_CALL(glReadBuffer(GL_COLOR_ATTACHMENT0));
     GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));

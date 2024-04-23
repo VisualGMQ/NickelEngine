@@ -1,5 +1,5 @@
-#include "imgui_plugin.hpp"
 #include "common/transform.hpp"
+#include "imgui_plugin.hpp"
 #include "nickel.hpp"
 
 #include "asset_property_window.hpp"
@@ -11,7 +11,6 @@
 #include "show_component.hpp"
 #include "spawn_component.hpp"
 #include "watch_file.hpp"
-
 
 enum class EditorScene {
     ProjectManager,
@@ -82,9 +81,12 @@ void RegistComponentShowMethods() {
     instance.Regist(::mirrow::drefl::typeinfo<nickel::Sprite>(), DisplaySprite);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::AnimationPlayer>(),
                     DisplayAnimationPlayer);
+    instance.Regist(::mirrow::drefl::typeinfo<nickel::Material2DHandle>(),
+                    DisplayMaterial2DHandle);
     instance.Regist(::mirrow::drefl::typeinfo<nickel::SoundPlayer>(),
                     DisplaySoundPlayer);
-    // instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(), DisplayLabel);
+    // instance.Regist(::mirrow::drefl::typeinfo<nickel::ui::Label>(),
+    // DisplayLabel);
 }
 
 template <typename T>
@@ -108,6 +110,15 @@ void SpawnAnimationPlayer(gecs::commands cmds, gecs::entity ent,
     }
 }
 
+void SpawnMaterial2DPlayer(gecs::commands cmds, gecs::entity ent,
+                           gecs::registry reg) {
+    if (reg.template has<nickel::Material2D>(ent)) {
+        cmds.template replace<nickel::Material2D>(ent);
+    } else {
+        cmds.template emplace<nickel::Material2D>(ent);
+    }
+}
+
 void RegistSpawnMethods() {
     auto& instance = SpawnComponentMethods::Instance();
 
@@ -115,6 +126,7 @@ void RegistSpawnMethods() {
     instance.Regist<nickel::GlobalTransform>(
         GeneralSpawnMethod<nickel::GlobalTransform>);
     instance.Regist<nickel::Sprite>(GeneralSpawnMethod<nickel::Sprite>);
+    instance.Regist<nickel::Material2D>(SpawnMaterial2DPlayer);
     instance.Regist<nickel::AnimationPlayer>(SpawnAnimationPlayer);
     // instance.Regist<nickel::ui::Style>(GeneralSpawnMethod<nickel::ui::Style>);
     // instance.Regist<nickel::ui::Button>(GeneralSpawnMethod<nickel::ui::Button>);
@@ -138,14 +150,16 @@ void dropFileEventHandle(const nickel::DropFileEvent& event,
     FS_CALL(std::filesystem::copy(path, newPath, err), err);
 }
 
-void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
-                 gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
-                 gecs::resource<gecs::mut<nickel::FontManager>> fontMgr,
-                 gecs::resource<gecs::mut<EditorContext>> editorCtx,
-                 gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
-                 gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
-                 gecs::event_dispatcher<nickel::DropFileEvent> dropFileEvent,
-                 gecs::commands cmds) {
+void EditorEnter(
+    gecs::resource<gecs::mut<nickel::Window>> window,
+    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
+    gecs::resource<gecs::mut<nickel::FontManager>> fontMgr,
+    gecs::resource<gecs::mut<EditorContext>> editorCtx,
+    gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
+    gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
+    gecs::event_dispatcher<nickel::DropFileEvent> dropFileEvent,
+    gecs::event_dispatcher<nickel::WindowResizeEvent> windowResizeEvent,
+    gecs::commands cmds) {
     RegistEventHandler(releaseAsetEvent);
 
     dropFileEvent.sink().add<dropFileEventHandle>();
@@ -159,10 +173,15 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
         "NickelEngine Editor - " + editorCtx->projectInfo.windowData.title;
     nickel::InitProjectByConfig(editorConfig, window.get(), assetMgr.get());
 
+    windowResizeEvent.happend(nickel::WindowResizeEvent{
+        {EditorWindowWidth, EditorWindowHeight}
+    });
+
     auto assetDir =
         nickel::GenAssetsDefaultStoreDir(editorCtx->projectInfo.projectPath);
 
-    cmds.emplace_resource<FileWatcher>(assetDir, *nickel::ECS::Instance().World().cur_registry());
+    cmds.emplace_resource<FileWatcher>(
+        assetDir, *nickel::ECS::Instance().World().cur_registry());
     RegistFileChangeEventHandler(fileChangeEvent);
 
     // init content browser info
@@ -172,16 +191,14 @@ void EditorEnter(gecs::resource<gecs::mut<nickel::Window>> window,
     std::error_code err;
     if (!std::filesystem::exists(contentBrowserWindow.RootPath(), err)) {
         FS_LOG_ERR(err, contentBrowserWindow.RootPath(), " not exists");
-        if (!std::filesystem::create_directory( contentBrowserWindow.RootPath(), err)) {
+        if (!std::filesystem::create_directory(contentBrowserWindow.RootPath(),
+                                               err)) {
             FS_LOG_ERR(err, "create resource dir ", assetDir, " failed");
         }
         MessageBox box{"error", "can't open project", MessageBoxType::Error};
         box.Show();
     }
     contentBrowserWindow.RescanDir();
-
-    // renderer->SetViewport(
-    //     {0, 0}, nickel::cgmath::Vec2(EditorWindowWidth, EditorWindowHeight));
 
     RegistComponentShowMethods();
     RegistSpawnMethods();
@@ -193,8 +210,14 @@ void EditorMenubar(EditorContext& ctx) {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("save")) {
-                SaveProjectByConfig(nickel::ECS::Instance().World().res<EditorContext>()->projectInfo,
-                                    nickel::ECS::Instance().World().res<nickel::AssetManager>().get());
+                SaveProjectByConfig(nickel::ECS::Instance()
+                                        .World()
+                                        .res<EditorContext>()
+                                        ->projectInfo,
+                                    nickel::ECS::Instance()
+                                        .World()
+                                        .res<nickel::AssetManager>()
+                                        .get());
             }
             ImGui::EndMenu();
         }
@@ -228,55 +251,38 @@ void EditorImGuiUpdate(gecs::resource<gecs::mut<EditorContext>> ctx) {
     }
 }
 
-void EditorExit() {
-    int btn =
-        MessageBox{"quit", "want to save project?", MessageBoxType::Warning}
-            .AddButton("yes", MessageBox::ButtonType::ReturnKeyDefault)
-            .AddButton("no", MessageBox::ButtonType::EscapeKeyDefault)
-            .Show();
-    if (btn == 0) {
-        SaveProjectByConfig(nickel::ECS::Instance().World().res<EditorContext>()->projectInfo,
-                            nickel::ECS::Instance().World().res<nickel::AssetManager>().get());
+void EditorExit(gecs::registry reg) {
+    if (reg.cur_state<EditorScene>() == EditorScene::Editor) {
+        int btn =
+            MessageBox{"quit", "want to save project?", MessageBoxType::Warning}
+                .AddButton("yes", MessageBox::ButtonType::ReturnKeyDefault)
+                .AddButton("no", MessageBox::ButtonType::EscapeKeyDefault)
+                .Show();
+        if (btn == 0) {
+            SaveProjectByConfig(nickel::ECS::Instance()
+                                    .World()
+                                    .res<EditorContext>()
+                                    ->projectInfo,
+                                nickel::ECS::Instance()
+                                    .World()
+                                    .res<nickel::AssetManager>()
+                                    .get());
+        }
     }
     nickel::ECS::Instance().World().remove_res<EditorContext>();
 }
 
 void RegistSystems(gecs::world& world) {
-    world
-        .cur_registry()
-        // startup systems
-        ->regist_startup_system<nickel::VideoSystemInit>()
-        .regist_startup_system<nickel::FontSystemInit>()
-        .regist_startup_system<nickel::EventPollerInit>()
-        .regist_startup_system<nickel::InputSystemInit>()
-        // .regist_startup_system<ui::InitSystem>()
-        .regist_startup_system<nickel::InitAudioSystem>()
-        .regist_startup_system<plugin::ImGuiInit>()
-        // shutdown systems
-        .regist_shutdown_system<plugin::ImGuiShutdown>()
-        // update systems
-        .regist_update_system<nickel::VideoSystemUpdate>()
-        // other input handle event must put here(after mouse/keyboard update)
-        .regist_update_system<nickel::Mouse::Update>()
-        .regist_update_system<nickel::Keyboard::Update>()
-        .regist_update_system<nickel::HandleInputEvents>()
-        .regist_update_system<nickel::UpdateGlobalTransform>()
-        .regist_update_system<nickel::UpdateGLTFModelTransform>()
-        .regist_update_system<nickel::UpdateCamera2GPU>()
-        // .regist_update_system<ui::UpdateGlobalPosition>()
-        // .regist_update_system<ui::HandleEventSystem>()
-        // start render pipeline
-        .regist_update_system<nickel::BeginRender>()
-        .regist_update_system<nickel::RenderGLTFModel>()
-        .regist_update_system<nickel::RenderSprite2D>()
-        .regist_update_system<plugin::ImGuiStart>()
-        .regist_update_system<plugin::ImGuiEnd>()
-        .regist_update_system<nickel::EndRender>()
-        .regist_update_system<nickel::SwapContext>()
-        // 2D UI render
-        // .regist_update_system<ui::RenderUI>()
-        // time update
-        .regist_update_system<nickel::Time::Update>()
+    auto& reg = *world.cur_registry();
+    nickel::RegistEngineSystem(reg);
+
+    reg.regist_startup_system<plugin::ImGuiInit>()
+        .regist_shutdown_system_before<plugin::ImGuiShutdown,
+                                       nickel::EngineShutdown>()
+        .regist_update_system_after<plugin::ImGuiStart,
+                                    nickel::RenderSprite2D>()
+        .regist_update_system_after<plugin::ImGuiEnd, plugin::ImGuiStart>()
+        .regist_shutdown_system_before<EditorExit, nickel::EngineShutdown>()
         .add_state(EditorScene::ProjectManager)
         .regist_enter_system_to_state<InitEditorContext>(
             EditorScene::ProjectManager)
@@ -285,7 +291,6 @@ void RegistSystems(gecs::world& world) {
             EditorScene::ProjectManager)
         .add_state(EditorScene::Editor)
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
-        .regist_exit_system_to_state<EditorExit>(EditorScene::Editor)
         .regist_update_system_to_state_after<EditorImGuiUpdate,
                                              plugin::ImGuiStart>(
             EditorScene::Editor);
@@ -300,6 +305,4 @@ void BootstrapSystem(gecs::world& world,
     initInfo.windowData.size.Set(ProjectMgrWindowWidth, ProjectMgrWindowHeight);
     InitSystem(world, initInfo, reg.commands());
     RegistSystems(world);
-
-    world.switch_registry("ProjectManage");
 }

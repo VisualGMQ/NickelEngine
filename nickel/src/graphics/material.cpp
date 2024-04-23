@@ -3,7 +3,15 @@
 
 namespace nickel {
 
-Material2D::Material2D() {}
+Material2D Material2D::Null;
+
+Material2D::Material2D() {
+}
+
+Material2D::Material2D(const toml::table& tbl) {
+    auto elem = LoadAssetFromMetaTable<Material2D>(tbl);
+    *this = std::move(*elem);
+}
 
 Material2D::Material2D(TextureHandle handle, rhi::SamplerAddressMode u,
                        rhi::SamplerAddressMode v, rhi::Filter min,
@@ -16,8 +24,7 @@ Material2D::Material2D(TextureHandle handle, rhi::SamplerAddressMode u,
 
     auto mgr = ECS::Instance().World().res<TextureManager>();
     if (!mgr->Has(texture_)) {
-        LOGE(log_tag::Asset,
-             "Texture is null when create texture");
+        LOGE(log_tag::Asset, "Texture is null when create texture");
     } else {
         // TODO: maybe we need function `Update()` to update part of bindGroup
         // for more performance?
@@ -122,6 +129,85 @@ rhi::BindGroup Material2D::createBindGroup(rhi::TextureView texture) {
 TextureBundle::~TextureBundle() {
     view.Destroy();
     texture.Destroy();
+}
+
+Material2DHandle Material2DManager::Create(TextureHandle handle,
+                                           rhi::SamplerAddressMode u,
+                                           rhi::SamplerAddressMode v,
+                                           rhi::Filter min, rhi::Filter mag) {
+    auto elem = std::make_unique<Material2D>(handle, u, v, min, mag);
+    if (elem) {
+        auto handle = Material2DHandle::Create();
+        storeNewItem(handle, std::move(elem));
+        return handle;
+    }
+    return Material2DHandle::Null();
+}
+
+Material2DHandle Material2DManager::Load(
+    const std::filesystem::path& filename) {
+    auto elem = ::nickel::LoadAssetFromMeta<Material2D>(filename);
+    if (elem) {
+        auto handle = Material2DHandle::Create();
+        storeNewItem(handle, std::move(elem));
+        return handle;
+    }
+    return Material2DHandle::Null();
+}
+
+toml::table Material2D::Save2Toml() const {
+    toml::table tbl;
+    auto mgr = ECS::Instance().World().res<TextureManager>();
+    if (mgr->Has(texture_)) {
+        tbl.emplace("texture", mgr->Get(texture_).RelativePath().string());
+    }
+
+    toml::table samplerTbl;
+    samplerTbl.emplace("u", static_cast<uint32_t>(samplerDesc_.u));
+    samplerTbl.emplace("v", static_cast<uint32_t>(samplerDesc_.v));
+    samplerTbl.emplace("min", static_cast<uint32_t>(samplerDesc_.min));
+    samplerTbl.emplace("mag", static_cast<uint32_t>(samplerDesc_.mag));
+
+    tbl.emplace("sampler", samplerTbl);
+    return tbl;
+}
+
+Material2D::operator bool() const noexcept {
+    return bindGroup_;
+}
+
+template <>
+std::unique_ptr<Material2D> LoadAssetFromMetaTable(const toml::table& tbl) {
+    auto mgr = ECS::Instance().World().res<TextureManager>();
+
+    TextureHandle texture;
+    if (auto node = tbl.get("texture"); node->is_string()) {
+        texture = mgr->Has(node->as_string()->get())
+                      ? mgr->GetHandle(node->as_string()->get())
+                      : TextureHandle::Null();
+    }
+
+    rhi::Sampler::Descriptor samplerDesc;
+    if (auto node = tbl.get("sampler"); node->is_table()) {
+        auto samplerTbl = node->as_table();
+        if (auto n = samplerTbl->get("u"); n->is_integer()) {
+            samplerDesc.u =
+                static_cast<rhi::SamplerAddressMode>(n->as_integer()->get());
+        }
+        if (auto n = samplerTbl->get("v"); n->is_integer()) {
+            samplerDesc.v =
+                static_cast<rhi::SamplerAddressMode>(n->as_integer()->get());
+        }
+        if (auto n = samplerTbl->get("min"); n->is_integer()) {
+            samplerDesc.min = static_cast<rhi::Filter>(n->as_integer()->get());
+        }
+        if (auto n = samplerTbl->get("mag"); n->is_integer()) {
+            samplerDesc.mag = static_cast<rhi::Filter>(n->as_integer()->get());
+        }
+    }
+
+    return std::make_unique<Material2D>(texture, samplerDesc.u, samplerDesc.v,
+                                        samplerDesc.min, samplerDesc.mag);
 }
 
 }  // namespace nickel

@@ -71,6 +71,10 @@ void DisplayTextureHandle(const mirrow::drefl::type* parent,
                           std::string_view name, mirrow::drefl::any& value,
                           gecs::registry reg);
 
+void DisplayMaterial2DHandle(const mirrow::drefl::type* parent,
+                             std::string_view name, mirrow::drefl::any& value,
+                             gecs::registry reg);
+
 void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
                             std::string_view name, mirrow::drefl::any& value,
                             gecs::registry reg);

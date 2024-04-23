@@ -12,25 +12,22 @@
  * @return false    don't need to show this asset
  */
 template <typename T>
-void ShowAsset(nickel::Handle<T>, const T&) {}
+void ShowAsset(const T&) {}
 
 template <>
-void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
-                                const nickel::Texture&);
+void ShowAsset<nickel::Texture>(const nickel::Texture&);
 
 template <>
-void ShowAsset<nickel::Font>(nickel::FontHandle handle, const nickel::Font&);
+void ShowAsset<nickel::Font>(const nickel::Font&);
 
 template <>
-void ShowAsset<nickel::Animation>(nickel::AnimationHandle handle,
-                                  const nickel::Animation&);
+void ShowAsset<nickel::Animation>(const nickel::Animation&);
 
 template <>
-void ShowAsset<nickel::Sound>(nickel::SoundHandle, const nickel::Sound&);
+void ShowAsset<nickel::Sound>(const nickel::Sound&);
 
 template <>
-void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
-                                  const nickel::Tilesheet&);
+void ShowAsset<nickel::Tilesheet>(const nickel::Tilesheet&);
 
 template <typename T>
 class AssetListWindow : public PopupWindow {
@@ -72,7 +69,7 @@ protected:
         }
 
         if (selectedAsset) {
-            ShowAsset(selectedHandle, *selectedAsset);
+            ShowAsset(*selectedAsset);
         }
     }
 

@@ -15,6 +15,7 @@ enum class FileType {
     Animation,
     Timer,
     GLTF,
+    Material2D,
 
     FileTypeCount,
 };

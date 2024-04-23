@@ -35,7 +35,8 @@ public:
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor& desc);
     Buffer CreateBuffer(const Buffer::Descriptor&);
 
-    void SwapContext();
+    void BeginFrame();
+    void EndFrame();
     void WaitIdle();
     Queue GetQueue();
 

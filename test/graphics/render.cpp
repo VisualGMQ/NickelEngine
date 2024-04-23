@@ -2,6 +2,7 @@
 
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::TextureManager>> mgr,
+                   gecs::resource<gecs::mut<nickel::Material2DManager>> mtl2dMgr,
                    gecs::resource<gecs::mut<nickel::GLTFManager>> modelMgr) {
     auto ent = cmds.create();
 
@@ -11,7 +12,7 @@ void StartupSystem(gecs::commands cmds,
         nickel::SpriteBundle bundle;
         bundle.transform.translation.Set(0, 0);
         bundle.transform.SetScale({0.5, 0.5});
-        bundle.sprite = nickel::Sprite::FromTexture(texture);
+        bundle.material.material = mtl2dMgr->Create(texture);
         cmds.emplace_bundle<nickel::SpriteBundle>(ent, std::move(bundle));
     }
 

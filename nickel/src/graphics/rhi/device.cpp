@@ -78,8 +78,12 @@ Buffer Device::CreateBuffer(const Buffer::Descriptor& desc) {
     return impl_->CreateBuffer(desc);
 }
 
-void Device::SwapContext() {
-    return impl_->SwapContext();
+void Device::BeginFrame() {
+    return impl_->BeginFrame();
+}
+
+void Device::EndFrame() {
+    return impl_->EndFrame();
 }
 
 void Device::WaitIdle() {

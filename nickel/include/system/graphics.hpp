@@ -28,7 +28,8 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>>,
                     gecs::resource<gecs::mut<RenderContext>>,
                     gecs::resource<gecs::mut<Camera>>,
                     gecs::resource<TextureManager>,
-                    gecs::querier<Sprite, Transform>);
+                    gecs::resource<Material2DManager>,
+                    gecs::querier<Transform, Sprite, SpriteMaterial>);
 
 void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>>,
                      gecs::resource<gecs::mut<Camera>>,
@@ -36,7 +37,8 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>>,
                      gecs::resource<GLTFManager>,
                      gecs::querier<GLTFHandle, Transform>);
 
-void SwapContext(gecs::resource<gecs::mut<rhi::Device>>,
-                 gecs::resource<gecs::mut<RenderContext>>,
-                 gecs::resource<Window>);
+void BeginFrame(gecs::resource<gecs::mut<rhi::Device>>);
+
+void EndFrame(gecs::resource<gecs::mut<rhi::Device>>,
+                 gecs::resource<gecs::mut<RenderContext>>);
 }  // namespace nickel

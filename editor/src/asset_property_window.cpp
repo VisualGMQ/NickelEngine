@@ -111,3 +111,33 @@ void FontPropertyPopupWindow::update() {
         ImGui::SameLine();
     }
 }
+
+void Material2DPropertyPopupWindow::update() {
+    auto mgr = nickel::ECS::Instance().World().res_mut<nickel::Material2DManager>();
+    if (!mgr->Has(handle_)) {
+        ImGui::Text("invalid material handle");
+        if (ImGui::Button("close")) {
+            Hide();
+        }
+        return;
+    }
+
+    auto& elem = mgr->Get(handle_);
+
+    char buf[512] = {0};
+    snprintf(buf, sizeof(buf), "Res://%s",
+             elem.RelativePath().string().c_str());
+    ImGui::InputText("filename", buf, sizeof(buf),
+                     ImGuiInputTextFlags_ReadOnly);
+
+    auto handle = elem.GetTexture();
+
+    static ImageViewCanva imageViewer;
+    if (mgr->Has(handle)) {
+        imageViewer.ChangeTexture(handle);
+        imageViewer.Resize({size, size});
+        imageViewer.Update();
+    }
+
+
+}

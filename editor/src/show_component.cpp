@@ -319,6 +319,39 @@ bool BeginDisplayHandle<nickel::TextureHandle>(
     return false;
 }
 
+template <>
+bool BeginDisplayHandle<nickel::Material2DHandle>(
+    EditorContext& ctx, std::string_view name, nickel::AssetManager& mgr,
+    nickel::Material2DHandle handle,
+    std::function<void(nickel::Material2DHandle)> handleChangeCallback,
+    std::function<void(const std::filesystem::path&)> createCallback) {
+    char buf[1024] = {0};
+    if (mgr.Has(handle)) {
+        auto& asset = mgr.Get(handle);
+        std::filesystem::path path = asset.RelativePath();
+        snprintf(buf, sizeof(buf), "Res://%s", path.string().c_str());
+        float size = ImGui::GetWindowContentRegionMax().x -
+                    (ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x);
+
+        static ImageViewCanva imageViewer;
+        if (mgr.Has(handle)) {
+            imageViewer.ChangeTexture(asset.GetTexture());
+            imageViewer.Resize({size, size});
+            imageViewer.Update();
+        }
+    } else {
+        snprintf(buf, sizeof(buf), "no asset");
+    }
+
+    char id[1024] = {0};
+    snprintf(id, sizeof(id), "##%s", name.data());
+    if (ImGui::Button(id)) {
+        // TODO: show material2d editor
+    }
+
+    return false;
+}
+
 void EndDisplayHandle() {
     ImGui::EndCombo();
 }
@@ -339,55 +372,55 @@ void DisplaySprite(const mirrow::drefl::type* parent, std::string_view name,
     auto& sprite = *mirrow::drefl::try_cast<nickel::Sprite>(obj);
     auto mgr = reg.res_mut<nickel::AssetManager>();
 
-    auto changeHandle = [&](nickel::TextureHandle h) { sprite.material->ChangeTexture(h); };
-    auto& ctx = *reg.res_mut<EditorContext>();
+    // auto changeHandle = [&](nickel::TextureHandle h) { sprite.material->ChangeTexture(h); };
+    // auto& ctx = *reg.res_mut<EditorContext>();
 
-    if (BeginDisplayHandle<nickel::TextureHandle>(*reg.res_mut<EditorContext>(),
-                                                  name, *mgr, sprite.material->GetTexture(),
-                                                  changeHandle)) {
-        if (ImGui::Selectable("load tilesheet")) {
-            ctx.tilesheetAssetListWindow.Show();
-            ctx.tilesheetAssetListWindow.SetSelectCallback(
-                [&](nickel::TilesheetHandle h) {
-                    ctx.tilesheetEditor.Show();
-                    ctx.tilesheetEditor.ChangeTilesheet(h);
-                    ctx.tilesheetEditor.SetSelectCallback(
-                        [&](nickel::Tile tile) {
-                            sprite.material->ChangeTexture(tile.handle);
-                            sprite.region = tile.region;
-                            sprite.customSize = tile.region.size;
-                        });
-                });
-        }
-        if (ImGui::Selectable("create tilesheet")) {
-            ctx.textureAssetListWindow.Show();
-            ctx.textureAssetListWindow.SetSelectCallback(
-                [&](nickel::TextureHandle h) {
-                    auto filename =
-                        SaveFileDialog("create new tilesheet", {".tilesheet"});
-                    if (!filename.empty()) {
-                        filename =
-                            filename.extension() != ".tilesheet"
-                                ? filename.replace_extension(".tilesheet")
-                                : filename;
-                        ctx.tilesheetEditor.Show();
-                        auto& tilesheetMgr = mgr->TilesheetMgr();
-                        auto handle = tilesheetMgr.Create(h, 1, 1);
-                        tilesheetMgr.AssociateFile(
-                            handle, ctx.GetRelativePath(filename));
-                        ctx.tilesheetEditor.ChangeTilesheet(handle);
-                        ctx.tilesheetEditor.SetSelectCallback(
-                            [&](nickel::Tile tile) {
-                                sprite.material->ChangeTexture(tile.handle);
-                                sprite.region = tile.region;
-                                sprite.customSize = tile.region.size;
-                            });
-                    }
-                });
-        }
+    // if (BeginDisplayHandle<nickel::TextureHandle>(*reg.res_mut<EditorContext>(),
+    //                                               name, *mgr, sprite.material->GetTexture(),
+    //                                               changeHandle)) {
+    //     if (ImGui::Selectable("load tilesheet")) {
+    //         ctx.tilesheetAssetListWindow.Show();
+    //         ctx.tilesheetAssetListWindow.SetSelectCallback(
+    //             [&](nickel::TilesheetHandle h) {
+    //                 ctx.tilesheetEditor.Show();
+    //                 ctx.tilesheetEditor.ChangeTilesheet(h);
+    //                 ctx.tilesheetEditor.SetSelectCallback(
+    //                     [&](nickel::Tile tile) {
+    //                         sprite.material->ChangeTexture(tile.handle);
+    //                         sprite.region = tile.region;
+    //                         sprite.customSize = tile.region.size;
+    //                     });
+    //             });
+    //     }
+    //     if (ImGui::Selectable("create tilesheet")) {
+    //         ctx.textureAssetListWindow.Show();
+    //         ctx.textureAssetListWindow.SetSelectCallback(
+    //             [&](nickel::TextureHandle h) {
+    //                 auto filename =
+    //                     SaveFileDialog("create new tilesheet", {".tilesheet"});
+    //                 if (!filename.empty()) {
+    //                     filename =
+    //                         filename.extension() != ".tilesheet"
+    //                             ? filename.replace_extension(".tilesheet")
+    //                             : filename;
+    //                     ctx.tilesheetEditor.Show();
+    //                     auto& tilesheetMgr = mgr->TilesheetMgr();
+    //                     auto handle = tilesheetMgr.Create(h, 1, 1);
+    //                     tilesheetMgr.AssociateFile(
+    //                         handle, ctx.GetRelativePath(filename));
+    //                     ctx.tilesheetEditor.ChangeTilesheet(handle);
+    //                     ctx.tilesheetEditor.SetSelectCallback(
+    //                         [&](nickel::Tile tile) {
+    //                             sprite.material->ChangeTexture(tile.handle);
+    //                             sprite.region = tile.region;
+    //                             sprite.customSize = tile.region.size;
+    //                         });
+    //                 }
+    //             });
+    //     }
 
-        EndDisplayHandle();
-    }
+    //     EndDisplayHandle();
+    // }
 }
 
 void DisplayTextureHandle(const mirrow::drefl::type* parent,
@@ -400,6 +433,18 @@ void DisplayTextureHandle(const mirrow::drefl::type* parent,
         EndDisplayHandle();
     }
 }
+
+void DisplayMaterial2DHandle(const mirrow::drefl::type* parent,
+                             std::string_view name, mirrow::drefl::any& obj,
+                             gecs::registry reg) {
+    auto& mtl = *mirrow::drefl::try_cast<nickel::SpriteMaterial>(obj);
+    auto mgr = reg.res_mut<nickel::AssetManager>();
+
+    if (BeginDisplayHandle(*reg.res_mut<EditorContext>(), name, *mgr, mtl.material)) {
+        EndDisplayHandle();
+    }
+}
+
 
 void DisplayAnimationPlayer(const mirrow::drefl::type* parent,
                             std::string_view name, mirrow::drefl::any& obj,
@@ -489,9 +534,9 @@ void DisplaySoundPlayer(const mirrow::drefl::type* parent,
         EndDisplayHandle();
     }
 
-    ImGui::SameLine();
-
     if (mgr.Has(player.Handle())) {
+        ImGui::SameLine();
+
         auto& sound = mgr.Get(player.Handle());
         if (ImGui::Button("edit")) {
             ctx->soundPropWindow.ChangeAudio(player.Handle());

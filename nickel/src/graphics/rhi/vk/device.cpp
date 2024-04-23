@@ -13,9 +13,6 @@ DeviceImpl::DeviceImpl(AdapterImpl& adapter) : adapter{adapter} {
                           cgmath::Vec2(w, h));
     createSyncObject();
     createCmdPool();
-    VK_CALL(curFrame,
-            device.acquireNextImageKHR(swapchain.swapchain, UINT64_MAX,
-                                       imageAvaliableSems[curFrame]));
 }
 
 void DeviceImpl::createDevice(vk::Instance instance,
@@ -231,7 +228,18 @@ void DeviceImpl::OnWindowResize(const cgmath::Vec2& size) {
     }
 }
 
-void DeviceImpl::SwapContext() {
+void DeviceImpl::BeginFrame() {
+    auto window = (SDL_Window*)adapter.window;
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
+        return;
+    }
+
+    VK_CALL(curImageIndex,
+            device.acquireNextImageKHR(swapchain.swapchain, UINT64_MAX,
+                                       imageAvaliableSems[curFrame]));
+}
+
+void DeviceImpl::EndFrame() {
     cmdCounter.Reset();
 
     auto window = (SDL_Window*)adapter.window;
@@ -289,15 +297,9 @@ void DeviceImpl::SwapContext() {
         .setSwapchains(swapchain.swapchain);
     VK_CALL_NO_VALUE(present.presentKHR(info));
 
-    VK_CALL_NO_VALUE(device.waitForFences(fences[curFrame], true, UINT64_MAX));
-
     device.resetCommandPool(cmdPool);
 
     curFrame = (curFrame + 1) % swapchain.imageInfo.imagCount;
-
-    VK_CALL(curImageIndex,
-            device.acquireNextImageKHR(swapchain.swapchain, UINT64_MAX,
-                                       imageAvaliableSems[curFrame]));
 }
 
 ShaderModule DeviceImpl::CreateShaderModule(

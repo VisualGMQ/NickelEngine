@@ -178,19 +178,6 @@ void ErrorCallback(int error, const char* description) {
     LOGE(log_tag::SDL2, description);
 }
 
-// void suitCanvas2Window(const WindowResizeEvent& event,
-//                        gecs::resource<gecs::mut<Camera>> camera,
-//                        gecs::resource<gecs::mut<ui::Context>> uiCtx,
-//                        gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-//     camera->SetProject(cgmath::CreateOrtho(0.0, event.size.w, 0.0, event.size.h,
-//                                            1000.0, -1000.0));
-//     renderer2d->SetViewport(cgmath::Vec2{0, 0},
-//                             cgmath::Vec2(event.size.w, event.size.h));
-// 
-//     uiCtx->camera.SetProject(cgmath::CreateOrtho(
-//         0.0, event.size.w, 0.0, event.size.h, 1000.0, -1000.0));
-// }
-
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds) {
     RegistReflectInfos();
@@ -207,13 +194,14 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
 
     cmds.emplace_resource<Time>();
     auto& textureMgr = cmds.emplace_resource<TextureManager>();
+    auto& mtl2dMgr = cmds.emplace_resource<Material2DManager>();
     auto& fontMgr = cmds.emplace_resource<FontManager>();
     auto& timerMgr = cmds.emplace_resource<TimerManager>();
     auto& tilesheetMgr = cmds.emplace_resource<TilesheetManager>();
     auto& animMgr = cmds.emplace_resource<AnimationManager>();
     auto& audioMgr = cmds.emplace_resource<AudioManager>();
     auto& gltfMgr = cmds.emplace_resource<GLTFManager>();
-    cmds.emplace_resource<AssetManager>(textureMgr, fontMgr, timerMgr,
+    cmds.emplace_resource<AssetManager>(textureMgr, mtl2dMgr, fontMgr, timerMgr,
                                         tilesheetMgr, animMgr, audioMgr, gltfMgr);
     cmds.emplace_resource<RenderContext>(renderAPI, device, window.Size());
 
@@ -246,6 +234,7 @@ void EngineShutdown() {
     world.destroy_all_entities();
     world.remove_res<TilesheetManager>();
     world.remove_res<TextureManager>();
+    world.remove_res<Material2DManager>();
     world.remove_res<FontManager>();
     world.remove_res<TimerManager>();
     world.remove_res<AnimationManager>();
@@ -281,11 +270,12 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         // .regist_update_system<ui::UpdateGlobalPosition>()
         // .regist_update_system<ui::HandleEventSystem>()
         // start render pipeline
+        .regist_update_system<BeginFrame>()
         .regist_update_system<BeginRender>()
         .regist_update_system<RenderGLTFModel>()
         .regist_update_system<RenderSprite2D>()
         .regist_update_system<EndRender>()
-        .regist_update_system<SwapContext>()
+        .regist_update_system<EndFrame>()
         // 2D UI render
         // .regist_update_system<ui::RenderUI>()
         // time update

@@ -24,7 +24,8 @@ public:
     virtual Buffer CreateBuffer(const Buffer::Descriptor&) = 0;
     virtual Queue GetQueue() = 0;
 
-    virtual void SwapContext() = 0;
+    virtual void BeginFrame() = 0;
+    virtual void EndFrame() = 0;
     virtual void WaitIdle() = 0;
 
     virtual ~DeviceImpl() = default;

@@ -71,7 +71,6 @@ void reflectSprite() {
         .property("customSize", &Sprite::customSize)
         .property("flip", &Sprite::flip)
         .property("visiable", &Sprite::visiable)
-        .property("texture", &Sprite::material)
         .property("z-index", &Sprite::orderInLayer);
 
     mirrow::drefl::registrar<Flip>::instance()
@@ -321,7 +320,14 @@ void reflectTexture() {
 void reflectMaterial() {
     mirrow::drefl::registrar<Material2D>::instance().regist("Material2D");
 
-    // mirrow::drefl::registrar<Material3D>::instance().regist("Material3D");
+    mirrow::drefl::registrar<Material2DHandle>::instance().regist(
+        "Material2DHandle");
+
+    mirrow::drefl::registrar<Material3D>::instance().regist("Material3D");
+
+    mirrow::drefl::registrar<SpriteMaterial>::instance()
+        .regist("SpriteMaterial")
+        .property("material", &SpriteMaterial::material);
 }
 
 void reflectGLTFModel() {

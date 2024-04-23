@@ -1,14 +1,15 @@
 #include "graphics/rhi/vk/texture_view.hpp"
 #include "graphics/system.hpp"
-#include "nickel.hpp"
 #include "imgui_plugin.hpp"
+#include "nickel.hpp"
+
 
 nickel::TextureHandle handle1;
 nickel::TextureHandle handle2;
 
 void StartupSystem(gecs::resource<gecs::mut<nickel::TextureManager>> textureMgr,
-                    gecs::resource<plugin::ImGuiVkContext> ctx,
-                    gecs::resource<nickel::rhi::Device> device) {
+                   gecs::resource<plugin::ImGuiVkContext> ctx,
+                   gecs::resource<nickel::rhi::Device> device) {
     handle1 = textureMgr->Load("test/graphics/assets/demon.png");
     handle2 = textureMgr->Load("test/graphics/assets/chest.png");
 }
@@ -33,44 +34,14 @@ void BootstrapSystem(gecs::world& world,
     initInfo.windowData.title = "imgui demo";
     initInfo.windowData.size.Set(720, 480);
     InitSystem(world, initInfo, reg.commands());
+    nickel::RegistEngineSystem(reg);
 
-    reg
-        // startup systems
-        .regist_startup_system<nickel::VideoSystemInit>()
-        .regist_startup_system<nickel::RenderSystemInit>()
-        .regist_startup_system<nickel::FontSystemInit>()
-        .regist_startup_system<nickel::EventPollerInit>()
-        .regist_startup_system<nickel::InputSystemInit>()
-        // .regist_startup_system<ui::InitSystem>()
-        .regist_startup_system<nickel::InitAudioSystem>()
-        .regist_startup_system<plugin::ImGuiInit>()
+    reg.regist_startup_system<plugin::ImGuiInit>()
         .regist_startup_system<StartupSystem>()
-        // shutdown systems
-        .regist_shutdown_system<plugin::ImGuiShutdown>()
-        .regist_shutdown_system<nickel::EngineShutdown>()
-        .regist_shutdown_system<nickel::InitAudioSystem>()
-        // update systems
-        .regist_update_system<nickel::VideoSystemUpdate>()
-        // other input handle event must put here(after mouse/keyboard update)
-        .regist_update_system<nickel::Mouse::Update>()
-        .regist_update_system<nickel::Keyboard::Update>()
-        .regist_update_system<nickel::HandleInputEvents>()
-        .regist_update_system<nickel::UpdateGlobalTransform>()
-        .regist_update_system<nickel::UpdateGLTFModelTransform>()
-        .regist_update_system<nickel::UpdateCamera2GPU>()
-        // .regist_update_system<ui::UpdateGlobalPosition>()
-        // .regist_update_system<ui::HandleEventSystem>()
-        // start render pipeline
-        .regist_update_system<nickel::BeginRender>()
-        .regist_update_system<nickel::RenderGLTFModel>()
-        .regist_update_system<nickel::RenderSprite2D>()
-        .regist_update_system<plugin::ImGuiStart>()
-        .regist_update_system<UpdateSystem>()
-        .regist_update_system<plugin::ImGuiEnd>()
-        .regist_update_system<nickel::EndRender>()
-        .regist_update_system<nickel::SwapContext>()
-        // 2D UI render
-        // .regist_update_system<ui::RenderUI>()
-        // time update
-        .regist_update_system<nickel::Time::Update>();
+        .regist_shutdown_system_before<plugin::ImGuiShutdown,
+                                       nickel::EngineShutdown>()
+        .regist_update_system_after<plugin::ImGuiStart,
+                                    nickel::RenderSprite2D>()
+        .regist_update_system_after<UpdateSystem, plugin::ImGuiStart>()
+        .regist_update_system_after<plugin::ImGuiEnd, UpdateSystem>();
 }

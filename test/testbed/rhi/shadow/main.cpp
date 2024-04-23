@@ -366,6 +366,8 @@ void HandleEvent(gecs::resource<gecs::mut<Context>> ctx,
 
 void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
                   gecs::resource<gecs::mut<Context>> ctx) {
+    device->BeginFrame();
+
     RenderPass::Descriptor desc;
 
     Texture::Descriptor textureDesc;
@@ -431,7 +433,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto cmd2 = encoder2.Finish();
 
     queue.Submit({cmd2});
-    device->SwapContext();
+    device->EndFrame();
 
     encoder1.Destroy();
     encoder2.Destroy();
@@ -451,8 +453,6 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
     cmds.remove_resource<Context>();
-    cmds.remove_resource<Device>();
-    cmds.remove_resource<Adapter>();
 }
 
 void BootstrapSystem(gecs::world& world,

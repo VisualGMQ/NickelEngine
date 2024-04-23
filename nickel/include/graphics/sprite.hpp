@@ -17,21 +17,22 @@ struct Sprite final {
     std::optional<cgmath::Rect> region;
     std::optional<cgmath::Vec2> customSize;
     cgmath::Vec2 anchor;
-    std::unique_ptr<Material2D> material;
     Flip flip = Flip::None;
     bool visiable = true;
     int orderInLayer = 0;
 
-    static Sprite FromTexture(TextureHandle texture);
-    static Sprite FromRegion(TextureHandle texture,
-                             const cgmath::Rect& region);
-    static Sprite FromCustomSize(TextureHandle texture,
-                                 const cgmath::Vec2& size);
+    static Sprite FromRegion(const cgmath::Rect& region);
+    static Sprite FromCustomSize(const cgmath::Vec2& size);
+};
+
+struct SpriteMaterial {
+    Material2DHandle material;
 };
 
 struct SpriteBundle final {
-    Sprite sprite;
     Transform transform;
+    Sprite sprite;
+    SpriteMaterial material;
 };
 
 }  // namespace nickel

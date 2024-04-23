@@ -56,7 +56,7 @@ std::unique_ptr<T> LoadAssetFromMeta(const std::filesystem::path& path) {
     } else {
         LOGW(log_tag::Asset, "load asset from ", path,
              " failed: ", result.error());
-        return false;
+        return {};
     }
 }
 

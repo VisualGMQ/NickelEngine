@@ -66,7 +66,8 @@ public:
 
     void OnWindowResize(const cgmath::Vec2&);
 
-    void SwapContext() override;
+    void BeginFrame() override;
+    void EndFrame() override;
     void WaitIdle() override;
 
     Queue GetQueue() override;

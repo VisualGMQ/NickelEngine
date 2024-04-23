@@ -3,8 +3,7 @@
 #include "context.hpp"
 
 template <>
-void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
-                                const nickel::Texture& texture) {
+void ShowAsset<nickel::Texture>(const nickel::Texture& texture) {
     if (ImGui::BeginTooltip()) {
         ImGui::Image(texture, {texture.Size().w, texture.Size().h});
         ImGui::EndTooltip();
@@ -12,20 +11,16 @@ void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
 }
 
 template <>
-void ShowAsset<nickel::Font>(nickel::FontHandle handle,
-                             const nickel::Font& texture) {}
+void ShowAsset<nickel::Font>(const nickel::Font& texture) {}
 
 template <>
-void ShowAsset<nickel::Animation>(nickel::AnimationHandle handle,
-                                  const nickel::Animation&) {}
+void ShowAsset<nickel::Animation>(const nickel::Animation&) {}
 
 template <>
-void ShowAsset<nickel::Sound>(nickel::SoundHandle handle,
-                              const nickel::Sound& texture) {}
+void ShowAsset<nickel::Sound>(const nickel::Sound& texture) {}
 
 template <>
-void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
-                                  const nickel::Tilesheet& tilesheet) {
+void ShowAsset<nickel::Tilesheet>(const nickel::Tilesheet& tilesheet) {
     auto& mgr = nickel::ECS::Instance().World().res<nickel::AssetManager>().get();
     if (ImGui::BeginTooltip()) {
         if (mgr.Has(tilesheet.Handle())) {

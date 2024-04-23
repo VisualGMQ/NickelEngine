@@ -30,9 +30,11 @@ struct Render2DContext {
     rhi::RenderPipeline pipeline;
     rhi::PipelineLayout pipelineLayout;
     rhi::BindGroupLayout bindGroupLayout;
+    rhi::ShaderModule vertexShader;
+    rhi::ShaderModule fragmentShader;
+    rhi::BindGroup defaultBindGroup;    // bind a white texture
 
     std::unique_ptr<GPUMesh2D> identityRectMesh_;
-    std::unique_ptr<Material2D> defaultMaterial_;
 
     Render2DContext(rhi::APIPreference, rhi::Device,
                     const cgmath::Rect& viewport, RenderContext&);
@@ -51,14 +53,13 @@ private:
     std::unordered_map<uint32_t, rhi::Sampler> samplers_;
 
     rhi::PipelineLayout createPipelineLayout();
-    void initPipelineShader(rhi::RenderPipeline::Descriptor&,
-                            rhi::APIPreference);
+    void initPipelineShader(rhi::APIPreference);
     rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
     rhi::RenderPipeline createPipeline(rhi::APIPreference,
                                        const nickel::cgmath::Rect& viewport,
                                        RenderContext&);
     void initSamplers();
-    std::unique_ptr<Material2D> createDefaultMaterial();
+    rhi::BindGroup createDefaultBindGroup();
     std::unique_ptr<GPUMesh2D> createIdentityRectMesh();
 };
 
@@ -66,6 +67,8 @@ struct Render3DContext {
     rhi::RenderPipeline pipeline;
     rhi::PipelineLayout pipelineLayout;
     rhi::BindGroupLayout bindGroupLayout;
+    rhi::ShaderModule vertexShader;
+    rhi::ShaderModule fragmentShader;
 
     Render3DContext(rhi::APIPreference, rhi::Device,
                     const cgmath::Rect& viewport, RenderContext&);
@@ -78,8 +81,7 @@ private:
     rhi::Device device_;
 
     rhi::PipelineLayout createPipelineLayout();
-    void initPipelineShader(rhi::RenderPipeline::Descriptor&,
-                            rhi::APIPreference);
+    void initPipelineShader(rhi::APIPreference);
     rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
     rhi::RenderPipeline createPipeline(rhi::APIPreference,
                                        const nickel::cgmath::Rect& viewport,

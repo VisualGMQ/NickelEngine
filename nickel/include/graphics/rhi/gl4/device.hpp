@@ -36,7 +36,8 @@ public:
     Buffer CreateBuffer(const Buffer::Descriptor&) override;
     Queue GetQueue() override;
 
-    void SwapContext() override;
+    void BeginFrame() override;
+    void EndFrame() override;
     void WaitIdle() override;
 
     Queue queue;

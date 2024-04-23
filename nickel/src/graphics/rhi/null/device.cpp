@@ -52,7 +52,9 @@ Queue DeviceImpl::GetQueue() {
     return Queue{new QueueImpl{}};
 }
 
-void DeviceImpl::SwapContext() {}
+void DeviceImpl::BeginFrame() {}
+
+void DeviceImpl::EndFrame() {}
 
 void DeviceImpl::WaitIdle() {}
 

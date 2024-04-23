@@ -222,16 +222,6 @@ void RenderPipelineImpl::createRenderPipeline(
         .setRenderPass(renderPass);
 
     VK_CALL(pipeline, dev.device.createGraphicsPipeline(nullptr, info));
-
-    // clear shader module
-    auto module = desc.vertex.module;
-    module.Destroy();
-    module = desc.fragment.module;
-    module.Destroy();
-    if (desc.geometry) {
-        module = desc.geometry->module;
-        module.Destroy();
-    }
 }
 
 void RenderPipelineImpl::createRenderPass(
