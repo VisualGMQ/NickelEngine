@@ -11,11 +11,13 @@
 #include "input_text_window.hpp"
 #include "anim_editor.hpp"
 
-struct EditorContext {
+struct EditorContext: public nickel::Singlton<EditorContext, true> {
 private:
     std::filesystem::path editorPath_;
 
 public:
+    std::vector<Window*> globalWindows_;
+
     // normal windows
     ContentBrowserWindow contentBrowserWindow;
     EntityListWindow entityListWindow;
@@ -29,10 +31,8 @@ public:
     TilesheetAssetListWindow tilesheetAssetListWindow;
     AnimationAssetListWindow animAssetListWindow;
     SoundAssetListWindow soundAssetListWindow;
+    Material2DAssetListWindow mtl2dAssetListWindow;
 
-    TexturePropertyPopupWindow texturePropWindow;
-    SoundPropertyPopupWindow soundPropWindow;
-    FontPropertyPopupWindow fontPropWindow;
     TilesheetEditor tilesheetEditor;
     InputTextWindow inputTextWindow;
 
@@ -66,7 +66,6 @@ public:
     ~EditorContext();
 
     const nickel::TextCache& FindOrGenFontPrewview(nickel::FontHandle);
-    nickel::SoundPlayer& FindOrGenSoundPlayer(nickel::SoundHandle);
 
 private:
     std::unordered_map<nickel::FontHandle, nickel::TextCache,
@@ -75,8 +74,10 @@ private:
     std::unordered_map<nickel::SoundHandle, nickel::SoundPlayer,
                        nickel::SoundHandle::Hash, nickel::SoundHandle::Eq>
         soundPlayers_;
+
+    void updateMenubar();
 };
 
 inline void InitEditorContext(gecs::commands cmds) {
-    cmds.emplace_resource<EditorContext>();
+    EditorContext::Init();
 }

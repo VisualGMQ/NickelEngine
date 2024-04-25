@@ -34,6 +34,13 @@ public:
         }
     }
 
+    void Save2AssociateFile() const {
+        std::ofstream file(relativePath_);
+        if (file) {
+            file << toml::toml_formatter{Save2Toml()};
+        }
+    }
+
     auto& RelativePath() const { return relativePath_; }
 
     bool HasAssociatedFile() const { return !relativePath_.empty(); }

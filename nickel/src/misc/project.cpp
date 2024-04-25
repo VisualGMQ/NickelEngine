@@ -3,6 +3,7 @@
 #include "graphics/gltf.hpp"
 #include "graphics/system.hpp"
 #include "mirrow/drefl/make_any.hpp"
+#include "misc/serd.hpp"
 #include "nickel.hpp"
 #include "refl/drefl.hpp"
 #include "system/graphics.hpp"
@@ -181,6 +182,8 @@ void ErrorCallback(int error, const char* description) {
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds) {
     RegistReflectInfos();
+    RegistSerializeMethods();
+    RegistComponents();
 
     auto renderAPI = rhi::GetSupportRenderAPI(rhi::APIPreference::Vulkan);
     Window& window = cmds.emplace_resource<Window>(

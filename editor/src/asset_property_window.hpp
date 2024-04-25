@@ -5,10 +5,9 @@
 #include "nickel.hpp"
 #include "widget.hpp"
 
-
-class TexturePropertyPopupWindow : public PopupWindow {
+class TexturePropertyWidget: public Widget {
 public:
-    TexturePropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    TexturePropertyWidget() = default;
 
     void ChangeTexture(nickel::TextureHandle handle) {
         handle_ = handle;
@@ -19,48 +18,44 @@ public:
         }
     }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
     nickel::TextureHandle handle_;
     ImageViewCanva imageViewer_;
 };
 
-class SoundPropertyPopupWindow : public PopupWindow {
+class SoundPropertyWidget : public Widget {
 public:
-    SoundPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    SoundPropertyWidget() = default;
 
     void ChangeAudio(nickel::SoundHandle handle) { handle_ = handle; }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
     nickel::SoundHandle handle_;
 };
 
-class FontPropertyPopupWindow : public PopupWindow {
+class FontPropertyWidget: public Widget {
 public:
-    FontPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    FontPropertyWidget() = default;
 
     void ChangeFont(nickel::FontHandle handle) { handle_ = handle; }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
     nickel::FontHandle handle_;
 };
 
-class Material2DPropertyPopupWindow : public PopupWindow {
+class Material2DPropertyWidget: public Widget {
 public:
-    Material2DPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    Material2DPropertyWidget() = default;
 
     void ChangeMaterial(nickel::Material2DHandle handle) { handle_ = handle; }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
     nickel::Material2DHandle handle_;

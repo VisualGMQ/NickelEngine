@@ -18,6 +18,14 @@ ma_engine gEngine;
 
 Sound Sound::Null;
 
+SoundPlayer::SoundPlayer()
+    : mgr_{&ECS::Instance().World().res_mut<AudioManager>().get()} {}
+
+SoundPlayer::SoundPlayer(SoundHandle handle) : SoundPlayer() {
+    handle_ = handle;
+    recreateInnerSound(handle, *mgr_);
+}
+
 Sound::Sound(const std::filesystem::path& filename) : Asset(filename) {
     if (auto result =
             ma_decoder_init_file(filename.string().c_str(), NULL, data_);
@@ -33,12 +41,6 @@ void* Sound::GetAudioData() {
 
 Sound::~Sound() {
     ma_decoder_uninit(data_);
-}
-
-SoundPlayer SoundPlayer::Null;
-
-SoundPlayer::SoundPlayer(SoundHandle handle, AudioManager& mgr) {
-    recreateInnerSound(handle, mgr);
 }
 
 void SoundPlayer::recreateInnerSound(SoundHandle handle, AudioManager& mgr) {
@@ -58,21 +60,37 @@ void SoundPlayer::recreateInnerSound(SoundHandle handle, AudioManager& mgr) {
     }
 }
 
-void SoundPlayer::Play() { MA_CALL(ma_sound_start(data_)); }
+void SoundPlayer::Play() {
+    MA_CALL(ma_sound_start(data_));
+}
 
-void SoundPlayer::Stop() { MA_CALL(ma_sound_stop(data_)); }
+void SoundPlayer::Stop() {
+    MA_CALL(ma_sound_stop(data_));
+}
 
-void SoundPlayer::Pause() { MA_CALL(ma_sound_stop(data_)); }
+void SoundPlayer::Pause() {
+    MA_CALL(ma_sound_stop(data_));
+}
 
-void SoundPlayer::Rewind() { MA_CALL(ma_sound_seek_to_pcm_frame(data_, 0)); }
+void SoundPlayer::Rewind() {
+    MA_CALL(ma_sound_seek_to_pcm_frame(data_, 0));
+}
 
-void SoundPlayer::SetLoop(bool loop) { ma_sound_set_looping(data_, true); }
+void SoundPlayer::SetLoop(bool loop) {
+    ma_sound_set_looping(data_, true);
+}
 
-bool SoundPlayer::IsPlaying() const { return ma_sound_is_playing(data_); }
+bool SoundPlayer::IsPlaying() const {
+    return ma_sound_is_playing(data_);
+}
 
-bool SoundPlayer::IsLooping() const { return ma_sound_is_looping(data_); }
+bool SoundPlayer::IsLooping() const {
+    return ma_sound_is_looping(data_);
+}
 
-bool SoundPlayer::IsAtTheEnd() const { return ma_sound_at_end(data_); }
+bool SoundPlayer::IsAtTheEnd() const {
+    return ma_sound_at_end(data_);
+}
 
 void SoundPlayer::SetStartTime(uint64_t millisecond) {
     ma_sound_set_start_time_in_milliseconds(data_, millisecond);
@@ -124,9 +142,13 @@ cgmath::Vec3 SoundPlayer::GetDirToListener() {
     return {dir.x, dir.y, dir.z};
 }
 
-float SoundPlayer::GetVolumn() const { return ma_sound_get_volume(data_); }
+float SoundPlayer::GetVolumn() const {
+    return ma_sound_get_volume(data_);
+}
 
-void SoundPlayer::SetVolumn(float vol) { ma_sound_set_volume(data_, vol); }
+void SoundPlayer::SetVolumn(float vol) {
+    ma_sound_set_volume(data_, vol);
+}
 
 cgmath::Vec3 SoundPlayer::GetDirection() const {
     auto dir = ma_sound_get_direction(data_);
@@ -142,9 +164,8 @@ SoundPlayer::operator bool() const {
     return data_ && data_->pDataSource != nullptr;
 }
 
-
-void SoundPlayer::ChangeSound(SoundHandle handle, AudioManager& mgr) {
-    recreateInnerSound(handle, mgr);
+void SoundPlayer::ChangeSound(SoundHandle handle) {
+    recreateInnerSound(handle, *mgr_);
 }
 
 void InitAudioSystem() {

@@ -35,20 +35,6 @@ Animation::Animation(const std::filesystem::path& filename) : Asset(filename) {
     }
 }
 
-void Animation::Save(const std::filesystem::path& path) const {
-    toml::table tbl;
-    toml::array arr;
-    for (auto& track : tracks_) {
-        arr.push_back(track->Save2Toml());
-    }
-    tbl.emplace("tracks", arr);
-
-    std::ofstream file(path);
-    if (file) {
-        file << tbl;
-    }
-}
-
 template <>
 std::unique_ptr<Animation> LoadAssetFromMetaTable(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {

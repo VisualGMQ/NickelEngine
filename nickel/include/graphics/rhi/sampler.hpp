@@ -21,6 +21,18 @@ public:
         Filter min = Filter::Linear;
         Filter mag = Filter::Linear;
         Filter mipmapFilter = Filter::Linear;
+
+        bool operator==(const Descriptor& o) const {
+            return o.u == u && o.v == v && o.w == w && o.compare == compare &&
+                   o.lodMaxClamp == lodMaxClamp &&
+                   o.lodMinClamp == lodMinClamp &&
+                   o.maxAnisotropy == maxAnisotropy && o.min == min &&
+                   o.mag == mag && o.mipmapFilter == mipmapFilter;
+        }
+
+        bool operator!=(const Descriptor& o) const {
+            return !(o == *this);
+        }
     };
 
     Sampler() = default;
@@ -28,6 +40,7 @@ public:
                      const Descriptor& desc);
 
     Sampler(Sampler&& o) noexcept { swap(o, *this); }
+
     Sampler(const Sampler& o) = default;
     Sampler& operator=(const Sampler& o) = default;
 
@@ -35,13 +48,13 @@ public:
         if (&o != this) swap(o, *this);
         return *this;
     }
+
     void Destroy();
 
-    operator bool() const {
-        return impl_;
-    }
+    operator bool() const { return impl_; }
 
     auto Impl() const { return impl_; }
+
     auto Impl() { return impl_; }
 
 private:
@@ -54,4 +67,4 @@ private:
     }
 };
 
-}
+}  // namespace nickel::rhi

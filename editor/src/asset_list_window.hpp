@@ -18,15 +18,6 @@ template <>
 void ShowAsset<nickel::Texture>(const nickel::Texture&);
 
 template <>
-void ShowAsset<nickel::Font>(const nickel::Font&);
-
-template <>
-void ShowAsset<nickel::Animation>(const nickel::Animation&);
-
-template <>
-void ShowAsset<nickel::Sound>(const nickel::Sound&);
-
-template <>
 void ShowAsset<nickel::Tilesheet>(const nickel::Tilesheet&);
 
 template <typename T>
@@ -82,3 +73,4 @@ using FontAssetListWindow = AssetListWindow<nickel::Font>;
 using TilesheetAssetListWindow = AssetListWindow<nickel::Tilesheet>;
 using SoundAssetListWindow = AssetListWindow<nickel::Sound>;
 using AnimationAssetListWindow = AssetListWindow<nickel::Animation>;
+using Material2DAssetListWindow = AssetListWindow<nickel::Material2D>;

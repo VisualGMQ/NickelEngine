@@ -279,11 +279,6 @@ public:
         return time;
     }
 
-    /**
-     * @brief save animation info to toml file(as asset file)
-     */
-    void Save(const std::filesystem::path& path) const;
-
     toml::table Save2Toml() const override {
         toml::table tbl;
         tbl.emplace("path", RelativePath().string());
@@ -322,9 +317,8 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer() = default;
-
-    explicit AnimationPlayer(AnimationManager& mgr) : mgr_(&mgr) {}
+    AnimationPlayer()
+        : mgr_{&ECS::Instance().World().res_mut<AnimationManager>().get()} {}
 
     AnimationPlayer(const AnimationPlayer&) = delete;
 

@@ -131,12 +131,24 @@ TextureBundle::~TextureBundle() {
     texture.Destroy();
 }
 
-Material2DHandle Material2DManager::Create(TextureHandle handle,
-                                           rhi::SamplerAddressMode u,
-                                           rhi::SamplerAddressMode v,
-                                           rhi::Filter min, rhi::Filter mag) {
+Material2DHandle Material2DManager::Create(const std::filesystem::path& filename) {
+    auto elem = std::make_unique<Material2D>();
+    if (elem) {
+        auto handle = Material2DHandle::Create();
+        elem->AssociateFile(filename);
+        storeNewItem(handle, std::move(elem));
+        return handle;
+    }
+    return Material2DHandle::Null();
+}
+
+Material2DHandle Material2DManager::Create(
+    const std::filesystem::path& filename , TextureHandle handle,
+    rhi::SamplerAddressMode u, rhi::SamplerAddressMode v, rhi::Filter min,
+    rhi::Filter mag) {
     auto elem = std::make_unique<Material2D>(handle, u, v, min, mag);
     if (elem) {
+        elem->AssociateFile(filename);
         auto handle = Material2DHandle::Create();
         storeNewItem(handle, std::move(elem));
         return handle;
@@ -181,7 +193,7 @@ std::unique_ptr<Material2D> LoadAssetFromMetaTable(const toml::table& tbl) {
     auto mgr = ECS::Instance().World().res<TextureManager>();
 
     TextureHandle texture;
-    if (auto node = tbl.get("texture"); node->is_string()) {
+    if (auto node = tbl.get("texture"); node && node->is_string()) {
         texture = mgr->Has(node->as_string()->get())
                       ? mgr->GetHandle(node->as_string()->get())
                       : TextureHandle::Null();

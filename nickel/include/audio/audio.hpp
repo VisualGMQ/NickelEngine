@@ -64,18 +64,15 @@ public:
 
 class SoundPlayer {
 public:
-    static SoundPlayer Null;
-
-    SoundPlayer(SoundHandle, AudioManager&);
-    SoundPlayer() = default;
-
+    SoundPlayer();
+    explicit SoundPlayer(SoundHandle);
     SoundPlayer(const SoundPlayer&) = delete;
     SoundPlayer& operator=(const SoundPlayer&) = delete;
     SoundPlayer(SoundPlayer&& o) = default;
     SoundPlayer& operator=(SoundPlayer&& o) = default;
 
     auto Handle() const { return handle_; }
-    void ChangeSound(SoundHandle, AudioManager&);
+    void ChangeSound(SoundHandle);
 
     void Play();
 
@@ -117,6 +114,7 @@ private:
     // static void destroySound(ma_sound* data) { ma_sound_uninit(data); }
     ma_sound* data_{};
     SoundHandle handle_;
+    AudioManager* mgr_;
 
     void recreateInnerSound(SoundHandle, AudioManager&);
 };

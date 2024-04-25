@@ -11,15 +11,6 @@ void ShowAsset<nickel::Texture>(const nickel::Texture& texture) {
 }
 
 template <>
-void ShowAsset<nickel::Font>(const nickel::Font& texture) {}
-
-template <>
-void ShowAsset<nickel::Animation>(const nickel::Animation&) {}
-
-template <>
-void ShowAsset<nickel::Sound>(const nickel::Sound& texture) {}
-
-template <>
 void ShowAsset<nickel::Tilesheet>(const nickel::Tilesheet& tilesheet) {
     auto& mgr = nickel::ECS::Instance().World().res<nickel::AssetManager>().get();
     if (ImGui::BeginTooltip()) {

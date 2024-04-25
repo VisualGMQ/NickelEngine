@@ -256,7 +256,7 @@ public:
                  " failed:", parse.error());
         } else {
             if (auto asset = ::nickel::LoadAssetFromMetaTable<T>(parse.table());
-                asset && *asset) {
+                asset) {
                 asset->AssociateFile(StripMetaExtension(filename));
                 storeNewItem(AssetHandle::Create(), std::move(asset));
             }

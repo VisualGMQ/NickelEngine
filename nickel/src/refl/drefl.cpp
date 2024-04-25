@@ -38,6 +38,20 @@ void reflectVec4() {
         .property("z", &cgmath::Vec4::z);
 }
 
+void reflectMat() {
+    mirrow::drefl::registrar<cgmath::Mat44>::instance()
+        .regist("Mat44")
+        .property("data", &cgmath::Mat44::data);
+
+    mirrow::drefl::registrar<cgmath::Mat33>::instance()
+        .regist("Mat33")
+        .property("data", &cgmath::Mat33::data);
+
+    mirrow::drefl::registrar<cgmath::Mat22>::instance()
+        .regist("Mat22")
+        .property("data", &cgmath::Mat22::data);
+}
+
 void reflectRect() {
     mirrow::drefl::registrar<cgmath::Rect>::instance()
         .regist("Rect")
@@ -52,14 +66,14 @@ void reflectTramsform() {
         .property("rotation", &Transform::rotation)
         .property("scale", &Transform::scale);
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Transform>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Transform>();
 }
 
 void reflectGlobalTramsform() {
     mirrow::drefl::registrar<GlobalTransform>::instance().regist(
         "GlobalTransform");
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<GlobalTransform>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<GlobalTransform>();
 }
 
 void reflectSprite() {
@@ -82,15 +96,15 @@ void reflectSprite() {
 
     mirrow::drefl::registrar<TextureHandle>::instance().regist("TextureHandle");
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Sprite>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Flip>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Sprite>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Flip>();
 }
 
 void reflectAnimation() {
     mirrow::drefl::registrar<AnimationPlayer>::instance().regist(
         "AnimationPlayer");
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<AnimationPlayer>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
 void reflectUI() {
@@ -116,9 +130,9 @@ void reflectUI() {
         .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
         .property("pressColor", &ui::Label::pressColor, {AttrColor});
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Style>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Button>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Label>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<ui::Style>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<ui::Button>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<ui::Label>();
 }
 
 void reflectWindow() {
@@ -127,7 +141,7 @@ void reflectWindow() {
         .property("title", &WindowBuilder::Data::title)
         .property("size", &WindowBuilder::Data::size);
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<WindowBuilder::Data>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<WindowBuilder::Data>();
 }
 
 void reflectTilesheet() {
@@ -143,19 +157,18 @@ void reflectTilesheet() {
         .property("x", &Spacing::x)
         .property("y", &Spacing::y);
 
-    mirrow::drefl::registrar<Tilesheet>::instance()
-        .regist("Tilesheet");
+    mirrow::drefl::registrar<Tilesheet>::instance().regist("Tilesheet");
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Margin>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Spacing>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Tilesheet>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Margin>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Spacing>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Tilesheet>();
 }
 
 void reflectMisc() {
     mirrow::drefl::registrar<Name>::instance().regist("Name").property(
         "name", &Name::name);
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Name>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Name>();
 
     mirrow::drefl::registrar<gecs::entity>::instance().regist("entity");
 }
@@ -163,18 +176,19 @@ void reflectMisc() {
 void serializeTextureHandle(toml::node& node, const mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize texture-handle to table");
     auto mgr = ECS::Instance().World().res<TextureManager>();
-    auto handle =  mirrow::drefl::try_cast_const<TextureHandle>(elem);
+    auto handle = mirrow::drefl::try_cast_const<TextureHandle>(elem);
     if (mgr->Has(*handle)) {
         auto& texture = mgr->Get(*handle);
         node.as_table()->emplace("path", texture.RelativePath().string());
     }
 }
 
-void deserializeTextureHandle(const toml::node& node, mirrow::drefl::any& elem) {
+void deserializeTextureHandle(const toml::node& node,
+                              mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize texture-handle to table");
     auto& tbl = *node.as_table();
 
-    if (auto path = tbl.get("path"); path && path->is_string())  {
+    if (auto path = tbl.get("path"); path && path->is_string()) {
         auto filename = path->as_string()->get();
         auto& handle = *mirrow::drefl::try_cast<TextureHandle>(elem);
 
@@ -190,10 +204,12 @@ void deserializeTextureHandle(const toml::node& node, mirrow::drefl::any& elem) 
 
 void registTextureHandleSerd() {
     auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
-    serd.regist_serialize(mirrow::drefl::typeinfo<TextureHandle>(), serializeTextureHandle);
-    serd.regist_deserialize(mirrow::drefl::typeinfo<TextureHandle>(), deserializeTextureHandle);
+    serd.regist_serialize(mirrow::drefl::typeinfo<TextureHandle>(),
+                          serializeTextureHandle);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<TextureHandle>(),
+                            deserializeTextureHandle);
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<TextureHandle>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
 void serializeSoundPlayer(toml::node& node, const mirrow::drefl::any& elem) {
@@ -212,26 +228,29 @@ void deserializeSoundPlayer(const toml::node& node, mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize sound player to table");
     auto& tbl = *node.as_table();
 
-    if (auto path = tbl.get("path"); path && path->is_string())  {
+    if (auto path = tbl.get("path"); path && path->is_string()) {
         auto filename = tbl.get("path")->as_string()->get();
         auto& player = *mirrow::drefl::try_cast<SoundPlayer>(elem);
 
         auto mgr = ECS::Instance().World().res_mut<AudioManager>();
         if (mgr->Has(filename)) {
-            player.ChangeSound(mgr->GetHandle(filename), mgr.get());
+            player.ChangeSound(mgr->GetHandle(filename));
         }
     }
 }
 
 void registSoundPlayerSerd() {
     auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
-    serd.regist_serialize(mirrow::drefl::typeinfo<SoundPlayer>(), serializeSoundPlayer);
-    serd.regist_deserialize(mirrow::drefl::typeinfo<SoundPlayer>(), deserializeSoundPlayer);
+    serd.regist_serialize(mirrow::drefl::typeinfo<SoundPlayer>(),
+                          serializeSoundPlayer);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<SoundPlayer>(),
+                            deserializeSoundPlayer);
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<SoundPlayer>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<SoundPlayer>();
 }
 
-void serializeAnimationPlayer(toml::node& node, const mirrow::drefl::any& elem) {
+void serializeAnimationPlayer(toml::node& node,
+                              const mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize animation-handle to table");
     auto& player = *mirrow::drefl::try_cast_const<AnimationPlayer>(elem);
     auto mgr = ECS::Instance().World().res<AnimationManager>();
@@ -243,12 +262,13 @@ void serializeAnimationPlayer(toml::node& node, const mirrow::drefl::any& elem) 
     }
 }
 
-void deserializeAnimationPlayer(const toml::node& node, mirrow::drefl::any& elem) {
+void deserializeAnimationPlayer(const toml::node& node,
+                                mirrow::drefl::any& elem) {
     Assert(node.is_table(), "serialize sound player to table");
     auto& tbl = *node.as_table();
 
     auto mgr = ECS::Instance().World().res<AnimationManager>();
-    if (auto path = tbl.get("path"); path && path->is_string())  {
+    if (auto path = tbl.get("path"); path && path->is_string()) {
         auto filename = tbl.get("path")->as_string()->get();
         auto& player = *mirrow::drefl::try_cast<AnimationPlayer>(elem);
 
@@ -258,16 +278,18 @@ void deserializeAnimationPlayer(const toml::node& node, mirrow::drefl::any& elem
     }
 }
 
-
 void registAnimationPlayerSerd() {
     auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
-    serd.regist_serialize(mirrow::drefl::typeinfo<AnimationPlayer>(), serializeAnimationPlayer);
-    serd.regist_deserialize(mirrow::drefl::typeinfo<AnimationPlayer>(), deserializeAnimationPlayer);
+    serd.regist_serialize(mirrow::drefl::typeinfo<AnimationPlayer>(),
+                          serializeAnimationPlayer);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<AnimationPlayer>(),
+                            deserializeAnimationPlayer);
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<AnimationPlayer>();
+    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
-void serializeGlobalTransform(toml::node& node, const mirrow::drefl::any& elem) {
+void serializeGlobalTransform(toml::node& node,
+                              const mirrow::drefl::any& elem) {
     Assert(elem.type_info() == mirrow::drefl::typeinfo<GlobalTransform>(),
            "elem type incorrect");
     Assert(node.is_table(), "serialize GlobalTransform require table");
@@ -275,25 +297,31 @@ void serializeGlobalTransform(toml::node& node, const mirrow::drefl::any& elem) 
     node.as_table()->emplace(elem.type_info()->name(), toml::table{});
 }
 
-void deserializeGlobalTransform(const toml::node& node, mirrow::drefl::any& elem) {
+void deserializeGlobalTransform(const toml::node& node,
+                                mirrow::drefl::any& elem) {
     Assert(elem.type_info() == mirrow::drefl::typeinfo<GlobalTransform>(),
            "elem type incorrect");
     Assert(node.is_table(), "serialize GlobalTransform require table");
 
-    mirrow::drefl::try_cast<GlobalTransform>(elem)->mat = cgmath::Mat44::Identity();
+    mirrow::drefl::try_cast<GlobalTransform>(elem)->mat =
+        cgmath::Mat44::Identity();
 }
 
 void registGlobalTransformSerd() {
     auto& serd = mirrow::serd::drefl::serialize_method_storage::instance();
-    serd.regist_serialize(mirrow::drefl::typeinfo<GlobalTransform>(), serializeGlobalTransform);
-    serd.regist_deserialize(mirrow::drefl::typeinfo<GlobalTransform>(), deserializeGlobalTransform);
+    serd.regist_serialize(mirrow::drefl::typeinfo<GlobalTransform>(),
+                          serializeGlobalTransform);
+    serd.regist_deserialize(mirrow::drefl::typeinfo<GlobalTransform>(),
+                            deserializeGlobalTransform);
 }
 
 void reflectHierarchy() {
-    mirrow::drefl::registrar<Parent>::instance().regist("Parent", {EditorNodisplay}).property(
-        "entity", &Parent::entity);
-    mirrow::drefl::registrar<Child>::instance().regist("Child", {EditorNodisplay}).property(
-        "entities", &Child::entities);
+    mirrow::drefl::registrar<Parent>::instance()
+        .regist("Parent", {EditorNodisplay})
+        .property("entity", &Parent::entity);
+    mirrow::drefl::registrar<Child>::instance()
+        .regist("Child", {EditorNodisplay})
+        .property("entities", &Child::entities);
 }
 
 void reflectAudio() {
@@ -339,6 +367,7 @@ void RegistReflectInfos() {
     reflectVec3();
     reflectVec4();
     reflectRect();
+    reflectMat();
     reflectTramsform();
     reflectGlobalTramsform();
     reflectAnimation();
@@ -353,11 +382,6 @@ void RegistReflectInfos() {
     reflectTexture();
     reflectMaterial();
     reflectGLTFModel();
-
-    registTextureHandleSerd();
-    registSoundPlayerSerd();
-    registAnimationPlayerSerd();
-    registGlobalTransformSerd();
 }
 
 }  // namespace nickel

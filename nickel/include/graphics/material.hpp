@@ -96,11 +96,13 @@ using Material2DHandle = Handle<Material2D>;
 class Material2DManager : public Manager<Material2D> {
 public:
     Material2DHandle Create(
+        const std::filesystem::path& filename,
         TextureHandle handle,
         rhi::SamplerAddressMode u = rhi::SamplerAddressMode::Repeat,
         rhi::SamplerAddressMode v = rhi::SamplerAddressMode::Repeat,
         rhi::Filter min = rhi::Filter::Linear,
         rhi::Filter mag = rhi::Filter::Linear);
+    Material2DHandle Create(const std::filesystem::path& filename);
 
     Material2DHandle Load(const std::filesystem::path&);
 

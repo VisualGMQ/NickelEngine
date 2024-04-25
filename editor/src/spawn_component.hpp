@@ -4,22 +4,39 @@
 
 class SpawnComponentMethods final : public nickel::Singlton<SpawnComponentMethods, false> {
 public:
-    using spawn_fn = void(*)(gecs::commands, gecs::entity, gecs::registry);
-    using type_info = const ::mirrow::drefl::type*;
+    using SpawnFnType = std::function<void(gecs::entity)>;
+    using TypeInfo = const ::mirrow::drefl::type*;
 
     template <typename T>
-    void Regist(spawn_fn show) {
+    void Regist(SpawnFnType show) {
         Regist(::mirrow::drefl::typeinfo<T>(), show);
     }
 
-    void Regist(type_info type, spawn_fn show) {
-        methods_[type] = show;
+    template <typename T>
+    void Regist() {
+        auto fn = [](gecs::entity ent) {
+            auto reg = nickel::ECS::Instance().World().cur_registry();
+            if (reg->has<T>(ent)) {
+                reg->replace<T>(ent);
+            } else {
+                reg->emplace<T>(ent);
+            }
+        };
+
+        Regist(::mirrow::drefl::typeinfo<T>(), fn);
     }
 
-    auto& Methods() const { return methods_; }
+    void Regist(TypeInfo type, SpawnFnType show) {
+        methods_[type] = show;
+        types_.emplace_back(type);
+    }
 
-    spawn_fn Find(type_info type);
+    void Spawn(TypeInfo, gecs::entity);
+    const std::vector<TypeInfo>& RegistedTypes() const;
 
 private:
-    std::map<type_info, spawn_fn> methods_;
+    std::map<TypeInfo, SpawnFnType> methods_;
+    std::vector<TypeInfo> types_;
 };
+
+void RegistSpawnMethods();

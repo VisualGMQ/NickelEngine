@@ -1,20 +1,21 @@
 #include "inspector.hpp"
 #include "context.hpp"
+#include "type_displayer.hpp"
 
-void InspectorWindow::update() {
-    auto& reg = *nickel::ECS::Instance().World().cur_registry();
-    auto entity = reg.res<EditorContext>()->entityListWindow.GetSelected();
-    auto cmds = reg.commands();
+void ComponentDisplayWidget::Update() {
+    auto reg = nickel::ECS::Instance().World().cur_registry();
+    auto entity = EditorContext::Instance().entityListWindow.GetSelected();
+    auto cmds = reg->commands();
 
     auto& types = mirrow::drefl::all_typeinfo();
 
-    if (!reg.alive(entity)) {
+    if (!reg->alive(entity)) {
         return;
     }
 
-    int id = 0;
+    int imguiID = 0;
     for (auto [name, typeInfo] : types) {
-        if (reg.has(entity, typeInfo)) {
+        if (reg->has(entity, typeInfo)) {
             auto& attrs = typeInfo->attributes();
 
             if (std::find(attrs.begin(), attrs.end(),
@@ -22,12 +23,9 @@ void InspectorWindow::update() {
                 continue;
             }
 
-            auto data = reg.get_mut(entity, typeInfo);
+            auto data = reg->get_mut(entity, typeInfo);
 
-            auto& methods = ComponentShowMethods::Instance();
-            auto func = methods.Find(typeInfo);
-
-            ImGui::PushID(id++);
+            ImGui::PushID(imguiID++);
             if (ImGui::Button("delete")) {
                 cmds.remove(entity, typeInfo);
                 ImGui::PopID();
@@ -36,44 +34,34 @@ void InspectorWindow::update() {
             ImGui::PopID();
             ImGui::SameLine();
             if (ImGui::CollapsingHeader(typeInfo->name().c_str())) {
-                if (func) {
-                    func(typeInfo, typeInfo->name(), data, reg);
-                }
+                TypeDisplayerRegistrar::Instance().Display(data);
             }
         }
     }
 
     // show add componet button
-    static std::vector<const char*> items;
-    items.clear();
-
     auto& spawnMethods = SpawnComponentMethods::Instance();
+    auto& items = spawnMethods.RegistedTypes();
 
-    for (auto& [type, spawnFn] : spawnMethods.Methods()) {
-        items.push_back(type->name().data());
+    char names[1024] = {0};
+    int idx = 0;
+    for (auto& item : items) {
+        strcpy(names + idx, item->name().c_str());
+        Assert(idx <= sizeof(names), "out of range");
+        idx += item->name().size() + 1;
     }
 
     ImGui::Separator();
 
     static int selectedItem = -1;
 
-    typename SpawnComponentMethods::spawn_fn spawn = nullptr;
-
-    ImGui::Combo("components", &selectedItem, items.data(), items.size());
-
-    auto it = spawnMethods.Methods().begin();
-    int i = 0;
-
-    while (it != spawnMethods.Methods().end() && i != selectedItem) {
-        it++;
-        i++;
-    }
+    ImGui::Combo("components", &selectedItem, names);
 
     static bool replaceHintOpen = false;
     static bool shouldSpawn = false;
 
-    if (ImGui::Button("add component") && it != spawnMethods.Methods().end()) {
-        if (reg.has(entity, it->first)) {
+    if (ImGui::Button("add component") && selectedItem >= 0) {
+        if (reg->has(entity, items[selectedItem])) {
             replaceHintOpen = true;
         } else {
             shouldSpawn = true;
@@ -83,7 +71,7 @@ void InspectorWindow::update() {
     if (replaceHintOpen) {
         ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowFocus();
-        if (ImGui::Begin("spawn hint", 0)) {
+        if (ImGui::Begin("spawn hint")) {
             ImGui::Text("component already exists, do you want replace it?");
             if (ImGui::Button("yes")) {
                 shouldSpawn = true;
@@ -94,12 +82,17 @@ void InspectorWindow::update() {
             if (ImGui::Button("cancel")) {
                 replaceHintOpen = false;
             }
-
         }
+        ImGui::End();
     }
 
     if (shouldSpawn) {
-        it->second(cmds, entity, reg);
+        spawnMethods.Spawn(items[selectedItem], entity);
         shouldSpawn = false;
     }
+   
+}
+
+void InspectorWindow::update() {
+    curWidget_->Update();
 }

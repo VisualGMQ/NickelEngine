@@ -22,14 +22,16 @@ bool EntityListWindow::beginShowOneEntity(bool isLeaf, gecs::entity& selected,
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
         selected = ent;
         auto reg = nickel::ECS::Instance().World().cur_registry();
-        auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
+        auto& ctx = EditorContext::Instance();
         if (reg->has<AnimationPlayer>(ent)) {
             auto& player = reg->get<AnimationPlayer>(ent);
-            ctx->animEditor.ChangePlayer(ent, player.Anim());
+            ctx.animEditor.ChangePlayer(ent, player.Anim());
         } else {
-            ctx->animEditor.ChangePlayer(gecs::null_entity,
+            ctx.animEditor.ChangePlayer(gecs::null_entity,
                                          AnimationHandle::Null());
         }
+
+        EditorContext::Instance().inspectorWindow.DisplayComponent();
     }
 
     // deal drag target

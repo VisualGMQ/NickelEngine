@@ -29,6 +29,7 @@ class Font;
 class Tilesheet;
 class Animation;
 class Timer;
+class Material2D;
 
 template <typename T>
 FileType DetectFileType() {
@@ -44,6 +45,8 @@ FileType DetectFileType() {
         return FileType::Animation;
     } else if constexpr (std::is_same_v<T, Timer>) {
         return FileType::Timer;
+    } else if constexpr (std::is_same_v<T, Material2D>) {
+        return FileType::Material2D;
     }
     return FileType::Unknown;
 }

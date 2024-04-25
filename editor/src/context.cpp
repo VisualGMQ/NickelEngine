@@ -6,9 +6,7 @@ EditorContext::EditorContext()
       tilesheetAssetListWindow("tilesheets"),
       soundAssetListWindow("sounds"),
       animAssetListWindow("animations"),
-      texturePropWindow("texture property"),
-      soundPropWindow("sound property"),
-      fontPropWindow("font property"),
+      mtl2dAssetListWindow("2D materials"),
       tilesheetEditor("tilesheet editor"),
       inputTextWindow("input text"),
       contentBrowserWindow(this),
@@ -30,11 +28,11 @@ void EditorContext::Update() {
     tilesheetAssetListWindow.Update();
     soundAssetListWindow.Update();
     animAssetListWindow.Update();
-    fontPropWindow.Update();
-    texturePropWindow.Update();
-    soundPropWindow.Update();
+    mtl2dAssetListWindow.Update();
     tilesheetEditor.Update();
     inputTextWindow.Update();
+
+    updateMenubar();
 }
 
 EditorContext::~EditorContext() {}
@@ -61,17 +59,33 @@ const nickel::TextCache& EditorContext::FindOrGenFontPrewview(
     return fontPreviewTextures_.emplace(handle, std::move(cache)).first->second;
 }
 
-nickel::SoundPlayer& EditorContext::FindOrGenSoundPlayer(
-    nickel::SoundHandle handle) {
-    if (auto it = soundPlayers_.find(handle); it != soundPlayers_.end()) {
-        return it->second;
-    }
+void EditorContext::updateMenubar() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("save")) {
+                SaveProjectByConfig(EditorContext::Instance().projectInfo,
+                                    nickel::ECS::Instance()
+                                        .World()
+                                        .res<nickel::AssetManager>()
+                                        .get());
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("View")) {
+            auto addMenuItem = [](const std::string& text, Window& window) {
+                bool show = window.IsVisible();
+                ImGui::MenuItem(text.c_str(), nullptr, &show);
+                window.SetVisible(show);
+            };
+            addMenuItem("game content window", gameWindow);
+            addMenuItem("inspector", EditorContext::Instance().inspectorWindow);
+            addMenuItem("entity list",
+                        EditorContext::Instance().entityListWindow);
+            addMenuItem("content browser", contentBrowserWindow);
+            ImGui::MenuItem("imgui demo window", nullptr, &openDemoWindow);
+            ImGui::EndMenu();
+        }
 
-    auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AudioManager>();
-    if (!mgr->Has(handle)) {
-        return nickel::SoundPlayer::Null;
+        ImGui::EndMainMenuBar();
     }
-
-    return soundPlayers_.emplace(handle, nickel::SoundPlayer(handle, mgr.get()))
-        .first->second;
 }
