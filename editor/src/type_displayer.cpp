@@ -169,7 +169,7 @@ void DisplayTextureHandle(mirrow::drefl::any& payload) {
     IMGUI_MAKE_EMPTY_ID(id, payload);
 
     if (!mgr->Has(handle)) {
-        char str[] = "invalid texture";
+        char str[MAX_PATH_LENGTH] = "invalid texture";
         ImGui::BeginDisabled();
         ImGui::InputText(id, str, sizeof(str));
         ImGui::EndDisabled();
@@ -202,7 +202,7 @@ void DisplaySoundHandle(mirrow::drefl::any& payload) {
     auto handle = *mirrow::drefl::try_cast_const<nickel::SoundHandle>(payload);
 
     if (!mgr->Has(handle)) {
-        char str[] = "invalid sound";
+        char str[MAX_PATH_LENGTH] = "invalid sound";
         ImGui::BeginDisabled();
         ImGui::InputText("###invalid-sound", str, sizeof(str));
         ImGui::EndDisabled();
@@ -227,7 +227,7 @@ void DisplayAnimationHandle(mirrow::drefl::any& payload) {
         *mirrow::drefl::try_cast_const<nickel::AnimationHandle>(payload);
 
     if (!mgr->Has(handle)) {
-        char str[] = "invalid animation";
+        char str[MAX_PATH_LENGTH] = "invalid animation";
         ImGui::BeginDisabled();
         ImGui::InputText("###invalid-animation", str, sizeof(str));
         ImGui::EndDisabled();
@@ -489,7 +489,7 @@ void DisplayMaterial2DHandle(mirrow::drefl::any& payload) {
         nickel::ECS::Instance().World().res_mut<nickel::Material2DManager>();
 
     if (!mgr->Has(handle)) {
-        char str[] = "invalid material2d";
+        char str[MAX_PATH_LENGTH] = "invalid material2d";
         ImGui::BeginDisabled();
         ImGui::InputText("###invalid-material2d", str, sizeof(str));
         ImGui::EndDisabled();
@@ -528,6 +528,9 @@ void DisplaySpriteMaterial(mirrow::drefl::any& payload) {
     ImGui::SameLine();
 
     if (!payload.is_constref()) {
+        auto mutablePlayer =
+            mirrow::drefl::try_cast<nickel::SpriteMaterial>(payload);
+
         auto any = mirrow::drefl::any_make_constref(handle);
 
         ImGui::SameLine();
@@ -537,11 +540,8 @@ void DisplaySpriteMaterial(mirrow::drefl::any& payload) {
         if (ImGui::BeginCombo(imguiID, "", ImGuiComboFlags_NoPreview)) {
             if (ImGui::Selectable("load")) {
                 auto changeHandle =
-                    [&payload](nickel::Material2DHandle handle) {
-                        auto& mutablePlayer =
-                            *mirrow::drefl::try_cast<nickel::SpriteMaterial>(
-                                payload);
-                        mutablePlayer.material = handle;
+                    [=](nickel::Material2DHandle handle) {
+                        mutablePlayer->material = handle;
                     };
 
                 auto& assetListWindow =

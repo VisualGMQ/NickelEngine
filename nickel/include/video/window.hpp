@@ -44,7 +44,7 @@ public:
 
     cgmath::Vec2 Size() const;
 
-    void* Raw() { return window_; }
+    void* Raw() const { return window_; }
 
     bool ShouldClose() const { return shouldClose_; }
 

@@ -13,10 +13,11 @@
 
 struct EditorContext: public nickel::Singlton<EditorContext, true> {
 private:
-    std::filesystem::path editorPath_;
+    std::filesystem::path editorPath_;  // must first init
 
 public:
-    std::vector<Window*> globalWindows_;
+    // for game off-screen rendering
+    std::unique_ptr<nickel::Texture> texture;
 
     // normal windows
     ContentBrowserWindow contentBrowserWindow;
@@ -76,6 +77,8 @@ private:
         soundPlayers_;
 
     void updateMenubar();
+
+    void initGameWindowTexture();
 };
 
 inline void InitEditorContext(gecs::commands cmds) {

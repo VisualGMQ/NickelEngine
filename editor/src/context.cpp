@@ -15,13 +15,15 @@ EditorContext::EditorContext()
     entityListWindow.SetTitle("entity list");
     inspectorWindow.SetTitle("inspector");
     gameWindow.SetTitle("game");
+    initGameWindowTexture();
 }
+
+EditorContext::~EditorContext() {}
 
 void EditorContext::Update() {
     contentBrowserWindow.Update();
     entityListWindow.Update();
     inspectorWindow.Update();
-    gameWindow.Update();
     animEditor.Update();
     textureAssetListWindow.Update();
     fontAssetListWindow.Update();
@@ -33,9 +35,8 @@ void EditorContext::Update() {
     inputTextWindow.Update();
 
     updateMenubar();
+    gameWindow.Update();
 }
-
-EditorContext::~EditorContext() {}
 
 const nickel::TextCache& EditorContext::FindOrGenFontPrewview(
     nickel::FontHandle handle) {
@@ -88,4 +89,23 @@ void EditorContext::updateMenubar() {
 
         ImGui::EndMainMenuBar();
     }
+}
+
+void EditorContext::initGameWindowTexture() {
+    auto displayIndex =
+        SDL_GetWindowDisplayIndex((SDL_Window*)nickel::ECS::Instance()
+                                      .World()
+                                      .res<nickel::Window>()
+                                      ->Raw());
+    SDL_Rect rect;
+    SDL_GetDisplayBounds(displayIndex, &rect);
+    texture =
+        nickel::ECS::Instance()
+            .World()
+            .res_mut<nickel::TextureManager>()
+            ->CreateSolitary(
+                nullptr, rect.w, rect.h,
+                nickel::rhi::TextureFormat::RGBA8_UNORM,
+                nickel::rhi::Flags(nickel::rhi::TextureUsage::TextureBinding) |
+                    nickel::rhi::TextureUsage::RenderAttachment);
 }

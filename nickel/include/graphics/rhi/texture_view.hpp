@@ -8,6 +8,7 @@ namespace nickel::rhi {
 class DeviceImpl;
 class TextureViewImpl;
 class TextureImpl;
+class Texture;
 
 class TextureView {
 public:
@@ -29,7 +30,7 @@ public:
 
     TextureView(TextureView&& o) noexcept { swap(o, *this); }
 
-    TextureView& operator==(TextureView&& o) noexcept {
+    TextureView& operator=(TextureView&& o) noexcept {
         if (&o != this) swap(o, *this);
         return *this;
     }

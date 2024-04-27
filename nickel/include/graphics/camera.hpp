@@ -18,7 +18,8 @@ public:
     };
 
     static Camera CreateOrtho(float left, float right, float top, float bottom,
-                              float near, float far) {
+                              float near, float far,
+                              const nickel::cgmath::Rect& viewport) {
         auto api = ECS::Instance()
                        .World()
                        .res<rhi::Adapter>()
@@ -27,13 +28,13 @@ public:
         return {Type::Ortho,
                 cgmath::CreateOrtho(left, right, top, bottom, near, far,
                                     api == rhi::APIPreference::GL),
-                cgmath::Mat44::Identity()};
+                cgmath::Mat44::Identity(), viewport};
     }
 
     static Camera CreateOrthoByWindowRegion(const cgmath::Vec2& size) {
         auto halfSize = size * 0.5;
         return CreateOrtho(-halfSize.w, halfSize.w, halfSize.h, -halfSize.h,
-                           1000.0, -1000.0);
+                           1000.0, -1000.0, {0, 0, size.w, size.h});
     }
 
     auto& Project() const { return proj_; }
@@ -76,15 +77,8 @@ public:
         recalcView();
     }
 
-    void ScaleTo(const cgmath::Vec3& scale) {
-        scale_ = scale;
-        recalcView();
-    }
-
     void ScaleTo(const cgmath::Vec2& scale) {
-        scale_.x = scale.x;
-        scale_.y = scale.y;
-        scale_.z = 1.0;
+        scale_ = scale;
         recalcView();
     }
 
@@ -92,21 +86,34 @@ public:
 
     auto& Scale() const { return scale_; }
 
+    void SetRenderTarget(rhi::TextureView view) { target_ = view; }
+
+    void SetViewport(const nickel::cgmath::Rect& rect) { viewport_ = rect; }
+
+    auto& GetViewport() const { return viewport_; }
+
+    void SetTarget2Default() { target_ = {}; }
+
+    rhi::TextureView GetTarget() const { return target_; }
+
 private:
-    Camera(Type type, const cgmath::Mat44& proj, const cgmath::Mat44 view)
-        : proj_{proj}, view_{view}, type_{type} {}
+    Camera(Type type, const cgmath::Mat44& proj, const cgmath::Mat44 view,
+           const cgmath::Rect& viewport)
+        : proj_{proj}, view_{view}, viewport_{viewport}, type_{type} {}
 
     cgmath::Mat44 proj_;
     cgmath::Mat44 view_;
     cgmath::Vec3 position_;
-    cgmath::Vec3 scale_{1, 1};
+    cgmath::Vec2 scale_{1, 1};
+    cgmath::Rect viewport_;
+    rhi::TextureView target_;
 
     Type type_;
     cgmath::Color clearColor_{0.1, 0.1, 0.1, 1};
 
     void recalcView() {
-        view_ =
-            cgmath::CreateScale(scale_) * cgmath::CreateTranslation(position_);
+        view_ = cgmath::CreateScale({scale_.x, scale_.y, 1.0}) *
+                cgmath::CreateTranslation(position_);
     }
 };
 

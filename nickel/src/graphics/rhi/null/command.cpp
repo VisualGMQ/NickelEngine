@@ -47,4 +47,6 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     return RenderPassEncoder{new RenderPassEncoderImpl{}};
 }
 
+void RenderPassEncoderImpl::SetViewport(float x, float y, float width, float height) {}
+
 }  // namespace nickel::rhi::null

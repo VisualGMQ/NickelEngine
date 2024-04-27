@@ -122,7 +122,7 @@ void Material2DPropertyWidget::Update() {
             nickel::ECS::Instance().World().res_mut<nickel::TextureManager>();
         auto handle = elem.GetTexture();
 
-        char str[] = "no texture";
+        char str[MAX_PATH_LENGTH] = "no texture";
         if (textureMgr->Has(handle)) {
             static ImageViewCanva canva;
             canva.ChangeTexture(handle);

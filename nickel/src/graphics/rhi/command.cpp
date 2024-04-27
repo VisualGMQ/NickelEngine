@@ -81,6 +81,10 @@ void RenderPassEncoder::SetPushConstant(ShaderStage stage, const void* value, ui
     impl_->SetPushConstant(stage, value, offset, size);
 }
 
+void RenderPassEncoder::SetViewport(float x, float y, float width, float height) {
+    impl_->SetViewport(x, y, width, height);
+}
+
 void RenderPassEncoder::End() {
     impl_->End();
     if (impl_) {

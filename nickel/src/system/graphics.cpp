@@ -18,6 +18,8 @@ void UpdateCamera2GPU(gecs::resource<Camera> camera,
     auto map = (cgmath::Mat44*)ctx->mvpBuffer.GetMappedRange();
     memcpy(map, camera->View().data, sizeof(cgmath::Mat44));
     memcpy(map + 1, camera->Project().data, sizeof(cgmath::Mat44));
+
+    PROFILE_END();
 }
 
 void BeginRender(gecs::resource<gecs::mut<rhi::Device>> device,
@@ -29,6 +31,8 @@ void BeginRender(gecs::resource<gecs::mut<rhi::Device>> device,
     ctx->presentTexture = device->CreateTexture(textureDesc);
     ctx->presentTextureView = ctx->presentTexture.CreateView();
     ctx->encoder = device->CreateCommandEncoder();
+
+    PROFILE_END();
 }
 
 void drawMesh2D(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
@@ -124,7 +128,14 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
     rhi::RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = rhi::AttachmentLoadOp::Load;
     colorAtt.storeOp = rhi::AttachmentStoreOp::Store;
-    colorAtt.view = ctx->presentTextureView;
+
+    auto target = camera->GetTarget();
+
+    if (target) {
+        colorAtt.view = target;
+    } else {
+        colorAtt.view = ctx->presentTextureView;
+    }
     desc.colorAttachments.emplace_back(colorAtt);
 
     auto renderPass = ctx->encoder.BeginRenderPass(desc);
@@ -157,6 +168,8 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
     }
 
     renderPass.End();
+
+    PROFILE_END();
 }
 
 void renderNodeRecursive(const GLTFModel& gltfModel, Node& node,
@@ -222,7 +235,14 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
     auto& clearColor = camera->GetClearColor();
     colorAtt.clearValue = {clearColor.r, clearColor.g, clearColor.b,
                            clearColor.a};
-    colorAtt.view = ctx->presentTextureView;
+
+    auto target = camera->GetTarget();
+
+    if (target) {
+        colorAtt.view = target;
+    } else {
+        colorAtt.view = ctx->presentTextureView;
+    }
     desc.colorAttachments.emplace_back(colorAtt);
 
     desc.depthStencilAttachment =
@@ -234,6 +254,9 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
     desc.depthStencilAttachment->depthClearValue = 0.0;
 
     auto renderPass = ctx->encoder.BeginRenderPass(desc);
+    auto viewport = camera->GetViewport();
+    renderPass.SetViewport(viewport.position.x, viewport.position.y,
+                           viewport.size.w, viewport.size.h);
     renderPass.SetPipeline(ctx->ctx3D->pipeline);
 
     for (auto&& [_, model, transform] : querier) {
@@ -243,6 +266,8 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
     }
 
     renderPass.End();
+
+    PROFILE_END();
 }
 
 void EndRender(gecs::resource<gecs::mut<rhi::Device>> device,
@@ -257,10 +282,16 @@ void EndRender(gecs::resource<gecs::mut<rhi::Device>> device,
 
         queue.Submit({cmd});
     }
+
+    PROFILE_END();
 }
 
 void BeginFrame(gecs::resource<gecs::mut<rhi::Device>> device) {
+    PROFILE_BEGIN();
+
     device->BeginFrame();
+
+    PROFILE_END();
 }
 
 void EndFrame(gecs::resource<gecs::mut<rhi::Device>> device,
@@ -272,6 +303,8 @@ void EndFrame(gecs::resource<gecs::mut<rhi::Device>> device,
     ctx->encoder.Destroy();
     ctx->presentTextureView.Destroy();
     ctx->presentTexture.Destroy();
+
+    PROFILE_END();
 }
 
 void updateGLTFNodeTransformRecur(const cgmath::Mat44& parentMat, Node& node) {

@@ -87,6 +87,13 @@ void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value
         ShaderStage2Vk(stage), offset, size, value);
 }
 
+void RenderPassEncoderImpl::SetViewport(float x, float y, float width, float height) {
+    vk::Viewport viewport{x, y, width, height, 0, 1};
+    cmd_.setViewport(0, viewport);
+    vk::Rect2D scissor{vk::Offset2D(x, y), vk::Extent2D(width, height)};
+    cmd_.setScissor(0, scissor);
+}
+
 void RenderPassEncoderImpl::End() {
     cmd_.endRenderPass();
 }

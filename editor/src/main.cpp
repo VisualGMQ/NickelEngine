@@ -84,15 +84,29 @@ void dropFileEventHandle(const nickel::DropFileEvent& event) {
 }
 
 void EditorEnter(
+    gecs::resource<nickel::rhi::Adapter> adapter,
     gecs::resource<gecs::mut<nickel::Window>> window,
     gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
     gecs::resource<gecs::mut<nickel::FontManager>> fontMgr,
+    gecs::resource<gecs::mut<nickel::Camera>> camera,
     gecs::event_dispatcher<ReleaseAssetEvent> releaseAsetEvent,
     gecs::event_dispatcher<FileChangeEvent> fileChangeEvent,
     gecs::event_dispatcher<nickel::DropFileEvent> dropFileEvent,
     gecs::event_dispatcher<nickel::WindowResizeEvent> windowResizeEvent,
     gecs::commands cmds) {
     RegistEventHandler(releaseAsetEvent);
+
+    auto& target = EditorContext::Instance().texture;
+    auto halfTextureSize = target->Size() * 0.5f;
+    camera->SetProject(nickel::cgmath::CreateOrtho(
+        -halfTextureSize.w, halfTextureSize.w, halfTextureSize.h,
+        -halfTextureSize.h, 1000, -1000,
+        adapter->RequestAdapterInfo().api == nickel::rhi::APIPreference::GL));
+    camera->SetRenderTarget(target->View());
+    camera->SetViewport({
+        {0, 0},
+        target->Size()
+    });
 
     dropFileEvent.sink().add<dropFileEventHandle>();
 
@@ -139,7 +153,95 @@ void EditorEnter(
     window->SetResizable(true);
 }
 
+void DrawGuizmos() {
+    auto reg = nickel::ECS::Instance().World().cur_registry();
+    auto camera = reg->res_mut<nickel::Camera>();
+    auto mouse = reg->res<nickel::Mouse>();
+
+    // if (IsFocused()) {
+    //     if (mouse->MiddleBtn().IsPressing()) {
+    //         auto offset = mouse->Offset();
+    //         auto scale = camera->Scale();
+    //         camera->Move(nickel::cgmath::Vec2{-offset.x, offset.y} / scale);
+    //     }
+
+    //     if (auto wheel = mouse->WheelOffset(); wheel.y != 0) {
+    //         auto scale = camera->Scale();
+    //         auto newScale = scale + wheel.y * nickel::cgmath::Vec2{0.01, 0.01};
+    //         if (newScale.x <= 0 || newScale.y <= 0) {
+    //             newScale.Set(0.01, 0.01);
+    //         }
+    //         camera->ScaleTo(newScale);
+    //     }
+    // }
+
+    auto selectedEnt = EditorContext::Instance().entityListWindow.GetSelected();
+    if (!reg->alive(selectedEnt) || !reg->has<nickel::Transform>(selectedEnt)) {
+        return;
+    }
+    
+    static auto guizmoOperation_ = ImGuizmo::OPERATION::TRANSLATE;
+    static auto guizmoMode_ = ImGuizmo::MODE::LOCAL;
+
+    auto& transform = reg->get_mut<nickel::Transform>(selectedEnt);
+
+    auto keyboard = reg->res<nickel::Keyboard>();
+    if (keyboard->Key(nickel::Key::Q).IsPressed()) {
+        guizmoOperation_ = ImGuizmo::TRANSLATE;
+    }
+    if (keyboard->Key(nickel::Key::W).IsPressed()) {
+        guizmoOperation_ = ImGuizmo::SCALE;
+    }
+    if (keyboard->Key(nickel::Key::E).IsPressed()) {
+        guizmoOperation_ = ImGuizmo::ROTATE;
+    }
+    if (ImGui::RadioButton("Translate", guizmoOperation_ == ImGuizmo::TRANSLATE))
+        guizmoOperation_ = ImGuizmo::TRANSLATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Rotate", guizmoOperation_ == ImGuizmo::ROTATE))
+        guizmoOperation_ = ImGuizmo::ROTATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Scale", guizmoOperation_ == ImGuizmo::SCALE))
+        guizmoOperation_  = ImGuizmo::SCALE;
+
+
+    if (ImGuizmo::IsOver(ImGuizmo::TRANSLATE)) {
+        // transform.translation += mouse->Offset();
+        LOGT("trace", "111");
+    }
+
+    nickel::cgmath::Mat44 matrix;
+    auto windowSize = reg->res<nickel::Window>()->Size();
+    float matrixRot[3] = {0, 0, transform.rotation};
+    float matrixTrans[3] = {transform.translation.x, transform.translation.y, 0};
+    float matrixScale[3] = {transform.scale.x, transform.scale.y, 0};
+    ImGuizmo::RecomposeMatrixFromComponents(matrixTrans, matrixRot, matrixScale,
+                                            matrix.data);
+
+    if (guizmoOperation_ != ImGuizmo::SCALE)
+    {
+        if (ImGui::RadioButton("Local", guizmoMode_ == ImGuizmo::LOCAL))
+            guizmoMode_ = ImGuizmo::LOCAL;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("World", guizmoMode_ == ImGuizmo::WORLD))
+            guizmoMode_ = ImGuizmo::WORLD;
+    }
+    ImGuizmo::Enable(true);
+    ImGuiIO& io = ImGui::GetIO();
+    auto pos = ImGui::GetWindowPos() + ImGui::GetWindowContentRegionMin();
+    auto size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin();
+    ImGuizmo::SetRect(0, 0, 1024, 720);
+    auto view = nickel::cgmath::CreateScale({1, -1, 1}) * camera->View();
+    // ImGuizmo::DrawGrid(view.data, camera->Project().data, matrix.data, 100.f);
+    ImGuizmo::Manipulate(view.data, camera->Project().data,
+                         guizmoOperation_, guizmoMode_, matrix.data, nullptr,
+                         nullptr);
+
+}
+
 void EditorImGuiUpdate() {
+    PROFILE_BEGIN();
+
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
     auto& ctx = EditorContext::Instance();
@@ -149,6 +251,8 @@ void EditorImGuiUpdate() {
     if (ctx.openDemoWindow) {
         ImGui::ShowDemoWindow(&ctx.openDemoWindow);
     }
+
+    // DrawGuizmos();
 }
 
 void EditorExit(gecs::registry reg) {
@@ -178,6 +282,8 @@ void RegistSystems(gecs::world& world) {
                                        nickel::EngineShutdown>()
         .regist_update_system_after<plugin::ImGuiStart,
                                     nickel::RenderSprite2D>()
+        .regist_update_system_before<plugin::ImGuiGameWindowLayoutTransition,
+                                     plugin::ImGuiStart>()
         .regist_update_system_after<plugin::ImGuiEnd, plugin::ImGuiStart>()
         .regist_shutdown_system_before<EditorExit, nickel::EngineShutdown>()
         .add_state(EditorScene::ProjectManager)

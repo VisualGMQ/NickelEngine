@@ -74,9 +74,9 @@ public:
 
     const MouseButton& LeftBtn() const { return buttons_[0]; }
 
-    const MouseButton& RightBtn() const { return buttons_[1]; }
+    const MouseButton& MiddleBtn() const { return buttons_[1]; }
 
-    const MouseButton& MiddleBtn() const { return buttons_[2]; }
+    const MouseButton& RightBtn() const { return buttons_[2]; }
 
     cgmath::Vec2 WheelOffset() const { return wheel_; }
 

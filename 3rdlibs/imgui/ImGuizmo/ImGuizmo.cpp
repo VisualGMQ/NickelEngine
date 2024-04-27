@@ -822,6 +822,9 @@ namespace IMGUIZMO_NAMESPACE
       const float zNear = gContext.mReversed ? (1.f - FLT_EPSILON) : 0.f;
       const float zFar = gContext.mReversed ? 0.f : (1.f - FLT_EPSILON);
 
+      // printf("io.MousePos.x = %f, position.x = %f\n", io.MousePos.x, position.x);
+      // printf("mox = %f, moy = %f\n", mox, moy);
+
       rayOrigin.Transform(makeVect(mox, moy, zNear, 1.f), mViewProjInverse);
       rayOrigin *= 1.f / rayOrigin.w;
       vec_t rayEnd;
@@ -2027,9 +2030,12 @@ namespace IMGUIZMO_NAMESPACE
 
    static int GetMoveType(OPERATION op, vec_t* gizmoHitProportion)
    {
-      if(!Intersects(op, TRANSLATE) || gContext.mbUsing || !gContext.mbMouseOver)
-      {
-        return MT_NONE;
+       printf("isTranslate = %d, mbUsing = %d, gContext.mbMouseOver = %d\n",
+              Intersects(op, TRANSLATE), gContext.mbUsing,
+              gContext.mbMouseOver);
+       if (!Intersects(op, TRANSLATE) || gContext.mbUsing ||
+           !gContext.mbMouseOver) {
+           return MT_NONE;
       }
       ImGuiIO& io = ImGui::GetIO();
       int type = MT_NONE;

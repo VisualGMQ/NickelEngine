@@ -8,12 +8,12 @@ namespace nickel {
 Texture Texture::Null = Texture{};
 
 Texture::Texture(rhi::Device device, const std::filesystem::path& filename,
-                 rhi::TextureFormat gpuFmt)
+                 rhi::TextureFormat gpuFmt, rhi::Flags<rhi::TextureUsage> usage)
     : Asset(filename) {
     stbi_uc* pixels = stbi_load((filename).string().c_str(), &w_, &h_, nullptr,
                                 STBI_rgb_alpha);
     if (pixels) {
-        texture_ = loadTexture(device, pixels, w_, h_, gpuFmt);
+        texture_ = createTexture(device, pixels, w_, h_, gpuFmt, usage);
         if (!texture_) {
             LOGE(log_tag::RHI, "create texture from", filename, "failed");
         } else {
@@ -38,18 +38,6 @@ Texture::Texture(rhi::Device device, const toml::table& tbl) {
             filename = path->as_string()->get();
         }
 
-        rhi::Sampler::Descriptor sampler;
-        auto samplerTypeinfo = mirrow::drefl::typeinfo<decltype(sampler)>();
-        auto samplerName = samplerTypeinfo->name();
-        if (auto node = tbl.get(samplerName); node && node->is_table()) {
-            auto ref = mirrow::drefl::any_make_ref(sampler);
-            mirrow::serd::drefl::deserialize(ref, *node->as_table());
-        } else {
-            LOGW(log_tag::Asset, "deserialize texture failed! `", samplerName,
-                 "` field not table");
-            break;
-        }
-
         auto newTexture = Texture{device, filename};
         newTexture.AssociateFile(filename);
         *this = std::move(newTexture);
@@ -57,11 +45,9 @@ Texture::Texture(rhi::Device device, const toml::table& tbl) {
 }
 
 Texture::Texture(rhi::Device device, void* pixels, int w, int h,
-                 rhi::TextureFormat gpuFmt)
+                 rhi::TextureFormat gpuFmt, rhi::Flags<rhi::TextureUsage> usage)
     : w_(w), h_(h) {
-    Assert(pixels != nullptr, "pixels must valid");
-
-    texture_ = loadTexture(device, pixels, w_, h_, gpuFmt);
+    texture_ = createTexture(device, pixels, w_, h_, gpuFmt, usage);
     if (!texture_) {
         LOGE(log_tag::RHI, "create texture from pixels failed");
     } else {
@@ -69,45 +55,47 @@ Texture::Texture(rhi::Device device, void* pixels, int w, int h,
     }
 }
 
-rhi::Texture Texture::loadTexture(rhi::Device dev, void* data, uint32_t w,
-                                  uint32_t h, rhi::TextureFormat gpuFmt) {
+rhi::Texture Texture::createTexture(rhi::Device dev, void* data, uint32_t w,
+                                    uint32_t h, rhi::TextureFormat gpuFmt,
+                                    rhi::Flags<rhi::TextureUsage> usage) {
     rhi::Texture::Descriptor desc;
     desc.format = gpuFmt;
     desc.size.width = w;
     desc.size.height = h;
     desc.size.depthOrArrayLayers = 1;
-    desc.usage = static_cast<uint32_t>(rhi::TextureUsage::TextureBinding) |
-                 static_cast<uint32_t>(rhi::TextureUsage::CopyDst);
+    desc.usage = usage;
     auto texture = dev.CreateTexture(desc);
 
-    rhi::Buffer::Descriptor bufferDesc;
-    bufferDesc.mappedAtCreation = true;
-    bufferDesc.usage = rhi::BufferUsage::CopySrc;
-    bufferDesc.size = 4 * w * h;
-    rhi::Buffer copyBuffer = dev.CreateBuffer(bufferDesc);
+    if (data) {
+        rhi::Buffer::Descriptor bufferDesc;
+        bufferDesc.mappedAtCreation = true;
+        bufferDesc.usage = rhi::BufferUsage::CopySrc;
+        bufferDesc.size = 4 * w * h;
+        rhi::Buffer copyBuffer = dev.CreateBuffer(bufferDesc);
 
-    void* bufData = copyBuffer.GetMappedRange();
-    memcpy(bufData, data, bufferDesc.size);
-    copyBuffer.Unmap();
+        void* bufData = copyBuffer.GetMappedRange();
+        memcpy(bufData, data, bufferDesc.size);
+        copyBuffer.Unmap();
 
-    auto encoder = dev.CreateCommandEncoder();
-    rhi::CommandEncoder::BufTexCopySrc src;
-    src.buffer = copyBuffer;
-    src.offset = 0;
-    src.rowLength = w;
-    src.rowsPerImage = h;
-    rhi::CommandEncoder::BufTexCopyDst dst;
-    dst.texture = texture;
-    dst.aspect = rhi::TextureAspect::All;
-    dst.miplevel = 0;
-    encoder.CopyBufferToTexture(src, dst,
-                                rhi::Extent3D{(uint32_t)w, (uint32_t)h, 1});
-    auto buf = encoder.Finish();
-    dev.GetQueue().Submit({buf});
-    dev.WaitIdle();
-    encoder.Destroy();
+        auto encoder = dev.CreateCommandEncoder();
+        rhi::CommandEncoder::BufTexCopySrc src;
+        src.buffer = copyBuffer;
+        src.offset = 0;
+        src.rowLength = w;
+        src.rowsPerImage = h;
+        rhi::CommandEncoder::BufTexCopyDst dst;
+        dst.texture = texture;
+        dst.aspect = rhi::TextureAspect::All;
+        dst.miplevel = 0;
+        encoder.CopyBufferToTexture(src, dst,
+                                    rhi::Extent3D{(uint32_t)w, (uint32_t)h, 1});
+        auto buf = encoder.Finish();
+        dev.GetQueue().Submit({buf});
+        dev.WaitIdle();
+        encoder.Destroy();
 
-    copyBuffer.Destroy();
+        copyBuffer.Destroy();
+    }
 
     return texture;
 }
@@ -130,13 +118,15 @@ toml::table Texture::Save2Toml() const {
 }
 
 TextureHandle TextureManager::Load(const std::filesystem::path& filename,
-                                   rhi::TextureFormat gpuFmt) {
-    auto [handle, _] = LoadAndGet(filename, gpuFmt);
+                                   rhi::TextureFormat gpuFmt,
+                                   rhi::Flags<rhi::TextureUsage> usage) {
+    auto [handle, _] = LoadAndGet(filename, gpuFmt, usage);
     return handle;
 }
 
 std::tuple<TextureHandle, Texture&> TextureManager::LoadAndGet(
-    const std::filesystem::path& filename, rhi::TextureFormat gpuFmt) {
+    const std::filesystem::path& filename, rhi::TextureFormat gpuFmt,
+    rhi::Flags<rhi::TextureUsage> usage) {
     if (Has(filename)) {
         auto handle = GetHandle(filename);
         auto& texture = Get(handle);
@@ -144,7 +134,8 @@ std::tuple<TextureHandle, Texture&> TextureManager::LoadAndGet(
     }
 
     auto texture = std::make_unique<Texture>(
-        ECS::Instance().World().res<rhi::Device>().get(), filename, gpuFmt);
+        ECS::Instance().World().res<rhi::Device>().get(), filename, gpuFmt,
+        usage);
     if (texture && *texture) {
         TextureHandle handle = TextureHandle::Create();
         return {handle, storeNewItem(handle, std::move(texture))};
@@ -155,13 +146,15 @@ std::tuple<TextureHandle, Texture&> TextureManager::LoadAndGet(
 
 TextureHandle TextureManager::Create(const std::filesystem::path& name,
                                      void* data, uint32_t w, uint32_t h,
-                                     rhi::TextureFormat gpuFmt) {
+                                     rhi::TextureFormat gpuFmt,
+                                     rhi::Flags<rhi::TextureUsage> usage) {
     if (Has(name)) {
         return GetHandle(name);
     }
 
     auto texture = std::make_unique<Texture>(
-        ECS::Instance().World().res<rhi::Device>().get(), data, w, h, gpuFmt);
+        ECS::Instance().World().res<rhi::Device>().get(), data, w, h, gpuFmt,
+        usage);
     texture->AssociateFile(name);
     if (texture && *texture) {
         TextureHandle handle = TextureHandle::Create();
@@ -174,13 +167,14 @@ TextureHandle TextureManager::Create(const std::filesystem::path& name,
 
 bool TextureManager::Replace(TextureHandle handle,
                              const std::filesystem::path& filename,
-                             rhi::TextureFormat gpuFmt) {
+                             rhi::TextureFormat gpuFmt,
+                             rhi::Flags<rhi::TextureUsage> usage) {
     if (!Has(handle)) {
         return false;
     }
 
     Texture texture{ECS::Instance().World().res<rhi::Device>().get(), filename,
-                    gpuFmt};
+                    gpuFmt, usage};
     if (texture) {
         Get(handle) = std::move(texture);
         return true;
@@ -190,9 +184,11 @@ bool TextureManager::Replace(TextureHandle handle,
 }
 
 std::unique_ptr<Texture> TextureManager::CreateSolitary(
-    void* data, int w, int h, rhi::TextureFormat gpuFmt) {
-    auto texture = std::unique_ptr<Texture>(new Texture{
-        ECS::Instance().World().res<rhi::Device>().get(), data, w, h, gpuFmt});
+    void* data, int w, int h, rhi::TextureFormat gpuFmt,
+    rhi::Flags<rhi::TextureUsage> usage) {
+    auto texture = std::unique_ptr<Texture>(
+        new Texture{ECS::Instance().World().res<rhi::Device>().get(), data, w,
+                    h, gpuFmt, usage});
     if (texture && *texture) {
         return std::move(texture);
     } else {

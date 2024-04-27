@@ -42,7 +42,7 @@ enum TextureFormat TextureView::Format() const {
     return impl_->Format();
 }
 
-class Texture TextureView::Texture() const {
+::nickel::rhi::Texture TextureView::Texture() const {
     return impl_->Texture();
 }
 

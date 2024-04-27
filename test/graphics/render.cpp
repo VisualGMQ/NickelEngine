@@ -12,7 +12,7 @@ void StartupSystem(gecs::commands cmds,
         nickel::SpriteBundle bundle;
         bundle.transform.translation.Set(0, 0);
         bundle.transform.SetScale({0.5, 0.5});
-        bundle.material.material = mtl2dMgr->Create(texture);
+        bundle.material.material = mtl2dMgr->Create("test.mtl2d", texture);
         cmds.emplace_bundle<nickel::SpriteBundle>(ent, std::move(bundle));
     }
 

@@ -22,6 +22,7 @@ public:
     virtual void SetBindGroup(BindGroup, const std::vector<uint32_t>& dynamicOffset) = 0;
     virtual void SetPipeline(RenderPipeline) = 0;
     virtual void SetPushConstant(ShaderStage stage, const void* value, uint32_t offset, uint32_t size) = 0;
+    virtual void SetViewport(float x, float y, float width, float height) = 0;
 
     virtual void End() = 0;
 

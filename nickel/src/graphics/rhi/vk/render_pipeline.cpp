@@ -209,6 +209,14 @@ void RenderPipelineImpl::createRenderPipeline(
         info.setPDepthStencilState(&depthStencilState);
     }
 
+    // dynamic states
+    vk::PipelineDynamicStateCreateInfo dynState;
+    std::array states = {
+        vk::DynamicState::eViewport,
+        vk::DynamicState::eScissor,
+    };
+    dynState.setDynamicStates(states);
+
     // create render pipeline
     info.setPVertexInputState(&vertexInput)
         .setPInputAssemblyState(&inputAsm)
@@ -219,7 +227,8 @@ void RenderPipelineImpl::createRenderPipeline(
         .setPColorBlendState(&colorBlend)
         .setLayout(
             static_cast<const PipelineLayoutImpl*>(desc.layout.Impl())->layout)
-        .setRenderPass(renderPass);
+        .setRenderPass(renderPass)
+        .setPDynamicState(&dynState);
 
     VK_CALL(pipeline, dev.device.createGraphicsPipeline(nullptr, info));
 }

@@ -10,7 +10,6 @@
 #include "misc/name.hpp"
 #include "misc/serd.hpp"
 
-
 namespace nickel {
 
 void ComponentEmplaceRegistrar::Emplace(gecs::entity entity,
@@ -36,13 +35,9 @@ toml::table saveAsPrefabNoHierarchy(gecs::entity entity, gecs::registry reg) {
             continue;
         }
 
-        toml::table componentTbl;
-
         if (reg.has(entity, typeinfo.type_info)) {
             auto component = reg.get_mut(entity, typeinfo.type_info);
-            mirrow::serd::drefl::serialize(tbl, component,
-                                           typeinfo.type_info->name());
-            tbl.emplace(typeinfo.type_info->name(), std::move(componentTbl));
+            mirrow::serd::drefl::serialize(tbl, component, typeinfo.type_info->name());
         }
     }
 
@@ -96,8 +91,8 @@ gecs::entity createFromPrefabNoHierarchy(const toml::table& tbl,
 
         auto typeinfo = mirrow::drefl::typeinfo(key);
 
-        auto component = SerializeMethodRegistrar::Instance().Deserialize(
-            typeinfo, *tbl[key].as_table());
+        auto component = typeinfo->default_construct();
+        mirrow::serd::drefl::deserialize(component, value);
 
         if (component.has_value()) {
             ComponentEmplaceRegistrar::Instance().Emplace(ent, component);

@@ -344,6 +344,11 @@ void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value
     buffer_->cmds.push_back({CmdType::PushConstant, cmd});
 }
 
+void RenderPassEncoderImpl::SetViewport(float x, float y, float width, float height) {
+    GL_CALL(glViewport(x, y, width, height));
+    GL_CALL(glScissor(x, y, width, height));
+}
+
 void RenderPassEncoderImpl::End() {}
 
 }  // namespace nickel::rhi::gl4

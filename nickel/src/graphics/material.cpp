@@ -193,10 +193,11 @@ std::unique_ptr<Material2D> LoadAssetFromMetaTable(const toml::table& tbl) {
     auto mgr = ECS::Instance().World().res<TextureManager>();
 
     TextureHandle texture;
+    std::filesystem::path filename;
     if (auto node = tbl.get("texture"); node && node->is_string()) {
-        texture = mgr->Has(node->as_string()->get())
-                      ? mgr->GetHandle(node->as_string()->get())
-                      : TextureHandle::Null();
+        filename = node->as_string()->get();
+        texture = mgr->Has(filename) ? mgr->GetHandle(filename)
+                                     : TextureHandle::Null();
     }
 
     rhi::Sampler::Descriptor samplerDesc;
@@ -218,8 +219,11 @@ std::unique_ptr<Material2D> LoadAssetFromMetaTable(const toml::table& tbl) {
         }
     }
 
-    return std::make_unique<Material2D>(texture, samplerDesc.u, samplerDesc.v,
-                                        samplerDesc.min, samplerDesc.mag);
+    auto mtl =
+        std::make_unique<Material2D>(texture, samplerDesc.u, samplerDesc.v,
+                                     samplerDesc.min, samplerDesc.mag);
+    mtl->AssociateFile(filename);
+    return mtl;
 }
 
 }  // namespace nickel

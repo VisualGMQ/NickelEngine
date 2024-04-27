@@ -61,16 +61,19 @@ private:
 };
 #endif
 
-
 void ImGuiInit(gecs::commands, gecs::resource<gecs::mut<Window>>,
                gecs::resource<gecs::mut<EventPoller>>,
                gecs::resource<rhi::Adapter>, gecs::resource<rhi::Device>,
                gecs::event_dispatcher<WindowResizeEvent>);
 
+void ImGuiGameWindowLayoutTransition(
+    gecs::resource<gecs::mut<rhi::Device>> device,
+    gecs::resource<gecs::mut<Camera>>,
+    gecs::resource<gecs::mut<RenderContext>>);
+
 void ImGuiStart(gecs::resource<rhi::Adapter>);
 
-void ImGuiEnd(gecs::resource<gecs::mut<Window>>,
-              gecs::resource<rhi::Adapter>,
+void ImGuiEnd(gecs::resource<gecs::mut<Window>>, gecs::resource<rhi::Adapter>,
               gecs::resource<rhi::Device>,
               gecs::resource<gecs::mut<ImGuiVkContext>>,
               gecs::resource<gecs::mut<RenderContext>>);
@@ -83,7 +86,8 @@ void ImGuiShutdown(gecs::commands, gecs::resource<rhi::Adapter>,
 namespace ImGui {
 
 void Image(const ::nickel::Texture& texture, const ImVec2& image_size,
-           const ImVec2& uv0 = {0, 0}, const ImVec2& uv1 = {1, 1}, const ImVec4& tint_col = {1, 1, 1, 1},
+           const ImVec2& uv0 = {0, 0}, const ImVec2& uv1 = {1, 1},
+           const ImVec4& tint_col = {1, 1, 1, 1},
            const ImVec4& border_col = {0, 0, 0, 0});
 
 bool ImageButton(const char* str_id, const ::nickel::Texture& texture,

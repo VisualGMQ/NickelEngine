@@ -12,9 +12,13 @@
 #include "graphics/rhi/vk/adapter.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/queue.hpp"
+#include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
+#include "graphics/rhi/vk/queue.hpp"
 #include "graphics/rhi/vk/util.hpp"
 #include "imgui_impl_vulkan.h"
+#include "graphics/context.hpp"
+
 
 #endif
 #include "GraphEditor.h"
@@ -147,7 +151,7 @@ void ImGuiVkContext::initRenderPass(rhi::vulkan::DeviceImpl& device) {
         .setStoreOp(vk::AttachmentStoreOp::eStore)
         .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
         .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-        .setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+        .setInitialLayout(vk::ImageLayout::eUndefined)
         .setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
     vk::AttachmentReference color_attachment;
@@ -160,7 +164,7 @@ void ImGuiVkContext::initRenderPass(rhi::vulkan::DeviceImpl& device) {
     vk::SubpassDependency dependency;
     dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL)
         .setDstSubpass(0)
-        .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+        .setSrcStageMask(vk::PipelineStageFlagBits::eFragmentShader)
         .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
         .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 
@@ -208,7 +212,6 @@ void renderVkFrame(RenderContext& ctx, ImGuiVkContext& vkCtx,
     });
     cmd.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-    // Record dear imgui primitives into command buffer
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
     vk::FramebufferCreateInfo info;
@@ -244,6 +247,8 @@ void ImGuiInit(gecs::commands cmds, gecs::resource<gecs::mut<Window>> window,
                gecs::resource<rhi::Adapter> adapter,
                gecs::resource<rhi::Device> device,
                gecs::event_dispatcher<WindowResizeEvent> eventDispatcher) {
+    PROFILE_BEGIN();
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -291,9 +296,58 @@ void ImGuiInit(gecs::commands cmds, gecs::resource<gecs::mut<Window>> window,
 
     poller->InjectHandler<imguiProcessEvent>();
     eventDispatcher.immediatly_sink().add<ImGuiOnWindowResize>();
+
+    PROFILE_END();
+}
+
+void ImGuiGameWindowLayoutTransition(
+    gecs::resource<gecs::mut<rhi::Device>> device,
+    gecs::resource<gecs::mut<Camera>> camera,
+    gecs::resource<gecs::mut<RenderContext>> renderCtx) {
+    PROFILE_BEGIN();
+
+    auto cmd = getCmdBuf(renderCtx.get());
+
+    auto target = camera->GetTarget();
+
+    if (!target) {
+        return ;
+    }
+
+    auto texture = static_cast<rhi::vulkan::TextureImpl*>(target.Impl()->Texture().Impl());
+
+    auto dev = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());
+
+    dev->WaitIdle();
+
+    auto aspect = nickel::rhi::vulkan::DetermineTextureAspect(
+        nickel::rhi::TextureAspect::All, texture->Format());
+
+    vk::ImageMemoryBarrier barrier;
+    vk::ImageSubresourceRange range;
+    range.setAspectMask(aspect)
+        .setBaseArrayLayer(0)
+        .setLayerCount(1)
+        .setBaseMipLevel(0)
+        .setLevelCount(1);
+
+    barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal)
+        .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+        .setSrcAccessMask(vk::AccessFlagBits::eNone)
+        .setDstAccessMask(vk::AccessFlagBits::eNone)
+        .setImage(texture->GetImage())
+        .setSubresourceRange(range);
+
+    cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe,
+                        vk::PipelineStageFlagBits::eBottomOfPipe,
+                        vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+
+    texture->layouts[0] = vk::ImageLayout::eShaderReadOnlyOptimal;
 }
 
 void ImGuiStart(gecs::resource<rhi::Adapter> adapter) {
+    PROFILE_BEGIN();
+
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
         ImGui_ImplOpenGL3_NewFrame();
     } else {
@@ -303,6 +357,9 @@ void ImGuiStart(gecs::resource<rhi::Adapter> adapter) {
     }
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+    ImGuizmo::BeginFrame();
+
+    PROFILE_END();
 }
 
 void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
@@ -310,9 +367,12 @@ void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
               gecs::resource<rhi::Device> device,
               gecs::resource<gecs::mut<ImGuiVkContext>> vkCtx,
               gecs::resource<gecs::mut<RenderContext>> ctx) {
+    PROFILE_BEGIN();
+
     ImGui::Render();
 
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     } else {
 #ifdef NICKEL_HAS_VULKAN
@@ -322,10 +382,14 @@ void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
                       main_draw_data);
 #endif
     }
+
+    PROFILE_END();
 }
 
 void ImGuiShutdown(gecs::commands cmds, gecs::resource<rhi::Adapter> adapter,
                    gecs::resource<rhi::Device> device) {
+    PROFILE_BEGIN();
+
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
         ImGui_ImplOpenGL3_Shutdown();
     } else {
@@ -341,6 +405,8 @@ void ImGuiShutdown(gecs::commands cmds, gecs::resource<rhi::Adapter> adapter,
         cmds.remove_resource<ImGuiVkContext>();
     }
 #endif
+
+    PROFILE_END();
 }
 
 }  // namespace plugin
@@ -385,16 +451,16 @@ bool ImageButton(const char* str_id, const ::nickel::Texture& texture,
         auto ctx =
             nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
         return ::ImGui::ImageButton(str_id,
-                             ctx->GetTextureBindedDescriptorSet(texture),
-                             image_size, uv0, uv1, bg_col, tint_col);
+                                    ctx->GetTextureBindedDescriptorSet(texture),
+                                    image_size, uv0, uv1, bg_col, tint_col);
     }
 #endif
     if (api == nickel::rhi::APIPreference::GL) {
         auto glTexture =
             static_cast<const ::nickel::rhi::gl4::TextureViewImpl*>(
                 texture.View().Impl());
-        return ::ImGui::ImageButton(str_id, (ImTextureID)glTexture->id, image_size, uv0, uv1, bg_col,
-                       tint_col);
+        return ::ImGui::ImageButton(str_id, (ImTextureID)glTexture->id,
+                                    image_size, uv0, uv1, bg_col, tint_col);
     }
     return false;
 }
@@ -412,7 +478,8 @@ bool ImageButton(const ::nickel::Texture& texture, const ImVec2& size,
         auto ctx =
             nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
         return ::ImGui::ImageButton(ctx->GetTextureBindedDescriptorSet(texture),
-                             size, uv0, uv1, frame_padding, bg_col, tint_col);
+                                    size, uv0, uv1, frame_padding, bg_col,
+                                    tint_col);
     }
 #endif
     if (api == nickel::rhi::APIPreference::GL) {

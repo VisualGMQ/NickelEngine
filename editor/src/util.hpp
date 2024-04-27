@@ -50,3 +50,5 @@ bool ChDir(const std::filesystem::path&);
 
 #define IMGUI_MAKE_UNIID(output, label, payload) \
     snprintf(output, sizeof(output), "%s###%p", label, payload.payload())
+
+inline constexpr size_t MAX_PATH_LENGTH = 270;
