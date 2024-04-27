@@ -205,11 +205,6 @@ void DrawGuizmos() {
         guizmoOperation_  = ImGuizmo::SCALE;
 
 
-    if (ImGuizmo::IsOver(ImGuizmo::TRANSLATE)) {
-        // transform.translation += mouse->Offset();
-        LOGT("trace", "111");
-    }
-
     nickel::cgmath::Mat44 matrix;
     auto windowSize = reg->res<nickel::Window>()->Size();
     float matrixRot[3] = {0, 0, transform.rotation};

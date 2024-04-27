@@ -46,7 +46,7 @@ void ComponentDisplayWidget::Update() {
     char names[1024] = {0};
     int idx = 0;
     for (auto& item : items) {
-        strcpy(names + idx, item->name().c_str());
+        strncpy(names + idx, item->name().c_str(), item->name().size());
         Assert(idx <= sizeof(names), "out of range");
         idx += item->name().size() + 1;
     }

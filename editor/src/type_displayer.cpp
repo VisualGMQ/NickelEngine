@@ -72,7 +72,8 @@ void DisplayString(mirrow::drefl::any& payload) {
     bool isConst = payload.is_constref() || typeinfo->is_string_view();
 
     char buf[1024] = {0};
-    strcpy(buf, typeinfo->get_str_view(payload).data());
+    auto str = typeinfo->get_str_view(payload);
+    strncpy(buf, str.data(), str.size());
 
     char id[128] = {0};
     IMGUI_MAKE_EMPTY_ID(id, payload);
@@ -98,7 +99,7 @@ void DisplayEnum(mirrow::drefl::any& payload) {
     int idx = 0;
     for (int i = 0; i < typeinfo->enums().size(); i++) {
         auto& item = typeinfo->enums()[i];
-        strcpy(items + idx, item.name().c_str());
+        strncpy(items + idx, item.name().c_str(), item.name().size());
         idx += item.name().size() + 1;
         Assert(idx <= 2048, "out of range");
         if (item.value() == typeinfo->get_value(payload)) {
@@ -186,7 +187,7 @@ void DisplayTextureHandle(mirrow::drefl::any& payload) {
     canva.Resize({size, size});
     canva.Update();
 
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              texture.RelativePath().string().c_str());
     ImGui::InputText("path", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
@@ -210,7 +211,7 @@ void DisplaySoundHandle(mirrow::drefl::any& payload) {
     }
 
     auto& sound = mgr->Get(handle);
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              sound.RelativePath().string().c_str());
     ImGui::InputText("path", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
@@ -235,7 +236,7 @@ void DisplayAnimationHandle(mirrow::drefl::any& payload) {
     }
 
     auto& anim = mgr->Get(handle);
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              anim.RelativePath().string().c_str());
     ImGui::InputText("path", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
@@ -288,7 +289,7 @@ void DisplayArray(mirrow::drefl::any& payload) {
         return;
     }
 
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     for (int i = 0; i < typeinfo->size(payload); i++) {
         snprintf(buf, sizeof(buf), "elem %d", i);
         if (ImGui::TreeNodeEx(buf, ImGuiTreeNodeFlags_None)) {
@@ -498,7 +499,7 @@ void DisplayMaterial2DHandle(mirrow::drefl::any& payload) {
 
     auto& mtl = mgr->Get(handle);
     auto handlePayload = mirrow::drefl::any_make_constref(mtl.GetTexture());
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s", mtl.RelativePath().string().c_str());
     ImGui::InputText("path", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
     DisplayTextureHandle(handlePayload);
@@ -521,7 +522,8 @@ void DisplaySpriteMaterial(mirrow::drefl::any& payload) {
         canva.Update();
         canva.ChangeTexture(mtl.GetTexture());
 
-        strcpy(buf, mtl.RelativePath().string().c_str());
+        auto path = mtl.RelativePath().string();
+        std::strncpy(buf, path.c_str(), path.size());
     }
     ImGui::InputText("path", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
 
@@ -539,10 +541,9 @@ void DisplaySpriteMaterial(mirrow::drefl::any& payload) {
         IMGUI_MAKE_EMPTY_ID(imguiID, payload);
         if (ImGui::BeginCombo(imguiID, "", ImGuiComboFlags_NoPreview)) {
             if (ImGui::Selectable("load")) {
-                auto changeHandle =
-                    [=](nickel::Material2DHandle handle) {
-                        mutablePlayer->material = handle;
-                    };
+                auto changeHandle = [=](nickel::Material2DHandle handle) {
+                    mutablePlayer->material = handle;
+                };
 
                 auto& assetListWindow =
                     EditorContext::Instance().mtl2dAssetListWindow;

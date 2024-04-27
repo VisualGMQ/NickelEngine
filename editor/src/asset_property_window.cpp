@@ -17,7 +17,7 @@ void TexturePropertyWidget::Update() {
 
     auto& texture = textureMgr.Get(handle_);
 
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              texture.RelativePath().string().c_str());
     ImGui::InputText("filename", buf, sizeof(buf),
@@ -93,7 +93,7 @@ void FontPropertyWidget::Update() {
 
     auto& elem = mgr.Get(handle_);
 
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              elem.RelativePath().string().c_str());
     ImGui::InputText("filename", buf, sizeof(buf),
@@ -128,8 +128,8 @@ void Material2DPropertyWidget::Update() {
             canva.ChangeTexture(handle);
             canva.Update();
 
-            strcpy(str,
-                   textureMgr->Get(handle).RelativePath().string().c_str());
+            auto path = textureMgr->Get(handle).RelativePath().string();
+            std::strncpy(str, path.c_str(), path.size());
         }
 
         ImGui::Text("path");

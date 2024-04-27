@@ -68,7 +68,7 @@ void Material2D::ChangeTexture(TextureHandle handle) {
         // TODO: maybe we need function `Update()` to update part of bindGroup
         // for more performance?
         bindGroup_.Destroy();
-        createBindGroup(mgr->Get(texture_).View());
+        bindGroup_ = createBindGroup(mgr->Get(texture_).View());
     }
 }
 
@@ -89,7 +89,7 @@ void Material2D::ChangeSampler(rhi::SamplerAddressMode u,
         // TODO: maybe we need function `Update()` to update part of bindGroup
         // for more performance?
         bindGroup_.Destroy();
-        createBindGroup(mgr->Get(texture_).View());
+        bindGroup_ = createBindGroup(mgr->Get(texture_).View());
     }
 }
 

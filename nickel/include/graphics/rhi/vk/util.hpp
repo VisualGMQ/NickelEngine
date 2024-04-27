@@ -123,6 +123,8 @@ inline std::string_view VkError2String(vk::Result err) {
             return "OperationNotDeferredKHR";
         case vk::Result::eErrorCompressionExhaustedEXT:
             return "ErrorCompressionExhaustedEXT";
+        default:
+            return "UnknownVkError";
     }
 }
 

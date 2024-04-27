@@ -258,17 +258,42 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
                   ->fbo;
     }
 
+    vk::Rect2D renderArea;
+    if (desc.renderArea) {
+        renderArea.extent.setWidth(desc.renderArea->extent.width);
+        renderArea.extent.setHeight(desc.renderArea->extent.width);
+        renderArea.offset.setX(desc.renderArea->offset.x);
+        renderArea.offset.setY(desc.renderArea->offset.y);
+    } else {
+        if (!desc.colorAttachments.empty()) {
+            auto extent = desc.colorAttachments[0].view.Texture().Extent();
+            renderArea.extent.setWidth(extent.width);
+            renderArea.extent.setHeight(extent.height);
+            renderArea.offset.setX(0);
+            renderArea.offset.setY(0);
+        } else if (desc.depthStencilAttachment) {
+            auto extent = desc.depthStencilAttachment->view.Texture().Extent();
+            renderArea.extent.setWidth(extent.width);
+            renderArea.extent.setHeight(extent.height);
+            renderArea.offset.setX(0);
+            renderArea.offset.setY(0);
+        } else {
+            renderArea.offset.setX(0);
+            renderArea.offset.setY(0);
+            renderArea.extent.setWidth(dev_.swapchain.ImageInfo().extent.width);
+            renderArea.extent.setHeight(
+                dev_.swapchain.ImageInfo().extent.height);
+        }
+    }
+
     auto renderPassImpl = static_cast<RenderPassImpl*>(renderPass.Impl());
     vk::RenderPassBeginInfo info;
-    info.setRenderArea(desc.renderArea ?
-                        vk::Rect2D{{desc.renderArea->offset.x, desc.renderArea->offset.y},
-                                    {desc.renderArea->extent.width, desc.renderArea->extent.height}} :
-                        vk::Rect2D{{0, 0},
-                                    {dev_.swapchain.ImageInfo().extent.width, dev_.swapchain.ImageInfo().extent.height}})
+    info.setRenderArea(renderArea)
         .setClearValues(clearValues)
         .setRenderPass(renderPassImpl->renderPass)
         .setFramebuffer(fbo);
     buf.beginRenderPass(info, vk::SubpassContents::eInline);
+
 
     return RenderPassEncoder{
         new RenderPassEncoderImpl{dev_, buf, *renderPassImpl}
@@ -311,8 +336,8 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
     vk::BufferCopy region;
     region.setSize(size).setSrcOffset(srcOffset).setDstOffset(dstOffset);
     buf.copyBuffer(static_cast<const vulkan::BufferImpl*>(src.Impl())->buffer,
-                    static_cast<const vulkan::BufferImpl*>(dst.Impl())->buffer,
-                    region);
+                   static_cast<const vulkan::BufferImpl*>(dst.Impl())->buffer,
+                   region);
 }
 
 void CommandEncoderImpl::CopyBufferToTexture(
@@ -355,9 +380,9 @@ void CommandEncoderImpl::CopyBufferToTexture(
                 .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
                 .setSubresourceRange(range);
             buf.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                                 vk::PipelineStageFlagBits::eTransfer,
-                                 vk::DependencyFlagBits::eByRegion, {}, {},
-                                 barrier);
+                                vk::PipelineStageFlagBits::eTransfer,
+                                vk::DependencyFlagBits::eByRegion, {}, {},
+                                barrier);
 
             vk::ImageSubresourceLayers layers;
             layers.setAspectMask(aspect)
@@ -375,21 +400,21 @@ void CommandEncoderImpl::CopyBufferToTexture(
                 .setImageExtent({copySize.width, copySize.height, 1})
                 .setImageSubresource(layers);
             buf.copyBufferToImage(buffer, image.GetImage(),
-                                   vk::ImageLayout::eTransferDstOptimal,
-                                   copyInfo);
+                                  vk::ImageLayout::eTransferDstOptimal,
+                                  copyInfo);
 
             barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
                 .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
                 .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
                 .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
             buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                                 vk::PipelineStageFlagBits::eFragmentShader,
-                                 vk::DependencyFlagBits::eByRegion, {}, {},
-                                 barrier);
+                                vk::PipelineStageFlagBits::eFragmentShader,
+                                vk::DependencyFlagBits::eByRegion, {}, {},
+                                barrier);
 
             // record layout transition
-            static_cast<CommandBufferImpl*>(cmdBuf_)
-                ->AddLayoutTransition(oldLayout, barrier.newLayout);
+            static_cast<CommandBufferImpl*>(cmdBuf_)->AddLayoutTransition(
+                oldLayout, barrier.newLayout);
         }
     } else {
         auto oldLayout = image.layouts[dst.origin.z];
@@ -409,9 +434,8 @@ void CommandEncoderImpl::CopyBufferToTexture(
             .setSrcQueueFamilyIndex(dev_.queueIndices.graphicsIndex.value())
             .setSubresourceRange(range);
         buf.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                             vk::PipelineStageFlagBits::eTransfer,
-                             vk::DependencyFlagBits::eByRegion, {}, {},
-                             barrier);
+                            vk::PipelineStageFlagBits::eTransfer,
+                            vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
 
         vk::ImageSubresourceLayers layers;
         layers.setAspectMask(aspect)
@@ -426,21 +450,20 @@ void CommandEncoderImpl::CopyBufferToTexture(
             .setImageExtent({copySize.width, copySize.height, 1})
             .setImageSubresource(layers);
         buf.copyBufferToImage(buffer, image.GetImage(),
-                               vk::ImageLayout::eTransferDstOptimal, copyInfo);
+                              vk::ImageLayout::eTransferDstOptimal, copyInfo);
 
         barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
             .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
             .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
             .setDstAccessMask(vk::AccessFlagBits::eShaderRead);
         buf.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                             vk::PipelineStageFlagBits::eFragmentShader,
-                             vk::DependencyFlagBits::eByRegion, {}, {},
-                             barrier);
+                            vk::PipelineStageFlagBits::eFragmentShader,
+                            vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
 
         // record layout transition
         for (int i = dst.origin.z; i < copySize.depthOrArrayLayers; i++) {
-            static_cast<CommandBufferImpl*>(cmdBuf_)
-                ->AddLayoutTransition(image.layouts[i], barrier.newLayout);
+            static_cast<CommandBufferImpl*>(cmdBuf_)->AddLayoutTransition(
+                image.layouts[i], barrier.newLayout);
         }
     }
 }

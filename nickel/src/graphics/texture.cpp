@@ -220,7 +220,7 @@ TextureHandle TextureManager::LoadSVG(const std::filesystem::path& filename,
         ECS::Instance().World().res<rhi::Device>().get(), (void*)bitmap.data(),
         bitmap.width(), bitmap.height());
     texture->AssociateFile(filename);
-    if (texture && *texture) {
+    if (texture) {
         storeNewItem(handle, std::move(texture));
         return handle;
     }

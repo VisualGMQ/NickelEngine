@@ -546,6 +546,11 @@ rhi::RenderPipeline Render3DContext::createPipeline(
     desc.viewport.scissor.extent.height = viewport.size.h;
 
     rhi::RenderPipeline::FragmentTarget target;
+    target.blend.color.srcFactor = rhi::BlendFactor::SrcAlpha;
+    target.blend.color.dstFactor = rhi::BlendFactor::OneMinusSrcAlpha;
+    target.blend.color.operation = rhi::BlendOp::Add;
+    target.blend.alpha.srcFactor = rhi::BlendFactor::One;
+    target.blend.alpha.dstFactor = rhi::BlendFactor::Zero;
     target.format = rhi::TextureFormat::Presentation;
     desc.layout = pipelineLayout;
     desc.fragment.targets.emplace_back(target);
@@ -617,8 +622,8 @@ void RenderContext::initDepthTexture(rhi::Device device,
                                      const nickel::cgmath::Vec2& size) {
     rhi::Texture::Descriptor desc;
     desc.format = rhi::TextureFormat::DEPTH24_PLUS_STENCIL8;
-    desc.size.width = size.w;
-    desc.size.height = size.h;
+    desc.size.width = 1536;
+    desc.size.height = 864;
     desc.size.depthOrArrayLayers = 1;
     desc.usage = rhi::TextureUsage::RenderAttachment;
     depthTexture = device.CreateTexture(desc);

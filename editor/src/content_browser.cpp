@@ -203,7 +203,6 @@ void ContentBrowserWindow::showIcons() {
                             .World()
                             .res_mut<nickel::FontManager>()
                             .get();
-        static std::optional<int> clickedIdx;
 
         // please ensure all files are exists
         for (int i = 0; i < files_.size(); i++) {
@@ -279,6 +278,7 @@ nickel::Texture& ContentBrowserWindow::FindTextureOrGen(
             return textureMgr_.Get(handle);
         }
         return textureMgr_.Get(unknownFileIconHandle_);
+        // return nickel::Texture::Null;
     }
 }
 
