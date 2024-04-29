@@ -15,4 +15,13 @@ Sprite Sprite::FromCustomSize(const cgmath::Vec2& size) {
     return sprite;
 }
 
+Sprite::~Sprite() {
+    if (slot) {
+        ECS::Instance()
+            .World()
+            .res_mut<RenderContext>()
+            ->ctx2D->ReuseVertexSlot(slot.value());
+    }
+}
+
 }  // namespace nickel

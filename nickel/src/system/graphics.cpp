@@ -35,29 +35,38 @@ void BeginRender(gecs::resource<gecs::mut<rhi::Device>> device,
     PROFILE_END();
 }
 
-void drawMesh2D(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
-                const GPUMesh2D& mesh, const Material2D& material,
-                const nickel::cgmath::Mat44& model) {
+void draw(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
+          uint32_t count, rhi::Buffer vertexBuffer,
+          uint32_t firstVertex, rhi::Buffer indexBuffer,
+          uint32_t firstIndex, const Material2D& material,
+          const nickel::cgmath::Mat44& model) {
     renderPass.SetPushConstant(rhi::ShaderStage::Vertex, &model.data, 0,
                                sizeof(model));
-    renderPass.SetVertexBuffer(0, mesh.verticesBuffer, 0,
-                               mesh.verticesBuffer.Size());
+    renderPass.SetVertexBuffer(0, vertexBuffer, 0, vertexBuffer.Size());
     if (material) {
         renderPass.SetBindGroup(material.GetBindGroup());
     } else {
         renderPass.SetBindGroup(ctx.ctx2D->defaultBindGroup);
     }
-    if (mesh.indicesBuffer) {
-        renderPass.SetIndexBuffer(mesh.indicesBuffer, rhi::IndexType::Uint32, 0,
-                                  mesh.indicesBuffer.Size());
-        renderPass.DrawIndexed(mesh.elemCount, 1, 0, 0, 0);
+    if (indexBuffer) {
+        renderPass.SetIndexBuffer(indexBuffer, rhi::IndexType::Uint32, 0,
+                                  indexBuffer.Size());
+        renderPass.DrawIndexed(count, 1, firstIndex, firstVertex, 0);
     } else {
-        renderPass.Draw(mesh.elemCount, 1, 0, 0);
+        renderPass.Draw(count, 1, firstVertex, 0);
     }
 }
 
-void drawTexture(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
-                 const TextureManager& mgr, const Material2D& material,
+void drawMesh2D(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
+                const GPUMesh2D& mesh, const Material2D& material,
+                const nickel::cgmath::Mat44& model) {
+    draw(ctx, renderPass, mesh.elemCount, mesh.verticesBuffer, 0,
+         mesh.indicesBuffer, 0, material, model);
+}
+
+void drawTexture(RenderContext& ctx, uint32_t slot,
+                 rhi::RenderPassEncoder renderPass, const TextureManager& mgr,
+                 const Material2D& material,
                  const std::optional<cgmath::Rect>& region,
                  const cgmath::Color& color, const cgmath::Mat44& model,
                  float z) {
@@ -82,9 +91,7 @@ void drawTexture(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
         color
     };
 
-    if (!material) {
-        drawMesh2D(ctx, renderPass, *ctx.ctx2D->identityRectMesh_, material, model);
-    } else {
+    if (material) {
         auto size = mgr.Get(material.GetTexture()).Size();
         cgmath::Rect rect = region.value_or(cgmath::Rect{
             {0, 0},
@@ -100,28 +107,29 @@ void drawTexture(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
                                  (rect.position.y + rect.size.h) / size.h);
 
         std::array vertices{
-            topLeft, topRight, bottomRight, topLeft, bottomRight, bottomLeft,
+            topRight, topLeft, bottomRight, bottomLeft,
         };
 
-        void* map =
-            ctx.ctx2D->identityRectMesh_->verticesBuffer.GetMappedRange();
-        memcpy(map, vertices.data(), sizeof(vertices));
-        if (!ctx.ctx2D->identityRectMesh_->verticesBuffer
-                 .IsMappingCoherence()) {
-            ctx.ctx2D->identityRectMesh_->verticesBuffer.Flush();
+        auto buf = ctx.ctx2D->vertexBuffer;
+        auto map = (Vertex2D*)buf.GetMappedRange();
+        memcpy(map + slot * 4, vertices.data(), sizeof(vertices));
+
+        if (!buf.IsMappingCoherence()) {
+            buf.Flush();
         }
 
-        drawMesh2D(ctx, renderPass, *ctx.ctx2D->identityRectMesh_, material,
-                   model);
+        draw(ctx, renderPass, 6, ctx.ctx2D->vertexBuffer, slot * 4,
+             ctx.ctx2D->indexBuffer, 0, material, model);
     }
 }
 
-void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
-                    gecs::resource<gecs::mut<RenderContext>> ctx,
-                    gecs::resource<gecs::mut<Camera>> camera,
-                    gecs::resource<TextureManager> mgr,
-                    gecs::resource<Material2DManager> mtl2dMgr,
-                    gecs::querier<Transform, Sprite, SpriteMaterial> querier) {
+void RenderSprite2D(
+    gecs::resource<gecs::mut<rhi::Device>> device,
+    gecs::resource<gecs::mut<RenderContext>> ctx,
+    gecs::resource<gecs::mut<Camera>> camera,
+    gecs::resource<TextureManager> mgr,
+    gecs::resource<Material2DManager> mtl2dMgr,
+    gecs::querier<Transform, gecs::mut<Sprite>, SpriteMaterial> querier) {
     PROFILE_BEGIN();
 
     rhi::RenderPass::Descriptor desc;
@@ -156,10 +164,15 @@ void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>> device,
             continue;
         }
 
+        if (!sprite.slot) {
+            sprite.slot = ctx->ctx2D->GenVertexSlot();
+        }
+
         auto& texture = mgr->Get(mtl.GetTexture());
 
         drawTexture(
-            ctx.get(), renderPass, mgr.get(), mtl, sprite.region, sprite.color,
+            ctx.get(), sprite.slot.value(), renderPass, mgr.get(), mtl,
+            sprite.region, sprite.color,
             transform.ToMat() * calcMatFromRenderInfo(
                                     sprite.flip,
                                     sprite.customSize.value_or(texture.Size()),

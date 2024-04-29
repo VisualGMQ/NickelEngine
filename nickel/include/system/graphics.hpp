@@ -24,12 +24,11 @@ void EndRender(gecs::resource<gecs::mut<rhi::Device>>,
                gecs::resource<gecs::mut<RenderContext>>,
                gecs::resource<Window>);
 
-void RenderSprite2D(gecs::resource<gecs::mut<rhi::Device>>,
-                    gecs::resource<gecs::mut<RenderContext>>,
-                    gecs::resource<gecs::mut<Camera>>,
-                    gecs::resource<TextureManager>,
-                    gecs::resource<Material2DManager>,
-                    gecs::querier<Transform, Sprite, SpriteMaterial>);
+void RenderSprite2D(
+    gecs::resource<gecs::mut<rhi::Device>>,
+    gecs::resource<gecs::mut<RenderContext>>, gecs::resource<gecs::mut<Camera>>,
+    gecs::resource<TextureManager>, gecs::resource<Material2DManager>,
+    gecs::querier<Transform, gecs::mut<Sprite>, SpriteMaterial>);
 
 void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>>,
                      gecs::resource<gecs::mut<Camera>>,

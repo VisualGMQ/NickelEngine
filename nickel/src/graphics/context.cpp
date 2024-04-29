@@ -11,7 +11,8 @@ Render2DContext::Render2DContext(rhi::APIPreference api, rhi::Device device,
                                  const cgmath::Rect& viewport,
                                  RenderContext& ctx)
     : device_{device} {
-    identityRectMesh_ = createIdentityRectMesh();
+    initUsableVertexSlots();
+    initBuffers();
     initPipelineShader(api);
     bindGroupLayout = createBindGroupLayout(ctx);
     defaultBindGroup = createDefaultBindGroup();
@@ -24,6 +25,16 @@ void Render2DContext::RecreatePipeline(rhi::APIPreference api,
                                        RenderContext& ctx) {
     pipeline.Destroy();
     pipeline = createPipeline(api, {0, 0, size.w, size.h}, ctx);
+}
+
+uint32_t Render2DContext::GenVertexSlot() {
+    uint32_t slot = usableVertexSlots_.top();
+    usableVertexSlots_.pop();
+    return slot;
+}
+
+void Render2DContext::ReuseVertexSlot(uint32_t slot) {
+    usableVertexSlots_.push(slot);
 }
 
 rhi::PipelineLayout Render2DContext::createPipelineLayout() {
@@ -111,30 +122,42 @@ rhi::Sampler Render2DContext::GetSampler(rhi::SamplerAddressMode u,
     return sampler;
 }
 
-std::unique_ptr<GPUMesh2D> Render2DContext::createIdentityRectMesh() {
-    std::array<Vertex2D, 6> vertices = {
-        Vertex2D{{-0.5, -0.5, 0}, {0, 0}, {1, 1, 1, 1}},
-        Vertex2D{ {0.5, -0.5, 0}, {1, 0}, {1, 1, 1, 1}},
-        Vertex2D{  {0.5, 0.5, 0}, {1, 1}, {1, 1, 1, 1}},
-
-        Vertex2D{ {0.5, -0.5, 0}, {1, 0}, {1, 1, 1, 1}},
-        Vertex2D{  {0.5, 0.5, 0}, {1, 1}, {1, 1, 1, 1}},
-        Vertex2D{ {-0.5, 0.5, 0}, {0, 1}, {1, 1, 1, 1}},
-    };
-
-    rhi::Buffer::Descriptor desc;
-    desc.mappedAtCreation = true;
-    desc.size = sizeof(vertices);
-    desc.usage =
-        rhi::Flags(rhi::BufferUsage::Vertex) | rhi::BufferUsage::MapWrite;
-    auto buf = device_.CreateBuffer(desc);
-    void* map = buf.GetMappedRange();
-    memcpy(map, vertices.data(), sizeof(vertices));
-    if (!buf.IsMappingCoherence()) {
-        buf.Flush();
+void Render2DContext::initBuffers() {
+    // vertex buffer
+    {
+        rhi::Buffer::Descriptor desc;
+        desc.mappedAtCreation = true;
+        desc.size = VertexBufferSize;
+        desc.usage =
+            rhi::Flags(rhi::BufferUsage::Vertex) | rhi::BufferUsage::MapWrite;
+        vertexBuffer = device_.CreateBuffer(desc);
     }
 
-    return std::unique_ptr<GPUMesh2D>(new GPUMesh2D{buf, {}, 6});
+    // indices buffer
+    {
+        std::array<uint32_t, 6> oneIndices = {
+            0, 1, 2, 2, 1, 3,
+        };
+
+        rhi::Buffer::Descriptor desc;
+        desc.mappedAtCreation = true;
+        desc.size = sizeof(oneIndices);
+        desc.usage =
+            rhi::Flags(rhi::BufferUsage::Index) | rhi::BufferUsage::MapWrite;
+        indexBuffer = device_.CreateBuffer(desc);
+
+        auto ptr = indexBuffer.GetMappedRange();
+
+        memcpy(ptr, oneIndices.data(), sizeof(oneIndices));
+
+        indexBuffer.Unmap();
+    }
+}
+
+void Render2DContext::initUsableVertexSlots() {
+    for (int i = 0; i < MaxRectCount; i++) {
+        usableVertexSlots_.push(i);
+    }
 }
 
 rhi::BindGroup Render2DContext::createDefaultBindGroup() {
@@ -144,6 +167,8 @@ rhi::BindGroup Render2DContext::createDefaultBindGroup() {
 }
 
 Render2DContext::~Render2DContext() {
+    vertexBuffer.Destroy();
+    indexBuffer.Destroy();
     vertexShader.Destroy();
     fragmentShader.Destroy();
     for (auto& [_, sampler] : samplers_) {

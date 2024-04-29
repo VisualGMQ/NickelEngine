@@ -6,6 +6,7 @@
 #include "graphics/texture.hpp"
 #include "graphics/vertex.hpp"
 #include "video/event.hpp"
+#include <stack>
 
 namespace nickel {
 
@@ -33,8 +34,8 @@ struct Render2DContext {
     rhi::ShaderModule vertexShader;
     rhi::ShaderModule fragmentShader;
     rhi::BindGroup defaultBindGroup;    // bind a white texture
-
-    std::unique_ptr<GPUMesh2D> identityRectMesh_;
+    rhi::Buffer vertexBuffer;           // for 2D texture vertices
+    rhi::Buffer indexBuffer;            // for 2D texture vertices
 
     Render2DContext(rhi::APIPreference, rhi::Device,
                     const cgmath::Rect& viewport, RenderContext&);
@@ -48,9 +49,16 @@ struct Render2DContext {
     void RecreatePipeline(rhi::APIPreference api, const cgmath::Vec2& size,
                           RenderContext& ctx);
 
+    uint32_t GenVertexSlot();
+    void ReuseVertexSlot(uint32_t);
+
 private:
+    static constexpr size_t MaxRectCount = 1024;
+    static constexpr size_t VertexBufferSize = sizeof(Vertex2D) * MaxRectCount * 4;
+
     rhi::Device device_;
     std::unordered_map<uint32_t, rhi::Sampler> samplers_;
+    std::stack<uint32_t> usableVertexSlots_;
 
     rhi::PipelineLayout createPipelineLayout();
     void initPipelineShader(rhi::APIPreference);
@@ -60,7 +68,8 @@ private:
                                        RenderContext&);
     void initSamplers();
     rhi::BindGroup createDefaultBindGroup();
-    std::unique_ptr<GPUMesh2D> createIdentityRectMesh();
+    void initBuffers();
+    void initUsableVertexSlots();
 };
 
 struct Render3DContext {

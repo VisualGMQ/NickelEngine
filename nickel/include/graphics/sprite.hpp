@@ -21,8 +21,13 @@ struct Sprite final {
     bool visiable = true;
     int orderInLayer = 0;
 
+    std::optional<uint32_t> slot;   // for inner use
+
+    ~Sprite();
+
     static Sprite FromRegion(const cgmath::Rect& region);
     static Sprite FromCustomSize(const cgmath::Vec2& size);
+
 };
 
 struct SpriteMaterial {
