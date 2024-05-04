@@ -100,9 +100,12 @@ void EditorEnter(
     gecs::commands cmds) {
     RegistEventHandler(releaseAsetEvent);
 
+    const auto& halfGameWindowSize = EditorContext::Instance().projectInfo.windowData.size * 0.5;
     auto& target = EditorContext::Instance().texture;
     auto halfTextureSize = target->Size() * 0.5f;
     camera->SetProject(nickel::cgmath::CreateOrtho(
+        // -halfGameWindowSize.w, halfGameWindowSize.w, halfGameWindowSize.h,
+        // -halfGameWindowSize.h, 1000, -1000,
         -halfTextureSize.w, halfTextureSize.w, halfTextureSize.h,
         -halfTextureSize.h, 1000, -1000,
         adapter->RequestAdapterInfo().api == nickel::rhi::APIPreference::GL));

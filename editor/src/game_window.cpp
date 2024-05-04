@@ -10,6 +10,7 @@ void GameWindow::update() {
     auto drawList = ImGui::GetWindowDrawList();
     ImGuizmo::SetDrawlist(drawList);
 
+    // draw game content
     auto vkCtx = nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
     drawList->AddImage(vkCtx->GetTextureBindedDescriptorSet(*texture), {0, 0},
                        ImVec2(texture->Width(), texture->Height()));
@@ -18,6 +19,43 @@ void GameWindow::update() {
     auto camera = reg->res_mut<nickel::Camera>();
     auto mouse = reg->res<nickel::Mouse>();
 
+    // draw grid
+    auto gameCanvaSize = camera->GetTarget().Texture().Extent();
+    nickel::cgmath::Vec2 halfGameCanvaSize{gameCanvaSize.width * 0.5f,
+                                           gameCanvaSize.height * 0.5f};
+    auto halfGameWindowSize =
+        EditorContext::Instance().projectInfo.windowData.size * 0.5;
+
+    std::array points = {
+  // rect
+        nickel::cgmath::Vec2{-halfGameWindowSize.x, -halfGameWindowSize.y},
+        nickel::cgmath::Vec2{ halfGameWindowSize.x, -halfGameWindowSize.y},
+        nickel::cgmath::Vec2{ halfGameWindowSize.x,  halfGameWindowSize.y},
+        nickel::cgmath::Vec2{-halfGameWindowSize.x,  halfGameWindowSize.y},
+
+ // origin
+        nickel::cgmath::Vec2{                    0,                     0},
+    };
+
+    for (auto& pt : points) {
+        pt *= camera->Scale();
+        pt += halfGameCanvaSize +
+             nickel::cgmath::Vec2{camera->Position().x, -camera->Position().y} *
+                 camera->Scale();
+    }
+
+    drawList->AddRect(ImVec2{points[2].x, points[2].y},
+                      ImVec2{points[0].x, points[0].y},
+                      ImGui::GetColorU32({0, 0, 1, 1}));
+
+    drawList->AddLine({points.back().x - 10000, points.back().y},
+                      {points.back().x + 10000, points.back().y},
+                      ImGui::GetColorU32({1.0, 0.0, 0.0, 0.5}));
+    drawList->AddLine({points.back().x, points.back().y - 10000},
+                      {points.back().x, points.back().y + 10000},
+                      ImGui::GetColorU32({0.0, 1.0, 0.0, 0.5}));
+
+    // use ImGuizmo
     if (IsFocused()) {
         if (mouse->MiddleBtn().IsPressing()) {
             auto offset = mouse->Offset();
@@ -52,14 +90,15 @@ void GameWindow::update() {
     if (keyboard->Key(nickel::Key::E).IsPressed()) {
         guizmoOperation_ = ImGuizmo::SCALE;
     }
-    if (ImGui::RadioButton("Translate", guizmoOperation_ == ImGuizmo::TRANSLATE))
+    if (ImGui::RadioButton("Translate",
+                           guizmoOperation_ == ImGuizmo::TRANSLATE))
         guizmoOperation_ = ImGuizmo::TRANSLATE;
     ImGui::SameLine();
     if (ImGui::RadioButton("Rotate", guizmoOperation_ == ImGuizmo::ROTATE))
         guizmoOperation_ = ImGuizmo::ROTATE;
     ImGui::SameLine();
     if (ImGui::RadioButton("Scale", guizmoOperation_ == ImGuizmo::SCALE))
-        guizmoOperation_  = ImGuizmo::SCALE;
+        guizmoOperation_ = ImGuizmo::SCALE;
 
     nickel::cgmath::Mat44 matrix;
     auto windowSize = reg->res<nickel::Window>()->Size();
@@ -109,5 +148,4 @@ void GameWindow::update() {
             transform.scale.y = matrixScale[1];
         }
     }
-
 }
