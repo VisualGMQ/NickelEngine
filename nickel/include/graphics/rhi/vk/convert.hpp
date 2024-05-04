@@ -402,14 +402,18 @@ inline TextureFormat TextureFormatFromVk(vk::Format f) {
     }
 }
 
-inline vk::ImageAspectFlags TextureAspect2Vk(TextureAspect aspect) {
-    switch (aspect) {
-        CASE(TextureAspect::All, vk::ImageAspectFlagBits::eColor |
-                                     vk::ImageAspectFlagBits::eDepth |
-                                     vk::ImageAspectFlagBits::eStencil);
-        CASE(TextureAspect::DepthOnly, vk::ImageAspectFlagBits::eDepth);
-        CASE(TextureAspect::StencilOnly, vk::ImageAspectFlagBits::eStencil);
+inline vk::Flags<vk::ImageAspectFlagBits> TextureAspect2Vk(TextureAspect aspect) {
+    vk::Flags<vk::ImageAspectFlagBits> flags;
+    if (aspect == TextureAspect::ColorOnly) {
+        flags |= vk::ImageAspectFlagBits::eColor;
     }
+    if (aspect == TextureAspect::DepthOnly) {
+        flags |= vk::ImageAspectFlagBits::eDepth;
+    }
+    if (aspect == TextureAspect::StencilOnly) {
+        flags |= vk::ImageAspectFlagBits::eStencil;
+    }
+    return flags;
 }
 
 inline vk::ImageViewType TextureViewType2Vk(TextureViewType type) {

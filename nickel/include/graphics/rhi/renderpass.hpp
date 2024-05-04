@@ -38,7 +38,7 @@ public:
     };
 
     RenderPass() = default;
-    RenderPass(APIPreference, DeviceImpl&, const Descriptor&);
+    explicit RenderPass(RenderPassImpl* impl);
     RenderPass(RenderPass&& o) { swap(o, *this); }
     RenderPass(const RenderPass& o) = default;
     RenderPass& operator=(const RenderPass& o) = default;
@@ -47,7 +47,6 @@ public:
         if (&o != this) swap(o, *this);
         return *this;
     }
-    const RenderPass::Descriptor& GetDescriptor() const;
     void Destroy();
 
     auto Impl() const { return impl_; }
@@ -56,6 +55,8 @@ public:
     operator bool() const {
         return impl_ != nullptr;
     }
+
+    const Descriptor& GetDescriptor() const;
 
 private:
     RenderPassImpl* impl_{};

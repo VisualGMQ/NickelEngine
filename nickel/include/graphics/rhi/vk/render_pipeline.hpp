@@ -25,7 +25,8 @@ public:
     const RenderPipeline::Descriptor& GetDescriptor() const;
 
     vk::Pipeline pipeline;
-    vk::RenderPass defaultRenderPass;
+    vk::RenderPass renderPass;
+    bool needReleaseRenderPass = true;
 
 private:
     PipelineLayout layout_;
@@ -40,7 +41,8 @@ private:
     friend void swap(RenderPipelineImpl& o1, RenderPipelineImpl& o2) noexcept {
         using std::swap;
         swap(o1.pipeline, o2.pipeline);
-        swap(o1.defaultRenderPass, o2.defaultRenderPass);
+        swap(o1.renderPass, o2.renderPass);
+        swap(o1.needReleaseRenderPass, o2.needReleaseRenderPass);
         swap(o1.layout_, o2.layout_);
         swap(o1.dev_, o2.dev_);
         swap(o1.desc_, o2.desc_);

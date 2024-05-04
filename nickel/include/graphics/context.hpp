@@ -130,6 +130,7 @@ struct RenderContext final {
     rhi::Texture presentTexture;
     rhi::TextureView presentTextureView;
     rhi::CommandEncoder encoder;
+    rhi::CommandBuffer cmd;
 
 private:
     void initDepthTexture(rhi::Device, const nickel::cgmath::Vec2& size);

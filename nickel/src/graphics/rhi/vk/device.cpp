@@ -1,7 +1,9 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/command.hpp"
 #include "graphics/rhi/vk/queue.hpp"
+#include "graphics/rhi/vk/texture_view.hpp"
 #include "graphics/rhi/vk/util.hpp"
+
 
 namespace nickel::rhi::vulkan {
 
@@ -98,7 +100,7 @@ DeviceImpl::QueueFamilyIndices DeviceImpl::chooseQueue(
 
 void DeviceImpl::createCmdPool() {
     vk::CommandPoolCreateInfo info;
-    info.setFlags(vk::CommandPoolCreateFlagBits::eTransient)
+    info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
         .setQueueFamilyIndex(queueIndices.graphicsIndex.value());
 
     VK_CALL(cmdPool, device.createCommandPool(info));
@@ -107,7 +109,6 @@ void DeviceImpl::createCmdPool() {
 void DeviceImpl::createSyncObject() {
     for (int i = 0; i < swapchain.images.size(); i++) {
         vk::FenceCreateInfo info;
-        info.setFlags(vk::FenceCreateFlagBits::eSignaled);
         vk::Fence fence;
         VK_CALL(fence, device.createFence(info));
         fences.emplace_back(fence);
@@ -141,6 +142,8 @@ DeviceImpl::~DeviceImpl() {
     for (auto fbo : framebuffers) {
         fbo.Destroy();
     }
+
+    device.freeCommandBuffers(cmdPool, cmdBufs);
 
     device.destroyCommandPool(cmdPool);
     swapchain.Destroy(device);
@@ -215,17 +218,20 @@ void DeviceImpl::OnWindowResize(const cgmath::Vec2& size) {
             framebuffers.begin(), framebuffers.end(), [&](Framebuffer& fbo) {
                 auto impl = static_cast<FramebufferImpl*>(fbo.Impl());
                 for (auto& att : impl->Views()) {
-                    for (auto& image : swapchain.ImageViews()) {
-                        if (att == image) {
-                            fbo.Destroy();
-                            return true;
-                        }
+                    if (att.Format() == rhi::TextureFormat::Presentation) {
+                        fbo.Destroy();
+                        return true;
                     }
                 }
                 return false;
             });
         framebuffers.erase(it, framebuffers.end());
     }
+}
+
+std::pair<Texture, TextureView> DeviceImpl::GetPresentationTexture() {
+    return {Texture{swapchain.Images()[curImageIndex]},
+            TextureView{swapchain.ImageViews()[curImageIndex]}};
 }
 
 void DeviceImpl::BeginFrame() {
@@ -240,64 +246,29 @@ void DeviceImpl::BeginFrame() {
 }
 
 void DeviceImpl::EndFrame() {
-    cmdCounter.Reset();
-
     auto window = (SDL_Window*)adapter.window;
+
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
-        VK_CALL_NO_VALUE(
-            device.waitForFences(fences[curFrame], true, UINT64_MAX));
         return;
     }
 
-    // transform present image barrier
-    vk::CommandBufferAllocateInfo allocInfo;
-    allocInfo.setCommandBufferCount(1).setCommandPool(cmdPool).setLevel(
-        vk::CommandBufferLevel::ePrimary);
-    std::vector<vk::CommandBuffer> cmdBufs;
-    VK_CALL(cmdBufs, device.allocateCommandBuffers(allocInfo));
-    vk::ImageMemoryBarrier barrier;
-    vk::ImageSubresourceRange range;
-    range.setAspectMask(vk::ImageAspectFlagBits::eColor)
-        .setBaseArrayLayer(0)
-        .setLayerCount(1)
-        .setBaseMipLevel(0)
-        .setLevelCount(1);
+    if (needPresent) {
+        VK_CALL_NO_VALUE(
+            device.waitForFences(fences[curFrame], true, UINT64_MAX));
+        VK_CALL_NO_VALUE(device.resetFences(fences[curFrame]));
+        device.resetCommandPool(cmdPool);
 
-    barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal)
-        .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-        .setSrcAccessMask(vk::AccessFlagBits::eNone)
-        .setDstAccessMask(vk::AccessFlagBits::eNone)
-        .setImage(swapchain.Images()[curImageIndex])
-        .setSubresourceRange(range);
+        vk::Queue present =
+            static_cast<const vulkan::QueueImpl*>(presentQueue->Impl())->queue;
 
-    vk::CommandBufferBeginInfo beginInfo;
-    beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    VK_CALL_NO_VALUE(cmdBufs[0].begin(beginInfo));
-    cmdBufs[0].pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe,
-                               vk::PipelineStageFlagBits::eBottomOfPipe,
-                               vk::DependencyFlagBits::eByRegion, {}, {},
-                               barrier);
-    VK_CALL_NO_VALUE(cmdBufs[0].end());
+        vk::PresentInfoKHR info;
+        info.setImageIndices(curImageIndex)
+            .setWaitSemaphores(renderFinishSems[curFrame])
+            .setSwapchains(swapchain.swapchain);
+        VK_CALL_NO_VALUE(present.presentKHR(info));
 
-    vk::Queue graphics =
-        static_cast<const vulkan::QueueImpl*>(graphicsQueue->Impl())->queue;
-    vk::Queue present =
-        static_cast<const vulkan::QueueImpl*>(presentQueue->Impl())->queue;
-
-    vk::SubmitInfo submit;
-    submit.setCommandBuffers(cmdBufs);
-    VK_CALL_NO_VALUE(graphics.submit(submit));
-    VK_CALL_NO_VALUE(device.waitIdle());
-
-    device.freeCommandBuffers(cmdPool, cmdBufs);
-
-    vk::PresentInfoKHR info;
-    info.setImageIndices(curImageIndex)
-        .setWaitSemaphores(renderFinishSems[curFrame])
-        .setSwapchains(swapchain.swapchain);
-    VK_CALL_NO_VALUE(present.presentKHR(info));
-
-    device.resetCommandPool(cmdPool);
+        needPresent = false;
+    }
 
     curFrame = (curFrame + 1) % swapchain.imageInfo.imagCount;
 }
@@ -317,6 +288,28 @@ Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
 
 Queue DeviceImpl::GetQueue() {
     return *graphicsQueue;
+}
+
+vk::CommandBuffer DeviceImpl::RequireCmdBuf() {
+    constexpr size_t CmdBufIncStep = 5;
+
+    if (cmdBufInVacant.empty()) {
+        vk::CommandBufferAllocateInfo allocInfo;
+        allocInfo.setCommandBufferCount(CmdBufIncStep)
+            .setCommandPool(cmdPool)
+            .setLevel(vk::CommandBufferLevel::ePrimary);
+        VK_CALL(cmdBufInVacant, device.allocateCommandBuffers(allocInfo));
+        std::copy(cmdBufInVacant.begin(), cmdBufInVacant.end(),
+                  std::back_inserter(cmdBufs));
+    }
+
+    auto cmd = cmdBufInVacant.back();
+    cmdBufInVacant.pop_back();
+    return cmd;
+}
+
+void DeviceImpl::ResetCmdBuf(vk::CommandBuffer cmd) {
+    cmdBufInVacant.emplace_back(cmd);
 }
 
 }  // namespace nickel::rhi::vulkan

@@ -14,6 +14,7 @@ class TextureImpl : public rhi::TextureImpl {
 public:
     TextureImpl(AdapterImpl&, DeviceImpl&, const Texture::Descriptor& desc,
                 const std::vector<uint32_t>& queueIndices);
+    TextureImpl(DeviceImpl&, vk::Image, vk::DeviceMemory, const Texture::Descriptor& desc);
     ~TextureImpl();
 
     TextureView CreateView(const TextureView::Descriptor&) override;
@@ -21,11 +22,11 @@ public:
     vk::Image GetImage() const;
 
     vk::DeviceMemory mem;
+    vk::Image image;
     std::vector<vk::ImageLayout>
         layouts;  // if image is array, they layout will store separatly
 
 private:
-    vk::Image image_;
     DeviceImpl& dev_;
 
     void createImage(const Texture::Descriptor& desc,

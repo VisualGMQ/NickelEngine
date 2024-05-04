@@ -81,6 +81,9 @@ private:
     void initGameWindowTexture();
 };
 
-inline void InitEditorContext(gecs::commands cmds) {
+inline void InitEditorContext(
+    gecs::commands cmds, gecs::resource<gecs::mut<nickel::Camera>> camera) {
     EditorContext::Init();
+    auto& target = EditorContext::Instance().texture;
+    camera->SetRenderTarget(target->View());
 }

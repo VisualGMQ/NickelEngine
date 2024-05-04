@@ -15,7 +15,7 @@ public:
     struct Descriptor final {
         std::optional<TextureViewType> dimension;
         std::optional<uint32_t> arrayLayerCount;
-        TextureAspect aspect = TextureAspect::All;
+        Flags<TextureAspect> aspect = TextureAspect::Unknown;
         uint32_t baseArrayLayer = 0;
         uint32_t baseMipLevel = 0;
         std::optional<TextureFormat> format;

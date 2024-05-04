@@ -9,25 +9,7 @@
 
 namespace nickel::rhi {
 
-RenderPass::RenderPass(APIPreference api, DeviceImpl& dev,
-                       const Descriptor& desc) {
-    switch (api) {
-        case APIPreference::Undefine:
-            break;
-        case APIPreference::GL:
-            impl_ = new gl4::RenderPassImpl(desc);
-            break;
-        case APIPreference::Vulkan:
-#ifdef NICKEL_HAS_VULKAN
-            impl_ = new vulkan::RenderPassImpl(
-                static_cast<vulkan::DeviceImpl&>(dev), desc);
-#endif
-            break;
-        case APIPreference::Null:
-            impl_ = new null::RenderPassImpl{};
-            break;
-    }
-}
+RenderPass::RenderPass(RenderPassImpl* impl) : impl_{impl} {}
 
 const RenderPass::Descriptor& RenderPass::GetDescriptor() const {
     return impl_->GetDescriptor();

@@ -2030,9 +2030,6 @@ namespace IMGUIZMO_NAMESPACE
 
    static int GetMoveType(OPERATION op, vec_t* gizmoHitProportion)
    {
-       printf("isTranslate = %d, mbUsing = %d, gContext.mbMouseOver = %d\n",
-              Intersects(op, TRANSLATE), gContext.mbUsing,
-              gContext.mbMouseOver);
        if (!Intersects(op, TRANSLATE) || gContext.mbUsing ||
            !gContext.mbMouseOver) {
            return MT_NONE;

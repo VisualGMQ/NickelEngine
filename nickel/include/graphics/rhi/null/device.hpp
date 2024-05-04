@@ -20,6 +20,7 @@ public:
         const ShaderModule::Descriptor&) override;
     Buffer CreateBuffer(const Buffer::Descriptor&) override;
     Queue GetQueue() override;
+    std::pair<Texture, TextureView> GetPresentationTexture() override;
 
     void BeginFrame() override;
     void EndFrame() override;

@@ -8,17 +8,15 @@
 #include "imgui_internal.h"
 
 #ifdef NICKEL_HAS_VULKAN
+#include "graphics/context.hpp"
 #include "graphics/rhi/gl4/texture_view.hpp"
 #include "graphics/rhi/vk/adapter.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/queue.hpp"
 #include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
-#include "graphics/rhi/vk/queue.hpp"
 #include "graphics/rhi/vk/util.hpp"
 #include "imgui_impl_vulkan.h"
-#include "graphics/context.hpp"
-
 
 #endif
 #include "GraphEditor.h"
@@ -50,10 +48,12 @@ ImGuiVkContext::ImGuiVkContext(rhi::Device device) : device_{device} {
     initRenderPass(*vkDevice);
     initFramebuffers(*vkDevice);
     initCombinedSampler(vkDevice->device);
+    initCmdPoolAndBufs(*vkDevice);
 }
 
 ImGuiVkContext::~ImGuiVkContext() {
     auto device = static_cast<rhi::vulkan::DeviceImpl*>(device_.Impl())->device;
+
     device.destroySampler(combinedSampler);
     for (auto fbo : framebuffers) {
         device.destroyFramebuffer(fbo);
@@ -64,6 +64,9 @@ ImGuiVkContext::~ImGuiVkContext() {
     device.destroyDescriptorSetLayout(descriptorSetLayout);
     device.destroyDescriptorPool(descriptorPool);
     device.destroyRenderPass(renderPass);
+
+    device.freeCommandBuffers(cmdPool, cmdBuf);
+    device.destroyCommandPool(cmdPool);
 }
 
 void ImGuiVkContext::initSetLayout(vk::Device device) {
@@ -81,6 +84,20 @@ void ImGuiVkContext::initSetLayout(vk::Device device) {
 void ImGuiVkContext::initCombinedSampler(vk::Device device) {
     vk::SamplerCreateInfo info;
     VK_CALL(combinedSampler, device.createSampler(info));
+}
+
+void ImGuiVkContext::initCmdPoolAndBufs(rhi::vulkan::DeviceImpl& device) {
+    vk::CommandPoolCreateInfo createInfo;
+    createInfo.setQueueFamilyIndex(device.queueIndices.graphicsIndex.value());
+    VK_CALL(cmdPool, device.device.createCommandPool(createInfo));
+
+    vk::CommandBufferAllocateInfo allocInfo;
+    allocInfo.setCommandPool(cmdPool).setCommandBufferCount(1).setLevel(
+        vk::CommandBufferLevel::ePrimary);
+
+    std::vector<vk::CommandBuffer> bufs;
+    VK_CALL(bufs, device.device.allocateCommandBuffers(allocInfo));
+    cmdBuf = bufs[0];
 }
 
 void ImGuiVkContext::initDescriptorSets(vk::Device device) {
@@ -147,12 +164,12 @@ void ImGuiVkContext::initRenderPass(rhi::vulkan::DeviceImpl& device) {
     vk::AttachmentDescription attachment;
     attachment.setFormat(device.swapchain.imageInfo.format.format)
         .setSamples(vk::SampleCountFlagBits::e1)
-        .setLoadOp(vk::AttachmentLoadOp::eLoad)
+        .setLoadOp(vk::AttachmentLoadOp::eClear)
         .setStoreOp(vk::AttachmentStoreOp::eStore)
         .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
         .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
         .setInitialLayout(vk::ImageLayout::eUndefined)
-        .setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+        .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
     vk::AttachmentReference color_attachment;
     color_attachment.setAttachment(0).setLayout(
@@ -184,15 +201,11 @@ void ImGuiVkContext::initFramebuffers(rhi::vulkan::DeviceImpl& device) {
         .setLayers(1);
     framebuffers.resize(device.swapchain.imageInfo.imagCount);
     for (uint32_t i = 0; i < device.swapchain.imageInfo.imagCount; i++) {
-        info.setAttachments(device.swapchain.ImageViews()[i]);
+        std::array<vk::ImageView, 1> views{
+            device.swapchain.ImageViews()[i]->GetView()};
+        info.setAttachments(views);
         VK_CALL(framebuffers[i], device.device.createFramebuffer(info));
     }
-}
-
-// get command buffer related by swapchain image
-vk::CommandBuffer getCmdBuf(RenderContext& ctx) {
-    return static_cast<rhi::vulkan::CommandEncoderImpl*>(ctx.encoder.Impl())
-        ->buf;
 }
 
 void renderVkFrame(RenderContext& ctx, ImGuiVkContext& vkCtx,
@@ -200,23 +213,41 @@ void renderVkFrame(RenderContext& ctx, ImGuiVkContext& vkCtx,
     auto idx = device.curFrame;
     auto imageAvalibleSem = device.imageAvaliableSems[idx];
     auto renderFinishSem = device.renderFinishSems[idx];
-    auto cmd = getCmdBuf(ctx);
+    auto cmd = vkCtx.cmdBuf;
 
     vk::RenderPassBeginInfo renderPassInfo;
+    vk::ClearValue clearValue{
+        vk::ClearColorValue{0.1f, 0.1f, 0.1f, 1.f}
+    };
     renderPassInfo.setRenderPass(vkCtx.renderPass)
         .setFramebuffer(vkCtx.framebuffers[device.curImageIndex])
         .setRenderArea({
             {                                      0,0                                                   },
             {device.swapchain.imageInfo.extent.width,
              device.swapchain.imageInfo.extent.height}
-    });
+    })
+        .setClearValues(clearValue);
     cmd.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
-    vk::FramebufferCreateInfo info;
-
     cmd.endRenderPass();
+
+    VK_CALL_NO_VALUE(cmd.end());
+
+    vk::PipelineStageFlags waitStage;
+    waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    auto queue =
+        static_cast<rhi::vulkan::QueueImpl*>(device.graphicsQueue->Impl())
+            ->queue;
+    vk::SubmitInfo submitInfo;
+    submitInfo.setCommandBuffers(vkCtx.cmdBuf)
+        .setSignalSemaphores(renderFinishSem)
+        .setWaitSemaphores(imageAvalibleSem)
+        .setWaitDstStageMask(waitStage);
+    VK_CALL_NO_VALUE(queue.submit(submitInfo, device.fences[device.curFrame]));
+
+    device.needPresent = true;
 }
 
 void ImGuiOnWindowResize(const WindowResizeEvent& event,
@@ -303,25 +334,27 @@ void ImGuiInit(gecs::commands cmds, gecs::resource<gecs::mut<Window>> window,
 void ImGuiGameWindowLayoutTransition(
     gecs::resource<gecs::mut<rhi::Device>> device,
     gecs::resource<gecs::mut<Camera>> camera,
-    gecs::resource<gecs::mut<RenderContext>> renderCtx) {
+    gecs::resource<gecs::mut<RenderContext>> renderCtx,
+    gecs::resource<gecs::mut<ImGuiVkContext>> vkCtx) {
     PROFILE_BEGIN();
 
-    auto cmd = getCmdBuf(renderCtx.get());
+    auto cmd = vkCtx->cmdBuf;
 
     auto target = camera->GetTarget();
 
     if (!target) {
-        return ;
+        return;
     }
 
-    auto texture = static_cast<rhi::vulkan::TextureImpl*>(target.Impl()->Texture().Impl());
+    auto texture =
+        static_cast<rhi::vulkan::TextureImpl*>(target.Impl()->Texture().Impl());
 
     auto dev = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());
 
     dev->WaitIdle();
 
-    auto aspect = nickel::rhi::vulkan::DetermineTextureAspect(
-        nickel::rhi::TextureAspect::All, texture->Format());
+    auto aspect =
+        nickel::rhi::vulkan::DetermineTextureAspectByFormat(texture->Format());
 
     vk::ImageMemoryBarrier barrier;
     vk::ImageSubresourceRange range;
@@ -345,8 +378,19 @@ void ImGuiGameWindowLayoutTransition(
     texture->layouts[0] = vk::ImageLayout::eShaderReadOnlyOptimal;
 }
 
-void ImGuiStart(gecs::resource<rhi::Adapter> adapter) {
+void ImGuiStart(gecs::resource<rhi::Adapter> adapter,
+                gecs::resource<gecs::mut<rhi::Device>> device,
+                gecs::resource<gecs::mut<ImGuiVkContext>> vkCtx) {
     PROFILE_BEGIN();
+
+    auto vkDevice = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());
+
+    auto cmd = vkCtx->cmdBuf;
+    VK_CALL_NO_VALUE(vkDevice->device.resetCommandPool(vkCtx->cmdPool));
+
+    vk::CommandBufferBeginInfo beginInfo;
+    beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    VK_CALL_NO_VALUE(cmd.begin(beginInfo));
 
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
         ImGui_ImplOpenGL3_NewFrame();
@@ -438,6 +482,55 @@ void Image(const ::nickel::Texture& texture, const ImVec2& image_size,
     }
 }
 
+void transferLayout2ShaderReadOnly(const ::nickel::Texture& texture,
+                                   ::nickel::rhi::Device device) {
+    auto dev = static_cast<::nickel::rhi::vulkan::DeviceImpl*>(device.Impl());
+    auto vkTexture = static_cast<::nickel::rhi::vulkan::TextureImpl*>(
+        texture.RawTexture().Impl());
+
+    if (vkTexture->layouts[0] == vk::ImageLayout::eShaderReadOnlyOptimal) {
+        return;
+    }
+    auto cmd = dev->RequireCmdBuf();
+
+    vk::CommandBufferBeginInfo beginInfo;
+    beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    VK_CALL_NO_VALUE(cmd.begin(beginInfo));
+
+    auto aspect = vk::ImageAspectFlagBits::eColor;
+
+    vk::ImageMemoryBarrier barrier;
+    vk::ImageSubresourceRange range;
+    range.setAspectMask(aspect)
+        .setBaseArrayLayer(0)
+        .setLayerCount(1)
+        .setBaseMipLevel(0)
+        .setLevelCount(1);
+
+    barrier.setOldLayout(vkTexture->layouts[0])
+        .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+        .setSrcAccessMask(vk::AccessFlagBits::eNone)
+        .setDstAccessMask(vk::AccessFlagBits::eNone)
+        .setImage(vkTexture->GetImage())
+        .setSubresourceRange(range);
+
+    cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe,
+                        vk::PipelineStageFlagBits::eFragmentShader,
+                        vk::DependencyFlagBits::eByRegion, {}, {}, barrier);
+
+    VK_CALL_NO_VALUE(cmd.end());
+
+    vkTexture->layouts[0] = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+    auto queue = static_cast<::nickel::rhi::vulkan::QueueImpl*>(
+        dev->graphicsQueue->Impl());
+
+    vk::SubmitInfo submitInfo;
+    submitInfo.setCommandBuffers(cmd);
+    VK_CALL_NO_VALUE(queue->queue.submit(submitInfo));
+    VK_CALL_NO_VALUE(queue->queue.waitIdle());
+}
+
 bool ImageButton(const char* str_id, const ::nickel::Texture& texture,
                  const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1,
                  const ImVec4& bg_col, const ImVec4& tint_col) {
@@ -450,6 +543,11 @@ bool ImageButton(const char* str_id, const ::nickel::Texture& texture,
     if (api == nickel::rhi::APIPreference::Vulkan) {
         auto ctx =
             nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
+        transferLayout2ShaderReadOnly(texture,
+                                      ::nickel::ECS::Instance()
+                                          .World()
+                                          .res_mut<nickel::rhi::Device>()
+                                          .get());
         return ::ImGui::ImageButton(str_id,
                                     ctx->GetTextureBindedDescriptorSet(texture),
                                     image_size, uv0, uv1, bg_col, tint_col);
@@ -477,6 +575,12 @@ bool ImageButton(const ::nickel::Texture& texture, const ImVec2& size,
     if (api == nickel::rhi::APIPreference::Vulkan) {
         auto ctx =
             nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
+        transferLayout2ShaderReadOnly(texture,
+                                      ::nickel::ECS::Instance()
+                                          .World()
+                                          .res_mut<nickel::rhi::Device>()
+                                          .get());
+
         return ::ImGui::ImageButton(ctx->GetTextureBindedDescriptorSet(texture),
                                     size, uv0, uv1, frame_padding, bg_col,
                                     tint_col);

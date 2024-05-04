@@ -78,6 +78,10 @@ Buffer Device::CreateBuffer(const Buffer::Descriptor& desc) {
     return impl_->CreateBuffer(desc);
 }
 
+std::pair<Texture, TextureView> Device::GetPresentationTexture() {
+    return impl_->GetPresentationTexture();
+}
+
 void Device::BeginFrame() {
     return impl_->BeginFrame();
 }

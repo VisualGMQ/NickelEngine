@@ -65,7 +65,7 @@ public:
     };
 
     struct BufTexCopyDst final {
-        TextureAspect aspect = TextureAspect::All;
+        Flags<TextureAspect> aspect = TextureAspect::ColorOnly;
         uint32_t miplevel = 0;
         Offset3D origin;
         Texture texture;

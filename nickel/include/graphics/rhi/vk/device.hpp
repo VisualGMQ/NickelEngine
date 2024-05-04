@@ -33,21 +33,6 @@ public:
         }
     };
 
-    struct CommandCounter final {
-        CommandCounter() { counter_.fill(0); }
-
-        void Reset() { counter_.fill(0); }
-
-        void Add(CmdType type) { counter_[static_cast<uint32_t>(type)]++; }
-
-        uint32_t Get(CmdType type) {
-            return counter_[static_cast<uint32_t>(type)];
-        }
-
-    private:
-        std::array<int, static_cast<uint32_t>(CmdType::CmdTypeNumber)> counter_;
-    };
-
     explicit DeviceImpl(AdapterImpl&);
     ~DeviceImpl();
 
@@ -66,11 +51,15 @@ public:
 
     void OnWindowResize(const cgmath::Vec2&);
 
+    std::pair<Texture, TextureView> GetPresentationTexture() override;
     void BeginFrame() override;
     void EndFrame() override;
     void WaitIdle() override;
 
     Queue GetQueue() override;
+
+    vk::CommandBuffer RequireCmdBuf();
+    void ResetCmdBuf(vk::CommandBuffer cmdBuf);
 
     AdapterImpl& adapter;
     vk::Device device;
@@ -80,6 +69,7 @@ public:
     Queue* graphicsQueue;
     Queue* presentQueue;
     uint32_t curImageIndex = 0;
+    bool needPresent = false;
 
     uint32_t curFrame = 0;
     std::vector<vk::Fence> fences;
@@ -89,7 +79,8 @@ public:
     std::vector<RenderPass> renderPasses;
     std::vector<Framebuffer> framebuffers;
 
-    CommandCounter cmdCounter;
+    std::vector<vk::CommandBuffer> cmdBufs;
+    std::vector<vk::CommandBuffer> cmdBufInVacant;
 
 private:
     void createDevice(vk::Instance, vk::PhysicalDevice, vk::SurfaceKHR);

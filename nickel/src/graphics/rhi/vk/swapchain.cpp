@@ -19,7 +19,7 @@ Swapchain::Swapchain(vk::PhysicalDevice phyDev, DeviceImpl& dev,
 
     std::set<uint32_t> uniqueIndices{queueIndices.graphicsIndex.value(),
                                      queueIndices.presentIndex.value()};
-
+                                     
     std::vector<uint32_t> indices;
     for (auto idx : uniqueIndices) {
         indices.push_back(idx);
@@ -97,7 +97,11 @@ vk::PresentModeKHR Swapchain::queryPresentMode(vk::PhysicalDevice dev,
 void Swapchain::Destroy(vk::Device dev) {
     if (swapchain) {
         for (auto& view : imageViews) {
-            dev.destroyImageView(view);
+            delete view;
+        }
+        for (auto& image : images) {
+            image->image = nullptr;
+            delete image;
         }
         dev.destroySwapchainKHR(swapchain);
     }
@@ -106,8 +110,20 @@ void Swapchain::Destroy(vk::Device dev) {
 void Swapchain::getAndCreateImageViews(DeviceImpl& dev) {
     std::vector<vk::Image> images;
     VK_CALL(images, dev.device.getSwapchainImagesKHR(swapchain));
+
+    Texture::Descriptor desc;
+    desc.size.width = ImageInfo().extent.width;
+    desc.size.height = ImageInfo().extent.height;
+    desc.size.depthOrArrayLayers = 1;
+    desc.usage = TextureUsage::RenderAttachment;
+    desc.sampleCount = SampleCount::Count1;
+    desc.mipmapLevelCount = 1;
+    desc.dimension = TextureType::Dim2;
+    desc.format = TextureFormat::Presentation;
+
     for (auto& image : images) {
-        this->images.push_back(image);
+        auto& texture =
+            this->images.emplace_back(new TextureImpl{dev, image, {}, desc});
 
         vk::ComponentMapping mapping;
         vk::ImageSubresourceRange range;
@@ -126,7 +142,7 @@ void Swapchain::getAndCreateImageViews(DeviceImpl& dev) {
         vk::ImageView view;
         VK_CALL(view, dev.device.createImageView(createInfo));
         if (view) {
-            imageViews.emplace_back(view);
+            imageViews.emplace_back(new TextureViewImpl{dev, *texture, view});
         }
     }
 }

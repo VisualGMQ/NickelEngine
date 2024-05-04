@@ -47,10 +47,10 @@ void GameWindow::update() {
         guizmoOperation_ = ImGuizmo::TRANSLATE;
     }
     if (keyboard->Key(nickel::Key::W).IsPressed()) {
-        guizmoOperation_ = ImGuizmo::SCALE;
+        guizmoOperation_ = ImGuizmo::ROTATE;
     }
     if (keyboard->Key(nickel::Key::E).IsPressed()) {
-        guizmoOperation_ = ImGuizmo::ROTATE;
+        guizmoOperation_ = ImGuizmo::SCALE;
     }
     if (ImGui::RadioButton("Translate", guizmoOperation_ == ImGuizmo::TRANSLATE))
         guizmoOperation_ = ImGuizmo::TRANSLATE;

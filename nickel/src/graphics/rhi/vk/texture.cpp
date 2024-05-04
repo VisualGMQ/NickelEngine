@@ -10,22 +10,22 @@ TextureImpl::TextureImpl(AdapterImpl& adapter, DeviceImpl& dev,
                          const Texture::Descriptor& desc,
                          const std::vector<uint32_t>& queueIndices)
     : rhi::TextureImpl{desc}, dev_{dev} {
-    if (desc.format != TextureFormat::Presentation) {
-        createImage(desc, queueIndices);
-        allocMem(adapter.phyDevice,
-                 desc.viewFormat ? desc.viewFormat.value() : desc.format,
-                 desc.size);
-        VK_CALL_NO_VALUE(dev_.device.bindImageMemory(image_, mem, 0));
-    } else {
-        desc_.size.width = dev.swapchain.ImageInfo().extent.width;
-        desc_.size.height = dev.swapchain.ImageInfo().extent.height;
-        desc_.size.depthOrArrayLayers = 1;
-        desc_.usage = TextureUsage::RenderAttachment;
-        desc_.sampleCount = SampleCount::Count1;
-        desc_.mipmapLevelCount = 1;
-        desc_.dimension = TextureType::Dim2;
-        layouts.push_back(vk::ImageLayout::eUndefined);
-    }
+    Assert(desc.format != rhi::TextureFormat::Presentation,
+           "Present format texture can only get from "
+           "device.GetPresentationTexture()");
+
+    createImage(desc, queueIndices);
+    allocMem(adapter.phyDevice,
+             desc.viewFormat ? desc.viewFormat.value() : desc.format,
+             desc.size);
+
+    VK_CALL_NO_VALUE(dev_.device.bindImageMemory(image, mem, 0));
+}
+
+TextureImpl::TextureImpl(DeviceImpl& dev, vk::Image image, vk::DeviceMemory mem,
+                         const Texture::Descriptor& desc)
+    : rhi::TextureImpl{desc}, dev_{dev}, image{image}, mem{mem} {
+    layouts.emplace_back(vk::ImageLayout::eUndefined);
 }
 
 bool isDepthOrStencil(TextureFormat fmt) {
@@ -60,12 +60,12 @@ void TextureImpl::createImage(const Texture::Descriptor& desc,
 
     layouts.resize(desc.size.depthOrArrayLayers, vk::ImageLayout::eUndefined);
 
-    VK_CALL(image_, dev_.device.createImage(info));
+    VK_CALL(image, dev_.device.createImage(info));
 }
 
 void TextureImpl::allocMem(vk::PhysicalDevice phyDevice, TextureFormat,
                            const Extent3D&) {
-    auto requirements = dev_.device.getImageMemoryRequirements(image_);
+    auto requirements = dev_.device.getImageMemoryRequirements(image);
     auto index = FindMemoryType(phyDevice, requirements,
 
                                 vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -84,8 +84,8 @@ TextureImpl::~TextureImpl() {
     if (mem) {
         dev_.device.freeMemory(mem);
     }
-    if (image_) {
-        dev_.device.destroy(image_);
+    if (image) {
+        dev_.device.destroy(image);
     }
 }
 
@@ -94,11 +94,7 @@ TextureView TextureImpl::CreateView(const TextureView::Descriptor& desc) {
 }
 
 vk::Image TextureImpl::GetImage() const {
-    if (Descriptor().format == TextureFormat::Presentation) {
-        return dev_.swapchain.Images()[dev_.curImageIndex];
-    } else {
-        return image_;
-    }
+    return image;
 }
 
 }  // namespace nickel::rhi::vulkan

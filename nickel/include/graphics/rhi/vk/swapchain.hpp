@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common/cgmath.hpp"
-#include "graphics/rhi/texture.hpp"
-#include "graphics/rhi/texture_view.hpp"
+#include "graphics/rhi/vk/texture.hpp"
+#include "graphics/rhi/vk/texture_view.hpp"
 #include "graphics/rhi/vk/pch.hpp"
 
 
@@ -30,9 +30,9 @@ public:
 
     auto& ImageInfo() const { return imageInfo; }
 
-    const std::vector<vk::Image>& Images() const { return images; }
+    auto& Images() const { return images; }
 
-    const std::vector<vk::ImageView>& ImageViews() const { return imageViews; }
+    auto& ImageViews() const { return imageViews; }
 
     struct ImageInfo {
         vk::Extent2D extent;
@@ -41,8 +41,10 @@ public:
     } imageInfo;
 
     vk::SwapchainKHR swapchain;
-    std::vector<vk::Image> images;
-    std::vector<vk::ImageView> imageViews;
+    // std::vector<vk::Image> images;
+    // std::vector<vk::ImageView> imageViews;
+    std::vector<TextureImpl*> images;
+    std::vector<TextureViewImpl*> imageViews;
 
 private:
     struct ImageInfo queryImageInfo(vk::PhysicalDevice, const cgmath::Vec2&,

@@ -10,7 +10,7 @@ namespace nickel::rhi::vulkan {
 
 class FramebufferImpl : public rhi::FramebufferImpl {
 public:
-    FramebufferImpl(vk::Device dev, const std::vector<vk::ImageView>& views,
+    FramebufferImpl(vk::Device dev, const std::vector<TextureView>& views,
                     const Extent3D& extent, vk::RenderPass);
     ~FramebufferImpl();
 
@@ -21,7 +21,7 @@ public:
 
 private:
     vk::Device dev_;
-    std::vector<vk::ImageView> views_;
+    std::vector<TextureView> views_;
     Extent3D extent_;
 };
 

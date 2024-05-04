@@ -28,8 +28,9 @@ void BeginRender(gecs::resource<gecs::mut<rhi::Device>> device,
 
     rhi::Texture::Descriptor textureDesc;
     textureDesc.format = rhi::TextureFormat::Presentation;
-    ctx->presentTexture = device->CreateTexture(textureDesc);
-    ctx->presentTextureView = ctx->presentTexture.CreateView();
+    auto [texture, view] = device->GetPresentationTexture();
+    ctx->presentTexture = texture;
+    ctx->presentTextureView = view;
     ctx->encoder = device->CreateCommandEncoder();
 
     PROFILE_END();
@@ -288,12 +289,11 @@ void EndRender(gecs::resource<gecs::mut<rhi::Device>> device,
                gecs::resource<Window> window) {
     PROFILE_BEGIN();
 
-    auto cmd = ctx->encoder.Finish();
-
     if (!window->IsMinimized()) {
         rhi::Queue queue = device->GetQueue();
 
-        queue.Submit({cmd});
+        ctx->cmd = ctx->encoder.Finish();
+        queue.Submit({ctx->cmd});
     }
 
     PROFILE_END();
@@ -314,8 +314,6 @@ void EndFrame(gecs::resource<gecs::mut<rhi::Device>> device,
     device->EndFrame();
 
     ctx->encoder.Destroy();
-    ctx->presentTextureView.Destroy();
-    ctx->presentTexture.Destroy();
 
     PROFILE_END();
 }

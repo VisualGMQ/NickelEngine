@@ -9,8 +9,9 @@
 #include "entity_list_window.hpp"
 #include "inspector.hpp"
 #include "spawn_component.hpp"
-#include "watch_file.hpp"
 #include "type_displayer.hpp"
+#include "watch_file.hpp"
+
 
 enum class EditorScene {
     ProjectManager,
@@ -18,9 +19,10 @@ enum class EditorScene {
 };
 
 void ProjectManagerUpdate(
-    gecs::commands cmds,
-    gecs::resource<nickel::Window> window,
+    gecs::commands cmds, gecs::resource<nickel::Window> window,
     gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr) {
+    PROFILE_BEGIN();
+
     static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
                                     ImGuiWindowFlags_NoMove |
                                     ImGuiWindowFlags_NoSavedSettings;
@@ -67,6 +69,8 @@ void ProjectManagerUpdate(
         }
         ImGui::End();
     }
+
+    PROFILE_END();
 }
 
 void dropFileEventHandle(const nickel::DropFileEvent& event) {
@@ -102,7 +106,6 @@ void EditorEnter(
         -halfTextureSize.w, halfTextureSize.w, halfTextureSize.h,
         -halfTextureSize.h, 1000, -1000,
         adapter->RequestAdapterInfo().api == nickel::rhi::APIPreference::GL));
-    camera->SetRenderTarget(target->View());
     camera->SetViewport({
         {0, 0},
         target->Size()
@@ -167,8 +170,8 @@ void DrawGuizmos() {
 
     //     if (auto wheel = mouse->WheelOffset(); wheel.y != 0) {
     //         auto scale = camera->Scale();
-    //         auto newScale = scale + wheel.y * nickel::cgmath::Vec2{0.01, 0.01};
-    //         if (newScale.x <= 0 || newScale.y <= 0) {
+    //         auto newScale = scale + wheel.y * nickel::cgmath::Vec2{0.01,
+    //         0.01}; if (newScale.x <= 0 || newScale.y <= 0) {
     //             newScale.Set(0.01, 0.01);
     //         }
     //         camera->ScaleTo(newScale);
@@ -179,7 +182,7 @@ void DrawGuizmos() {
     if (!reg->alive(selectedEnt) || !reg->has<nickel::Transform>(selectedEnt)) {
         return;
     }
-    
+
     static auto guizmoOperation_ = ImGuizmo::OPERATION::TRANSLATE;
     static auto guizmoMode_ = ImGuizmo::MODE::LOCAL;
 
@@ -195,26 +198,26 @@ void DrawGuizmos() {
     if (keyboard->Key(nickel::Key::E).IsPressed()) {
         guizmoOperation_ = ImGuizmo::ROTATE;
     }
-    if (ImGui::RadioButton("Translate", guizmoOperation_ == ImGuizmo::TRANSLATE))
+    if (ImGui::RadioButton("Translate",
+                           guizmoOperation_ == ImGuizmo::TRANSLATE))
         guizmoOperation_ = ImGuizmo::TRANSLATE;
     ImGui::SameLine();
     if (ImGui::RadioButton("Rotate", guizmoOperation_ == ImGuizmo::ROTATE))
         guizmoOperation_ = ImGuizmo::ROTATE;
     ImGui::SameLine();
     if (ImGui::RadioButton("Scale", guizmoOperation_ == ImGuizmo::SCALE))
-        guizmoOperation_  = ImGuizmo::SCALE;
-
+        guizmoOperation_ = ImGuizmo::SCALE;
 
     nickel::cgmath::Mat44 matrix;
     auto windowSize = reg->res<nickel::Window>()->Size();
     float matrixRot[3] = {0, 0, transform.rotation};
-    float matrixTrans[3] = {transform.translation.x, transform.translation.y, 0};
+    float matrixTrans[3] = {transform.translation.x, transform.translation.y,
+                            0};
     float matrixScale[3] = {transform.scale.x, transform.scale.y, 0};
     ImGuizmo::RecomposeMatrixFromComponents(matrixTrans, matrixRot, matrixScale,
                                             matrix.data);
 
-    if (guizmoOperation_ != ImGuizmo::SCALE)
-    {
+    if (guizmoOperation_ != ImGuizmo::SCALE) {
         if (ImGui::RadioButton("Local", guizmoMode_ == ImGuizmo::LOCAL))
             guizmoMode_ = ImGuizmo::LOCAL;
         ImGui::SameLine();
@@ -224,14 +227,14 @@ void DrawGuizmos() {
     ImGuizmo::Enable(true);
     ImGuiIO& io = ImGui::GetIO();
     auto pos = ImGui::GetWindowPos() + ImGui::GetWindowContentRegionMin();
-    auto size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin();
+    auto size =
+        ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin();
     ImGuizmo::SetRect(0, 0, 1024, 720);
     auto view = nickel::cgmath::CreateScale({1, -1, 1}) * camera->View();
-    // ImGuizmo::DrawGrid(view.data, camera->Project().data, matrix.data, 100.f);
-    ImGuizmo::Manipulate(view.data, camera->Project().data,
-                         guizmoOperation_, guizmoMode_, matrix.data, nullptr,
-                         nullptr);
-
+    // ImGuizmo::DrawGrid(view.data, camera->Project().data, matrix.data,
+    // 100.f);
+    ImGuizmo::Manipulate(view.data, camera->Project().data, guizmoOperation_,
+                         guizmoMode_, matrix.data, nullptr, nullptr);
 }
 
 void EditorImGuiUpdate() {
@@ -275,10 +278,7 @@ void RegistSystems(gecs::world& world) {
     reg.regist_startup_system<plugin::ImGuiInit>()
         .regist_shutdown_system_before<plugin::ImGuiShutdown,
                                        nickel::EngineShutdown>()
-        .regist_update_system_after<plugin::ImGuiStart,
-                                    nickel::RenderSprite2D>()
-        .regist_update_system_before<plugin::ImGuiGameWindowLayoutTransition,
-                                     plugin::ImGuiStart>()
+        .regist_update_system_after<plugin::ImGuiStart, nickel::EndRender>()
         .regist_update_system_after<plugin::ImGuiEnd, plugin::ImGuiStart>()
         .regist_shutdown_system_before<EditorExit, nickel::EngineShutdown>()
         .add_state(EditorScene::ProjectManager)
@@ -291,6 +291,9 @@ void RegistSystems(gecs::world& world) {
         .regist_enter_system_to_state<EditorEnter>(EditorScene::Editor)
         .regist_update_system_to_state_after<EditorImGuiUpdate,
                                              plugin::ImGuiStart>(
+            EditorScene::Editor)
+        .regist_update_system_to_state_after<
+            plugin::ImGuiGameWindowLayoutTransition, EditorImGuiUpdate>(
             EditorScene::Editor);
 
     world.cur_registry()->switch_state_immediatly(EditorScene::ProjectManager);

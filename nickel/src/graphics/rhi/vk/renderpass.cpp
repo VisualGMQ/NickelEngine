@@ -6,109 +6,30 @@
 
 namespace nickel::rhi::vulkan {
 
-RenderPassImpl::RenderPassImpl(DeviceImpl& dev,
-                               const RenderPass::Descriptor& desc)
-    : desc{desc}, dev_{dev.device} {
-    createRenderPass(dev, desc);
-}
+RenderPassImpl::RenderPassImpl(vk::Device device,
+                               const rhi::RenderPass::Descriptor& descriptor,
+                               const RenderPassInfo& info)
+    : renderPassInfo{std::move(info)}, dev_{device}, descriptor_{descriptor} {
+    vk::RenderPassCreateInfo createInfo;
 
-void RenderPassImpl::createRenderPass(DeviceImpl& dev,
-                                      const RenderPass::Descriptor& desc) {
-    vk::RenderPassCreateInfo info;
-    std::vector<vk::AttachmentDescription> attachments;
-    size_t attCount = desc.colorAttachments.size() +
-                      (desc.depthStencilAttachment.has_value() ? 1 : 0);
-    attachments.reserve(attCount);
-    std::vector<vk::AttachmentReference> colorAttRefs;
-    colorAttRefs.reserve(desc.colorAttachments.size());
+    std::vector<vk::SubpassDescription> subpasses(
+        renderPassInfo.subpasses.size());
+    std::transform(
+        renderPassInfo.subpasses.begin(), renderPassInfo.subpasses.end(),
+        subpasses.begin(), [](const SubpassInfo& info) {
+            vk::SubpassDescription subpass;
+            subpass.setColorAttachments(info.colorRefs);
+            if (info.depthRef) {
+                subpass.setPDepthStencilAttachment(&info.depthRef.value());
+            }
+            return subpass;
+        });
 
-    for (int i = 0; i < desc.colorAttachments.size(); i++) {
-        auto& colorAtt = desc.colorAttachments[i];
-        vk::AttachmentDescription attDesc;
-        attDesc
-            .setInitialLayout(static_cast<vulkan::TextureImpl*>(
-                                  colorAtt.view.Texture().Impl())
-                                  ->layouts[0])
-            .setFinalLayout(GetImageLayoutAfterSubpass(colorAtt.view.Format()))
-            .setFormat(colorAtt.view.Format() == TextureFormat::Presentation
-                           ? dev.swapchain.imageInfo.format.format
-                           : TextureFormat2Vk(colorAtt.view.Format()))
-            .setLoadOp(AttachmentLoadOp2Vk(colorAtt.loadOp))
-            .setStoreOp(AttachmentStoreOp2Vk(colorAtt.storeOp))
-            .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-            .setStencilStoreOp(vk::AttachmentStoreOp::eNone)
-            .setSamples(SampleCount2Vk(colorAtt.view.Texture().SampleCount()));
+    createInfo.setAttachments(renderPassInfo.descriptions)
+        .setDependencies(renderPassInfo.dependencies)
+        .setSubpasses(subpasses);
 
-        attachments.push_back(attDesc);
-
-        vk::AttachmentReference ref;
-        ref.setAttachment(i).setLayout(
-            vk::ImageLayout::eColorAttachmentOptimal);
-        colorAttRefs.emplace_back(ref);
-    }
-
-    vk::AttachmentReference depthAttRef;
-    if (desc.depthStencilAttachment) {
-        vk::AttachmentDescription depthAttach;
-
-        auto texture = static_cast<const TextureImpl*>(
-            desc.depthStencilAttachment->view.Texture().Impl());
-
-        depthAttach
-            .setInitialLayout(texture->layouts[0])
-            /*
-                TODO: currently we don't enable separateDepthStencilLayouts, so
-                depth & stencil will use one layout
-            */
-            .setFinalLayout(GetDepthStencilLayoutAfterSubpass(desc))
-            .setFormat(
-                TextureFormat2Vk(desc.depthStencilAttachment->view.Format()))
-            .setLoadOp(
-                AttachmentLoadOp2Vk(desc.depthStencilAttachment->depthLoadOp))
-            .setStoreOp(
-                AttachmentStoreOp2Vk(desc.depthStencilAttachment->depthStoreOp))
-            .setStencilLoadOp(
-                AttachmentLoadOp2Vk(desc.depthStencilAttachment->stencilLoadOp))
-            .setStencilStoreOp(AttachmentStoreOp2Vk(
-                desc.depthStencilAttachment->stencilStoreOp))
-            .setSamples(SampleCount2Vk(
-                desc.depthStencilAttachment->view.Texture().SampleCount()));
-
-        attachments.push_back(depthAttach);
-
-        depthAttRef.setAttachment(attCount - 1)
-            .setLayout(depthAttach.finalLayout);
-    }
-
-    vk::SubpassDescription subpass;
-    subpass.setColorAttachments(colorAttRefs)
-        .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-    if (desc.depthStencilAttachment) {
-        subpass.setPDepthStencilAttachment(&depthAttRef);
-    }
-
-    vk::SubpassDependency dep;
-    dep.setSrcSubpass(VK_SUBPASS_EXTERNAL).setDstSubpass(0);
-    if (desc.depthStencilAttachment) {
-        dep.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput |
-                            vk::PipelineStageFlagBits::eEarlyFragmentTests)
-            .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput |
-                             vk::PipelineStageFlagBits::eEarlyFragmentTests)
-            .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite |
-                              vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-    } else {
-        dep.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-            .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
-            .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-    }
-
-    info.setAttachments(attachments).setSubpasses(subpass).setDependencies(dep);
-
-    VK_CALL(renderPass, dev_.createRenderPass(info));
-}
-
-const RenderPass::Descriptor& RenderPassImpl::GetDescriptor() const {
-    return desc;
+    VK_CALL(renderPass, dev_.createRenderPass(createInfo));
 }
 
 RenderPassImpl::~RenderPassImpl() {

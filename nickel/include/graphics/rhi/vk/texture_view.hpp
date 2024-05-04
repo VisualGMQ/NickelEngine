@@ -10,8 +10,8 @@
 
 namespace nickel::rhi::vulkan {
 
-vk::Flags<vk::ImageAspectFlagBits> DetermineTextureAspect(TextureAspect aspect,
-                                                          TextureFormat format);
+vk::Flags<vk::ImageAspectFlagBits> DetermineTextureAspectByFormat(
+    TextureFormat format);
 
 class DeviceImpl;
 class TextureImpl;

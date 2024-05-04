@@ -4,27 +4,19 @@
 
 namespace nickel::rhi::vulkan {
 
-vk::Flags<vk::ImageAspectFlagBits> DetermineTextureAspect(TextureAspect aspect,
-                                                          TextureFormat format) {
-    if (aspect == TextureAspect::All) {
-        if (format ==TextureFormat::DEPTH16_UNORM || format ==TextureFormat::DEPTH24_PLUS ||
-            format ==TextureFormat::DEPTH32_FLOAT) {
-            return vk::ImageAspectFlagBits::eDepth;
-        } else if (format ==TextureFormat::DEPTH32_FLOAT_STENCIL8 ||
-                   format ==TextureFormat::DEPTH24_PLUS_STENCIL8) {
-            return vk::ImageAspectFlagBits::eDepth |
-                   vk::ImageAspectFlagBits::eStencil;
-        } else if (format ==TextureFormat::STENCIL8) {
-            return vk::ImageAspectFlagBits::eStencil;
-        } else {
-            return vk::ImageAspectFlagBits::eColor;
-        }
-    } else if (aspect == TextureAspect::DepthOnly) {
+vk::Flags<vk::ImageAspectFlagBits> DetermineTextureAspectByFormat(TextureFormat format) {
+    if (format ==TextureFormat::DEPTH16_UNORM || format ==TextureFormat::DEPTH24_PLUS ||
+        format ==TextureFormat::DEPTH32_FLOAT) {
         return vk::ImageAspectFlagBits::eDepth;
-    } else if (aspect == TextureAspect::StencilOnly) {
+    } else if (format ==TextureFormat::DEPTH32_FLOAT_STENCIL8 ||
+                format ==TextureFormat::DEPTH24_PLUS_STENCIL8) {
+        return vk::ImageAspectFlagBits::eDepth |
+                vk::ImageAspectFlagBits::eStencil;
+    } else if (format ==TextureFormat::STENCIL8) {
         return vk::ImageAspectFlagBits::eStencil;
+    } else {
+        return vk::ImageAspectFlagBits::eColor;
     }
-    return vk::ImageAspectFlagBits::eNone;
 }
 
 TextureViewImpl::TextureViewImpl(DeviceImpl& dev, TextureImpl& texture,
@@ -32,13 +24,18 @@ TextureViewImpl::TextureViewImpl(DeviceImpl& dev, TextureImpl& texture,
     : rhi::TextureViewImpl(desc.format ? desc.format.value() : texture.Format(),
                            texture),
       dev_{dev} {
+
     if (texture.Format() != TextureFormat::Presentation) {
         vk::ImageViewCreateInfo info;
         vk::ImageSubresourceRange range;
         enum TextureFormat format =
             desc.format ? desc.format.value() : texture.Format();
-        vk::Flags<vk::ImageAspectFlagBits> aspect =
-            DetermineTextureAspect(desc.aspect, format);
+        vk::Flags<vk::ImageAspectFlagBits> aspect;
+        if (desc.aspect == TextureAspect::Unknown) {
+            aspect = DetermineTextureAspectByFormat(format);
+        } else {
+            aspect = TextureAspect2Vk(desc.aspect);
+        }
 
         TextureViewType dimension;
 
@@ -97,11 +94,7 @@ TextureViewImpl::~TextureViewImpl() {
 }
 
 vk::ImageView TextureViewImpl::GetView() const {
-    if (Format() ==TextureFormat::Presentation) {
-        return dev_.swapchain.imageViews[dev_.curImageIndex];
-    } else {
-        return view_;
-    }
+    return view_;
 }
 
 }  // namespace nickel::rhi::vulkan

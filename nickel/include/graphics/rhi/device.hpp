@@ -35,6 +35,8 @@ public:
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor& desc);
     Buffer CreateBuffer(const Buffer::Descriptor&);
 
+
+    std::pair<Texture, TextureView> GetPresentationTexture();
     void BeginFrame();
     void EndFrame();
     void WaitIdle();

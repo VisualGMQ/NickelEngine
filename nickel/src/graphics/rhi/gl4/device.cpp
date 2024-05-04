@@ -86,6 +86,10 @@ Queue DeviceImpl::GetQueue() {
     return queue;
 }
 
+std::pair<Texture, TextureView> DeviceImpl::GetPresentationTexture() {
+    return {};
+}
+
 void DeviceImpl::BeginFrame() {}
 
 void DeviceImpl::EndFrame() {

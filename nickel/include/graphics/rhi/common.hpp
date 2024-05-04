@@ -82,6 +82,8 @@ enum class SampleCount {
 
 enum class TextureFormat {
     Undefined,
+
+    // can't use, only for swapchain image
     Presentation,
 
     // 8_bit formats
@@ -230,9 +232,10 @@ struct Offset3D {
 };
 
 enum class TextureAspect {
-    All,
-    DepthOnly,
-    StencilOnly,
+    Unknown = 0x00,
+    ColorOnly = 0x01,
+    DepthOnly = 0x02,
+    StencilOnly = 0x04,
 };
 
 enum class ShaderStage {

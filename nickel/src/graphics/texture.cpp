@@ -85,7 +85,7 @@ rhi::Texture Texture::createTexture(rhi::Device dev, void* data, uint32_t w,
         src.rowsPerImage = h;
         rhi::CommandEncoder::BufTexCopyDst dst;
         dst.texture = texture;
-        dst.aspect = rhi::TextureAspect::All;
+        dst.aspect = rhi::TextureAspect::ColorOnly;
         dst.miplevel = 0;
         encoder.CopyBufferToTexture(src, dst,
                                     rhi::Extent3D{(uint32_t)w, (uint32_t)h, 1});

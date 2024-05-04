@@ -162,8 +162,7 @@ inline vk::ImageLayout GetLayoutByFormat(
     TextureFormat fmt, bool stencilReadOnly = false, bool depthReadOnly = false,
     bool stencilDepthLayoutSperate = false) {
     if (fmt == TextureFormat::Presentation) {
-        // return vk::ImageLayout::ePresentSrcKHR;
-        return vk::ImageLayout::eColorAttachmentOptimal;
+        return vk::ImageLayout::ePresentSrcKHR;
     }
 
     if (IsDepthStencilFormat(fmt)) {

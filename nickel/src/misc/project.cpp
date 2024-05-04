@@ -10,7 +10,6 @@
 #include "system/physics.hpp"
 #include "system/video.hpp"
 
-
 namespace nickel {
 
 void SaveAssets(const std::filesystem::path& rootPath,
@@ -186,9 +185,9 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     RegistComponents();
 
     auto renderAPI = rhi::GetSupportRenderAPI(rhi::APIPreference::Vulkan);
-    Window& window = cmds.emplace_resource<Window>(
-        WindowBuilder{info.windowData}.Build(renderAPI ==
-                                             rhi::APIPreference::Vulkan));
+    Window& window =
+        cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build(
+            renderAPI == rhi::APIPreference::Vulkan));
     window.SetResizable(true);
 
     auto& adapter = cmds.emplace_resource<rhi::Adapter>(
@@ -205,7 +204,8 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     auto& audioMgr = cmds.emplace_resource<AudioManager>();
     auto& gltfMgr = cmds.emplace_resource<GLTFManager>();
     cmds.emplace_resource<AssetManager>(textureMgr, mtl2dMgr, fontMgr, timerMgr,
-                                        tilesheetMgr, animMgr, audioMgr, gltfMgr);
+                                        tilesheetMgr, animMgr, audioMgr,
+                                        gltfMgr);
     cmds.emplace_resource<RenderContext>(renderAPI, device, window.Size());
 
     auto windowSize = window.Size();

@@ -44,7 +44,7 @@ public:
 
     BindGroupLayout GetLayout() const { return desc_.layout; }
 
-    void Transformlayouts();
+    auto& GetDescriptor() const { return desc_; }
 
     std::vector<vk::DescriptorSet> sets;
 

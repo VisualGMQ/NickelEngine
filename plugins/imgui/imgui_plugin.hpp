@@ -38,6 +38,8 @@ struct ImGuiVkContext {
     vk::RenderPass renderPass;
     vk::Sampler combinedSampler;
     std::vector<vk::Framebuffer> framebuffers;
+    vk::CommandPool cmdPool;
+    vk::CommandBuffer cmdBuf;
 
     std::vector<vk::DescriptorSet> descriptorSets;
     size_t curDescriptorSetIndex = 0;
@@ -58,6 +60,7 @@ private:
     void initFramebuffers(rhi::vulkan::DeviceImpl&);
     void initSetLayout(vk::Device);
     void initCombinedSampler(vk::Device);
+    void initCmdPoolAndBufs(rhi::vulkan::DeviceImpl&);
 };
 #endif
 
@@ -66,12 +69,14 @@ void ImGuiInit(gecs::commands, gecs::resource<gecs::mut<Window>>,
                gecs::resource<rhi::Adapter>, gecs::resource<rhi::Device>,
                gecs::event_dispatcher<WindowResizeEvent>);
 
-void ImGuiGameWindowLayoutTransition(
-    gecs::resource<gecs::mut<rhi::Device>> device,
-    gecs::resource<gecs::mut<Camera>>,
-    gecs::resource<gecs::mut<RenderContext>>);
+void ImGuiGameWindowLayoutTransition(gecs::resource<gecs::mut<rhi::Device>>,
+                                     gecs::resource<gecs::mut<Camera>>,
+                                     gecs::resource<gecs::mut<RenderContext>>,
+                                     gecs::resource<gecs::mut<ImGuiVkContext>>);
 
-void ImGuiStart(gecs::resource<rhi::Adapter>);
+void ImGuiStart(gecs::resource<rhi::Adapter>,
+                gecs::resource<gecs::mut<rhi::Device>>,
+                gecs::resource<gecs::mut<ImGuiVkContext>>);
 
 void ImGuiEnd(gecs::resource<gecs::mut<Window>>, gecs::resource<rhi::Adapter>,
               gecs::resource<rhi::Device>,
@@ -100,4 +105,5 @@ bool ImageButton(const ::nickel::Texture& texture, const ImVec2& size,
                  const ImVec2& uv0 = {0, 0}, const ImVec2& uv1 = {1, 1},
                  int frame_padding = -1, const ImVec4& bg_col = {0, 0, 0, 0},
                  const ImVec4& tint_col = {1, 1, 1, 1});
+
 }  // namespace ImGui

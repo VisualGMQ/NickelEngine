@@ -5,14 +5,16 @@
 
 namespace nickel::rhi::gl4 {
 
-class RenderPassImpl: public rhi::RenderPassImpl {
+class RenderPassImpl : public rhi::RenderPassImpl {
 public:
-    explicit RenderPassImpl(const RenderPass::Descriptor&);
+    RenderPassImpl(const RenderPass::Descriptor& desc) : desc_{desc} {}
 
-    const RenderPass::Descriptor& GetDescriptor() const override;
+    const RenderPass::Descriptor& GetDescriptor() const override {
+        return desc_;
+    }
 
 private:
     RenderPass::Descriptor desc_;
 };
 
-}
+}  // namespace nickel::rhi::gl4
