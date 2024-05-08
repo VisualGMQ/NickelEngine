@@ -600,7 +600,10 @@ struct Sampler final {
 
         bool operator==(const Wrapper& o) const {
             return s == o.s && r == o.r && t == o.t &&
-                   borderColor == o.borderColor;
+                   borderColor[0] == o.borderColor[0] &&
+                   borderColor[1] == o.borderColor[1] &&
+                   borderColor[2] == o.borderColor[2] &&
+                   borderColor[3] == o.borderColor[3];
         }
 
         bool operator!=(const Wrapper& o) const { return !(*this == o); }
