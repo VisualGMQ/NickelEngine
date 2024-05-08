@@ -46,8 +46,7 @@ struct Render2DContext {
                             rhi::SamplerAddressMode v, rhi::Filter min,
                             rhi::Filter mag);
 
-    void RecreatePipeline(rhi::APIPreference api, const cgmath::Vec2& size,
-                          RenderContext& ctx);
+    void RecreatePipeline(rhi::APIPreference api, RenderContext& ctx);
 
     uint32_t GenVertexSlot();
     void ReuseVertexSlot(uint32_t);
@@ -64,7 +63,6 @@ private:
     void initPipelineShader(rhi::APIPreference);
     rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
     rhi::RenderPipeline createPipeline(rhi::APIPreference,
-                                       const nickel::cgmath::Rect& viewport,
                                        RenderContext&);
     void initSamplers();
     rhi::BindGroup createDefaultBindGroup();
@@ -79,12 +77,10 @@ struct Render3DContext {
     rhi::ShaderModule vertexShader;
     rhi::ShaderModule fragmentShader;
 
-    Render3DContext(rhi::APIPreference, rhi::Device,
-                    const cgmath::Rect& viewport, RenderContext&);
+    Render3DContext(rhi::APIPreference, rhi::Device, RenderContext&);
     ~Render3DContext();
 
-    void RecreatePipeline(rhi::APIPreference api, const cgmath::Vec2& size,
-                          RenderContext& ctx);
+    void RecreatePipeline(rhi::APIPreference api, RenderContext& ctx);
 
 private:
     rhi::Device device_;
@@ -92,9 +88,7 @@ private:
     rhi::PipelineLayout createPipelineLayout();
     void initPipelineShader(rhi::APIPreference);
     rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
-    rhi::RenderPipeline createPipeline(rhi::APIPreference,
-                                       const nickel::cgmath::Rect& viewport,
-                                       RenderContext&);
+    rhi::RenderPipeline createPipeline(rhi::APIPreference, RenderContext&);
 };
 
 /**

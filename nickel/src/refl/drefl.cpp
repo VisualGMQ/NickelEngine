@@ -65,15 +65,11 @@ void reflectTramsform() {
         .property("translation", &Transform::translation)
         .property("rotation", &Transform::rotation)
         .property("scale", &Transform::scale);
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Transform>();
 }
 
 void reflectGlobalTramsform() {
     mirrow::drefl::registrar<GlobalTransform>::instance().regist(
         "GlobalTransform");
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<GlobalTransform>();
 }
 
 void reflectSprite() {
@@ -95,16 +91,11 @@ void reflectSprite() {
         .add("Both", Flip::Both);
 
     mirrow::drefl::registrar<TextureHandle>::instance().regist("TextureHandle");
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Sprite>();
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Flip>();
 }
 
 void reflectAnimation() {
     mirrow::drefl::registrar<AnimationPlayer>::instance().regist(
         "AnimationPlayer");
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
 void reflectUI() {
@@ -124,15 +115,12 @@ void reflectUI() {
         .property("hover-color", &ui::Button::hoverColor, {AttrColor})
         .property("press-color", &ui::Button::pressColor, {AttrColor});
 
-    mirrow::drefl::registrar<ui::Label>::instance()
-        .regist("Label")
-        .property("color", &ui::Label::color, {AttrColor})
-        .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
-        .property("pressColor", &ui::Label::pressColor, {AttrColor});
+    // mirrow::drefl::registrar<ui::Label>::instance()
+    //     .regist("Label")
+    //     .property("color", &ui::Label::color, {AttrColor})
+    //     .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
+    //     .property("pressColor", &ui::Label::pressColor, {AttrColor});
 
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<ui::Style>();
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<ui::Button>();
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<ui::Label>();
 }
 
 void reflectWindow() {
@@ -140,8 +128,6 @@ void reflectWindow() {
         .regist("WindowData")
         .property("title", &WindowBuilder::Data::title)
         .property("size", &WindowBuilder::Data::size);
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<WindowBuilder::Data>();
 }
 
 void reflectTilesheet() {
@@ -158,17 +144,11 @@ void reflectTilesheet() {
         .property("y", &Spacing::y);
 
     mirrow::drefl::registrar<Tilesheet>::instance().regist("Tilesheet");
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Margin>();
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Spacing>();
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Tilesheet>();
 }
 
 void reflectMisc() {
     mirrow::drefl::registrar<Name>::instance().regist("Name").property(
         "name", &Name::name);
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<Name>();
 
     mirrow::drefl::registrar<gecs::entity>::instance().regist("entity");
 }
@@ -208,8 +188,6 @@ void registTextureHandleSerd() {
                           serializeTextureHandle);
     serd.regist_deserialize(mirrow::drefl::typeinfo<TextureHandle>(),
                             deserializeTextureHandle);
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
 void serializeSoundPlayer(toml::node& node, const mirrow::drefl::any& elem) {
@@ -245,8 +223,6 @@ void registSoundPlayerSerd() {
                           serializeSoundPlayer);
     serd.regist_deserialize(mirrow::drefl::typeinfo<SoundPlayer>(),
                             deserializeSoundPlayer);
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<SoundPlayer>();
 }
 
 void serializeAnimationPlayer(toml::node& node,
@@ -284,8 +260,6 @@ void registAnimationPlayerSerd() {
                           serializeAnimationPlayer);
     serd.regist_deserialize(mirrow::drefl::typeinfo<AnimationPlayer>(),
                             deserializeAnimationPlayer);
-
-    ComponentEmplaceRegistrar::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
 void serializeGlobalTransform(toml::node& node,

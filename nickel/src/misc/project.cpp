@@ -212,11 +212,6 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
 
     cmds.emplace_resource<Camera>(
         Camera::CreateOrthoByWindowRegion(window.Size()));
-    // renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
-    // world.cur_registry()
-    //     ->event_dispatcher<WindowResizeEvent>()
-    //     .sink()
-    //     .add<suitCanvas2Window>();
 
     // init animation serialize method
     AnimTrackLoadMethods::Instance()
@@ -257,9 +252,10 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_startup_system<FontSystemInit>()
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
-        // .regist_startup_system<ui::InitSystem>()
+        .regist_startup_system<ui::InitSystem>()
         .regist_startup_system<InitAudioSystem>()
         // shutdown systems
+        .regist_shutdown_system<ui::ShutdownSystem>()
         .regist_shutdown_system<EngineShutdown>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()
@@ -270,17 +266,16 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_update_system<UpdateGlobalTransform>()
         .regist_update_system<UpdateGLTFModelTransform>()
         .regist_update_system<UpdateCamera2GPU>()
-        // .regist_update_system<ui::UpdateGlobalPosition>()
-        // .regist_update_system<ui::HandleEventSystem>()
-        // start render pipeline
+        .regist_update_system<ui::UpdateGlobalPosition>()
+        .regist_update_system<ui::HandleEventSystem>()
+        // render relate
         .regist_update_system<BeginFrame>()
         .regist_update_system<BeginRender>()
         .regist_update_system<RenderGLTFModel>()
         .regist_update_system<RenderSprite2D>()
+        .regist_update_system<ui::RenderUI>()
         .regist_update_system<EndRender>()
         .regist_update_system<EndFrame>()
-        // 2D UI render
-        // .regist_update_system<ui::RenderUI>()
         // time update
         .regist_update_system<Time::Update>();
 }

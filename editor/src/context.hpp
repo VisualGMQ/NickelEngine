@@ -82,8 +82,10 @@ private:
 };
 
 inline void InitEditorContext(
-    gecs::commands cmds, gecs::resource<gecs::mut<nickel::Camera>> camera) {
+    gecs::commands cmds, gecs::resource<gecs::mut<nickel::Camera>> camera,
+    gecs::resource<gecs::mut<nickel::ui::UIContext>> uiCtx) {
     EditorContext::Init();
     auto& target = EditorContext::Instance().texture;
     camera->SetRenderTarget(target->View());
+    uiCtx->renderCtx.camera.SetRenderTarget(target->View());
 }

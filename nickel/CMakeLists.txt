@@ -121,18 +121,18 @@ target_compile_features(Nickel.Animation PUBLIC cxx_std_17)
 target_link_libraries(Nickel.Animation PUBLIC Nickel.Common)
 
 # Nickel.UI
-# aux_source_directory(src/ui nickel_ui_src)
-# file(GLOB_RECURSE nickel_ui_headers ./include/ui/*.hpp)
-# 
-# add_library(Nickel.UI STATIC)
-# target_sources(Nickel.UI PRIVATE ${nickel_ui_src})
-# target_sources(Nickel.UI PUBLIC ${nickel_ui_headers})
-# target_include_directories(Nickel.UI PUBLIC ./include)
-# set_target_properties(Nickel.UI
-#     PROPERTIES
-#     PUBLIC_HEADER "${nickel_ui_headers}")
-# target_compile_features(Nickel.UI PUBLIC cxx_std_17)
-# target_link_libraries(Nickel.UI PUBLIC Nickel.Common Nickel.Graphics)
+aux_source_directory(src/ui nickel_ui_src)
+file(GLOB_RECURSE nickel_ui_headers ./include/ui/*.hpp)
+
+add_library(Nickel.UI STATIC)
+target_sources(Nickel.UI PRIVATE ${nickel_ui_src})
+target_sources(Nickel.UI PUBLIC ${nickel_ui_headers})
+target_include_directories(Nickel.UI PUBLIC ./include)
+set_target_properties(Nickel.UI
+    PROPERTIES
+    PUBLIC_HEADER "${nickel_ui_headers}")
+target_compile_features(Nickel.UI PUBLIC cxx_std_17)
+target_link_libraries(Nickel.UI PUBLIC Nickel.Common Nickel.Graphics)
 
 # Nickel.Refl
 aux_source_directory(src/refl nickel_refl_src)
@@ -152,7 +152,7 @@ target_link_libraries(Nickel.Refl PUBLIC
     Nickel.Animation
     Nickel.Audio
     Nickel.Physics
-    #Nickel.UI
+    Nickel.UI
 )
 
 # Nickel.Misc

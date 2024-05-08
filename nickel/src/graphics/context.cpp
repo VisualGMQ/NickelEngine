@@ -17,14 +17,13 @@ Render2DContext::Render2DContext(rhi::APIPreference api, rhi::Device device,
     bindGroupLayout = createBindGroupLayout(ctx);
     defaultBindGroup = createDefaultBindGroup();
     pipelineLayout = createPipelineLayout();
-    pipeline = createPipeline(api, viewport, ctx);
+    pipeline = createPipeline(api, ctx);
 }
 
 void Render2DContext::RecreatePipeline(rhi::APIPreference api,
-                                       const cgmath::Vec2& size,
                                        RenderContext& ctx) {
     pipeline.Destroy();
-    pipeline = createPipeline(api, {0, 0, size.w, size.h}, ctx);
+    pipeline = createPipeline(api, ctx);
 }
 
 uint32_t Render2DContext::GenVertexSlot() {
@@ -217,9 +216,8 @@ rhi::Texture RenderContext::createSingleValueTexture(rhi::Device dev,
     return texture;
 }
 
-rhi::RenderPipeline Render2DContext::createPipeline(
-    rhi::APIPreference api, const nickel::cgmath::Rect& viewport,
-    RenderContext& ctx) {
+rhi::RenderPipeline Render2DContext::createPipeline(rhi::APIPreference api,
+                                                    RenderContext& ctx) {
     rhi::RenderPipeline::Descriptor desc;
 
     desc.vertex.module = vertexShader;
@@ -227,15 +225,6 @@ rhi::RenderPipeline Render2DContext::createPipeline(
 
     auto& bufferState = Vertex2D::Layout();
     desc.vertex.buffers.emplace_back(bufferState);
-
-    desc.viewport.viewport.x = viewport.position.x;
-    desc.viewport.viewport.y = viewport.position.y;
-    desc.viewport.viewport.w = viewport.size.w;
-    desc.viewport.viewport.h = viewport.size.h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = viewport.size.w;
-    desc.viewport.scissor.extent.height = viewport.size.h;
 
     rhi::RenderPipeline::FragmentTarget target;
     target.format = rhi::TextureFormat::Presentation;
@@ -277,13 +266,12 @@ void Render2DContext::initPipelineShader(rhi::APIPreference api) {
 }
 
 Render3DContext::Render3DContext(rhi::APIPreference api, rhi::Device device,
-                                 const cgmath::Rect& viewport,
                                  RenderContext& ctx)
     : device_{device} {
     initPipelineShader(api);
     bindGroupLayout = createBindGroupLayout(ctx);
     pipelineLayout = createPipelineLayout();
-    pipeline = createPipeline(api, viewport, ctx);
+    pipeline = createPipeline(api, ctx);
 }
 
 Render3DContext::~Render3DContext() {
@@ -295,10 +283,9 @@ Render3DContext::~Render3DContext() {
 }
 
 void Render3DContext::RecreatePipeline(rhi::APIPreference api,
-                                       const cgmath::Vec2& size,
                                        RenderContext& ctx) {
     pipeline.Destroy();
-    pipeline = createPipeline(api, {0, 0, size.w, size.h}, ctx);
+    pipeline = createPipeline(api, ctx);
 }
 
 rhi::PipelineLayout Render3DContext::createPipelineLayout() {
@@ -504,9 +491,8 @@ rhi::BindGroupLayout Render3DContext::createBindGroupLayout(
     return device_.CreateBindGroupLayout(desc);
 }
 
-rhi::RenderPipeline Render3DContext::createPipeline(
-    rhi::APIPreference api, const nickel::cgmath::Rect& viewport,
-    RenderContext& ctx) {
+rhi::RenderPipeline Render3DContext::createPipeline(rhi::APIPreference api,
+                                                    RenderContext& ctx) {
     rhi::RenderPipeline::Descriptor desc;
 
     desc.vertex.module = vertexShader;
@@ -561,15 +547,6 @@ rhi::RenderPipeline Render3DContext::createPipeline(
         desc.vertex.buffers.emplace_back(std::move(state));
     }
 
-    desc.viewport.viewport.x = viewport.position.x;
-    desc.viewport.viewport.y = viewport.position.y;
-    desc.viewport.viewport.w = viewport.size.w;
-    desc.viewport.viewport.h = viewport.size.h;
-    desc.viewport.scissor.offset.x = viewport.position.x;
-    desc.viewport.scissor.offset.y = viewport.position.y;
-    desc.viewport.scissor.extent.width = viewport.size.w;
-    desc.viewport.scissor.extent.height = viewport.size.h;
-
     rhi::RenderPipeline::FragmentTarget target;
     target.blend.color.srcFactor = rhi::BlendFactor::SrcAlpha;
     target.blend.color.dstFactor = rhi::BlendFactor::OneMinusSrcAlpha;
@@ -604,8 +581,7 @@ RenderContext::RenderContext(rhi::APIPreference api, rhi::Device device,
     defaultSampler = createDefaultSampler(device);
     ctx2D = std::make_unique<Render2DContext>(
         api, device, cgmath::Rect{0, 0, windowSize.w, windowSize.h}, *this);
-    ctx3D = std::make_unique<Render3DContext>(
-        api, device, cgmath::Rect{0, 0, windowSize.w, windowSize.h}, *this);
+    ctx3D = std::make_unique<Render3DContext>(api, device, *this);
 }
 
 RenderContext::~RenderContext() {
@@ -627,8 +603,8 @@ RenderContext::~RenderContext() {
 void RenderContext::RecreatePipeline(const cgmath::Vec2& size) {
     auto api =
         ECS::Instance().World().res<rhi::Adapter>()->RequestAdapterInfo().api;
-    ctx2D->RecreatePipeline(api, size, *this);
-    ctx3D->RecreatePipeline(api, size, *this);
+    ctx2D->RecreatePipeline(api, *this);
+    ctx3D->RecreatePipeline(api, *this);
 
     depthTextureView.Destroy();
     depthTexture.Destroy();
@@ -640,7 +616,7 @@ void RenderContext::RecreatePipeline(const cgmath::Vec2& size) {
 void RenderContext::OnWindowResize(
     const WindowResizeEvent& event,
     gecs::resource<gecs::mut<RenderContext>> ctx) {
-    ctx->RecreatePipeline(event.size);
+    // ctx->RecreatePipeline(event.size);
 }
 
 void RenderContext::initDepthTexture(rhi::Device device,

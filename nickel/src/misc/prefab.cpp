@@ -9,6 +9,7 @@
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
 #include "misc/name.hpp"
 #include "misc/serd.hpp"
+#include "ui/ui.hpp"
 
 namespace nickel {
 
@@ -144,11 +145,16 @@ void RegistComponents() {
     registrar.RegistEmplaceFn<GlobalTransform>();
     registrar.RegistEmplaceFn<Sprite>();
     registrar.RegistEmplaceFn<SpriteMaterial>();
+    // registrar.RegistEmplaceFn<Tilesheet>();
     registrar.RegistEmplaceFn<AnimationPlayer>();
     registrar.RegistEmplaceFn<SoundPlayer>();
     registrar.RegistEmplaceFn<Name>();
     registrar.RegistEmplaceFn<Parent>();
     registrar.RegistEmplaceFn<Child>();
+    registrar.RegistEmplaceFn<ui::Style>();
+    registrar.RegistEmplaceFn<ui::Button>();
+    // registrar.RegistEmplaceFn<ui::Label>();
+
 }
 
 }  // namespace nickel

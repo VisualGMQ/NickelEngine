@@ -45,9 +45,11 @@ Texture::Texture(rhi::Device device, const toml::table& tbl) {
 }
 
 Texture::Texture(rhi::Device device, void* pixels, int w, int h,
-                 rhi::TextureFormat gpuFmt, rhi::Flags<rhi::TextureUsage> usage)
+                 rhi::TextureFormat gpuFmt,
+                 rhi::Flags<rhi::TextureUsage> usage)
     : w_(w), h_(h) {
-    texture_ = createTexture(device, pixels, w_, h_, gpuFmt, usage);
+    texture_ =
+        createTexture(device, pixels, w_, h_, gpuFmt, usage);
     if (!texture_) {
         LOGE(log_tag::RHI, "create texture from pixels failed");
     } else {
@@ -55,8 +57,124 @@ Texture::Texture(rhi::Device device, void* pixels, int w, int h,
     }
 }
 
+uint8_t GetTextureFormatSize(rhi::TextureFormat fmt) {
+    switch (fmt) {
+        case rhi::TextureFormat::Undefined:
+        case rhi::TextureFormat::Presentation:
+            Assert(false, "invalid texture format");
+            return 0;
+        case rhi::TextureFormat::R8_UNORM:
+        case rhi::TextureFormat::R8_SNORM:
+        case rhi::TextureFormat::R8_UINT:
+        case rhi::TextureFormat::R8_SINT:
+            return 1;
+        case rhi::TextureFormat::R16_UINT:
+        case rhi::TextureFormat::R16_SINT:
+        case rhi::TextureFormat::R16_FLOAT:
+        case rhi::TextureFormat::RG8_UNORM:
+        case rhi::TextureFormat::RG8_SNORM:
+        case rhi::TextureFormat::RG8_UINT:
+        case rhi::TextureFormat::RG8_SINT:
+            return 2;
+        case rhi::TextureFormat::R32_UINT:
+        case rhi::TextureFormat::R32_SINT:
+        case rhi::TextureFormat::R32_FLOAT:
+        case rhi::TextureFormat::RG16_UINT:
+        case rhi::TextureFormat::RG16_SINT:
+        case rhi::TextureFormat::RG16_FLOAT:
+        case rhi::TextureFormat::RGBA8_UNORM:
+        case rhi::TextureFormat::RGBA8_UNORM_SRGB:
+        case rhi::TextureFormat::RGBA8_SNORM:
+        case rhi::TextureFormat::RGBA8_UINT:
+        case rhi::TextureFormat::RGBA8_SINT:
+        case rhi::TextureFormat::BGRA8_UNORM:
+        case rhi::TextureFormat::BGRA8_UNORM_SRGB:
+        case rhi::TextureFormat::RGB9E5_UFLOAT:
+        case rhi::TextureFormat::RGB10A2_UINT:
+        case rhi::TextureFormat::RGB10A2_UNORM:
+        case rhi::TextureFormat::RG11B10_UFLOAT:
+            return 4;
+        case rhi::TextureFormat::RG32_UINT:
+        case rhi::TextureFormat::RG32_SINT:
+        case rhi::TextureFormat::RG32_FLOAT:
+        case rhi::TextureFormat::RGBA16_UINT:
+        case rhi::TextureFormat::RGBA16_SINT:
+        case rhi::TextureFormat::RGBA16_FLOAT:
+            return 8;
+        case rhi::TextureFormat::RGBA32_UINT:
+        case rhi::TextureFormat::RGBA32_SINT:
+        case rhi::TextureFormat::RGBA32_FLOAT:
+            return 16;
+        case rhi::TextureFormat::STENCIL8:
+            return 1;
+        case rhi::TextureFormat::DEPTH16_UNORM:
+            return 2;
+        case rhi::TextureFormat::DEPTH24_PLUS:
+        case rhi::TextureFormat::DEPTH24_PLUS_STENCIL8:
+        case rhi::TextureFormat::DEPTH32_FLOAT:
+            return 4;
+        case rhi::TextureFormat::DEPTH32_FLOAT_STENCIL8:
+            return 5;
+        case rhi::TextureFormat::BC1_RGBA_UNORM:
+        case rhi::TextureFormat::BC1_RGBA_UNORM_SRGB:
+        case rhi::TextureFormat::BC2_RGBA_UNORM:
+        case rhi::TextureFormat::BC2_RGBA_UNORM_SRGB:
+        case rhi::TextureFormat::BC3_RGBA_UNORM:
+        case rhi::TextureFormat::BC3_RGBA_UNORM_SRGB:
+        case rhi::TextureFormat::BC4_R_UNORM:
+        case rhi::TextureFormat::BC4_R_SNORM:
+        case rhi::TextureFormat::BC5_RG_UNORM:
+        case rhi::TextureFormat::BC5_RG_SNORM:
+        case rhi::TextureFormat::BC6H_RGB_UFLOAT:
+        case rhi::TextureFormat::BC6H_RGB_FLOAT:
+        case rhi::TextureFormat::BC7_RGBA_UNORM:
+        case rhi::TextureFormat::BC7_RGBA_UNORM_SRGB:
+        case rhi::TextureFormat::ETC2_RGB8_UNORM:
+        case rhi::TextureFormat::ETC2_RGB8_UNORM_SRGB:
+        case rhi::TextureFormat::ETC2_RGB8A1_UNORM:
+        case rhi::TextureFormat::ETC2_RGB8A1_UNORM_SRGB:
+        case rhi::TextureFormat::ETC2_RGBA8_UNORM:
+        case rhi::TextureFormat::ETC2_RGBA8_UNORM_SRGB:
+        case rhi::TextureFormat::EAC_R11_UNORM:
+        case rhi::TextureFormat::EAC_R11_SNORM:
+        case rhi::TextureFormat::EAC_RG11_UNORM:
+        case rhi::TextureFormat::EAC_RG11_SNORM:
+        case rhi::TextureFormat::ASTC_4X4_UNORM:
+        case rhi::TextureFormat::ASTC_4X4_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_5X4_UNORM:
+        case rhi::TextureFormat::ASTC_5X4_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_5X5_UNORM:
+        case rhi::TextureFormat::ASTC_5X5_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_6X5_UNORM:
+        case rhi::TextureFormat::ASTC_6X5_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_6X6_UNORM:
+        case rhi::TextureFormat::ASTC_6X6_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_8X5_UNORM:
+        case rhi::TextureFormat::ASTC_8X5_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_8X6_UNORM:
+        case rhi::TextureFormat::ASTC_8X6_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_8X8_UNORM:
+        case rhi::TextureFormat::ASTC_8X8_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_10X5_UNORM:
+        case rhi::TextureFormat::ASTC_10X5_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_10X6_UNORM:
+        case rhi::TextureFormat::ASTC_10X6_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_10X8_UNORM:
+        case rhi::TextureFormat::ASTC_10X8_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_10X10_UNORM:
+        case rhi::TextureFormat::ASTC_10X10_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_12X10_UNORM:
+        case rhi::TextureFormat::ASTC_12X10_UNORM_SRGB:
+        case rhi::TextureFormat::ASTC_12X12_UNORM:
+        case rhi::TextureFormat::ASTC_12X12_UNORM_SRGB:
+            Assert(false, "not implement");
+            return 0;
+    }
+}
+
 rhi::Texture Texture::createTexture(rhi::Device dev, void* data, uint32_t w,
-                                    uint32_t h, rhi::TextureFormat gpuFmt,
+                                    uint32_t h,
+                                    rhi::TextureFormat gpuFmt,
                                     rhi::Flags<rhi::TextureUsage> usage) {
     rhi::Texture::Descriptor desc;
     desc.format = gpuFmt;
@@ -70,7 +188,7 @@ rhi::Texture Texture::createTexture(rhi::Device dev, void* data, uint32_t w,
         rhi::Buffer::Descriptor bufferDesc;
         bufferDesc.mappedAtCreation = true;
         bufferDesc.usage = rhi::BufferUsage::CopySrc;
-        bufferDesc.size = 4 * w * h;
+        bufferDesc.size = GetTextureFormatSize(gpuFmt) * w * h;
         rhi::Buffer copyBuffer = dev.CreateBuffer(bufferDesc);
 
         void* bufData = copyBuffer.GetMappedRange();
@@ -153,8 +271,8 @@ TextureHandle TextureManager::Create(const std::filesystem::path& name,
     }
 
     auto texture = std::make_unique<Texture>(
-        ECS::Instance().World().res<rhi::Device>().get(), data, w, h, gpuFmt,
-        usage);
+        ECS::Instance().World().res<rhi::Device>().get(), data, w, h,
+        gpuFmt, usage);
     texture->AssociateFile(name);
     if (texture && *texture) {
         TextureHandle handle = TextureHandle::Create();

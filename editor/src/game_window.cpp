@@ -17,6 +17,7 @@ void GameWindow::update() {
 
     auto reg = nickel::ECS::Instance().World().cur_registry();
     auto camera = reg->res_mut<nickel::Camera>();
+    auto& uiCamera = reg->res_mut<nickel::ui::UIContext>()->renderCtx.camera;
     auto mouse = reg->res<nickel::Mouse>();
 
     // draw grid
@@ -61,6 +62,7 @@ void GameWindow::update() {
             auto offset = mouse->Offset();
             auto scale = camera->Scale();
             camera->Move(nickel::cgmath::Vec2{-offset.x, offset.y} / scale);
+            uiCamera.Move(nickel::cgmath::Vec2{-offset.x, offset.y} / scale);
         }
 
         if (auto wheel = mouse->WheelOffset(); wheel.y != 0) {
@@ -70,6 +72,7 @@ void GameWindow::update() {
                 newScale.Set(0.01, 0.01);
             }
             camera->ScaleTo(newScale);
+            uiCamera.ScaleTo(newScale);
         }
     }
 

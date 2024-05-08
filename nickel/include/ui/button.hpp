@@ -9,18 +9,13 @@
 
 namespace nickel::ui {
 
-class Button final {
-public:
+struct Button final {
     cgmath::Color color = {1, 1, 1, 1};
     cgmath::Color hoverColor = {1, 1, 1, 1};
     cgmath::Color pressColor = {1, 1, 1, 1};
-};
-
-class TextureButton final {
-public:
-    TextureHandle texture;
-    TextureHandle hoverTexture;
-    TextureHandle pressTexture;
+    TextureClip texture;
+    TextureClip hoverTexture;
+    TextureClip pressTexture;
 };
 
 }  // namespace nickel::ui

@@ -26,7 +26,7 @@
 #include "system/graphics.hpp"
 #include "system/physics.hpp"
 #include "system/video.hpp"
-// #include "ui/ui.hpp"
+#include "ui/ui.hpp"
 #include "video/device.hpp"
 #include "video/event.hpp"
 #include "video/input.hpp"
