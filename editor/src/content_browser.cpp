@@ -168,6 +168,7 @@ void ContentBrowserWindow::showOneIcon(
                         break;
                     case nickel::FileType::Timer:
                     case nickel::FileType::FileTypeCount:
+                    case nickel::FileType::Meta:
                     case nickel::FileType::Unknown:
                         break;
                 }

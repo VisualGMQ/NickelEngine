@@ -10,6 +10,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(NICKEL_COPYDLL "auto copy needed dll to output dir" OFF)
 include(cmake/copy_dll.cmake)
 
+set (CMAKE_CXX_STANDARD 20)
+
 add_subdirectory(3rdlibs)
 add_subdirectory(nickel)
 add_subdirectory(plugins)

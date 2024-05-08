@@ -1,7 +1,7 @@
-message("find package: SDL2 ...")
-find_package(SDL2 QUIET)
+message(STATUS "find package: SDL2 ...")
 
 # check SDL
+find_package(SDL2 QUIET)
 if (SDL2_FOUND)
     if (NOT EXISTS "${SDL2_INCLUDE_DIRS}/SDL.h")
         set(SDL2_FOUND OFF)
@@ -26,7 +26,7 @@ if (NOT SDL2_FOUND)
             message("SDL2 information:")
             message("\tinclude dir: ${SDL2_INCLUDE_DIRS}")
             message("\tSDL libs: ${SDL2_LIBRARIES}")
-            if (WIN32)
+            if (WIN32 OR APPLE)
                 add_library(SDL2 INTERFACE IMPORTED GLOBAL)
                 target_link_libraries(SDL2 INTERFACE SDL2::SDL2 SDL2::SDL2main)
             else()

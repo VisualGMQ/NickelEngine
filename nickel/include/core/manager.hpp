@@ -200,7 +200,16 @@ protected:
     std::unordered_map<AssetHandle, AssetStoreType, typename AssetHandle::Hash,
                        typename AssetHandle::Eq>
         datas_;
-    std::unordered_map<std::filesystem::path, AssetHandle> pathHandleMap_;
+
+    class PathHash {
+    public:
+        size_t operator()(const std::filesystem::path& p) const {
+            return std::hash<std::string>()(p.string());
+        }
+    };
+
+    std::unordered_map<std::filesystem::path, AssetHandle, PathHash>
+        pathHandleMap_;
 };
 
 }  // namespace nickel
