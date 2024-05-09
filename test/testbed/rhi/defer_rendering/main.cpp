@@ -375,7 +375,7 @@ void loadImage(Context& ctx, Device& dev) {
     src.rowsPerImage = h;
     CommandEncoder::BufTexCopyDst dst;
     dst.texture = ctx.imageBundle.texture;
-    dst.aspect = TextureAspect::All;
+    dst.aspect = TextureAspect::ColorOnly;
     dst.miplevel = 0;
     encoder.CopyBufferToTexture(src, dst,
                                 Extent3D{(uint32_t)w, (uint32_t)h, 1});
@@ -423,7 +423,7 @@ void initWhiteImage(Context& ctx, Device& dev) {
     src.rowsPerImage = 1;
     CommandEncoder::BufTexCopyDst dst;
     dst.texture = ctx.whiteImageBundle.texture;
-    dst.aspect = TextureAspect::All;
+    dst.aspect = TextureAspect::ColorOnly;
     dst.miplevel = 0;
     encoder.CopyBufferToTexture(src, dst, Extent3D{1, 1, 1});
     auto buf = encoder.Finish();
@@ -595,6 +595,7 @@ void UpdateGBuffer(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->gBufferPipeline);
+    renderPass.SetViewport(0, 0, 1024, 720);
     renderPass.SetVertexBuffer(0, ctx->cubeVertexBuffer, 0,
                                ctx->cubeVertexBuffer.Size());
     renderPass.SetBindGroup(ctx->gbufferBindGroup);
@@ -642,14 +643,14 @@ void RenderByGBuffer(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     Texture::Descriptor textureDesc;
     textureDesc.format = TextureFormat::Presentation;
-    auto texture = device->CreateTexture(textureDesc);
-    auto view = texture.CreateView();
+    auto [texture, view] = device->GetPresentationTexture();
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
 
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->renderPipeline);
+    renderPass.SetViewport(0, 0, 1024, 720);
     renderPass.SetVertexBuffer(0, ctx->renderVertexBuffer, 0,
                                ctx->renderVertexBuffer.Size());
     renderPass.SetBindGroup(ctx->renderBindGroup);
@@ -663,8 +664,6 @@ void RenderByGBuffer(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     device->EndFrame();
 
     encoder.Destroy();
-    view.Destroy();
-    texture.Destroy();
 }
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,

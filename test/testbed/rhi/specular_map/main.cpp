@@ -234,7 +234,7 @@ TextureBundle loadTexture(const std::filesystem::path& filename, Context& ctx,
     src.rowsPerImage = h;
     CommandEncoder::BufTexCopyDst dst;
     dst.texture = texture;
-    dst.aspect = TextureAspect::All;
+    dst.aspect = TextureAspect::ColorOnly;
     dst.miplevel = 0;
     encoder.CopyBufferToTexture(src, dst,
                                 Extent3D{(uint32_t)w, (uint32_t)h, 1});
@@ -268,7 +268,7 @@ void StartupSystem(gecs::commands cmds,
     initMeshData(device, ctx);
     ctx.colorTexture =
         loadTexture("test/testbed/rhi/specular_map/crate.png", ctx, device,
-                    TextureFormat::RGBA8_UNORM_SRGB);
+                    TextureFormat::RGBA8_UNORM);
     ctx.defaultNormalTexture =
         loadTexture("test/testbed/rhi/specular_map/specular_map.png", ctx,
                     device, TextureFormat::RGBA8_UNORM);
@@ -351,9 +351,8 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     Texture::Descriptor textureDesc;
     textureDesc.format = TextureFormat::Presentation;
-    auto texture = device->CreateTexture(textureDesc);
+    auto [texture, view] = device->GetPresentationTexture();
 
-    auto view = texture.CreateView();
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
 
@@ -368,6 +367,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->pipeline);
+    renderPass.SetViewport(0, 0, 1024, 720);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
     renderPass.SetBindGroup(ctx->bindGroup);
@@ -381,8 +381,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     device->EndFrame();
 
     encoder.Destroy();
-    view.Destroy();
-    texture.Destroy();
 }
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,

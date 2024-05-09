@@ -454,18 +454,21 @@ private:
 
             if (auto binding = std::get_if<TextureBinding>(&entry.entry);
                 binding) {
-                translateBindGroupImageLayout(visibility, *binding);
+                translateBindGroupImageLayout(visibility, binding->view);
+            } else if (auto binding = std::get_if<SamplerBinding>(&entry.entry);
+                binding && binding->view) {
+                translateBindGroupImageLayout(visibility, binding->view);
             }
         }
         cmds_.emplace_back(cmd);
     }
 
     void translateBindGroupImageLayout(Flags<ShaderStage> visibility,
-                                       const TextureBinding& binding) {
+                                       TextureView view) {
         Assert(lastRenderPassCmdIndex_,
                "SetBindGroup() call must after BeginRenderPass()");
 
-        auto texture = static_cast<TextureImpl*>(binding.view.Texture().Impl());
+        auto texture = static_cast<TextureImpl*>(view.Texture().Impl());
         for (int i = 0; i < texture->layouts.size(); i++) {
             auto& layout = texture->layouts[i];
             if (layout != vk::ImageLayout::eShaderReadOnlyOptimal) {
@@ -507,7 +510,7 @@ private:
                 cmds_.insert(cmds_.begin() + lastRenderPassCmdIndex_.value(),
                              std::move(cmd));
 
-                lastRenderPassCmdIndex_.value() ++;
+                lastRenderPassCmdIndex_.value()++;
             }
         }
 

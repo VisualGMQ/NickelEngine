@@ -19,19 +19,28 @@ ma_engine gEngine;
 Sound Sound::Null;
 
 SoundPlayer::SoundPlayer()
-    : mgr_{&ECS::Instance().World().res_mut<AudioManager>().get()} {}
+    : mgr_{&ECS::Instance().World().res_mut<AudioManager>().get()} {
+    data_ = new ma_sound;
+    data_->pDataSource = nullptr;
+}
 
 SoundPlayer::SoundPlayer(SoundHandle handle) : SoundPlayer() {
     handle_ = handle;
     recreateInnerSound(handle, *mgr_);
 }
 
+SoundPlayer::~SoundPlayer() {
+    ma_sound_uninit(data_);
+    delete data_;
+}
+
 Sound::Sound(const std::filesystem::path& filename) : Asset(filename) {
+    data_ = new ma_decoder;
     if (auto result =
             ma_decoder_init_file(filename.string().c_str(), NULL, data_);
         result != MA_SUCCESS) {
         LOGW(nickel::log_tag::Asset, "load audio from ", filename,
-             " failed: ", result);
+             " failed: ", ma_result_description(result));
     }
 }
 
@@ -41,6 +50,7 @@ void* Sound::GetAudioData() {
 
 Sound::~Sound() {
     ma_decoder_uninit(data_);
+    delete data_;
 }
 
 void SoundPlayer::recreateInnerSound(SoundHandle handle, AudioManager& mgr) {
@@ -174,7 +184,6 @@ void InitAudioSystem() {
     auto result = ma_engine_init(NULL, &gEngine);
     if (result != MA_SUCCESS) {
         LOGW(log_tag::Audio, "miniaudio engine init failed: ", result);
-        return;
     }
 }
 

@@ -40,7 +40,7 @@ void StartupSystem(gecs::commands cmds,
     {
         auto ent = cmds.create();
         nickel::ui::Style style;
-        style.center.Set(400, 400);
+        style.center.Set(350, 200);
         cmds.emplace<nickel::ui::Style>(ent, style);
 
         nickel::ui::Button btn;

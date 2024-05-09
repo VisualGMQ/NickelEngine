@@ -33,51 +33,40 @@ void TexturePropertyWidget::Update() {
 }
 
 void SoundPropertyWidget::Update() {
-    /*
     auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>();
 
     if (!mgr->Has(handle_)) {
         ImGui::Text("invalid audio handle");
-        if (ImGui::Button("close")) {
-            Hide();
-        }
         return;
     }
 
     auto& ctx = EditorContext::Instance();
 
-    if (elem.IsPlaying()) {
+    if (player_.IsPlaying()) {
         if (ImGui::Button("pause")) {
-            elem.Pause();
+            player_.Pause();
         }
     } else {
         if (ImGui::Button("play")) {
-            elem.Play();
+            player_.Play();
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("rewind")) {
-        elem.Rewind();
+        player_.Rewind();
     }
 
-    float cursor = elem.GetCursor();
-    float len = elem.Length();
+    float cursor = player_.GetCursor();
+    float len = player_.Length();
     std::string progress =
         std::to_string(cursor) + "/" + std::to_string(len) + "s";
     ImGui::SliderFloat(progress.c_str(), &cursor, 0, len, "%.2f");
 
-    bool isLooping = elem.IsLooping();
+    bool isLooping = player_.IsLooping();
     ImGui::Checkbox("looping", &isLooping);
-    if (isLooping != elem.IsLooping()) {
-        elem.SetLoop(isLooping);
+    if (isLooping != player_.IsLooping()) {
+        player_.SetLoop(isLooping);
     }
-
-    // show cancel button
-    if (ImGui::Button("cancel")) {
-        elem.Stop();
-        Hide();
-    }
-    */
 }
 
 void FontPropertyWidget::Update() {

@@ -1,8 +1,8 @@
-#version 430
+#version 450
 
-layout(location = 0) in vec2 fragUV;
+in vec2 fragUV;
 
-layout(location = 0) out vec4 outColor;
+out vec4 outColor;
 
 layout(binding = 0) uniform sampler2D positionSampler;
 layout(binding = 1) uniform sampler2D normalSampler;
@@ -19,7 +19,7 @@ layout(binding = 2) uniform UBO {
 } ubo;
 
 const float kc = 1.0;
-const float kl = 10;
+const float kl = 5;
 const float kq = 20;
 
 void main() {

@@ -56,7 +56,9 @@ void FileChangeEventHandler(
     auto path = ctx.GetRelativePath(absolutePath);
 
     if (event.action == FileChangeEvent::Action::Add) {
-        assetMgr->Load(path);
+        if (!assetMgr->Has(path)) {
+            assetMgr->Load(path);
+        }
     }
 
     if (event.action == FileChangeEvent::Action::Delete) {

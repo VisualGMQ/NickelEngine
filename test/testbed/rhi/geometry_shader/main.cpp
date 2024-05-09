@@ -127,15 +127,15 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     Texture::Descriptor textureDesc;
     textureDesc.format = TextureFormat::Presentation;
-    auto texture = device->CreateTexture(textureDesc);
+    auto [texture, view] = device->GetPresentationTexture();
 
-    auto view = texture.CreateView();
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
 
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->renderPipeline);
+    renderPass.SetViewport(0, 0, 1024, 720);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
     renderPass.Draw(3, 1, 0, 0);
@@ -148,8 +148,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     device->EndFrame();
 
     encoder.Destroy();
-    view.Destroy();
-    texture.Destroy();
 }
 
 void ShutdownSystem(gecs::commands cmds, gecs::resource<gecs::mut<Context>> ctx,

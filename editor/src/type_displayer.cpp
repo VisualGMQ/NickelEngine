@@ -399,11 +399,10 @@ void DisplayAnimationPlayer(mirrow::drefl::any& payload) {
         IMGUI_MAKE_EMPTY_ID(imguiID, payload);
         if (ImGui::BeginCombo(imguiID, "", ImGuiComboFlags_NoPreview)) {
             if (ImGui::Selectable("load")) {
-                auto changeHandle = [&payload](nickel::AnimationHandle handle) {
-                    auto& mutablePlayer =
-                        *mirrow::drefl::try_cast<nickel::AnimationPlayer>(
-                            payload);
-                    mutablePlayer.ChangeAnim(handle);
+                auto mutablePlayer =
+                    mirrow::drefl::try_cast<nickel::AnimationPlayer>(payload);
+                auto changeHandle = [=](nickel::AnimationHandle handle) {
+                    mutablePlayer->ChangeAnim(handle);
                     EditorContext::Instance()
                         .animEditor.sequence->player.ChangeAnim(handle);
                 };
@@ -459,10 +458,9 @@ void DisplaySoundPlayer(mirrow::drefl::any& payload) {
         IMGUI_MAKE_EMPTY_ID(imguiID, payload);
         if (ImGui::BeginCombo(imguiID, "", ImGuiComboFlags_NoPreview)) {
             if (ImGui::Selectable("load")) {
-                auto changeHandle = [&payload](nickel::SoundHandle handle) {
-                    auto& mutablePlayer =
-                        *mirrow::drefl::try_cast<nickel::SoundPlayer>(payload);
-                    mutablePlayer.ChangeSound(handle);
+                auto mutablePlayer = mirrow::drefl::try_cast<nickel::SoundPlayer>(payload);
+                auto changeHandle = [=](nickel::SoundHandle handle) {
+                    mutablePlayer->ChangeSound(handle);
                 };
 
                 auto& assetListWindow =

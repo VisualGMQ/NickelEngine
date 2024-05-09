@@ -78,8 +78,7 @@ void LoadAssetsWithPath(AssetManager& assetMgr,
     assetMgr.LoadFromToml(result.table());
 }
 
-bool LoadRegistryEntities(gecs::registry reg,
-                          const std::filesystem::path& filename) {
+bool LoadScene(gecs::registry reg, const std::filesystem::path& filename) {
     auto result = toml::parse_file(filename.string());
     if (!result) {
         LOGW(nickel::log_tag::Editor, "load scene from ", filename, " failed");
@@ -94,8 +93,6 @@ bool LoadRegistryEntities(gecs::registry reg,
     }
 
     const std::string& name = node->as_string()->get();
-
-    // InitSystem to reg
 
     node = tbl.get("entities");
     if (!node || !node->is_array()) {
@@ -115,9 +112,14 @@ bool LoadRegistryEntities(gecs::registry reg,
 void SaveBasicProjectConfig(const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
+    toml::table windowTbl;
+
     mirrow::serd::drefl::serialize(
-        tbl, mirrow::drefl::any_make_constref(initInfo.windowData), "window");
+        windowTbl, mirrow::drefl::any_make_constref(initInfo.windowData),
+        "window");
     // TODO: serialize camera information
+
+    tbl.emplace("scene", initInfo.startupScene.string());
 
     std::ofstream file(GenProjectConfigFilePath(initInfo.projectPath));
     file << toml::toml_formatter{tbl} << std::endl;
@@ -127,8 +129,7 @@ void SaveProjectByConfig(const ProjectInitInfo& info,
                          const AssetManager& assetMgr) {
     SaveBasicProjectConfig(info);
     SaveAssets(info.projectPath, assetMgr);
-    SaveRegistry(true, info.projectPath,
-                 ECS::Instance().World().cur_registry_name(),
+    SaveRegistry(true, info.projectPath, "MainScene.scene",
                  *ECS::Instance().World().cur_registry());
 }
 
@@ -155,6 +156,10 @@ ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
         mirrow::serd::drefl::deserialize(ref, *node.as_table());
     }
 
+    if (auto node = tbl["scene"]; node.is_string()) {
+        initInfo.startupScene = node.as_string()->get();
+    }
+
     return initInfo;
 }
 
@@ -170,12 +175,26 @@ void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
     LoadAssetsWithPath(assetMgr, initInfo.projectPath);
-    LoadRegistryEntities(*ECS::Instance().World().cur_registry(),
-                         initInfo.projectPath / "MainReg.scene");
+    LoadScene(*ECS::Instance().World().cur_registry(),
+              initInfo.projectPath / initInfo.startupScene);
 }
 
-void ErrorCallback(int error, const char* description) {
-    LOGE(log_tag::SDL2, description);
+void doChangeScene(const ChangeSceneEvent& event) {
+    auto& world = ECS::Instance().World();
+    if (std::filesystem::exists(event.newScene)) {
+        world.cur_registry()->destroy_all_entities();
+        LoadScene(*world.cur_registry(), event.newScene);
+    } else {
+        LOGE(log_tag::Nickel, "scene file ", event.newScene, " not exists");
+    }
+}
+
+void ChangeScene(const std::filesystem::path& path) {
+    ECS::Instance()
+        .World()
+        .cur_registry()
+        ->event_dispatcher<ChangeSceneEvent>()
+        .enqueue(ChangeSceneEvent{path});
 }
 
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
@@ -278,6 +297,8 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_update_system<EndFrame>()
         // time update
         .regist_update_system<Time::Update>();
+
+    reg.event_dispatcher<ChangeSceneEvent>().sink().add<doChangeScene>();
 }
 
 }  // namespace nickel

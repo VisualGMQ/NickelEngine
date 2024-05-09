@@ -98,7 +98,7 @@ void main() {
     vec3 f0 = metalness * baseColor;
 
     // calculate per-light radiance
-    vec3 radiance = vec3(1, 1, 1);
+    vec3 radiance = vec3(5, 5, 5);
 
     // Cook-Torrance BRDF
     float D = DistributionGGX(n, h, roughness);   

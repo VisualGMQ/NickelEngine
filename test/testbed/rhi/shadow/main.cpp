@@ -27,14 +27,21 @@ struct Context final {
 
     ~Context() {
         renderPipelineLayout.Destroy();
+        shadowPipelineLayout.Destroy();
         pipeline.Destroy();
+        shadowPipeline.Destroy();
         uniformBuffer.Destroy();
-        depth.Destroy();
-        depthView.Destroy();
-        bindGroup.Destroy();
-        renderBindGroupLayout.Destroy();
         cubeVertexBuffer.Destroy();
         planeVertexBuffer.Destroy();
+        depth.Destroy();
+        depthView.Destroy();
+        shadowDepth.Destroy();
+        shadowDepthView.Destroy();
+        shadowDepthSampler.Destroy();
+        bindGroup.Destroy();
+        shadowBindGroup.Destroy();
+        renderBindGroupLayout.Destroy();
+        shadowBindGroupLayout.Destroy();
     }
 };
 
@@ -110,8 +117,11 @@ void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
         1000, adapter.RequestAdapterInfo().api == APIPreference::GL);
     mvp.view = nickel::cgmath::CreateTranslation({0, 0, -5});
     mvp.model = nickel::cgmath::Mat44::Identity();
-    mvp.lightMatrix = nickel::cgmath::CreateOrtho(-10, 10, -10, 10, 5.5, -20.5) *
-                      nickel::cgmath::LookAt({}, -LightDir, {0, 1, 0});
+    mvp.lightMatrix =
+        nickel::cgmath::CreateOrtho(-10, 10, -10, 10, 5.5, -20.5,
+                                    adapter.RequestAdapterInfo().api ==
+                                        nickel::rhi::APIPreference::GL) *
+        nickel::cgmath::LookAt({}, -LightDir, {0, 1, 0});
     uint32_t offset = offsetof(MVP, lightMatrix);
 
     Buffer::Descriptor bufferDesc;
@@ -370,9 +380,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     RenderPass::Descriptor desc;
 
-    Texture::Descriptor textureDesc;
-    textureDesc.format = TextureFormat::Presentation;
-    auto texture = device->CreateTexture(textureDesc);
+    auto [texture, view] = device->GetPresentationTexture();
 
     desc.depthStencilAttachment =
         RenderPass::Descriptor::DepthStencilAttachment{};
@@ -387,6 +395,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     {
         auto renderPass = encoder1.BeginRenderPass(desc);
         renderPass.SetPipeline(ctx->shadowPipeline);
+        renderPass.SetViewport(0, 0, 1024, 720);
         renderPass.SetBindGroup(ctx->shadowBindGroup);
         renderPass.SetVertexBuffer(0, ctx->cubeVertexBuffer, 0,
                                 ctx->cubeVertexBuffer.Size());
@@ -400,7 +409,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     Queue queue = device->GetQueue();
     queue.Submit({cmd1});
 
-    auto view = texture.CreateView();
     RenderPass::Descriptor::ColorAttachment colorAtt;
     colorAtt.loadOp = AttachmentLoadOp::Clear;
     colorAtt.storeOp = AttachmentStoreOp::Store;
@@ -420,6 +428,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
         auto renderPass = encoder2.BeginRenderPass(desc);
         renderPass.SetPipeline(ctx->pipeline);
+        renderPass.SetViewport(0, 0, 1024, 720);
         renderPass.SetBindGroup(ctx->bindGroup);
         renderPass.SetVertexBuffer(0, ctx->cubeVertexBuffer, 0,
                                 ctx->cubeVertexBuffer.Size());
@@ -437,8 +446,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
 
     encoder1.Destroy();
     encoder2.Destroy();
-    view.Destroy();
-    texture.Destroy();
 }
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {

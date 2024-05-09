@@ -2,8 +2,9 @@
 
 #include "common/asset.hpp"
 #include "common/cgmath.hpp"
-#include "common/manager.hpp"
 #include "common/filetype.hpp"
+#include "common/manager.hpp"
+
 
 class ma_decoder;
 class ma_sound;
@@ -16,9 +17,18 @@ public:
 
     Sound(const std::filesystem::path& filename);
     Sound(const Sound&) = delete;
-    Sound(Sound&&) = default;
+
+    Sound(Sound&& o) { swap(*this, o); }
+
     Sound& operator=(const Sound&) = delete;
-    Sound& operator=(Sound&&) = default;
+
+    Sound& operator=(Sound&& o) {
+        if (this != &o) {
+            swap(*this, o);
+        }
+        return *this;
+    }
+
     ~Sound();
 
     void* GetAudioData();
@@ -35,13 +45,16 @@ public:
         return tbl;
     }
 
-    explicit operator bool() const {
-        return data_ != nullptr;
-    }
+    explicit operator bool() const { return data_ != nullptr; }
 
 private:
     Sound() = default;
     ma_decoder* data_{};
+
+    friend void swap(Sound& o1, Sound& o2) {
+        using std::swap;
+        swap(o1.data_, o2.data_);
+    }
 };
 
 using SoundHandle = Handle<Sound>;
@@ -68,10 +81,19 @@ public:
     explicit SoundPlayer(SoundHandle);
     SoundPlayer(const SoundPlayer&) = delete;
     SoundPlayer& operator=(const SoundPlayer&) = delete;
-    SoundPlayer(SoundPlayer&& o) = default;
-    SoundPlayer& operator=(SoundPlayer&& o) = default;
+
+    SoundPlayer(SoundPlayer&& o) { swap(o, *this); }
+    ~SoundPlayer();
+
+    SoundPlayer& operator=(SoundPlayer&& o) {
+        if (&o != this) {
+            swap(*this, o);
+        }
+        return *this;
+    }
 
     auto Handle() const { return handle_; }
+
     void ChangeSound(SoundHandle);
 
     void Play();
@@ -117,6 +139,13 @@ private:
     AudioManager* mgr_;
 
     void recreateInnerSound(SoundHandle, AudioManager&);
+
+    friend void swap(SoundPlayer& o1, SoundPlayer& o2) noexcept {
+        using std::swap;
+        swap(o1.data_, o2.data_);
+        swap(o1.handle_, o2.handle_);
+        swap(o1.mgr_, o2.mgr_);
+    }
 };
 
 void InitAudioSystem();

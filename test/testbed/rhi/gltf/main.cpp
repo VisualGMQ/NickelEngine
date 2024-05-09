@@ -309,7 +309,7 @@ TextureBundle LoadSkybox(const std::array<std::filesystem::path, 6>& filenames,
         src.rowsPerImage = height;
         CommandEncoder::BufTexCopyDst dst;
         dst.texture = texture;
-        dst.aspect = TextureAspect::All;
+        dst.aspect = TextureAspect::ColorOnly;
         dst.miplevel = 0;
         dst.origin.x = 0;
         dst.origin.y = 0;
@@ -547,7 +547,7 @@ private:
         src.rowsPerImage = h;
         CommandEncoder::BufTexCopyDst dst;
         dst.texture = texture;
-        dst.aspect = TextureAspect::All;
+        dst.aspect = TextureAspect::ColorOnly;
         dst.miplevel = 0;
         encoder.CopyBufferToTexture(src, dst,
                                     Extent3D{(uint32_t)w, (uint32_t)h, 1});
@@ -1249,12 +1249,12 @@ void StartupSystem(gecs::commands cmds,
             // "external/glTF-Sample-Models/2.0/2CylinderEngine/glTF/2CylinderEngine.gltf"},
             // "external/glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf"},
             // "external/glTF-Sample-Models/2.0/Avocado/glTF/Avocado.gltf"},
-            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
+            // "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"},
             // "external/glTF-Sample-Models/2.0/BoxTextured/glTF/"
             // "BoxTextured.gltf"},
             // "external/glTF-Sample-Models/2.0/Fox/glTF/Fox.gltf"},
             // "external/glTF-Sample-Models/2.0/SheenChair/glTF/SheenChair.gltf"},
-            // "external/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"},
+            "external/glTF-Sample-Models/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf"},
         // "external/glTF-Sample-Models/2.0/Box With Spaces/glTF/Box With
         // Spaces.gltf"},
         // "external/glTF-Sample-Models/2.0/Corset/glTF/Corset.gltf"},
@@ -1379,11 +1379,8 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     colorAtt.storeOp = AttachmentStoreOp::Store;
     colorAtt.clearValue = {0.3, 0.3, 0.3, 1};
 
-    Texture::Descriptor textureDesc;
-    textureDesc.format = TextureFormat::Presentation;
-    auto texture = device->CreateTexture(textureDesc);
+    auto [texture, view] = device->GetPresentationTexture();
 
-    auto view = texture.CreateView();
     colorAtt.view = view;
     desc.colorAttachments.emplace_back(colorAtt);
 
@@ -1398,6 +1395,7 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     auto encoder = device->CreateCommandEncoder();
     auto renderPass = encoder.BeginRenderPass(desc);
     renderPass.SetPipeline(ctx->pipeline);
+    renderPass.SetViewport(0, 0, 1024, 720);
     RenderScenes(node.get(), ctx.get(), renderPass);
     renderPass.End();
     auto cmd = encoder.Finish();
@@ -1408,8 +1406,6 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     device->EndFrame();
 
     encoder.Destroy();
-    view.Destroy();
-    texture.Destroy();
 }
 
 void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx,

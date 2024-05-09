@@ -29,12 +29,20 @@ class SoundPropertyWidget : public Widget {
 public:
     SoundPropertyWidget() = default;
 
-    void ChangeAudio(nickel::SoundHandle handle) { handle_ = handle; }
+    void ChangeAudio(nickel::SoundHandle handle) {
+        handle_ = handle;
+        if (handle_) {
+            player_.ChangeSound(handle);
+            player_.Stop();
+            player_.Rewind();
+        }
+    }
 
     void Update() override;
 
 private:
     nickel::SoundHandle handle_;
+    nickel::SoundPlayer player_;
 };
 
 class FontPropertyWidget: public Widget {

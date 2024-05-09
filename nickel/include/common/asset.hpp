@@ -59,7 +59,9 @@ std::unique_ptr<T> LoadAssetFromMetaTable(const toml::table&);
 template <typename T>
 std::unique_ptr<T> LoadAssetFromMeta(const std::filesystem::path& path) {
     if (auto result = toml::parse_file(path.string()); result) {
-        return LoadAssetFromMetaTable<T>(result.table());
+        auto elem = LoadAssetFromMetaTable<T>(result.table());
+        elem->AssociateFile(path);
+        return elem;
     } else {
         LOGW(log_tag::Asset, "load asset from ", path,
              " failed: ", result.error());
