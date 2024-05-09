@@ -59,25 +59,44 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/specular_map/vert.spv", std::ios::binary)
+                "test/testbed/rhi/specular_map/resources/vert.spv",
+                std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/specular_map/frag.spv", std::ios::binary)
+                "test/testbed/rhi/specular_map/resources/frag.spv",
+                std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
-        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/specular_map/shader.glsl.vert")
-                              .value();
+#ifdef NICKEL_HAS_GL4
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/specular_map/resources/shader.glsl.vert")
+                .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/specular_map/shader.glsl.frag")
-                              .value();
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/specular_map/resources/shader.glsl.frag")
+                .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#else
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/specular_map/resources/shader.es2.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/specular_map/resources/shader.es2.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+
+#endif
     }
 }
 
@@ -128,6 +147,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     bufferBinding1.buffer = ctx.MVPBuffer;
     bufferBinding1.hasDynamicOffset = false;
     bufferBinding1.type = BufferType::Uniform;
+    bufferBinding1.name = "MyUniform";
 
     Entry entry;
     entry.arraySize = 1;
@@ -167,13 +187,13 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     bufferBinding2.buffer = ctx.eyePosBuffer;
     bufferBinding2.hasDynamicOffset = false;
     bufferBinding2.type = BufferType::Uniform;
+    bufferBinding2.name = "EyePos";
 
     entry.arraySize = 1;
     entry.binding.binding = 3;
     entry.binding.entry = bufferBinding2;
     entry.visibility = ShaderStage::Fragment;
     bindGroupLayoutDesc.entries.emplace_back(entry);
-
 
     ctx.bindGroupLayout = device.CreateBindGroupLayout(bindGroupLayoutDesc);
 }
@@ -267,11 +287,11 @@ void StartupSystem(gecs::commands cmds,
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
     initMeshData(device, ctx);
     ctx.colorTexture =
-        loadTexture("test/testbed/rhi/specular_map/crate.png", ctx, device,
-                    TextureFormat::RGBA8_UNORM);
-    ctx.defaultNormalTexture =
-        loadTexture("test/testbed/rhi/specular_map/specular_map.png", ctx,
+        loadTexture("test/testbed/rhi/specular_map/resources/crate.png", ctx,
                     device, TextureFormat::RGBA8_UNORM);
+    ctx.defaultNormalTexture =
+        loadTexture("test/testbed/rhi/specular_map/resources/specular_map.png",
+                    ctx, device, TextureFormat::RGBA8_UNORM);
     initUniformBuffer(ctx, adapter, device, window.get(), camera);
     initEyePosBuffer(ctx, device, camera);
     initBindGroupLayout(ctx, device);
@@ -419,6 +439,7 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
+
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "specular", 1024, 720, API == APIPreference::Vulkan);
 

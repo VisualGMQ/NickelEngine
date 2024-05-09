@@ -49,7 +49,7 @@ public:
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor&) override;
     Buffer CreateBuffer(const Buffer::Descriptor&) override;
 
-    void OnWindowResize(const cgmath::Vec2&);
+    void OnWindowResize(int x, int y) override;
 
     std::pair<Texture, TextureView> GetPresentationTexture() override;
     void BeginFrame() override;

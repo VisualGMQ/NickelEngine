@@ -335,7 +335,7 @@ TextureHandle TextureManager::LoadSVG(const std::filesystem::path& filename,
     auto handle = TextureHandle::Create();
 
     auto texture = std::make_unique<Texture>(
-        ECS::Instance().World().res<rhi::Device>().get(), (void*)bitmap.data(),
+        ECS::Instance().World().res<rhi::Device>().get(), (char*)bitmap.data(),
         bitmap.width(), bitmap.height());
     texture->AssociateFile(filename);
     if (texture) {

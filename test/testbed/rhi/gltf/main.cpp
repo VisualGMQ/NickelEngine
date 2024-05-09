@@ -415,7 +415,7 @@ private:
             }
 
             if (auto idx = material.pbrMetallicRoughness
-                                   .metallicRoughnessTexture.index;
+                               .metallicRoughnessTexture.index;
                 idx != -1) {
                 Material::TextureInfo textureInfo;
                 auto& info = model_.textures[idx];
@@ -586,6 +586,7 @@ private:
             entry.type = BufferType::Uniform;
             entry.minBindingSize = sizeof(nickel::cgmath::Color);
             entry.buffer = colorBuf;
+            entry.name = "MyMaterial";
             bufferBinding.binding = 1;
             bufferBinding.entry = entry;
             desc.entries.push_back(bufferBinding);
@@ -596,7 +597,7 @@ private:
             BindingPoint samplerBinding;
             samplerBinding.binding = 2;
             SamplerBinding binding;
-            binding.name = "mySampler";
+            binding.name = "baseColorSampler";
             binding.sampler = ctx.samplers[material.basicTexture->sampler];
             binding.view = ctx.images[material.basicTexture->texture].view;
             samplerBinding.entry = binding;
@@ -940,25 +941,42 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/gltf/vert.spv", std::ios::binary)
+                "test/testbed/rhi/gltf/resources/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/gltf/frag.spv", std::ios::binary)
+                "test/testbed/rhi/gltf/resources/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
-        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/gltf/shader.glsl.vert")
-                              .value();
+#ifdef NICKEL_HAS_GL4
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/gltf/resources/shader.glsl.vert")
+                .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/gltf/shader.glsl.frag")
-                              .value();
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/gltf/resources/shader.glsl.frag")
+                .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#else
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/gltf/resources/shader.es2.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/gltf/resources/shader.es2.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+
+#endif
     }
 }
 
@@ -1019,6 +1037,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
         bufferBinding1.buffer = ctx.MVPBuffer;
         bufferBinding1.hasDynamicOffset = false;
         bufferBinding1.type = BufferType::Uniform;
+        bufferBinding1.name = "MyUniform";
 
         Entry entry;
         entry.arraySize = 1;
@@ -1034,6 +1053,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
         bufferBinding2.hasDynamicOffset = true;
         bufferBinding2.type = BufferType::Uniform;
         bufferBinding2.minBindingSize = sizeof(nickel::cgmath::Color);
+        bufferBinding2.name = "MyMaterial";
 
         Entry entry;
         entry.arraySize = 1;
@@ -1047,7 +1067,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     {
         SamplerBinding colorTextureBinding;
         colorTextureBinding.type = SamplerBinding::SamplerType::Filtering;
-        colorTextureBinding.name = "mySampler";
+        colorTextureBinding.name = "baseColorSampler";
         colorTextureBinding.view = ctx.whiteTexture.view;
         colorTextureBinding.sampler = ctx.whiteTextureSampler;
 
@@ -1092,19 +1112,19 @@ void initBindGroupLayout(Context& ctx, Device& device) {
     }
 
     // skybox sampler
-    {
-        SamplerBinding binding;
-        binding.sampler = ctx.skyboxSampler;
-        binding.view = ctx.skyboxTexture.view;
-        binding.name = "skyboxSampler";
+    // {
+    //     SamplerBinding binding;
+    //     binding.sampler = ctx.skyboxSampler;
+    //     binding.view = ctx.skyboxTexture.view;
+    //     binding.name = "skyboxSampler";
 
-        Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 5;
-        entry.binding.entry = binding;
-        entry.visibility = ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
-    }
+    //     Entry entry;
+    //     entry.arraySize = 1;
+    //     entry.binding.binding = 5;
+    //     entry.binding.entry = binding;
+    //     entry.visibility = ShaderStage::Fragment;
+    //     desc.entries.emplace_back(entry);
+    // }
 
     // occlusion sampler
     {
@@ -1128,6 +1148,7 @@ void initBindGroupLayout(Context& ctx, Device& device) {
         bufferBinding.type = BufferType::Uniform;
         bufferBinding.minBindingSize = sizeof(nickel::cgmath::Vec3);
         bufferBinding.buffer = ctx.cameraBuffer;
+        bufferBinding.name = "MyCameraInfo";
 
         Entry entry;
         entry.arraySize = 1;
@@ -1223,17 +1244,17 @@ void StartupSystem(gecs::commands cmds,
     SphericalCoordCameraProxy proxy(camera, {});
     proxy.Update2Camera();
 
-    ctx.skyboxTexture = LoadSkybox(
-        {
-            "test/testbed/rhi/gltf/skybox/right.jpg",
-            "test/testbed/rhi/gltf/skybox/left.jpg",
-            "test/testbed/rhi/gltf/skybox/top.jpg",
-            "test/testbed/rhi/gltf/skybox/bottom.jpg",
-            "test/testbed/rhi/gltf/skybox/front.jpg",
-            "test/testbed/rhi/gltf/skybox/back.jpg",
-        },
-        ctx, device);
-    ctx.skyboxSampler = device.CreateSampler({});
+    // ctx.skyboxTexture = LoadSkybox(
+    //     {
+    //         "test/testbed/rhi/gltf/resources/skybox/right.jpg",
+    //         "test/testbed/rhi/gltf/resources/skybox/left.jpg",
+    //         "test/testbed/rhi/gltf/resources/skybox/top.jpg",
+    //         "test/testbed/rhi/gltf/resources/skybox/bottom.jpg",
+    //         "test/testbed/rhi/gltf/resources/skybox/front.jpg",
+    //         "test/testbed/rhi/gltf/resources/skybox/back.jpg",
+    //     },
+    //     ctx, device);
+    // ctx.skyboxSampler = device.CreateSampler({});
     initWhiteTexture(ctx, device);
     initDefaultNormalTexture(ctx, device);
 
@@ -1445,6 +1466,7 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
+
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "gltf", 1024, 720, API == APIPreference::Vulkan);
 

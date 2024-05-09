@@ -1,6 +1,6 @@
 #pragma once
 #include "common/assert.hpp"
-#include "glad/glad.h"
+#include "glpch.hpp"
 #include "graphics/rhi/common.hpp"
 
 
@@ -13,9 +13,13 @@ namespace nickel::rhi::gl4 {
 inline GLenum ShaderStage2GL(ShaderStage stage) {
     switch (stage) {
         CASE(ShaderStage::Vertex, GL_VERTEX_SHADER);
-        CASE(ShaderStage::Compute, GL_COMPUTE_SHADER);
         CASE(ShaderStage::Fragment, GL_FRAGMENT_SHADER);
+#if !defined(NICKEL_HAS_GLES2)
+        CASE(ShaderStage::Compute, GL_COMPUTE_SHADER);
         CASE(ShaderStage::Geometry, GL_GEOMETRY_SHADER);
+#endif
+        default:
+            Assert(false, "unsupport shader stage: ", static_cast<int>(stage));
     }
 }
 
@@ -49,9 +53,14 @@ inline GLenum CompareOp2GL(CompareOp op) {
 
 inline GLenum PolygonMode2GL(PolygonMode mode) {
     switch (mode) {
+#if !defined(NICKEL_HAS_GLES2)
         CASE(PolygonMode::Line, GL_LINE);
         CASE(PolygonMode::Fill, GL_FILL);
         CASE(PolygonMode::Point, GL_POINT);
+#endif
+        default:
+            Assert(false, "opengles don't support polygon mode");
+            return 0;
     }
 }
 
@@ -225,9 +234,6 @@ inline GLenum BufferUsageFlag2GL(Flags<BufferUsage> flags) {
     if (flags & BufferUsage::Uniform) {
         return GL_UNIFORM_BUFFER;
     }
-    if (flags & BufferUsage::Storage) {
-        return GL_SHADER_STORAGE_BUFFER;
-    }
     if (flags & BufferUsage::Indirect) {
         /*
         return GL_DRAW_INDIRECT_BUFFER;
@@ -236,9 +242,15 @@ inline GLenum BufferUsageFlag2GL(Flags<BufferUsage> flags) {
         // NOTE: opengl separate indirect buffer in two, must unify with Vulkan
         Assert(false, "don't support indirect buffer in GL currently");
     }
+
+#if !defined(NICKEL_HAS_GLES2)
+    if (flags & BufferUsage::Storage) {
+        return GL_SHADER_STORAGE_BUFFER;
+    }
     if (flags & BufferUsage::QueryResolve) {
         return GL_QUERY_BUFFER;
     }
+#endif
 
     return GL_ARRAY_BUFFER;
 }
@@ -287,10 +299,8 @@ inline GLenum TextureFormat2GLInternal(TextureFormat fmt) {
             return GL_RGBA8_SNORM;
         case TextureFormat::RGBA8_UINT:
             return GL_RGBA8UI;
-        case TextureFormat::RGBA8_SINT:
-            return GL_RGBA8I;
-        case TextureFormat::BGRA8_UNORM:
-            return GL_BGRA;
+        // case TextureFormat::BGRA8_UNORM:
+        //     return GL_BGRA;
         case TextureFormat::BGRA8_UNORM_SRGB:
             return GL_SRGB;
         case TextureFormat::RGB9E5_UFLOAT:
@@ -319,8 +329,12 @@ inline GLenum TextureFormat2GLInternal(TextureFormat fmt) {
             return GL_RGBA32I;
         case TextureFormat::RGBA32_FLOAT:
             return GL_RGBA32F;
-        case TextureFormat::STENCIL8:
-            return GL_STENCIL_COMPONENTS;
+
+        case TextureFormat::RGBA8_SINT:
+            return GL_RGBA8I;
+        // case TextureFormat::STENCIL8:
+        //     return GL_STENCIL_COMPONENTS;
+
         case TextureFormat::DEPTH16_UNORM:
             return GL_DEPTH_COMPONENT16;
         case TextureFormat::DEPTH24_PLUS:
@@ -431,10 +445,6 @@ inline GLenum TextureFormat2GL(TextureFormat fmt) {
         case TextureFormat::RGBA32_FLOAT:
             return GL_RGBA;
         case TextureFormat::BGRA8_UNORM:
-        case TextureFormat::BGRA8_UNORM_SRGB:
-            return GL_BGRA;
-        case TextureFormat::STENCIL8:
-            return GL_STENCIL_INDEX;
         case TextureFormat::DEPTH16_UNORM:
         case TextureFormat::DEPTH24_PLUS:
         case TextureFormat::DEPTH32_FLOAT:
@@ -495,6 +505,13 @@ inline GLenum TextureFormat2GL(TextureFormat fmt) {
         case TextureFormat::ASTC_12X12_UNORM:
         case TextureFormat::ASTC_12X12_UNORM_SRGB:
             return GL_RGBA;
+
+#if !defined(NICKEL_HAS_GLES2)
+        case TextureFormat::BGRA8_UNORM_SRGB:
+            return GL_BGRA;
+        case TextureFormat::STENCIL8:
+            return GL_STENCIL_INDEX;
+#endif
         default:
             return GL_RGBA;
     }
@@ -551,10 +568,6 @@ inline GLenum TextureFormat2GLDataType(TextureFormat fmt) {
             return GL_BYTE;
         case TextureFormat::RGB9E5_UFLOAT:
             return GL_FLOAT;
-        case TextureFormat::RGB10A2_UINT:
-            return GL_UNSIGNED_INT_10_10_10_2;
-        case TextureFormat::RGB10A2_UNORM:
-            return GL_UNSIGNED_INT_10_10_10_2;
         case TextureFormat::RG11B10_UFLOAT:
             return GL_FLOAT;
         case TextureFormat::RG32_UINT:
@@ -575,8 +588,6 @@ inline GLenum TextureFormat2GLDataType(TextureFormat fmt) {
             return GL_INT;
         case TextureFormat::RGBA32_FLOAT:
             return GL_FLOAT;
-        case TextureFormat::STENCIL8:
-            return GL_STENCIL_COMPONENTS;
         case TextureFormat::DEPTH16_UNORM:
             return GL_UNSIGNED_SHORT;
         case TextureFormat::DEPTH24_PLUS:
@@ -652,6 +663,15 @@ inline GLenum TextureFormat2GLDataType(TextureFormat fmt) {
         case TextureFormat::ASTC_12X12_UNORM:
         case TextureFormat::ASTC_12X12_UNORM_SRGB:
             return GL_UNSIGNED_BYTE;
+
+#if !defined(NICKEL_HAS_GLES2)
+        case TextureFormat::STENCIL8:
+            return GL_STENCIL_COMPONENTS;
+        case TextureFormat::RGB10A2_UINT:
+            return GL_UNSIGNED_INT_10_10_10_2;
+        case TextureFormat::RGB10A2_UNORM:
+            return GL_UNSIGNED_INT_10_10_10_2;
+#endif
         default:
             return GL_RGBA;
     }
@@ -659,8 +679,6 @@ inline GLenum TextureFormat2GLDataType(TextureFormat fmt) {
 
 inline GLenum TextureViewType2GL(TextureViewType type) {
     switch (type) {
-        case TextureViewType::Dim1:
-            return GL_TEXTURE_1D;
         case TextureViewType::Dim2:
             return GL_TEXTURE_2D;
         case TextureViewType::Dim3:
@@ -669,8 +687,14 @@ inline GLenum TextureViewType2GL(TextureViewType type) {
             return GL_TEXTURE_2D_ARRAY;
         case TextureViewType::Cube:
             return GL_TEXTURE_CUBE_MAP;
+#if !defined(NICKEL_HAS_GLES2)
+        case TextureViewType::Dim1:
+            return GL_TEXTURE_1D;
         case TextureViewType::CubeArray:
             return GL_TEXTURE_CUBE_MAP_ARRAY;
+#endif
+        default:
+            return 0;
     }
 }
 
@@ -714,8 +738,8 @@ inline GLenum GetVertexFormatGLType(VertexFormat fmt) {
         case VertexFormat::Sint32x3:
         case VertexFormat::Sint32x4:
             return GL_INT;
-        case VertexFormat::Unorm10_10_10_2:
-            return GL_UNSIGNED_INT_10_10_10_2;
+            // case VertexFormat::Unorm10_10_10_2:
+            //     return GL_UNSIGNED_INT_10_10_10_2;
     }
 }
 

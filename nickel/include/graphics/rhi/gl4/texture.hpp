@@ -10,6 +10,7 @@ class DeviceImpl;
 class TextureImpl: public rhi::TextureImpl {
 public:
     TextureImpl(DeviceImpl&, const Texture::Descriptor&);
+    TextureImpl(GLuint id, GLenum type);
     ~TextureImpl();
 
     void Bind(int slot = 0) const;

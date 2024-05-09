@@ -78,6 +78,10 @@ Buffer Device::CreateBuffer(const Buffer::Descriptor& desc) {
     return impl_->CreateBuffer(desc);
 }
 
+void Device::OnWindowResize(int x, int y) {
+    return impl_->OnWindowResize(x, y);
+}
+
 std::pair<Texture, TextureView> Device::GetPresentationTexture() {
     return impl_->GetPresentationTexture();
 }

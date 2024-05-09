@@ -24,6 +24,7 @@ public:
 
     void BeginFrame() override;
     void EndFrame() override;
+    void OnWindowResize(int x, int y) override;
     void WaitIdle() override;
 };
 

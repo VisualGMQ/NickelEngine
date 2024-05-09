@@ -5,7 +5,6 @@
 #include "graphics/rhi/gl4/pipeline_layout.hpp"
 #include "graphics/rhi/gl4/shader.hpp"
 
-
 namespace nickel::rhi::gl4 {
 
 RenderPipelineImpl::RenderPipelineImpl(DeviceImpl& device,
@@ -33,6 +32,7 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
                         ->CreateShader(GL_FRAGMENT_SHADER);
     GL_CALL(glAttachShader(shaderId_, fragId));
 
+#ifdef NICKEL_HAS_GL4
     GLuint geomId = 0;
     if (desc.geometry) {
         rhi::ShaderModuleImpl* geomModule = desc.geometry->module.Impl().get();
@@ -40,6 +40,7 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
                             ->CreateShader(GL_GEOMETRY_SHADER);
         GL_CALL(glAttachShader(shaderId_, geomId));
     }
+#endif
 
     GL_CALL(glLinkProgram(shaderId_));
 
@@ -53,9 +54,12 @@ void RenderPipelineImpl::createShader(const RenderPipeline::Descriptor& desc) {
 
     GL_CALL(glDeleteShader(vertexId));
     GL_CALL(glDeleteShader(fragId));
+
+#ifdef NICKEL_HAS_GL4
     if (desc.geometry) {
         GL_CALL(glDeleteShader(geomId));
     }
+#endif
 }
 
 void RenderPipelineImpl::Apply() const {
@@ -63,8 +67,10 @@ void RenderPipelineImpl::Apply() const {
     GL_CALL(glUseProgram(shaderId_));
     GL_CALL(glBindVertexArray(vao_));
 
+#ifdef NICKEL_HAS_GL4
     GL_CALL(glPolygonMode(GL_FRONT_AND_BACK,
                           PolygonMode2GL(desc_.primitive.polygonMode)));
+#endif
 
     // viewport apply
     auto& viewport = desc_.viewport.viewport;
@@ -129,15 +135,16 @@ void RenderPipelineImpl::Apply() const {
         GL_CALL(glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE));
     }
 
+    // color blend
+    GL_CALL(glEnable(GL_BLEND));
+    // GL_CALL(glEnable(GL_COLOR_LOGIC_OP));
+
+#ifdef NICKEL_HAS_GL4
     if (desc_.primitive.unclippedDepth) {
         GL_CALL(glEnable(GL_DEPTH_CLAMP));
     } else {
         GL_CALL(glDisable(GL_DEPTH_CLAMP));
     }
-
-    // color blend
-    GL_CALL(glEnable(GL_BLEND));
-    // GL_CALL(glEnable(GL_COLOR_LOGIC_OP));
 
     for (int i = 0; i < desc_.fragment.targets.size(); i++) {
         auto& target = desc_.fragment.targets[i];
@@ -156,6 +163,7 @@ void RenderPipelineImpl::Apply() const {
                              target.writeMask & ColorWriteMask::Blue,
                              target.writeMask & ColorWriteMask::Alpha));
     }
+#endif
 
     // push constant apply
     auto& ranges = static_cast<const PipelineLayoutImpl*>(GetLayout().Impl())

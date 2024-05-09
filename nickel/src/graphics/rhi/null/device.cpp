@@ -60,6 +60,8 @@ void DeviceImpl::BeginFrame() {}
 
 void DeviceImpl::EndFrame() {}
 
+void DeviceImpl::OnWindowResize(int x, int y) {}
+
 void DeviceImpl::WaitIdle() {}
 
 }  // namespace nickel::rhi::null

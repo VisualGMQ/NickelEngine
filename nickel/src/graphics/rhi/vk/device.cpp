@@ -192,9 +192,10 @@ BindGroupLayout DeviceImpl::CreateBindGroupLayout(
     return BindGroupLayout{APIPreference::Vulkan, *this, desc};
 }
 
-void DeviceImpl::OnWindowResize(const cgmath::Vec2& size) {
+void DeviceImpl::OnWindowResize(int x, int y) {
     swapchain.Destroy(device);
-    swapchain = Swapchain(adapter.phyDevice, *this, adapter.surface, size);
+    swapchain = Swapchain(adapter.phyDevice, *this, adapter.surface,
+                          {(float)x, (float)y});
 
     // remove renderPass which contains swapchain image
     {

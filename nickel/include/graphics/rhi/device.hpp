@@ -34,6 +34,7 @@ public:
     BindGroupLayout CreateBindGroupLayout(const BindGroupLayout::Descriptor&);
     ShaderModule CreateShaderModule(const ShaderModule::Descriptor& desc);
     Buffer CreateBuffer(const Buffer::Descriptor&);
+    void OnWindowResize(int x, int y);
 
 
     std::pair<Texture, TextureView> GetPresentationTexture();

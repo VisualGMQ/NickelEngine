@@ -33,6 +33,7 @@ struct CmdExecutor final {
         GL_CALL(glBindBuffer(
             GL_PIXEL_UNPACK_BUFFER,
             static_cast<const BufferImpl*>(cmd.src.buffer.Impl())->id));
+#ifdef NICKEL_HAS_GL4
         if (texture->Type() == GL_TEXTURE_1D) {
             GL_CALL(glTexSubImage1D(texture->Type(), cmd.dst.miplevel,
                                     cmd.dst.origin.x, cmd.copySize.width,
@@ -59,6 +60,28 @@ struct CmdExecutor final {
         } else {
             LOGE(log_tag::GL, "unsupport texture type");
         }
+#else
+        if (texture->Type() == GL_TEXTURE_2D) {
+            GL_CALL(glTexSubImage2D(texture->Type(), cmd.dst.miplevel,
+                                    cmd.dst.origin.x, cmd.dst.origin.y,
+                                    cmd.copySize.width, cmd.copySize.height,
+                                    TextureFormat2GL(texture->Format()),
+                                    TextureFormat2GLDataType(texture->Format()),
+                                    (void*)cmd.src.offset));
+        } else if (texture->Type() == GL_TEXTURE_3D ||
+                   texture->Type() == GL_TEXTURE_2D_ARRAY) {
+            GL_CALL(glTexSubImage3D(
+                texture->Type(), cmd.dst.miplevel, cmd.dst.origin.x,
+                cmd.dst.origin.y, cmd.dst.origin.z, cmd.copySize.width,
+                cmd.copySize.height, cmd.copySize.depthOrArrayLayers,
+                TextureFormat2GL(texture->Format()),
+                TextureFormat2GLDataType(texture->Format()),
+                (void*)cmd.src.offset));
+        } else {
+            LOGE(log_tag::GL, "unsupport texture type");
+        }
+
+#endif
 
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
@@ -70,10 +93,16 @@ struct CmdExecutor final {
 
         setVertexBuffer2VAO();
 
+#ifdef NICKEL_HAS_GL4
         GL_CALL(glDrawArraysInstancedBaseInstance(
             Topology2GL(renderPipeline_->Descriptor().primitive.topology),
             cmd.firstVertex, cmd.vertexCount, cmd.instanceCount,
             cmd.firstInstance));
+#else
+        GL_CALL(glDrawArraysInstanced(Topology2GL(
+                    renderPipeline_->Descriptor().primitive.topology),
+                cmd.firstVertex, cmd.vertexCount, cmd.instanceCount));
+#endif
     }
 
     void operator()(const CmdDrawIndexed& cmd) const {
@@ -85,6 +114,7 @@ struct CmdExecutor final {
 
         auto& desc = renderPipeline_->Descriptor();
 
+#ifdef NICKEL_HAS_GL4
         GL_CALL(glDrawElementsInstancedBaseVertexBaseInstance(
             Topology2GL(desc.primitive.topology), cmd.indexCount,
             desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
@@ -96,6 +126,19 @@ struct CmdExecutor final {
                         cmd.firstIndex +
                     setIndexBufCmd_.offset),
             cmd.instanceCount, cmd.baseVertex, cmd.firstInstance));
+#else
+        GL_CALL(glDrawElementsInstanced(
+            Topology2GL(desc.primitive.topology), cmd.indexCount,
+            desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
+                ? GL_UNSIGNED_SHORT
+                : GL_UNSIGNED_INT,
+            (void*)((desc.primitive.stripIndexFormat == StripIndexFormat::Uint16
+                         ? 2
+                         : 4) *
+                        cmd.firstIndex +
+                    setIndexBufCmd_.offset),
+            cmd.instanceCount));
+#endif
     }
 
     void operator()(const CmdSetVertexBuffer& cmd) {
@@ -136,11 +179,24 @@ struct CmdExecutor final {
     }
 
     void operator()(const CmdPushConstant& cmd) {
-        auto id = renderPipeline_->GetShaderID();
+#ifdef NICKEL_HAS_GL4
 
         GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, device_.pushConstantBuf));
         GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, cmd.offset, cmd.size,
                                 cmd.data.data()));
+#else
+        auto id = renderPipeline_->GetShaderID();
+        auto index =
+            glGetUniformBlockIndex(id, "PushConstant");
+        if (index == GL_INVALID_INDEX) {
+            LOGE(log_tag::GL, "push constant uniform buffer not exists");
+        }
+        GL_CALL(glUniformBlockBinding(id, index, 16));
+        GL_CALL(glBindBuffer(GL_UNIFORM_BUFFER, device_.pushConstantBuf));
+        GL_CALL(glBindBufferRange(GL_UNIFORM_BUFFER, 16, device_.pushConstantBuf,
+                                  cmd.offset, cmd.size));
+
+#endif
     }
 
     void operator()(const CmdBeginRenderPass& cmd) {
@@ -150,9 +206,10 @@ struct CmdExecutor final {
                 static_cast<const TextureViewImpl*>(colorAtt.view.Impl())->id);
         }
         if (cmd.desc.depthStencilAttachment) {
-            attachments.emplace_back(static_cast<const TextureViewImpl*>(
-                                        cmd.desc.depthStencilAttachment->view.Impl())
-                                        ->id);
+            attachments.emplace_back(
+                static_cast<const TextureViewImpl*>(
+                    cmd.desc.depthStencilAttachment->view.Impl())
+                    ->id);
         }
 
         Framebuffer framebuffer;
@@ -166,7 +223,8 @@ struct CmdExecutor final {
         }
 
         if (!framebuffer) {
-            framebuffer = device_.framebuffers.emplace_back(new FramebufferImpl(cmd.desc));
+            framebuffer = device_.framebuffers.emplace_back(
+                new FramebufferImpl(cmd.desc));
         }
 
         static_cast<FramebufferImpl*>(framebuffer.Impl())->Bind();
@@ -175,17 +233,17 @@ struct CmdExecutor final {
 
             if (attachment.loadOp == AttachmentLoadOp::Clear) {
                 GLenum index = GL_COLOR_ATTACHMENT0 + i;
-                GL_CALL(glDrawBuffer(index));
-                GL_CALL(glClearBufferfv(GL_COLOR, 0,
-                                        attachment.clearValue.data()));
+                GL_CALL(glDrawBuffers(1, &index));
+                GL_CALL(
+                    glClearBufferfv(GL_COLOR, 0, attachment.clearValue.data()));
             }
         }
 
         if (cmd.desc.depthStencilAttachment) {
             auto attachment = cmd.desc.depthStencilAttachment.value();
             if (attachment.depthLoadOp == AttachmentLoadOp::Clear) {
-                GL_CALL(glClearBufferfv(GL_DEPTH, 0,
-                                        &attachment.depthClearValue));
+                GL_CALL(
+                    glClearBufferfv(GL_DEPTH, 0, &attachment.depthClearValue));
             }
             if (attachment.stencilLoadOp == AttachmentLoadOp::Clear) {
                 int value = attachment.stencilClearValue;
@@ -258,7 +316,8 @@ RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     const RenderPass::Descriptor& desc) {
     CmdBeginRenderPass cmd;
     cmd.desc = desc;
-    buffer_.cmds.emplace_back(Command{CmdType::BeginRenderPass, std::move(cmd)});
+    buffer_.cmds.emplace_back(
+        Command{CmdType::BeginRenderPass, std::move(cmd)});
 
     return RenderPassEncoder{new RenderPassEncoderImpl(*device_, buffer_)};
 }
@@ -327,8 +386,9 @@ void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     buffer_->cmds.push_back({CmdType::SetRenderPipeline, cmd});
 }
 
-void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value,
-                                            uint32_t offset, uint32_t size) {
+void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage,
+                                            const void* value, uint32_t offset,
+                                            uint32_t size) {
     CmdPushConstant cmd;
     cmd.stage = stage;
     cmd.offset = offset;
@@ -344,7 +404,8 @@ void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage, const void* value
     buffer_->cmds.push_back({CmdType::PushConstant, cmd});
 }
 
-void RenderPassEncoderImpl::SetViewport(float x, float y, float width, float height) {
+void RenderPassEncoderImpl::SetViewport(float x, float y, float width,
+                                        float height) {
     GL_CALL(glViewport(x, y, width, height));
     GL_CALL(glScissor(x, y, width, height));
 }

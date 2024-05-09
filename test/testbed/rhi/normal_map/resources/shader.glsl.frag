@@ -1,11 +1,11 @@
-#version 450
+#version 450 core
 
 in VS_OUT {
     vec2 fragUV;
     mat3 TBN;
 } fs_in;
 
-layout(location = 0) out vec4 outColor;
+out vec4 outColor;
 
 layout(binding = 1) uniform sampler2D mySampler;
 layout(binding = 2) uniform sampler2D normalMapSampler;

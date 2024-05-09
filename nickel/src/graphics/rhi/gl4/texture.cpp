@@ -8,13 +8,16 @@
 namespace nickel::rhi::gl4 {
 
 GLenum getTypeFromDesc(const Texture::Descriptor& desc) {
+#ifdef NICKEL_HAS_GL4
     if (desc.dimension == TextureType::Dim1) {
         if (desc.size.depthOrArrayLayers > 1) {
             return GL_TEXTURE_1D_ARRAY;
         } else {
             return GL_TEXTURE_1D;
         }
+        return GL_TEXTURE_1D;
     }
+#endif
 
     if (desc.dimension == TextureType::Dim2) {
         if (desc.size.depthOrArrayLayers > 1) {
@@ -36,19 +39,26 @@ TextureImpl::TextureImpl(DeviceImpl& device, const Texture::Descriptor& desc)
     if (desc.format != TextureFormat::Presentation) {
         GL_CALL(glGenTextures(1, &id));
         Bind();
+#ifdef NICKEL_HAS_GL4
         if (type_ == GL_TEXTURE_1D) {
             GL_CALL(glTexStorage1D(type_, desc.mipmapLevelCount,
-                                    TextureFormat2GLInternal(desc.format),
-                                    desc.size.width));
-        } else if (type_ == GL_TEXTURE_1D_ARRAY || type_ == GL_TEXTURE_2D) {
+                                   TextureFormat2GLInternal(desc.format),
+                                   desc.size.width));
+        } else
+#endif
+            if (
+#ifdef NICKEL_HAS_GL4
+                type_ == GL_TEXTURE_1D_ARRAY ||
+#endif
+                type_ == GL_TEXTURE_2D) {
             GL_CALL(glTexStorage2D(type_, desc.mipmapLevelCount,
-                                    TextureFormat2GLInternal(desc.format),
-                                    desc.size.width, desc.size.height));
+                                   TextureFormat2GLInternal(desc.format),
+                                   desc.size.width, desc.size.height));
         } else if (type_ == GL_TEXTURE_3D || type_ == GL_TEXTURE_2D_ARRAY) {
-                GL_CALL(glTexStorage3D(type_, desc.mipmapLevelCount,
-                                       TextureFormat2GLInternal(desc.format),
-                                       desc.size.width, desc.size.height,
-                                       desc.size.depthOrArrayLayers));
+            GL_CALL(glTexStorage3D(type_, desc.mipmapLevelCount,
+                                   TextureFormat2GLInternal(desc.format),
+                                   desc.size.width, desc.size.height,
+                                   desc.size.depthOrArrayLayers));
         } else {
             LOGE(log_tag::GL, "unsupport texture type");
         }
@@ -67,6 +77,12 @@ TextureImpl::TextureImpl(DeviceImpl& device, const Texture::Descriptor& desc)
         desc_.size.depthOrArrayLayers = 1;
     }
 }
+
+TextureImpl::TextureImpl(GLuint id, GLenum type)
+    : rhi::TextureImpl{Texture::Descriptor{
+          .format = rhi::TextureFormat::Presentation}},
+      id{id},
+      type_{type} {}
 
 void TextureImpl::Bind(int slot) const {
     GL_CALL(glActiveTexture(GL_TEXTURE0 + slot));

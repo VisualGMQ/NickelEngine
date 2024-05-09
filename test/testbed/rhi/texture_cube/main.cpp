@@ -32,27 +32,41 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/vert.spv", std::ios::binary)
+                "test/testbed/rhi/texture_cube/resources/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/frag.spv", std::ios::binary)
+                "test/testbed/rhi/texture_cube/resources/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
+#ifdef NICKEL_HAS_GL4
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/shader.glsl.vert")
+                "test/testbed/rhi/texture_cube/resources/shader.glsl.vert")
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/texture_cube/shader.glsl.frag")
+                "test/testbed/rhi/texture_cube/resources/shader.glsl.frag")
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#else
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/texture_cube/resources/shader.es2.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/texture_cube/resources/shader.es2.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#endif
     }
 }
 
@@ -67,12 +81,12 @@ void initVertexBuffer(Context& ctx, Device& device) {
     ctx.vertexBuffer.Unmap();
 }
 
-void initUniformBuffer(Context& ctx, Adapter adapter, Device device, nickel::Window& window) {
-    mvp.proj = nickel::cgmath::CreatePersp(nickel::cgmath::Deg2Rad(45.0f),
-                                           window.Size().w / window.Size().h,
-                                           0.1, 100, adapter.RequestAdapterInfo().api == APIPreference::GL);
-    mvp.view =
-        nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 0});
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
+                       nickel::Window& window) {
+    mvp.proj = nickel::cgmath::CreatePersp(
+        nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
+        100, adapter.RequestAdapterInfo().api == APIPreference::GL);
+    mvp.view = nickel::cgmath::CreateTranslation(nickel::cgmath::Vec3{0, 0, 0});
     mvp.model = nickel::cgmath::Mat44::Identity();
 
     Buffer::Descriptor bufferDesc;
@@ -146,8 +160,9 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
 
 void initImage(Context& ctx, Device& dev) {
     int w, h;
-    void* data = stbi_load("test/testbed/rhi/texture_cube/texture.jpg", &w,
-                           &h, nullptr, STBI_rgb_alpha);
+    void* data =
+        stbi_load("test/testbed/rhi/texture_cube/resources/texture.jpg", &w, &h,
+                  nullptr, STBI_rgb_alpha);
 
     Texture::Descriptor desc;
     desc.format = TextureFormat::RGBA8_UNORM;
@@ -290,7 +305,8 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
     static float x = 0, y = 0;
 
     void* data = ctx->uniformBuffer.GetMappedRange();
-    mvp.model = nickel::cgmath::CreateTranslation({0, 0, -5}) * nickel::cgmath::CreateXYZRotation({x, y, 0});
+    mvp.model = nickel::cgmath::CreateTranslation({0, 0, -5}) *
+                nickel::cgmath::CreateXYZRotation({x, y, 0});
     memcpy(data, mvp.model.data, sizeof(mvp.model));
     if (!ctx->uniformBuffer.IsMappingCoherence()) {
         ctx->uniformBuffer.Flush();
@@ -326,6 +342,7 @@ void BootstrapSystem(gecs::world& world,
 #else
     bool isVulkanBackend = true;
 #endif
+
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "04 texture cube", 1024, 720, API == APIPreference::Vulkan);
 

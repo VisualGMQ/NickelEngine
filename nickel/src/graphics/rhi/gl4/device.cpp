@@ -6,9 +6,13 @@
 namespace nickel::rhi::gl4 {
 
 DeviceImpl::DeviceImpl(AdapterImpl& adapter)
-    : queue{new QueueImpl{*this}}, adapter(&adapter) {
+    : queue{new QueueImpl{*this}},
+      adapter(&adapter) {
     initSwapchain();
     initPushConstantBuffer();
+    presentTexture = std::make_unique<TextureImpl>(swapchainTexture, GL_TEXTURE_2D);
+    presentTextureView = std::make_unique<TextureViewImpl>(
+        *presentTexture, TextureView::Descriptor{});
 }
 
 void DeviceImpl::initSwapchain() {
@@ -87,7 +91,7 @@ Queue DeviceImpl::GetQueue() {
 }
 
 std::pair<Texture, TextureView> DeviceImpl::GetPresentationTexture() {
-    return {};
+    return {Texture{presentTexture.get()}, TextureView{presentTextureView.get()}};
 }
 
 void DeviceImpl::BeginFrame() {}
@@ -102,6 +106,8 @@ void DeviceImpl::EndFrame() {
                               GL_LINEAR));
     SDL_GL_SwapWindow(adapter->window);
 }
+
+void DeviceImpl::OnWindowResize(int x, int y) {}
 
 void DeviceImpl::WaitIdle() {
     GL_CALL(glFlush());

@@ -13,16 +13,30 @@ FramebufferImpl::FramebufferImpl(const RenderPass::Descriptor& renderPassDesc) {
         auto view = static_cast<const TextureViewImpl*>(
             static_cast<const TextureViewImpl*>(att.view.Impl()));
         auto texture = static_cast<const TextureImpl*>(view->Texture().Impl());
+#ifdef NICKEL_HAS_GL4
         if (texture->Type() == GL_TEXTURE_1D ||
             texture->Type() == GL_TEXTURE_2D ||
             texture->Type() == GL_TEXTURE_3D) {
             GL_CALL(glFramebufferTexture(
                 GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, view->id, 0));
         }
+#else
+        if (texture->Type() == GL_TEXTURE_2D) {
+            GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i,
+                                    GL_TEXTURE_2D, view->id, 0));
+        } else if (texture->Type() == GL_TEXTURE_3D) {
+            auto layer = view->Texture().Extent().depthOrArrayLayers;
+            for (int j = 0; j < layer; j++) {
+                GL_CALL(glFramebufferTextureLayer(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i + j, view->id, 0, j));
+            }
+        }
+#endif
         attachments_.emplace_back(texture->id);
     }
     if (renderPassDesc.colorAttachments.empty()) {
-        GL_CALL(glDrawBuffer(GL_NONE));
+        GLenum buf = GL_NONE;
+        GL_CALL(glDrawBuffers(1, &buf));
         GL_CALL(glReadBuffer(GL_NONE));
     }
     if (renderPassDesc.depthStencilAttachment) {
@@ -41,7 +55,12 @@ FramebufferImpl::FramebufferImpl(const RenderPass::Descriptor& renderPassDesc) {
         } else {
             target = GL_STENCIL_ATTACHMENT;
         }
+#ifdef NICKEL_HAS_GL4
         GL_CALL(glFramebufferTexture(GL_FRAMEBUFFER, target, view->id, 0));
+#else
+        GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, target, GL_TEXTURE_2D,
+                                       view->id, 0));
+#endif
         attachments_.emplace_back(view->id);
     }
 

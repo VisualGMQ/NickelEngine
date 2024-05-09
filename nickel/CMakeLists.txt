@@ -21,9 +21,9 @@ aux_source_directory(src/graphics/rhi nickel_graphics_src)
 if (TARGET Vulkan)
     aux_source_directory(src/graphics/rhi/vk nickel_graphics_src)
 endif()
-aux_source_directory(src/graphics/rhi/gl4 nickel_graphics_src)
 aux_source_directory(src/graphics/rhi/impl nickel_graphics_src)
 aux_source_directory(src/graphics/rhi/null nickel_graphics_src)
+aux_source_directory(src/graphics/rhi/gl4 nickel_graphics_src)
 file(GLOB_RECURSE nickel_graphics_headers ./include/graphics/*.hpp)
 
 add_library(Nickel.Graphics STATIC)
@@ -34,7 +34,18 @@ set_target_properties(Nickel.Graphics
     PROPERTIES
     PUBLIC_HEADER "${nickel_graphics_headers}")
 target_compile_features(Nickel.Graphics PUBLIC cxx_std_17)
-target_link_libraries(Nickel.Graphics PRIVATE glad stb_image rapidxml freetype lunasvg tinygltf SDL2 Nickel.Common)
+if (NOT EMSCRIPTEN)
+    target_link_libraries(Nickel.Graphics PRIVATE glad)
+    target_compile_definitions(Nickel.Graphics PUBLIC NICKEL_HAS_GL4)
+else()
+    target_compile_definitions(Nickel.Graphics PUBLIC NICKEL_HAS_GLES2)
+endif()
+target_link_libraries(Nickel.Graphics PRIVATE stb_image freetype rapidxml lunasvg tinygltf SDL2 Nickel.Common)
+
+# hack way to include freetype2 dir when version under 2.10
+# but freetype can't compile in WASM above 2.10
+target_include_directories(Nickel.Graphics PRIVATE ${PROJECT_SOURCE_DIR}/3rdlibs/freetype2/include)
+
 target_compile_definitions(Nickel.Graphics PUBLIC
     TINYGLTF_NO_STB_IMAGE 
     TINYGLTF_NO_STB_IMAGE_WRITE

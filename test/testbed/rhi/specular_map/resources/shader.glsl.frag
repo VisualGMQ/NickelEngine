@@ -19,6 +19,7 @@ const vec3 lightDir = normalize(vec3(0, -1, -1));
 const float specularStrength = 0.5;
 const int specularExp = 32;
 const float ambient = 0.01;
+const float diffuseStrength = 0.5;
 const float diffuseFactor = 0.1;
 
 void main() {

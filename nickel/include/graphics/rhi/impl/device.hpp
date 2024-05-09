@@ -27,6 +27,7 @@ public:
     virtual std::pair<Texture, TextureView> GetPresentationTexture() = 0;
     virtual void BeginFrame() = 0;
     virtual void EndFrame() = 0;
+    virtual void OnWindowResize(int x, int y) = 0;
     virtual void WaitIdle() = 0;
 
     virtual ~DeviceImpl() = default;

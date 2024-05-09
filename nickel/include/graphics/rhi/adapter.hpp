@@ -14,7 +14,9 @@ struct GPUSupportLimits {
     uint32_t minStorageBufferOffsetAlignment;
     uint32_t nonCoherentAtomSize = 0;
     uint32_t maxPushConstantSize = 0;
-    bool supportGeometryShader;
+    bool supportGeometryShader = true;
+    bool supportComputeShader = true;
+    bool supportPolygonModeChange = true;
 };
 
 APIPreference GetSupportRenderAPI(APIPreference desired);

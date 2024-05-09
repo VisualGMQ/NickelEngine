@@ -1,4 +1,4 @@
-#version 450
+#version 300 es
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inUV;
@@ -7,24 +7,30 @@ layout(location = 3) in vec4 inTangent;
 
 out VS_OUT{
     vec2 fragUV;
+    vec3 inPos;
+    vec3 fragPos;
     mat3 TBN;
 } vs_out;
 
-layout(binding = 0) uniform MyUniform {
-    mat4 model;
+uniform MyUniform {
     mat4 view;
     mat4 proj;
 } MVP;
 
-layout(binding = 16) uniform PushConstant {
+uniform PushConstant {
     mat4 model;
 } pushConstant;
 
 void main() {
-    mat4 model = MVP.model * pushConstant.model;
-    gl_Position = MVP.proj * MVP.view * model * vec4(inPosition, 1.0);
+    vs_out.inPos = inPosition;
 
-    mat3 normalMat = transpose(inverse(mat3(model)));
+    mat4 model = pushConstant.model;
+    vec4 fragPos = model * vec4(inPosition, 1.0);
+    gl_Position = MVP.proj * MVP.view * fragPos;
+
+    vs_out.fragPos = vec3(fragPos);
+
+    mat3 normalMat = mat3(transpose(inverse(model)));
 
     vs_out.fragUV = inUV;
 

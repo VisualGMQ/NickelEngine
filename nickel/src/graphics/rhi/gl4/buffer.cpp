@@ -10,24 +10,30 @@ GLenum getBufferType(const Buffer::Descriptor& desc) {
     if (desc.usage & BufferUsage::Index) {
         return GL_ELEMENT_ARRAY_BUFFER;
     }
-    if (desc.usage & BufferUsage::Indirect) {
-        return GL_DISPATCH_INDIRECT_BUFFER;
-    }
-    if (desc.usage & BufferUsage::Storage) {
-        return GL_SHADER_STORAGE_BUFFER;
-    }
+
     if (desc.usage & BufferUsage::Uniform) {
         return GL_UNIFORM_BUFFER;
     }
-    if (desc.usage & BufferUsage::QueryResolve) {
-        return GL_QUERY_BUFFER;
-    }
+
     if (desc.usage & BufferUsage::CopyDst) {
         return GL_COPY_WRITE_BUFFER;
     }
     if (desc.usage & BufferUsage::CopySrc) {
         return GL_COPY_READ_BUFFER;
     }
+
+#ifdef NICKEL_HAS_GL4
+    if (desc.usage & BufferUsage::Indirect) {
+        return GL_DISPATCH_INDIRECT_BUFFER;
+    }
+    if (desc.usage & BufferUsage::Storage) {
+        return GL_SHADER_STORAGE_BUFFER;
+    }
+    if (desc.usage & BufferUsage::QueryResolve) {
+        return GL_QUERY_BUFFER;
+    }
+#endif
+
     return GL_ARRAY_BUFFER;
 }
 
@@ -47,8 +53,7 @@ BufferImpl::BufferImpl(const Buffer::Descriptor& desc)
         } else if (desc.usage & BufferUsage::MapWrite) {
             MapAsync(Buffer::Mode::Write, 0, desc.size);
         } else {
-            MapAsync(
-                Buffer::Mode::Write, 0, desc.size);
+            MapAsync(Buffer::Mode::Write, 0, desc.size);
         }
     }
     Unbind();
@@ -96,24 +101,36 @@ void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset,
     }
     GLenum access = 0;
     if (mode & Buffer::Mode::Read && mode & Buffer::Mode::Write) {
-        access |= GL_MAP_READ_BIT|GL_MAP_WRITE_BIT;
+        access |= GL_MAP_READ_BIT | GL_MAP_WRITE_BIT;
     } else if (mode & Buffer::Mode::Read) {
         access = GL_MAP_READ_BIT;
     } else {
         access = GL_MAP_WRITE_BIT;
     }
+
+#ifdef NICKEL_HAS_GL4
     if (!isMappingCoherence_) {
-        map_ = glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT|access);
+        map_ =
+            glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT | access);
         isMappingCoherence_ = true;
         if (!map_) {
             isMappingCoherence_ = false;
-            map_ = glMapBufferRange(type_, offset, size, GL_MAP_FLUSH_EXPLICIT_BIT|access);
+            map_ = glMapBufferRange(type_, offset, size,
+                                    GL_MAP_FLUSH_EXPLICIT_BIT | access);
         }
     } else if (isMappingCoherence_.value()) {
-        map_ = glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT|access);
+        map_ =
+            glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT | access);
     } else {
-        map_ = glMapBufferRange(type_, offset, size, GL_MAP_FLUSH_EXPLICIT_BIT|access);
+        map_ = glMapBufferRange(type_, offset, size,
+                                GL_MAP_FLUSH_EXPLICIT_BIT | access);
     }
+#else
+    map_ = glMapBufferRange(type_, offset, size,
+                            GL_MAP_FLUSH_EXPLICIT_BIT |
+                                GL_MAP_INVALIDATE_RANGE_BIT | access);
+    isMappingCoherence_ = false;
+#endif
     mappedOffset_ = offset;
     mappedSize_ = size;
     mapState_ = Buffer::MapState::Mapped;

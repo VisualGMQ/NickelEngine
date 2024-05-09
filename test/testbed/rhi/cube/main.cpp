@@ -29,25 +29,38 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/cube/vert.spv", std::ios::binary)
+                "test/testbed/rhi/cube/shaders/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/cube/frag.spv", std::ios::binary)
+                "test/testbed/rhi/cube/shaders/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
+#ifdef NICKEL_HAS_GL4
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/cube/shader.glsl.vert")
+                              "test/testbed/rhi/cube/shaders/shader.glsl.vert")
                               .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/cube/shader.glsl.frag")
+                              "test/testbed/rhi/cube/shaders/shader.glsl.frag")
                               .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#else
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/cube/shaders/shader.es2.glsl.vert")
+                              .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "test/testbed/rhi/cube/shaders/shader.es2.glsl.frag")
+                              .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+
+#endif
     }
 }
 
@@ -73,7 +86,8 @@ void initIndicesBuffer(Context& ctx, Device& device) {
     ctx.indicesBuffer.Unmap();
 }
 
-void initUniformBuffer(Context& ctx, Adapter adapter, Device device, nickel::Window& window) {
+void initUniformBuffer(Context& ctx, Adapter adapter, Device device,
+                       nickel::Window& window) {
     mvp.proj = nickel::cgmath::CreatePersp(
         nickel::cgmath::Deg2Rad(45.0f), window.Size().w / window.Size().h, 0.1,
         100, adapter.RequestAdapterInfo().api == APIPreference::GL);
@@ -133,8 +147,8 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
 
 void StartupSystem(gecs::commands cmds,
                    gecs::resource<gecs::mut<nickel::Window>> window) {
-    auto& adapter = cmds.emplace_resource<Adapter>(
-        window->Raw(), Adapter::Option{API});
+    auto& adapter =
+        cmds.emplace_resource<Adapter>(window->Raw(), Adapter::Option{API});
     auto& device = cmds.emplace_resource<Device>(adapter.RequestDevice());
     auto& ctx = cmds.emplace_resource<Context>();
 
@@ -211,7 +225,8 @@ void UpdateSystem(gecs::resource<gecs::mut<nickel::rhi::Device>> device,
     renderPass.SetViewport(0, 0, 1024, 720);
     renderPass.SetVertexBuffer(0, ctx->vertexBuffer, 0,
                                ctx->vertexBuffer.Size());
-    renderPass.SetIndexBuffer(ctx->indicesBuffer, IndexType::Uint32, 0, sizeof(gIndices));
+    renderPass.SetIndexBuffer(ctx->indicesBuffer, IndexType::Uint32, 0,
+                              sizeof(gIndices));
     renderPass.SetBindGroup(ctx->cubeBindGroup);
     renderPass.DrawIndexed(gIndices.size(), 1, 0, 0, 0);
     renderPass.End();
@@ -265,6 +280,7 @@ void BootstrapSystem(gecs::world& world,
 #else
     bool isVulkanBackend = false;
 #endif
+
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "03 cube", 1024, 720, API == APIPreference::Vulkan);
 

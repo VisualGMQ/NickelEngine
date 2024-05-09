@@ -56,7 +56,7 @@ inline const char* GLError2Str(GLenum error) {
         auto value = expr;                                               \
         GLenum e = glGetError();                                         \
         if (e != GL_NO_ERROR) {                                          \
-            LOGE(log_tag::GL, ::nickel::rhi::gl4::gogl::GLError2Str(e)); \
+            LOGE(log_tag::GL, ::nickel::rhi::gl4::GLError2Str(e)); \
         }                                                                \
         return value;                                                    \
     }()

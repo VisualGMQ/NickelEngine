@@ -7,6 +7,7 @@
 #include "graphics/rhi/gl4/render_pipeline.hpp"
 #include "graphics/rhi/gl4/pipeline_layout.hpp"
 #include "graphics/rhi/gl4/texture.hpp"
+#include "graphics/rhi/gl4/texture_view.hpp"
 #include "graphics/rhi/gl4/command.hpp"
 #include "graphics/rhi/gl4/queue.hpp"
 
@@ -39,12 +40,16 @@ public:
     std::pair<Texture, TextureView> GetPresentationTexture() override;
     void BeginFrame() override;
     void EndFrame() override;
+    void OnWindowResize(int x, int y) override;
     void WaitIdle() override;
 
     Queue queue;
 
     GLuint swapchainTexture;
     GLuint swapchainFramebuffer;
+
+    std::unique_ptr<TextureImpl> presentTexture;
+    std::unique_ptr<TextureViewImpl> presentTextureView;
 
     std::vector<Framebuffer> framebuffers;
     std::unordered_map<size_t, GLuint> vaos;  // index vao by indices-buffer

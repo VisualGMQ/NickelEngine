@@ -10,6 +10,15 @@ TextCache TextCache::Null;
 
 FT_Library gFtLib;
 
+const char* FT_Error_String(FT_Error error_code) {
+    #undef FTERRORS_H_
+    #define FT_ERRORDEF( e, v, s )  case e: return s;
+    #define FT_ERROR_START_LIST     switch (error_code) {
+    #define FT_ERROR_END_LIST       }
+    #include FT_ERRORS_H
+    return "(Unknown error)";
+}
+
 void FontSystemInit() {
     PROFILE_BEGIN();
 

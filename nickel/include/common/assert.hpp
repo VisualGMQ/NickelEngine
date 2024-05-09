@@ -7,7 +7,13 @@
 
 namespace nickel {
 
-void doAssert(bool, std::string_view);
+template <typename... Args>
+void doAssert(bool b, Args&&... args) {
+    if (!b) {
+        LOGF("Assert", std::forward<Args>(args)...);
+        assert(b);
+    }
+}
 
 /**
  * @addtogroup utilities
@@ -20,9 +26,9 @@ void doAssert(bool, std::string_view);
  * @param expr expression, be false will assert
  * @param msg  log fatal messge while assert
  */
-#define Assert(expr, msg)      \
-    do {                       \
-        ::nickel::doAssert(bool(expr), msg); \
+#define Assert(expr, ...)                              \
+    do {                                               \
+        ::nickel::doAssert(bool(expr), ##__VA_ARGS__); \
     } while (0)
 
 /**

@@ -5,9 +5,9 @@
 #include "graphics/rhi/gl4/glcall.hpp"
 #include "graphics/rhi/gl4/glpch.hpp"
 
-
 namespace nickel::rhi::gl4 {
 
+#ifdef NICKEL_HAS_GL4
 void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
                             GLenum severity, GLsizei length,
                             const char *message, const void *userParam) {
@@ -82,28 +82,41 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
     }
     std::cout << message << std::endl;
 }
+#endif
 
 AdapterImpl::AdapterImpl(SDL_Window *window) : window{window} {
+#ifdef NICKEL_HAS_GL4
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+#else
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#endif
 
     ctx_ = SDL_GL_CreateContext(window);
+    if (!ctx_) {
+        LOGE(log_tag::GL, "create opengl context failed");
+        exit(1);
+    }
 
+#ifdef NICKEL_HAS_GL4
     gladLoadGL();
 
     int flags;
-    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    GL_CALL(glGetIntegerv(GL_CONTEXT_FLAGS, &flags));
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         LOGI(log_tag::GL, "enable opengl debug output");
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(glDebugOutput, nullptr);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
-                              nullptr, GL_TRUE);
+        GL_CALL(glEnable(GL_DEBUG_OUTPUT));
+        GL_CALL(glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS));
+        GL_CALL(glDebugMessageCallback(glDebugOutput, nullptr));
+        GL_CALL(glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
+                                      0, nullptr, GL_TRUE));
     }
+#endif
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
@@ -138,12 +151,21 @@ Adapter::Info AdapterImpl::RequestAdapterInfo() const {
 
 void AdapterImpl::querySupportLimits() {
     GLint value;
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value);
+    GL_CALL(glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value));
     limits_.minUniformBufferOffsetAlignment = value;
-    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &value);
-    limits_.minStorageBufferOffsetAlignment = value;
     limits_.maxPushConstantSize = _NICKEL_GL_MAX_PUSHCONSTANT_SIZE;
+
+#ifdef NICKEL_HAS_GL4
+    GL_CALL(glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &value));
+    limits_.minStorageBufferOffsetAlignment = value;
     limits_.supportGeometryShader = true;
+    limits_.supportGeometryShader = true;
+    limits_.supportPolygonModeChange = true;
+#else
+    limits_.supportGeometryShader = false;
+    limits_.supportGeometryShader = false;
+    limits_.supportPolygonModeChange = false;
+#endif
 }
 
 }  // namespace nickel::rhi::gl4

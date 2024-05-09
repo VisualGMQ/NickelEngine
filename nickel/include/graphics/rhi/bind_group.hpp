@@ -19,6 +19,7 @@ enum class BufferType {
 
 struct BufferBinding final {
     Buffer buffer;
+    std::string name;
     bool hasDynamicOffset = false;
     std::optional<uint64_t> minBindingSize;
     BufferType type = BufferType::Uniform;
@@ -67,7 +68,7 @@ enum class BindingType {
 };
 
 struct BindingPoint {
-    uint32_t binding;
+    int binding = -1;
     std::variant<BufferBinding, SamplerBinding, StorageTextureBinding,
                  TextureBinding> entry;
 

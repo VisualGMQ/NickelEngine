@@ -1,17 +1,11 @@
 #include "graphics/system.hpp"
-#include "graphics/rhi/vk/device.hpp"
 
 namespace nickel {
 
 void recreateSwapchain(const WindowResizeEvent& event,
                        gecs::resource<rhi::Adapter> adapter,
                        gecs::resource<gecs::mut<rhi::Device>> device) {
-#ifdef NICKEL_HAS_VULKAN
-    if (adapter->RequestAdapterInfo().api == rhi::APIPreference::Vulkan) {
-        static_cast<rhi::vulkan::DeviceImpl*>(device->Impl())
-            ->OnWindowResize(event.size);
-    }
-#endif
+    device->OnWindowResize(event.size.w, event.size.h);
 }
 
 void waitDeviceIdle(const WindowResizeEvent&,

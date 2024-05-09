@@ -55,25 +55,41 @@ void initShaders(APIPreference api, Device device,
     if (api == APIPreference::Vulkan) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/normal_map/vert.spv", std::ios::binary)
+                "test/testbed/rhi/normal_map/resources/vert.spv", std::ios::binary)
                 .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>(
-                "test/testbed/rhi/normal_map/frag.spv", std::ios::binary)
+                "test/testbed/rhi/normal_map/resources/frag.spv", std::ios::binary)
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
-        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/normal_map/shader.glsl.vert")
-                              .value();
+#ifdef NICKEL_HAS_GL4
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/normal_map/resources/shader.glsl.vert")
+                .value();
         desc.vertex.module = device.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
-                              "test/testbed/rhi/normal_map/shader.glsl.frag")
-                              .value();
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/normal_map/resources/shader.glsl.frag")
+                .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#else
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/normal_map/resources/shader.es2.glsl.vert")
+                .value();
+        desc.vertex.module = device.CreateShaderModule(shaderDesc);
+
+        shaderDesc.code =
+            nickel::ReadWholeFile<std::vector<char>>(
+                "test/testbed/rhi/normal_map/resources/shader.es2.glsl.frag")
+                .value();
+        desc.fragment.module = device.CreateShaderModule(shaderDesc);
+#endif
     }
 }
 
@@ -172,7 +188,8 @@ void initNormalTangentMeshData() {
             (v2.position - v1.position).Cross(v3.position - v1.position));
         v1.normal = v2.normal = v3.normal = normal;
 
-        auto tan = nickel::cgmath::GetNormalMapTangent(v1.position, v2.position, v3.position, v1.uv, v2.uv, v3.uv);
+        auto tan = nickel::cgmath::GetNormalMapTangent(
+            v1.position, v2.position, v3.position, v1.uv, v2.uv, v3.uv);
         v1.tangent = v2.tangent = v3.tangent = tan;
     }
 }
@@ -250,11 +267,11 @@ void StartupSystem(gecs::commands cmds,
     initNormalTangentMeshData();
     initMeshData(device, ctx);
     ctx.colorTexture =
-        loadTexture("test/testbed/rhi/normal_map/brickwall.jpg", ctx, device,
-                    TextureFormat::RGBA8_UNORM_SRGB);
+        loadTexture("test/testbed/rhi/normal_map/resources/brickwall.jpg", ctx,
+                    device, TextureFormat::RGBA8_UNORM_SRGB);
     ctx.defaultNormalTexture =
-        loadTexture("test/testbed/rhi/normal_map/normal_map.png", ctx, device,
-                    TextureFormat::RGBA8_UNORM);
+        loadTexture("test/testbed/rhi/normal_map/resources/normal_map.png", ctx,
+                    device, TextureFormat::RGBA8_UNORM);
     initUniformBuffer(ctx, adapter, device, window.get());
     initBindGroupLayout(ctx, device);
     BindGroup::Descriptor bindGroupDesc;
