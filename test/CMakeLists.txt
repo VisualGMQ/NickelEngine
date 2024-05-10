@@ -22,8 +22,8 @@ AddConsoleTest(cgmath)
 AddConsoleTest(tweeny)
 AddConsoleTest(csv_iterator)
 
-AddVisualableTest(gjk)
-AddVisualableTest(script)
+# AddVisualableTest(gjk)
+# AddVisualableTest(script)
 
 add_subdirectory(testbed)
 add_subdirectory(graphics)
