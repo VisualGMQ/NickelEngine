@@ -50,13 +50,15 @@ void RegistFileChangeEventHandler(
 
 void FileChangeEventHandler(
     const FileChangeEvent& event,
-    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
-    gecs::resource<gecs::mut<EditorContext>> ctx) {
+    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr) {
     auto absolutePath = event.dir / event.filename;
-    auto path = ctx->GetRelativePath(absolutePath);
+    auto& ctx = EditorContext::Instance();
+    auto path = ctx.GetRelativePath(absolutePath);
 
     if (event.action == FileChangeEvent::Action::Add) {
-        assetMgr->Load(path);
+        if (!assetMgr->Has(path)) {
+            assetMgr->Load(path);
+        }
     }
 
     if (event.action == FileChangeEvent::Action::Delete) {
@@ -107,7 +109,7 @@ void FileChangeEventHandler(
         }
     }
 
-    auto& cbWindow = ctx->contentBrowserWindow;
+    auto& cbWindow = ctx.contentBrowserWindow;
     std::error_code err;
     if (std::filesystem::exists(event.dir, err) &&
         std::filesystem::equivalent(cbWindow.CurPath(), event.dir, err)) {

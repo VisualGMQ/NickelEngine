@@ -6,7 +6,6 @@
 #include "common/timer.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/font.hpp"
-#include "graphics/renderer2d.hpp"
 #include "graphics/texture.hpp"
 #include "video/event.hpp"
 #include "video/window.hpp"
@@ -19,7 +18,12 @@ constexpr std::string_view AssetStoreDir = "resources";
 
 struct ProjectInitInfo final {
     std::filesystem::path projectPath;
+    std::filesystem::path startupScene = "./MainScene.scene";
     WindowBuilder::Data windowData = WindowBuilder::Data::Default();
+};
+
+struct ChangeSceneEvent {
+    std::filesystem::path newScene;
 };
 
 void SaveProjectByConfig(const ProjectInitInfo& info,
@@ -55,7 +59,7 @@ toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg);
  */
 void LoadAssetsWithPath(AssetManager&, const std::filesystem::path& rootPath);
 
-bool LoadRegistryEntities(gecs::registry reg, const std::filesystem::path& filename);
+bool LoadScene(gecs::registry reg, const std::filesystem::path& filename);
 
 /**
  * @brief load basic project config from `rootPath/project.toml
@@ -125,6 +129,8 @@ inline std::filesystem::path GenSceneFilePath(const std::filesystem::path& root,
     return root / std::filesystem::path(sceneName).replace_extension(
                       SceneFileExtension);
 }
+
+void ChangeScene(const std::filesystem::path&);
 
 
 }  // namespace nickel

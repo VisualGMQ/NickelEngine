@@ -279,11 +279,6 @@ public:
         return time;
     }
 
-    /**
-     * @brief save animation info to toml file(as asset file)
-     */
-    void Save(const std::filesystem::path& path) const;
-
     toml::table Save2Toml() const override {
         toml::table tbl;
         tbl.emplace("path", RelativePath().string());
@@ -300,7 +295,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Animation> LoadAssetFromMeta(const toml::table& tbl);
+std::unique_ptr<Animation> LoadAssetFromMetaTable(const toml::table& tbl);
 
 using AnimationHandle = Handle<Animation>;
 
@@ -322,7 +317,8 @@ public:
 
     using animation_type = Animation;
 
-    explicit AnimationPlayer(AnimationManager& mgr) : mgr_(&mgr) {}
+    AnimationPlayer()
+        : mgr_{&ECS::Instance().World().res_mut<AnimationManager>().get()} {}
 
     AnimationPlayer(const AnimationPlayer&) = delete;
 

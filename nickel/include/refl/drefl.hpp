@@ -10,6 +10,6 @@ enum Attribute {
     EditorNodisplay,
 };
 
-void InitDynamicReflect();
+void RegistReflectInfos();
 
 }

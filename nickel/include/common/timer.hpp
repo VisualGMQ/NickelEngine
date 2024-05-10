@@ -85,7 +85,6 @@ public:
     Timer(TimerID id, TimeType time, int loop = 0)
         : id_(id), dstTime_(time), loop_(loop), shouldSendEvent(true) {}
 
-    explicit Timer(const toml::table&);
     explicit Timer(const std::filesystem::path&);
 
     Timer(const Timer&) = delete;
@@ -152,7 +151,7 @@ private:
 };
 
 template <>
-std::unique_ptr<Timer> LoadAssetFromMeta(const toml::table& tbl);
+std::unique_ptr<Timer> LoadAssetFromMetaTable(const toml::table& tbl);
 
 class TimerManager : public Manager<Timer> {
 public:

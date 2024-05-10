@@ -4,6 +4,7 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <filesystem>
 
 #include "common/singlton.hpp"
 
@@ -20,14 +21,16 @@ namespace nickel {
  * @return file content. Read file failed will return `std::nullopt`
  */
 template <typename T = std::string, typename PathT>
-inline std::optional<T> ReadWholeFile(const PathT& filename) {
-    std::ifstream file(filename);
+inline std::optional<T> ReadWholeFile(
+    const PathT& filename,
+    std::ios_base::openmode openmode = std::ios_base::in) {
+    std::ifstream file(filename, openmode);
     if (file.fail()) {
-        LOGE("file %s open failed", filename);
+        LOGE("file ", filename, " open failed");
         return std::nullopt;
     }
     T content(std::istreambuf_iterator<char>(file),
-                        (std::istreambuf_iterator<char>()));
+              (std::istreambuf_iterator<char>()));
     return content;
 }
 
@@ -68,9 +71,8 @@ inline bool IsWhiteSpace(char c) {
 template <typename CharList>
 class CSVIterator final {
 public:
-    explicit CSVIterator(const CharList& data): data_{&data} {
-        nextToken();
-    }
+    explicit CSVIterator(const CharList& data) : data_{&data} { nextToken(); }
+
     CSVIterator() = default;
 
     bool operator==(const CSVIterator& o) const {
@@ -89,9 +91,7 @@ public:
         }
     }
 
-    bool operator!=(const CSVIterator& o) const {
-        return !(*this == o);
-    }
+    bool operator!=(const CSVIterator& o) const { return !(*this == o); }
 
     auto& operator++() {
         nextToken();
@@ -117,19 +117,20 @@ private:
             return;
         }
 
-        begin_ = end_ + 1;        
+        begin_ = end_ + 1;
         while (begin_ < data_->size() && IsWhiteSpace((*data_)[begin_])) {
-            begin_ ++;
+            begin_++;
         }
         end_ = begin_ + 1;
         while (end_ < data_->size() && (*data_)[end_] != ',') {
-            end_ ++;
+            end_++;
         }
     }
 };
 
 template <typename F, typename... Args, size_t... Indices>
-void doVisitTuple(std::tuple<Args...>& t, std::index_sequence<Indices...>, F f) {
+void doVisitTuple(std::tuple<Args...>& t, std::index_sequence<Indices...>,
+                  F f) {
     (f(std::get<Indices>(t)), ...);
 }
 
@@ -139,7 +140,8 @@ void VisitTuple(std::tuple<Args...>& t, F f) {
 }
 
 template <typename F, typename... Args, size_t... Indices>
-void doVisitTuple(const std::tuple<Args...>& t, std::index_sequence<Indices...>, F f) {
+void doVisitTuple(const std::tuple<Args...>& t, std::index_sequence<Indices...>,
+                  F f) {
     (f(std::get<Indices>(t)), ...);
 }
 
@@ -148,7 +150,11 @@ void VisitTuple(const std::tuple<Args...>& t, F f) {
     doVisitTuple(t, std::make_index_sequence<sizeof...(Args)>(), f);
 }
 
-
+struct PathHasher {
+    size_t operator()(const std::filesystem::path& path) const {
+        return std::filesystem::hash_value(path);
+    }
+};
 
 /**
  * @}

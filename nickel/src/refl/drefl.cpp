@@ -1,4 +1,5 @@
 #include "refl/drefl.hpp"
+#include "graphics/gltf.hpp"
 #include "anim/anim.hpp"
 #include "audio/audio.hpp"
 #include "common/transform.hpp"
@@ -38,6 +39,20 @@ void reflectVec4() {
         .property("z", &cgmath::Vec4::z);
 }
 
+void reflectMat() {
+    mirrow::drefl::registrar<cgmath::Mat44>::instance()
+        .regist("Mat44")
+        .property("data", &cgmath::Mat44::data);
+
+    mirrow::drefl::registrar<cgmath::Mat33>::instance()
+        .regist("Mat33")
+        .property("data", &cgmath::Mat33::data);
+
+    mirrow::drefl::registrar<cgmath::Mat22>::instance()
+        .regist("Mat22")
+        .property("data", &cgmath::Mat22::data);
+}
+
 void reflectRect() {
     mirrow::drefl::registrar<cgmath::Rect>::instance()
         .regist("Rect")
@@ -51,15 +66,11 @@ void reflectTramsform() {
         .property("translation", &Transform::translation)
         .property("rotation", &Transform::rotation)
         .property("scale", &Transform::scale);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Transform>();
 }
 
 void reflectGlobalTramsform() {
     mirrow::drefl::registrar<GlobalTransform>::instance().regist(
         "GlobalTransform");
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<GlobalTransform>();
 }
 
 void reflectSprite() {
@@ -71,8 +82,7 @@ void reflectSprite() {
         .property("customSize", &Sprite::customSize)
         .property("flip", &Sprite::flip)
         .property("visiable", &Sprite::visiable)
-        .property("texture", &Sprite::texture)
-        .property("z-index", &Sprite::zIndex);
+        .property("z-index", &Sprite::orderInLayer);
 
     mirrow::drefl::registrar<Flip>::instance()
         .regist("Flip")
@@ -82,16 +92,11 @@ void reflectSprite() {
         .add("Both", Flip::Both);
 
     mirrow::drefl::registrar<TextureHandle>::instance().regist("TextureHandle");
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Sprite>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Flip>();
 }
 
 void reflectAnimation() {
     mirrow::drefl::registrar<AnimationPlayer>::instance().regist(
         "AnimationPlayer");
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
 void reflectUI() {
@@ -111,54 +116,12 @@ void reflectUI() {
         .property("hover-color", &ui::Button::hoverColor, {AttrColor})
         .property("press-color", &ui::Button::pressColor, {AttrColor});
 
-    mirrow::drefl::registrar<ui::Label>::instance()
-        .regist("Label")
-        .property("color", &ui::Label::color, {AttrColor})
-        .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
-        .property("pressColor", &ui::Label::pressColor, {AttrColor});
+    // mirrow::drefl::registrar<ui::Label>::instance()
+    //     .regist("Label")
+    //     .property("color", &ui::Label::color, {AttrColor})
+    //     .property("hoverColor", &ui::Label::hoverColor, {AttrColor})
+    //     .property("pressColor", &ui::Label::pressColor, {AttrColor});
 
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Style>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Button>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<ui::Label>();
-}
-
-void reflectRenderRelate() {
-    mirrow::drefl::registrar<gogl::Sampler>::instance()
-        .regist("Sampler")
-        .property("filter", &gogl::Sampler::filter)
-        .property("mipmap", &gogl::Sampler::mipmap)
-        .property("wrapper", &gogl::Sampler::wrapper);
-
-    mirrow::drefl::registrar<gogl::Sampler::Wrapper>::instance()
-        .regist("Wrapper")
-        .property("borderColor", &gogl::Sampler::Wrapper::borderColor)
-        .property("r", &gogl::Sampler::Wrapper::r)
-        .property("s", &gogl::Sampler::Wrapper::s)
-        .property("t", &gogl::Sampler::Wrapper::t);
-
-    mirrow::drefl::registrar<gogl::Sampler::Filter>::instance()
-        .regist("Filter")
-        .property("min", &gogl::Sampler::Filter::min)
-        .property("mag", &gogl::Sampler::Filter::mag);
-
-    mirrow::drefl::registrar<gogl::TextureFilterType>::instance()
-        .regist("TextureFilterType")
-        .add("Linear", gogl::TextureFilterType::Linear)
-        .add("Nearest", gogl::TextureFilterType::Nearest);
-    // TODO: add Other filter type enum
-
-    mirrow::drefl::registrar<gogl::TextureWrapperType>::instance()
-        .regist("TextureWrapperType")
-        .add("Repeat", gogl::TextureWrapperType::Repeat)
-        .add("MirrowRepeat", gogl::TextureWrapperType::MirroredRepeat)
-        .add("ClampToBorder", gogl::TextureWrapperType::ClampToBorder)
-        .add("ClampToEdge", gogl::TextureWrapperType::ClampToEdge);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::Sampler>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::Sampler::Wrapper>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<gogl::TextureFilterType>();
-    PrefabEmplaceMethods::Instance()
-        .RegistEmplaceFn<gogl::TextureWrapperType>();
 }
 
 void reflectWindow() {
@@ -166,8 +129,6 @@ void reflectWindow() {
         .regist("WindowData")
         .property("title", &WindowBuilder::Data::title)
         .property("size", &WindowBuilder::Data::size);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<WindowBuilder::Data>();
 }
 
 void reflectTilesheet() {
@@ -184,10 +145,6 @@ void reflectTilesheet() {
         .property("y", &Spacing::y);
 
     mirrow::drefl::registrar<Tilesheet>::instance().regist("Tilesheet");
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Margin>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Spacing>();
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Tilesheet>();
 }
 
 void reflectScript() {
@@ -195,15 +152,11 @@ void reflectScript() {
     mirrow::drefl::registrar<Script>::instance()
         .regist("Script")
         .property("handle", &Script::handle);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<LuaScript>();
 }
 
 void reflectMisc() {
     mirrow::drefl::registrar<Name>::instance().regist("Name").property(
         "name", &Name::name);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<Name>();
 
     mirrow::drefl::registrar<gecs::entity>::instance().regist("entity");
 }
@@ -231,7 +184,8 @@ void deserializeTextureHandle(const toml::node& node,
         if (mgr->Has(filename)) {
             handle = mgr->GetHandle(filename);
         } else {
-            handle = mgr->Load(filename, gogl::Sampler::CreateLinearRepeat());
+            // TODO: add format & sampler descriptor here
+            handle = mgr->Load(filename);
         }
     }
 }
@@ -242,8 +196,6 @@ void registTextureHandleSerd() {
                           serializeTextureHandle);
     serd.regist_deserialize(mirrow::drefl::typeinfo<TextureHandle>(),
                             deserializeTextureHandle);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<TextureHandle>();
 }
 
 void serializeSoundPlayer(toml::node& node, const mirrow::drefl::any& elem) {
@@ -268,7 +220,7 @@ void deserializeSoundPlayer(const toml::node& node, mirrow::drefl::any& elem) {
 
         auto mgr = ECS::Instance().World().res_mut<AudioManager>();
         if (mgr->Has(filename)) {
-            player.ChangeSound(mgr->GetHandle(filename), mgr.get());
+            player.ChangeSound(mgr->GetHandle(filename));
         }
     }
 }
@@ -279,8 +231,6 @@ void registSoundPlayerSerd() {
                           serializeSoundPlayer);
     serd.regist_deserialize(mirrow::drefl::typeinfo<SoundPlayer>(),
                             deserializeSoundPlayer);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<SoundPlayer>();
 }
 
 void serializeAnimationPlayer(toml::node& node,
@@ -318,8 +268,6 @@ void registAnimationPlayerSerd() {
                           serializeAnimationPlayer);
     serd.regist_deserialize(mirrow::drefl::typeinfo<AnimationPlayer>(),
                             deserializeAnimationPlayer);
-
-    PrefabEmplaceMethods::Instance().RegistEmplaceFn<AnimationPlayer>();
 }
 
 void serializeGlobalTransform(toml::node& node,
@@ -362,28 +310,61 @@ void reflectAudio() {
     mirrow::drefl::registrar<SoundPlayer>::instance().regist("SoundPlayer");
 }
 
-void InitDynamicReflect() {
+void reflectRHI() {
+    mirrow::drefl::registrar<rhi::SamplerAddressMode>::instance()
+        .regist("SamplerAddressMode")
+        .add("ClampToEdge", rhi::SamplerAddressMode::ClampToEdge)
+        .add("MirrowRepeat", rhi::SamplerAddressMode::MirrorRepeat)
+        .add("Repeat", rhi::SamplerAddressMode::Repeat);
+
+    mirrow::drefl::registrar<rhi::Filter>::instance()
+        .regist("Filter")
+        .add("Linear", rhi::Filter::Linear)
+        .add("Nearest", rhi::Filter::Nearest);
+}
+
+void reflectTexture() {
+    mirrow::drefl::registrar<Texture>::instance().regist("Texture");
+}
+
+void reflectMaterial() {
+    mirrow::drefl::registrar<Material2D>::instance().regist("Material2D");
+
+    mirrow::drefl::registrar<Material2DHandle>::instance().regist(
+        "Material2DHandle");
+
+    mirrow::drefl::registrar<Material3D>::instance().regist("Material3D");
+
+    mirrow::drefl::registrar<SpriteMaterial>::instance()
+        .regist("SpriteMaterial")
+        .property("material", &SpriteMaterial::material);
+}
+
+void reflectGLTFModel() {
+    mirrow::drefl::registrar<GLTFModel>::instance().regist("GLTFModel");
+}
+
+void RegistReflectInfos() {
     reflectVec2();
     reflectVec3();
     reflectVec4();
     reflectRect();
+    reflectMat();
     reflectTramsform();
     reflectGlobalTramsform();
     reflectAnimation();
     reflectSprite();
     reflectUI();
-    reflectRenderRelate();
     reflectWindow();
     reflectTilesheet();
     reflectHierarchy();
     reflectMisc();
     reflectAudio();
     reflectScript();
-
-    registTextureHandleSerd();
-    registSoundPlayerSerd();
-    registAnimationPlayerSerd();
-    registGlobalTransformSerd();
+    reflectRHI();
+    reflectTexture();
+    reflectMaterial();
+    reflectGLTFModel();
 }
 
 }  // namespace nickel

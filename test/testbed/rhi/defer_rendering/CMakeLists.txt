@@ -1,0 +1,2 @@
+AddRHITest(rhi_defer_rendering)
+target_link_libraries(rhi_defer_rendering PRIVATE stb_image)

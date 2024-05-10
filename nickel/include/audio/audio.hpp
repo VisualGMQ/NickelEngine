@@ -2,8 +2,9 @@
 
 #include "common/asset.hpp"
 #include "common/cgmath.hpp"
-#include "common/manager.hpp"
 #include "common/filetype.hpp"
+#include "common/manager.hpp"
+
 
 class ma_decoder;
 class ma_sound;
@@ -15,11 +16,19 @@ public:
     static Sound Null;
 
     Sound(const std::filesystem::path& filename);
-    Sound(const toml::table&);
     Sound(const Sound&) = delete;
-    Sound(Sound&&) = default;
+
+    Sound(Sound&& o) { swap(*this, o); }
+
     Sound& operator=(const Sound&) = delete;
-    Sound& operator=(Sound&&) = default;
+
+    Sound& operator=(Sound&& o) {
+        if (this != &o) {
+            swap(*this, o);
+        }
+        return *this;
+    }
+
     ~Sound();
 
     void* GetAudioData();
@@ -36,13 +45,16 @@ public:
         return tbl;
     }
 
-    explicit operator bool() const {
-        return data_ != nullptr;
-    }
+    explicit operator bool() const { return data_ != nullptr; }
 
 private:
     Sound() = default;
     ma_decoder* data_{};
+
+    friend void swap(Sound& o1, Sound& o2) {
+        using std::swap;
+        swap(o1.data_, o2.data_);
+    }
 };
 
 using SoundHandle = Handle<Sound>;
@@ -65,18 +77,24 @@ public:
 
 class SoundPlayer {
 public:
-    static SoundPlayer Null;
-
-    SoundPlayer(SoundHandle, AudioManager&);
-    SoundPlayer() = default;
-
+    SoundPlayer();
+    explicit SoundPlayer(SoundHandle);
     SoundPlayer(const SoundPlayer&) = delete;
     SoundPlayer& operator=(const SoundPlayer&) = delete;
-    SoundPlayer(SoundPlayer&& o) = default;
-    SoundPlayer& operator=(SoundPlayer&& o) = default;
+
+    SoundPlayer(SoundPlayer&& o) { swap(o, *this); }
+    ~SoundPlayer();
+
+    SoundPlayer& operator=(SoundPlayer&& o) {
+        if (&o != this) {
+            swap(*this, o);
+        }
+        return *this;
+    }
 
     auto Handle() const { return handle_; }
-    void ChangeSound(SoundHandle, AudioManager&);
+
+    void ChangeSound(SoundHandle);
 
     void Play();
 
@@ -118,14 +136,22 @@ private:
     // static void destroySound(ma_sound* data) { ma_sound_uninit(data); }
     ma_sound* data_{};
     SoundHandle handle_;
+    AudioManager* mgr_;
 
     void recreateInnerSound(SoundHandle, AudioManager&);
+
+    friend void swap(SoundPlayer& o1, SoundPlayer& o2) noexcept {
+        using std::swap;
+        swap(o1.data_, o2.data_);
+        swap(o1.handle_, o2.handle_);
+        swap(o1.mgr_, o2.mgr_);
+    }
 };
 
 void InitAudioSystem();
 void ShutdownAudioSystem();
 
 template <>
-std::unique_ptr<Sound> LoadAssetFromMeta(const toml::table&);
+std::unique_ptr<Sound> LoadAssetFromMetaTable(const toml::table&);
 
 }  // namespace nickel

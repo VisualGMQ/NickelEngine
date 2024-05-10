@@ -1,21 +1,21 @@
 #include "common/profile.hpp"
 
+#ifdef NICKEL_ENABLE_PROFILE
 #include "easy/profiler.h"
+#endif
+
+#include <iostream>
 
 namespace nickel {
 
-void ProfileBegin() {
-#ifdef __PRETTY_FUNCTION__
-    EASY_BLOCK(__PRETTY_FUNCTION__);
-#else
-    EASY_BLOCK(__func__);
+void ProfileBegin(const char* name) {
+#ifdef NICKEL_ENABLE_PROFILE
+    EASY_BLOCK(name);
 #endif
 }
 
 void ProfileEnd() {
-#ifdef __PRETTY_FUNCTION__
-    EASY_END_BLOCK;
-#else
+#ifdef NICKEL_ENABLE_PROFILE
     EASY_END_BLOCK;
 #endif
 }

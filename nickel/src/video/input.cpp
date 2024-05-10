@@ -58,13 +58,14 @@ void InputSystemInit(
     gecs::commands cmds,
     gecs::event_dispatcher<MouseButtonEvent> mouseBtnDispatcher,
     gecs::event_dispatcher<MouseMotionEvent> mouseMotionDispatcher,
+    gecs::event_dispatcher<MouseWheelEvent> mouseWheelDispatcher,
     gecs::event_dispatcher<KeyboardEvent> keyboardDispatcher) {
     PROFILE_BEGIN();
 
     auto& keyboard = cmds.emplace_resource<Keyboard>();
     cmds.emplace_resource<Mouse>();
     ConnectInput2Event(mouseBtnDispatcher, mouseMotionDispatcher,
-                       keyboardDispatcher);
+                       mouseWheelDispatcher, keyboardDispatcher);
 
     std::unordered_map<std::string, Key> actions = {
         {    "up", Key::W},

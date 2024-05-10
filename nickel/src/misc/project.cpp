@@ -1,12 +1,14 @@
 #include "misc/project.hpp"
 #include "common/log_tag.hpp"
+#include "graphics/gltf.hpp"
+#include "graphics/system.hpp"
 #include "mirrow/drefl/make_any.hpp"
+#include "misc/serd.hpp"
 #include "nickel.hpp"
 #include "refl/drefl.hpp"
 #include "system/graphics.hpp"
 #include "system/physics.hpp"
 #include "system/video.hpp"
-
 
 namespace nickel {
 
@@ -76,8 +78,7 @@ void LoadAssetsWithPath(AssetManager& assetMgr,
     assetMgr.LoadFromToml(result.table());
 }
 
-bool LoadRegistryEntities(gecs::registry reg,
-                          const std::filesystem::path& filename) {
+bool LoadScene(gecs::registry reg, const std::filesystem::path& filename) {
     auto result = toml::parse_file(filename.string());
     if (!result) {
         LOGW(nickel::log_tag::Editor, "load scene from ", filename, " failed");
@@ -92,8 +93,6 @@ bool LoadRegistryEntities(gecs::registry reg,
     }
 
     const std::string& name = node->as_string()->get();
-
-    // InitSystem to reg
 
     node = tbl.get("entities");
     if (!node || !node->is_array()) {
@@ -113,9 +112,14 @@ bool LoadRegistryEntities(gecs::registry reg,
 void SaveBasicProjectConfig(const ProjectInitInfo& initInfo) {
     toml::table tbl;
 
+    toml::table windowTbl;
+
     mirrow::serd::drefl::serialize(
-        tbl, mirrow::drefl::any_make_constref(initInfo.windowData), "window");
+        windowTbl, mirrow::drefl::any_make_constref(initInfo.windowData),
+        "window");
     // TODO: serialize camera information
+
+    tbl.emplace("scene", initInfo.startupScene.string());
 
     std::ofstream file(GenProjectConfigFilePath(initInfo.projectPath));
     file << toml::toml_formatter{tbl} << std::endl;
@@ -125,8 +129,7 @@ void SaveProjectByConfig(const ProjectInitInfo& info,
                          const AssetManager& assetMgr) {
     SaveBasicProjectConfig(info);
     SaveAssets(info.projectPath, assetMgr);
-    SaveRegistry(true, info.projectPath,
-                 ECS::Instance().World().cur_registry_name(),
+    SaveRegistry(true, info.projectPath, "MainScene.scene",
                  *ECS::Instance().World().cur_registry());
 }
 
@@ -153,6 +156,10 @@ ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
         mirrow::serd::drefl::deserialize(ref, *node.as_table());
     }
 
+    if (auto node = tbl["scene"]; node.is_string()) {
+        initInfo.startupScene = node.as_string()->get();
+    }
+
     return initInfo;
 }
 
@@ -168,57 +175,64 @@ void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
     LoadAssetsWithPath(assetMgr, initInfo.projectPath);
-    LoadRegistryEntities(*ECS::Instance().World().cur_registry(),
-                         initInfo.projectPath / "MainReg.scene");
+    LoadScene(*ECS::Instance().World().cur_registry(),
+              initInfo.projectPath / initInfo.startupScene);
 }
 
-void ErrorCallback(int error, const char* description) {
-    LOGE(log_tag::SDL2, description);
+void doChangeScene(const ChangeSceneEvent& event) {
+    auto& world = ECS::Instance().World();
+    if (std::filesystem::exists(event.newScene)) {
+        world.cur_registry()->destroy_all_entities();
+        LoadScene(*world.cur_registry(), event.newScene);
+    } else {
+        LOGE(log_tag::Nickel, "scene file ", event.newScene, " not exists");
+    }
 }
 
-void suitCanvas2Window(const WindowResizeEvent& event,
-                       gecs::resource<gecs::mut<Camera>> camera,
-                       gecs::resource<gecs::mut<ui::Context>> uiCtx,
-                       gecs::resource<gecs::mut<Renderer2D>> renderer2d) {
-    camera->SetProject(cgmath::CreateOrtho(0.0, event.size.w, 0.0, event.size.h,
-                                           1000.0, -1000.0));
-    renderer2d->SetViewport(cgmath::Vec2{0, 0},
-                            cgmath::Vec2(event.size.w, event.size.h));
-
-    uiCtx->camera.SetProject(cgmath::CreateOrtho(
-        0.0, event.size.w, 0.0, event.size.h, 1000.0, -1000.0));
+void ChangeScene(const std::filesystem::path& path) {
+    ECS::Instance()
+        .World()
+        .cur_registry()
+        ->event_dispatcher<ChangeSceneEvent>()
+        .enqueue(ChangeSceneEvent{path});
 }
 
 void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                 gecs::commands cmds) {
-    InitDynamicReflect();
+    RegistReflectInfos();
+    RegistSerializeMethods();
+    RegistComponents();
 
-    Window* window =
-        &cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build());
+    auto renderAPI = rhi::GetSupportRenderAPI(rhi::APIPreference::Vulkan);
+    Window& window =
+        cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build(
+            renderAPI == rhi::APIPreference::Vulkan));
+    window.SetResizable(true);
+
+    auto& adapter = cmds.emplace_resource<rhi::Adapter>(
+        window.Raw(), rhi::Adapter::Option{renderAPI});
+    auto& device = cmds.emplace_resource<rhi::Device>(adapter.RequestDevice());
 
     cmds.emplace_resource<Time>();
     auto& textureMgr = cmds.emplace_resource<TextureManager>();
+    auto& mtl2dMgr = cmds.emplace_resource<Material2DManager>();
     auto& fontMgr = cmds.emplace_resource<FontManager>();
     auto& timerMgr = cmds.emplace_resource<TimerManager>();
     auto& tilesheetMgr = cmds.emplace_resource<TilesheetManager>();
     auto& animMgr = cmds.emplace_resource<AnimationManager>();
     auto& audioMgr = cmds.emplace_resource<AudioManager>();
+    auto& gltfMgr = cmds.emplace_resource<GLTFManager>();
     auto& scriptMgr = cmds.emplace_resource<ScriptManager>();
-    cmds.emplace_resource<AssetManager>(textureMgr, fontMgr, timerMgr,
+    cmds.emplace_resource<AssetManager>(textureMgr, mtl2dMgr, fontMgr, timerMgr,
                                         tilesheetMgr, animMgr, audioMgr,
+                                        gltfMgr,
                                         scriptMgr);
-    cmds.emplace_resource<RenderContext>();
+    cmds.emplace_resource<RenderContext>(renderAPI, device, window.Size());
 
-    auto windowSize = window->Size();
+    auto windowSize = window.Size();
 
-    auto& renderer2d = cmds.emplace_resource<Renderer2D>();
     cmds.emplace_resource<Camera>(
-        Camera::CreateOrthoByWindowRegion(window->Size()));
-    renderer2d.SetViewport(cgmath::Vec2{0, 0}, windowSize);
-    world.cur_registry()
-        ->event_dispatcher<WindowResizeEvent>()
-        .sink()
-        .add<suitCanvas2Window>();
+        Camera::CreateOrthoByWindowRegion(window.Size()));
 
     // init animation serialize method
     AnimTrackLoadMethods::Instance()
@@ -234,31 +248,38 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
 void EngineShutdown() {
     PROFILE_BEGIN();
 
-    ECS::Instance().World().destroy_all_entities();
+    auto& world = ECS::Instance().World();
+
+    world.destroy_all_entities();
     ECS::Instance().World().remove_res<ScriptManager>();
-    ECS::Instance().World().remove_res<TilesheetManager>();
-    ECS::Instance().World().remove_res<TextureManager>();
-    ECS::Instance().World().remove_res<FontManager>();
-    ECS::Instance().World().remove_res<TimerManager>();
-    ECS::Instance().World().remove_res<AnimationManager>();
-    ECS::Instance().World().remove_res<AudioManager>();
+    world.remove_res<TilesheetManager>();
+    world.remove_res<TextureManager>();
+    world.remove_res<Material2DManager>();
+    world.remove_res<FontManager>();
+    world.remove_res<TimerManager>();
+    world.remove_res<AnimationManager>();
+    world.remove_res<AudioManager>();
+    world.remove_res<GLTFManager>();
     FontSystemShutdown();
-    ECS::Instance().World().remove_res<Renderer2D>();
+    world.remove_res<RenderContext>();
+    world.res_mut<rhi::Device>()->Destroy();
+    world.res_mut<rhi::Adapter>()->Destroy();
 }
 
 void RegistEngineSystem(typename gecs::world::registry_type& reg) {
     reg
         // startup systems
         .regist_startup_system<VideoSystemInit>()
+        .regist_startup_system<RenderSystemInit>()
         .regist_startup_system<FontSystemInit>()
         .regist_startup_system<EventPollerInit>()
         .regist_startup_system<InputSystemInit>()
         .regist_startup_system<ui::InitSystem>()
         .regist_startup_system<InitAudioSystem>()
         // shutdown systems
+        .regist_shutdown_system<ui::ShutdownSystem>()
         .regist_shutdown_system<ScriptShutdownSystem>()
         .regist_shutdown_system<EngineShutdown>()
-        .regist_shutdown_system<InitAudioSystem>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()
         // other input handle event must put here(after mouse/keyboard update)
@@ -266,19 +287,23 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_update_system<Keyboard::Update>()
         .regist_update_system<HandleInputEvents>()
         .regist_update_system<UpdateGlobalTransform>()
+        .regist_update_system<UpdateGLTFModelTransform>()
+        .regist_update_system<UpdateCamera2GPU>()
         .regist_update_system<ui::UpdateGlobalPosition>()
         .regist_update_system<ui::HandleEventSystem>()
-        // start render pipeline
-        .regist_update_system<BeginRenderPipeline>()
-        // 2D sprite render
-        .regist_update_system<CollectSpriteRenderInfo>()
-        .regist_update_system<RenderElements>()
-        // 2D UI render
+        // render relate
+        .regist_update_system<BeginFrame>()
+        .regist_update_system<BeginRender>()
+        .regist_update_system<RenderGLTFModel>()
+        .regist_update_system<RenderSprite2D>()
         .regist_update_system<ui::RenderUI>()
-        .regist_update_system<EndRenderPipeline>()
+        .regist_update_system<EndRender>()
+        .regist_update_system<EndFrame>()
         // time update
         .regist_update_system<Time::Update>()
         .regist_update_system<ScriptUpdateSystem>();
+
+    reg.event_dispatcher<ChangeSceneEvent>().sink().add<doChangeScene>();
 }
 
 }  // namespace nickel

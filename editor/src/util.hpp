@@ -44,3 +44,11 @@ bool ChDir(const std::filesystem::path&);
             LOGE(nickel::log_tag::Filesystem, err.message()); \
         }                                                     \
     } while (0)
+
+#define IMGUI_MAKE_EMPTY_ID(output, payload) \
+    snprintf(output, sizeof(output), "###%p", payload.payload())
+
+#define IMGUI_MAKE_UNIID(output, label, payload) \
+    snprintf(output, sizeof(output), "%s###%p", label, payload.payload())
+
+inline constexpr size_t MAX_PATH_LENGTH = 270;

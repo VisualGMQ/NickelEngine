@@ -1,5 +1,7 @@
 *.profile
 .*
 cmake-build*
+wasm-build
 compile_commands.json
 sandbox
+/imgui.ini

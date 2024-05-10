@@ -3,122 +3,152 @@
 #include "util.hpp"
 
 GameWindow::GameWindow() {
-    auto screenSize = nickel::Screen::Instance().Size();
-    rbo_ = std::make_unique<nickel::gogl::RenderBuffer>(screenSize.w,
-                                                        screenSize.h);
-    texture_ = std::make_unique<nickel::gogl::Texture>(
-        nickel::gogl::Texture::Type::Dimension2, nullptr, screenSize.w,
-        screenSize.h, nickel::gogl::Sampler::CreateLinearRepeat(),
-        nickel::gogl::Format::RGBA, nickel::gogl::Format::RGBA,
-        nickel::gogl::DataType::UByte);
-    fbo_ = std::make_unique<nickel::gogl::Framebuffer>(
-        nickel::gogl::FramebufferAccess::ReadDraw);
-    fbo_->AttachColorTexture2D(*texture_);
-    fbo_->AttacheRenderBuffer(*rbo_);
-
-    GLenum err;
-    if (!fbo_->CheckValid(&err)) {
-        LOGW(nickel::log_tag::Renderer,
-             // TODO: output human readable error
-             "create game content framebuffer failed! ", err);
-    }
-
-    auto& camera = nickel::ECS::Instance().World().res_mut<nickel::Camera>().get();
-    auto& uiCamera = nickel::ECS::Instance().World().res_mut<nickel::ui::Context>()->camera;
-
-    camera.SetRenderTarget(*fbo_);
-    uiCamera.SetRenderTarget(*fbo_);
-    camera.SetProject(nickel::cgmath::CreateOrtho(0, fbo_->Size().w, 0,
-                                                  fbo_->Size().h, 1000, -1000));
-    uiCamera.SetProject(nickel::cgmath::CreateOrtho(
-        0, fbo_->Size().w, 0, fbo_->Size().h, 1000, -1000));
-}
-
-void drawCoordLine(const nickel::cgmath::Vec2& winSize,
-                   nickel::Renderer2D& renderer, nickel::Camera& camera,
-                   nickel::Camera& uiCamera) {
-    renderer.BeginRenderTexture(camera);
-    nickel::cgmath::Rect rect{0, 0, winSize.w, winSize.h};
-    renderer.DrawRect(rect, {0, 0, 1, 1});
-    // TODO: clip line start&end point to draw
-    renderer.DrawLine({-10000, 0}, {10000, 0}, {1, 0, 0, 1});
-    renderer.DrawLine({0, -10000}, {0, 10000}, {0, 1, 0, 1});
-
-    renderer.EndRender();
 }
 
 void GameWindow::update() {
-    auto& ctx = nickel::ECS::Instance().World().res_mut<EditorContext>().get();
-    auto& renderer = nickel::ECS::Instance().World().res_mut<nickel::Renderer2D>().get();
-    auto& camera = nickel::ECS::Instance().World().res_mut<nickel::Camera>().get();
-    auto& uiCamera = nickel::ECS::Instance().World().res_mut<nickel::ui::Context>()->camera;
+    auto& texture = EditorContext::Instance().texture;
+    auto drawList = ImGui::GetWindowDrawList();
+    ImGuizmo::SetDrawlist(drawList);
 
-    auto gameWindownSize = ctx.projectInfo.windowData.size;
+    // draw game content
+    auto vkCtx = nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
+    drawList->AddImage(vkCtx->GetTextureBindedDescriptorSet(*texture), {0, 0},
+                       ImVec2(texture->Width(), texture->Height()));
 
-    drawCoordLine(gameWindownSize, renderer, camera, uiCamera);
+    auto reg = nickel::ECS::Instance().World().cur_registry();
+    auto camera = reg->res_mut<nickel::Camera>();
+    auto& uiCamera = reg->res_mut<nickel::ui::UIContext>()->renderCtx.camera;
+    auto mouse = reg->res<nickel::Mouse>();
 
-    auto oldStyle = ImGui::GetStyle();
-    auto newStyle = oldStyle;
-    newStyle.WindowPadding.x = 0;
-    newStyle.WindowPadding.y = 0;
-    ImGui::GetStyle() = newStyle;
+    // draw grid
+    auto gameCanvaSize = camera->GetTarget().Texture().Extent();
+    nickel::cgmath::Vec2 halfGameCanvaSize{gameCanvaSize.width * 0.5f,
+                                           gameCanvaSize.height * 0.5f};
+    auto halfGameWindowSize =
+        EditorContext::Instance().projectInfo.windowData.size * 0.5;
 
-    auto regionMin = ImGui::GetWindowContentRegionMin();
-    auto regionMax = ImGui::GetWindowContentRegionMax();
-    auto windowPos = ImGui::GetWindowPos() + regionMin;
-    auto windowSize = regionMax - regionMin;
+    std::array points = {
+  // rect
+        nickel::cgmath::Vec2{-halfGameWindowSize.x, -halfGameWindowSize.y},
+        nickel::cgmath::Vec2{ halfGameWindowSize.x, -halfGameWindowSize.y},
+        nickel::cgmath::Vec2{ halfGameWindowSize.x,  halfGameWindowSize.y},
+        nickel::cgmath::Vec2{-halfGameWindowSize.x,  halfGameWindowSize.y},
 
-    ImVec2 uvMin = {0, 1};
-    ImVec2 uvMax = {windowSize.x / fbo_->Size().w,
-                    (fbo_->Size().h - windowSize.y) / fbo_->Size().h};
+ // origin
+        nickel::cgmath::Vec2{                    0,                     0},
+    };
 
-    ImGui::GetWindowDrawList()->AddImage(
-        (ImTextureID)texture_->Id(), windowPos,
-        ImVec2{windowPos.x + windowSize.x, windowPos.y + windowSize.y}, uvMin,
-        uvMax);
-
-    auto& io = ImGui::GetIO();
-    nickel::cgmath::Vec2 halfWindowSize{windowSize.x * 0.5f,
-                                        windowSize.y * 0.5f};
-
-    if (io.MouseWheel && ImGui::IsWindowHovered()) {
-        scale_ += ScaleFactor * io.MouseWheel;
-        scale_ = scale_ < minScaleFactor ? minScaleFactor : scale_;
-    }
-    if (ImGui::IsWindowHovered() &&
-        (io.MouseDelta.x != 0 || io.MouseDelta.y != 0) &&
-        io.MouseDown[ImGuiMouseButton_Middle]) {
-        offset_ += nickel::cgmath::Vec2{io.MouseDelta.x, io.MouseDelta.y};
+    for (auto& pt : points) {
+        pt *= camera->Scale();
+        pt += halfGameCanvaSize +
+             nickel::cgmath::Vec2{camera->Position().x, -camera->Position().y} *
+                 camera->Scale();
     }
 
-    auto view = ScaleByAnchorAsMat({0, 0}, scale_, halfWindowSize, offset_);
+    drawList->AddRect(ImVec2{points[2].x, points[2].y},
+                      ImVec2{points[0].x, points[0].y},
+                      ImGui::GetColorU32({0, 0, 1, 1}));
 
-    auto pos = ImGui::GetMousePos() - ImGui::GetWindowPos() -
-               ImGui::GetWindowContentRegionMin();
-    nickel::cgmath::Vec2 translatedPos{pos.x, pos.y};
-    translatedPos = (translatedPos - halfWindowSize) *
-                        nickel::cgmath::Vec2{1.0f / scale_, 1.0f / scale_} -
-                    offset_ + halfWindowSize;
-    srtGizmos_.SetMouseRelativePos(
-        nickel::cgmath::Vec2{translatedPos.x, translatedPos.y});
-    srtGizmos_.SetFBOScale(scale_);
-    srtGizmos_.SetEventHandleState(
-        ImGui::IsMouseHoveringRect(windowPos, windowPos + windowSize));
-    if (ImGui::IsWindowFocused()) {
-        if (ImGui::IsKeyPressed(ImGuiKey_S)) {
-            srtGizmos_.SetMode(SRTGizmos::Mode::Scale);
+    drawList->AddLine({points.back().x - 10000, points.back().y},
+                      {points.back().x + 10000, points.back().y},
+                      ImGui::GetColorU32({1.0, 0.0, 0.0, 0.5}));
+    drawList->AddLine({points.back().x, points.back().y - 10000},
+                      {points.back().x, points.back().y + 10000},
+                      ImGui::GetColorU32({0.0, 1.0, 0.0, 0.5}));
+
+    // use ImGuizmo
+    if (IsFocused()) {
+        if (mouse->MiddleBtn().IsPressing()) {
+            auto offset = mouse->Offset();
+            auto scale = camera->Scale();
+            camera->Move(nickel::cgmath::Vec2{-offset.x, offset.y} / scale);
+            uiCamera.Move(nickel::cgmath::Vec2{-offset.x, offset.y} / scale);
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_R)) {
-            srtGizmos_.SetMode(SRTGizmos::Mode::Rotate);
-        }
-        if (ImGui::IsKeyPressed(ImGuiKey_T)) {
-            srtGizmos_.SetMode(SRTGizmos::Mode::Translate);
+
+        if (auto wheel = mouse->WheelOffset(); wheel.y != 0) {
+            auto scale = camera->Scale();
+            auto newScale = scale + wheel.y * nickel::cgmath::Vec2{0.01, 0.01};
+            if (newScale.x <= 0 || newScale.y <= 0) {
+                newScale.Set(0.01, 0.01);
+            }
+            camera->ScaleTo(newScale);
+            uiCamera.ScaleTo(newScale);
         }
     }
-    srtGizmos_.Update(*nickel::ECS::Instance().World().cur_registry());
 
-    camera.SetView(view);
-    uiCamera.SetView(view);
+    auto selectedEnt = EditorContext::Instance().entityListWindow.GetSelected();
+    if (!reg->alive(selectedEnt) || !reg->has<nickel::Transform>(selectedEnt)) {
+        return;
+    }
 
-    ImGui::GetStyle() = oldStyle;
+    auto& transform = reg->get_mut<nickel::Transform>(selectedEnt);
+
+    auto keyboard = reg->res<nickel::Keyboard>();
+    if (keyboard->Key(nickel::Key::Q).IsPressed()) {
+        guizmoOperation_ = ImGuizmo::TRANSLATE;
+    }
+    if (keyboard->Key(nickel::Key::W).IsPressed()) {
+        guizmoOperation_ = ImGuizmo::ROTATE;
+    }
+    if (keyboard->Key(nickel::Key::E).IsPressed()) {
+        guizmoOperation_ = ImGuizmo::SCALE;
+    }
+    if (ImGui::RadioButton("Translate",
+                           guizmoOperation_ == ImGuizmo::TRANSLATE))
+        guizmoOperation_ = ImGuizmo::TRANSLATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Rotate", guizmoOperation_ == ImGuizmo::ROTATE))
+        guizmoOperation_ = ImGuizmo::ROTATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Scale", guizmoOperation_ == ImGuizmo::SCALE))
+        guizmoOperation_ = ImGuizmo::SCALE;
+
+    nickel::cgmath::Mat44 matrix;
+    auto windowSize = reg->res<nickel::Window>()->Size();
+    float matrixRot[3] = {0, 0, transform.rotation};
+    float matrixTrans[3] = {transform.translation.x, transform.translation.y,
+                            0};
+    float matrixScale[3] = {transform.scale.x, transform.scale.y, 0};
+    ImGuizmo::RecomposeMatrixFromComponents(matrixTrans, matrixRot, matrixScale,
+                                            matrix.data);
+
+    if (guizmoOperation_ != ImGuizmo::SCALE) {
+        if (ImGui::RadioButton("Local", guizmoMode_ == ImGuizmo::LOCAL))
+            guizmoMode_ = ImGuizmo::LOCAL;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("World", guizmoMode_ == ImGuizmo::WORLD))
+            guizmoMode_ = ImGuizmo::WORLD;
+    }
+
+    auto snap = nickel::cgmath::Vec3{1, 1, 0};
+    if (guizmoOperation_ == ImGuizmo::OPERATION::TRANSLATE) {
+        snap.Set(1, 1, 1);
+    } else if (guizmoOperation_ == ImGuizmo::OPERATION::ROTATE) {
+        snap.Set(0, 0, 1);
+    } else if (guizmoOperation_ == ImGuizmo::OPERATION::SCALE) {
+        snap.Set(0, 0, ScaleFactor);
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuizmo::SetRect(0, 0, 1536, 864);
+    auto view = nickel::cgmath::CreateScale({1, -1, 1}) * camera->View();
+    ImGuizmo::Manipulate(view.data, camera->Project().data, guizmoOperation_,
+                         guizmoMode_, matrix.data, nullptr, snap.data);
+
+    ImGuizmo::DecomposeMatrixToComponents(matrix.data, matrixTrans, matrixRot,
+                                          matrixScale);
+
+    if (ImGuizmo::IsUsing()) {
+        if (guizmoOperation_ == ImGuizmo::OPERATION::TRANSLATE) {
+            transform.translation.x = matrixTrans[0];
+            transform.translation.y = matrixTrans[1];
+        }
+        if (guizmoOperation_ == ImGuizmo::OPERATION::ROTATE) {
+            transform.rotation = matrixRot[2];
+        }
+        if (guizmoOperation_ == ImGuizmo::OPERATION::SCALE) {
+            transform.scale.x = matrixScale[0];
+            transform.scale.y = matrixScale[1];
+        }
+    }
 }

@@ -6,40 +6,38 @@ EditorContext::EditorContext()
       tilesheetAssetListWindow("tilesheets"),
       soundAssetListWindow("sounds"),
       animAssetListWindow("animations"),
-      scriptAssetListWindow("scripts"),
-      texturePropWindow("texture property"),
-      soundPropWindow("sound property"),
-      fontPropWindow("font property"),
+      mtl2dAssetListWindow("2D materials"),
       tilesheetEditor("tilesheet editor"),
       inputTextWindow("input text"),
       contentBrowserWindow(this),
+      scriptAssetListWindow("scripts"),
       editorPath_{std::filesystem::current_path()} {
     contentBrowserWindow.SetTitle("content browser");
     entityListWindow.SetTitle("entity list");
     inspectorWindow.SetTitle("inspector");
     gameWindow.SetTitle("game");
+    initGameWindowTexture();
 }
+
+EditorContext::~EditorContext() {}
 
 void EditorContext::Update() {
     contentBrowserWindow.Update();
     entityListWindow.Update();
     inspectorWindow.Update();
-    gameWindow.Update();
     animEditor.Update();
     textureAssetListWindow.Update();
     fontAssetListWindow.Update();
     tilesheetAssetListWindow.Update();
     soundAssetListWindow.Update();
     animAssetListWindow.Update();
-    scriptAssetListWindow.Update();
-    fontPropWindow.Update();
-    texturePropWindow.Update();
-    soundPropWindow.Update();
+    mtl2dAssetListWindow.Update();
     tilesheetEditor.Update();
     inputTextWindow.Update();
-}
 
-EditorContext::~EditorContext() {}
+    updateMenubar();
+    gameWindow.Update();
+}
 
 const nickel::TextCache& EditorContext::FindOrGenFontPrewview(
     nickel::FontHandle handle) {
@@ -63,17 +61,52 @@ const nickel::TextCache& EditorContext::FindOrGenFontPrewview(
     return fontPreviewTextures_.emplace(handle, std::move(cache)).first->second;
 }
 
-nickel::SoundPlayer& EditorContext::FindOrGenSoundPlayer(
-    nickel::SoundHandle handle) {
-    if (auto it = soundPlayers_.find(handle); it != soundPlayers_.end()) {
-        return it->second;
-    }
+void EditorContext::updateMenubar() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("save")) {
+                SaveProjectByConfig(EditorContext::Instance().projectInfo,
+                                    nickel::ECS::Instance()
+                                        .World()
+                                        .res<nickel::AssetManager>()
+                                        .get());
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("View")) {
+            auto addMenuItem = [](const std::string& text, Window& window) {
+                bool show = window.IsVisible();
+                ImGui::MenuItem(text.c_str(), nullptr, &show);
+                window.SetVisible(show);
+            };
+            addMenuItem("game content window", gameWindow);
+            addMenuItem("inspector", EditorContext::Instance().inspectorWindow);
+            addMenuItem("entity list",
+                        EditorContext::Instance().entityListWindow);
+            addMenuItem("content browser", contentBrowserWindow);
+            ImGui::MenuItem("imgui demo window", nullptr, &openDemoWindow);
+            ImGui::EndMenu();
+        }
 
-    auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AudioManager>();
-    if (!mgr->Has(handle)) {
-        return nickel::SoundPlayer::Null;
+        ImGui::EndMainMenuBar();
     }
+}
 
-    return soundPlayers_.emplace(handle, nickel::SoundPlayer(handle, mgr.get()))
-        .first->second;
+void EditorContext::initGameWindowTexture() {
+    auto displayIndex =
+        SDL_GetWindowDisplayIndex((SDL_Window*)nickel::ECS::Instance()
+                                      .World()
+                                      .res<nickel::Window>()
+                                      ->Raw());
+    SDL_Rect rect;
+    SDL_GetDisplayBounds(displayIndex, &rect);
+    texture =
+        nickel::ECS::Instance()
+            .World()
+            .res_mut<nickel::TextureManager>()
+            ->CreateSolitary(
+                nullptr, rect.w, rect.h,
+                nickel::rhi::TextureFormat::RGBA8_UNORM,
+                nickel::rhi::Flags(nickel::rhi::TextureUsage::TextureBinding) |
+                    nickel::rhi::TextureUsage::RenderAttachment);
 }

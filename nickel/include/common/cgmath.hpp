@@ -431,9 +431,7 @@ public:
 
     template <typename U, CGMATH_LEN_TYPE N2>
     explicit Vec(const Vec<U, N2>& other) {
-        x = other.data[0];
-        y = other.data[1];
-        z = N2 >= 3 ? other.data[2] : T{};
+        Set(other);
     }
 
     explicit Vec(T x) : x(x), y{}, z{} {}
@@ -451,7 +449,14 @@ public:
         this->z = z;
     }
 
-    auto Cross(const Vec<T, 3>& o) { return cgmath::Cross(*this, o); }
+    template <typename U, CGMATH_LEN_TYPE N2>
+    void Set(const Vec<U, N2>& other) {
+        x = other.data[0];
+        y = other.data[1];
+        z = N2 >= 3 ? other.data[2] : T{};
+    }
+
+    auto Cross(const Vec<T, 3>& o) const { return cgmath::Cross(*this, o); }
 };
 
 template <typename T>
@@ -475,10 +480,7 @@ public:
 
     template <typename U, CGMATH_LEN_TYPE N2>
     explicit Vec(const Vec<U, N2>& other) {
-        x = other.data[0];
-        y = other.data[1];
-        z = N2 >= 3 ? other.data[2] : T{};
-        w = N2 >= 4 ? other.data[3] : T{};
+        Set(other);
     }
 
     Vec(T x, T y) : x(x), y(y), z{}, w{} {}
@@ -495,6 +497,14 @@ public:
         this->y = y;
         this->z = z;
         this->w = w;
+    }
+
+    template <typename U, CGMATH_LEN_TYPE N2>
+    void Set(const Vec<U, N2>& other) {
+        x = other.data[0];
+        y = other.data[1];
+        z = N2 >= 3 ? other.data[2] : T{};
+        w = N2 >= 4 ? other.data[3] : T{};
     }
 };
 
@@ -718,15 +728,38 @@ using Mat22 = Mat<CGMATH_NUMERIC_TYPE, 2, 2>;
 using Mat33 = Mat<CGMATH_NUMERIC_TYPE, 3, 3>;
 using Mat44 = Mat<CGMATH_NUMERIC_TYPE, 4, 4>;
 
-inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
-                         float near, float far) {
+inline Mat44 CreatePersp(float fov, float aspect, float near, float far,
+                         bool GLCoord) {
+    float focal = 1.0 / std::tan(fov * 0.5);
+
     // clang-format off
     return Mat44::FromRow({
-        2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
-                         0.0f, 2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
-                         0.0f,                  0.0f, 2.0f / (far - near),     (near + far) / (near - far),
-                         0.0f,                  0.0f,                0.0f,                            1.0f,
+        focal / aspect, 0, 0, 0,
+        0, (GLCoord ? 1 : -1) *focal, 0, 0,
+        0, 0, 2.f * near / (far - near), 2.f * near * far / (far - near),
+        0, 0, -1, 0,
     });
+    // clang-format on
+}
+
+inline Mat44 CreateOrtho(float left, float right, float top, float bottom,
+                         float near, float far, bool GLCoord) {
+    // clang-format off
+    if (GLCoord) {
+        return Mat44::FromRow({
+            2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
+                            0.0f,  2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
+                            0.0f,                  0.0f, 2.0f / (near - far),     (near + far) / (far - near),
+                            0.0f,                  0.0f,                0.0f,                            1.0f,
+        });
+    } else {
+        return Mat44::FromRow({
+            2.0f / (right - left),                  0.0f,                0.0f, (left + right) / (left - right),
+                             0.0f,-2.0f / (top - bottom),                0.0f, (bottom + top) / (bottom - top),
+                             0.0f,                  0.0f,1.0f / (near - far),              far/ (far - near),
+                            0.0f,                 0.0f,               0.0f,                           1.0f,
+        });
+    }
     // clang-format on
 }
 
@@ -754,6 +787,24 @@ inline Mat44 CreateZRotation(float radians) {
     // clang-format on
 }
 
+inline Mat44 LookAt(const cgmath::Vec3& target, const cgmath::Vec3& srcPos,
+                    const cgmath::Vec3& up) {
+    Assert(up.LengthSqrd() == 1, "lookat param up must be normalized");
+
+    auto zAxis = Normalize(srcPos - target);
+    auto xAxis = nickel::cgmath::Normalize(up.Cross(zAxis));
+    auto yAxis = zAxis.Cross(xAxis);
+
+    // clang-format off
+    return Mat44::FromRow({
+        xAxis.x, xAxis.y, xAxis.z, -xAxis.Dot(srcPos),
+        yAxis.x, yAxis.y, yAxis.z, -yAxis.Dot(srcPos),
+        zAxis.x, zAxis.y, zAxis.z, -zAxis.Dot(srcPos),
+             0,      0,       0,                    1,
+    });
+    // clang-format on
+}
+
 inline Mat44 CreateXRotation(float radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
@@ -774,7 +825,7 @@ inline Mat44 CreateYRotation(float radians) {
     return Mat44::FromRow({
          cos, 0.0f,  sin, 0.0f,
         0.0f, 1.0f,  0.0, 0.0f,
-        -sin, -sin,  cos, 0.0f,
+        -sin, 0.0f,  cos, 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f,
     });
     // clang-format on
@@ -947,6 +998,22 @@ T GetRadianIn2PI(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
 }
 
 /**
+ * @brief Get degree between v1 & v2 in [0, 2 * PI)
+ * @note v1 & v2 are both normalized
+ */
+template <typename T>
+T GetRadianIn360(const Vec<T, 3>& v1, const Vec<T, 3>& v2, const Vec<T, 3>& rightAxis) {
+    auto cos = Dot(v1, v2);
+    auto sin = Dot(Cross(v1, v2), rightAxis);
+
+    if (Sign(sin) >= 0) {
+        return std::acos(cos);
+    } else {
+        return 2 * PI - std::acos(cos);
+    }
+}
+
+/**
  * @brief Get degree between v1 & v2 in [-PI, PI)
  * @note v1 & v2 are both normalized
  */
@@ -955,6 +1022,120 @@ T GetRadianInPISigned(const Vec<T, 2>& v1, const Vec<T, 2>& v2) {
     auto cos = Dot(v1, v2);
     auto sin = Cross(v1, v2);
     return std::acos(cos) * Sign(sin);
+}
+
+template <typename T>
+struct Quaternion final {
+    Vec<T, 3> v;
+    T w;
+
+    Quaternion(const Vec<T, 3>& v, T w) : v{v}, w{w} {}
+
+    Quaternion(T x, T y, T z, T w) : v{x, y, z}, w{w} {}
+
+    // only for unit quaternion
+    Quaternion Conjugate() const {
+        Assert(std::abs(LengthSqrd() - 1) <= 0.00001,
+               "conjugate only for unit quaternion");
+        return {-v, w};
+    }
+
+    // only for unit quaternion
+    Quaternion Inverse() const {
+        Assert(std::abs(LengthSqrd() - 1) <= 0.00001,
+               "inverse only for unit quaternion");
+        return Conjugate();
+    }
+
+    auto LengthSqrd() const { return v.LengthSqrd() + w * w; }
+
+    auto Length() const { return std::sqrt(v.LengthSqrd() + w * w); }
+
+    // clang-format off
+    Mat44 ToMat() const {
+        auto x2 = v.x * v.x;
+        auto y2 = v.y * v.y;
+        auto z2 = v.z * v.z;
+        auto xy = v.x * v.y;
+        auto yz = v.y * v.z;
+        auto xz = v.x * v.z;
+        auto xw = v.x * w;
+        auto yw = v.y * w;
+        auto zw = v.z * w;
+        return Mat44::FromCol({
+            1 - 2 * (y2 + z2),     2 * (xy + zw),     2 * (xz - yw), 0,
+               2 * (xy  - zw), 1 - 2 * (x2 + z2),     2 * (yz + xw), 0,
+                2 * (xz + yw),     2 * (yz - xw), 1 - 2 * (x2 + y2), 0,
+                            0,                 0,                 0, 1
+        });
+    }
+
+    // clang-format on
+};
+
+template <typename T>
+Quaternion<T> operator*(const Quaternion<T>& q1, const Quaternion<T>& q2) {
+    return {q1.w * q2.v + q2.w * q1.v + q1.v.Cross(q2.v),
+            q1.w * q2.w - q1.v.Dot(q2.v)};
+}
+
+using Quat = Quaternion<CGMATH_NUMERIC_TYPE>;
+
+template <typename T>
+Quaternion<T> CreateQuatByRotate(const Vec<T, 3>& axis, T radians) {
+    auto half = radians * 0.5;
+    return {axis * std::sin(half), std::cos(half)};
+}
+
+template <typename T>
+cgmath::Vec<T, 3> RotateByAxis(const cgmath::Vec<T, 3>& v,
+                               const Quaternion<T>& q) {
+    return q *
+           Quaternion<T>{
+               {v.x, v.y, v.z},
+               0
+    } *
+           q.Inverse().v;
+}
+
+template <typename T>
+std::pair<Vec<T, 3>, Vec<T, 3>> GetNormalMapTB(Vec<T, 3> p1, Vec<T, 3> p2,
+                                               Vec<T, 3> p3, Vec<T, 2> uv1,
+                                               Vec<T, 2> uv2, Vec<T, 2> uv3) {
+    Assert(!(uv1 == Vec<T, 2>{} && uv2 == Vec<T, 2>{} && uv3 == Vec<T, 2>{}),
+           "uvs are (0, 0) will cause numerical error");
+    Vec<T, 3> e1{p2 - p1}, e2{p3 - p1};
+    Vec<T, 2> dUV1{uv2 - uv1}, dUV2{uv3 - uv1};
+    float denoInv = 1.0 / (dUV1.x * dUV2.y - dUV2.x * dUV1.y);
+
+    // clang-format off
+    auto t = nickel::cgmath::Vec<T, 3>{
+                   dUV2.y * e1.x - dUV1.y * e2.x,
+                   dUV2.y * e1.y - dUV1.y * e2.y,
+                   dUV2.y * e1.z - dUV1.y * e2.z} * denoInv;
+    auto b = nickel::cgmath::Vec<T, 3>{
+                   -dUV2.x * e1.x + dUV1.x * e2.x,
+                   -dUV2.x * e1.y + dUV1.x * e2.y,
+                   -dUV2.x * e1.z + dUV1.x * e2.z} * denoInv;
+    // clang-format on
+
+    return {nickel::cgmath::Normalize(t), nickel::cgmath::Normalize(b)};
+}
+
+template <typename T>
+Vec<T, 3> GetNormalMapTangent(Vec<T, 3> p1, Vec<T, 3> p2,
+                                               Vec<T, 3> p3, Vec<T, 2> uv1,
+                                               Vec<T, 2> uv2, Vec<T, 2> uv3) {
+    Assert(!(uv1 == Vec<T, 2>{} && uv2 == Vec<T, 2>{} && uv3 == Vec<T, 2>{}),
+           "uvs are (0, 0) will cause numerical error");
+    Vec<T, 3> e1{p2 - p1}, e2{p3 - p1};
+    Vec<T, 2> dUV1{uv2 - uv1}, dUV2{uv3 - uv1};
+    float denoInv = 1.0 / (dUV1.x * dUV2.y - dUV2.x * dUV1.y);
+
+    return nickel::cgmath::Vec<T, 3>{dUV2.y * e1.x - dUV1.y * e2.x,
+                                     dUV2.y * e1.y - dUV1.y * e2.y,
+                                     dUV2.y * e1.z - dUV1.y * e2.z} *
+           denoInv;
 }
 
 }  // namespace cgmath

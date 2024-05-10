@@ -58,21 +58,22 @@ jobs:
     - name: pull submodules
       run: git submodule update --init --recursive
 
-    - name: Install SDL2(Ubuntu Only)
+    - name: Install SDL2&Vulkan(Ubuntu Only)
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev
+        sudo apt install libsdl2-dev
+        sudo apt install libvulkan1 mesa-vulkan-drivers
 
     - name: Download SDL2(Windows MSVC Only)
       if: ${{ (matrix.os == 'windows-latest') && ((matrix.cpp_compiler == 'cl') || ( matrix.cpp_compiler == 'clang' )) }}
       run: |
-        Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip" -o C:\SDL.zip
+        Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip" -OutFile C:\SDL.zip
 
     - name: Download SDL2(Windows MinGW Only)
       if: ${{ (matrix.os == 'windows-latest') && ( matrix.cpp_compiler == 'gcc' ) }}
       run: |
-        Invoke-WebRequest "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip" -o C:\SDL.zip
+        Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-mingw.zip" -OutFile C:\SDL.zip
     
     - name: Unzip SDL2(Windows Only)
       if: ${{ (matrix.os == 'windows-latest') }}

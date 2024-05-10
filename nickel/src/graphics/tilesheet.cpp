@@ -96,15 +96,15 @@ toml::table Tilesheet::Save2Toml() const {
     tbl.emplace("row", row_);
     tbl.emplace("col", col_);
 
-    // auto assetMgr = gWorld->res<AssetManager>();
-    // if (assetMgr->Has(handle_)) {
-    //     tbl.emplace("texture", assetMgr->Get(handle_).RelativePath().string());
-    // }
+    auto assetMgr = ECS::Instance().World().res<TextureManager>();
+    if (assetMgr->Has(handle_)) {
+        tbl.emplace("texture", assetMgr->Get(handle_).RelativePath().string());
+    }
     return tbl;
 }
 
 template <>
-std::unique_ptr<Tilesheet> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Tilesheet> LoadAssetFromMetaTable(const toml::table& tbl) {
     return std::make_unique<Tilesheet>(tbl);
 }
 
@@ -112,13 +112,15 @@ TilesheetHandle TilesheetManager::Create(TextureHandle handle, uint32_t col,
                                          uint32_t row, const Margin& margin,
                                          const Spacing& spacing) {
     auto elem = std::make_unique<Tilesheet>(
-        ECS::Instance().World().res<AssetManager>()->TextureMgr(), handle, col,
-        row, margin, spacing);
-    if (elem && *elem) {
+        ECS::Instance().World().res<TextureManager>().get(), handle, col, row,
+        margin, spacing);
+    if (elem) {
         auto handle = TilesheetHandle::Create();
         storeNewItem(handle, std::move(elem));
         return handle;
     }
+
+    return TilesheetHandle::Null();
 }
 
 TilesheetHandle TilesheetManager::Load(const std::filesystem::path& filename) {
@@ -128,7 +130,7 @@ TilesheetHandle TilesheetManager::Load(const std::filesystem::path& filename) {
 
     auto handle = TilesheetHandle::Create();
     auto elem = std::make_unique<Tilesheet>(filename);
-    if (elem && *elem) {
+    if (elem) {
         storeNewItem(handle, std::move(elem));
         return handle;
     } else {
@@ -194,11 +196,11 @@ TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
 
     if (texture) {
         auto mgr = ECS::Instance().World().res_mut<TilesheetManager>();
-        auto handle = mgr->Create(
-            texture, columns, tileCount / columns,
-            Margin{margin, margin, margin, margin}, Spacing{spacing, spacing});
-        mgr->AssociateFile(
-            handle, filename.parent_path() / (name + ".tilesheet"));
+        auto handle = mgr->Create(texture, columns, tileCount / columns,
+                                  Margin{margin, margin, margin, margin},
+                                  Spacing{spacing, spacing});
+        mgr->AssociateFile(handle,
+                           filename.parent_path() / (name + ".tilesheet"));
         return handle;
     }
 

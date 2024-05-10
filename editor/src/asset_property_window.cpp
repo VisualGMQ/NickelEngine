@@ -1,58 +1,23 @@
 #include "asset_property_window.hpp"
 #include "context.hpp"
 #include "image_view_canva.hpp"
-#include "show_component.hpp"
+#include "type_displayer.hpp"
 
-void TexturePropertyPopupWindow::showWrapper(
-    nickel::gogl::Sampler::Wrapper& wrapper, gecs::registry reg) {
-    if (ImGui::TreeNode("wrapper")) {
-        // show texture wrapper info
-        auto textureWrapperTypeInfo =
-            mirrow::drefl::typeinfo<nickel::gogl::TextureWrapperType>();
-        if (auto f =
-                ComponentShowMethods::Instance().Find(textureWrapperTypeInfo);
-            f) {
-            auto ref = mirrow::drefl::any_make_ref(wrapper.s);
-            f(nullptr, "s", ref, reg);
-            ref = mirrow::drefl::any_make_ref(wrapper.t);
-            f(nullptr, "t", ref, reg);
-            // TODO: if texture is 3D, show r component
-            // ref = mirrow::drefl::any_make_ref(wrapper.r);
-            // f(textureWrapperTypeInfo, "r", ref, reg, {});
-        }
-
-        // show border color
-        if (wrapper.NeedBorderColor()) {
-            ImGui::ColorEdit4("border color", wrapper.borderColor);
-        }
-        ImGui::TreePop();
-    }
-}
-
-void TexturePropertyPopupWindow::showSampler(nickel::gogl::Sampler& sampler,
-                                             gecs::registry reg) {
-    if (ImGui::TreeNode("sampler")) {
-        DisplayComponent("filter", sampler.filter);
-        showWrapper(sampler.wrapper, reg);
-        ImGui::TreePop();
-    }
-}
-
-void TexturePropertyPopupWindow::update() {
+void TexturePropertyWidget::Update() {
     auto& reg = *nickel::ECS::Instance().World().cur_registry();
-    auto& textureMgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>()->TextureMgr();
+    auto& textureMgr = nickel::ECS::Instance()
+                           .World()
+                           .res_mut<nickel::AssetManager>()
+                           ->TextureMgr();
 
     if (!textureMgr.Has(handle_)) {
         ImGui::Text("invalid texture handle");
-        if (ImGui::Button("close")) {
-            Hide();
-        }
         return;
     }
 
     auto& texture = textureMgr.Get(handle_);
 
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              texture.RelativePath().string().c_str());
     ImGui::InputText("filename", buf, sizeof(buf),
@@ -65,101 +30,138 @@ void TexturePropertyPopupWindow::update() {
 
     imageViewer_.Resize({size, size});
     imageViewer_.Update();
-
-    showSampler(sampler_, reg);
-    DisplayComponent("mipmap", sampler_.mipmap);
-
-    // show reimport button
-    if (sampler_ != texture.Sampler()) {
-        if (ImGui::Button("re-import")) {
-            textureMgr.Replace(handle_, texture.RelativePath(), sampler_);
-        }
-        ImGui::SameLine();
-    }
-
-    // show cancel button
-    if (ImGui::Button("cancel")) {
-        Hide();
-    }
 }
 
-void SoundPropertyPopupWindow::update() {
+void SoundPropertyWidget::Update() {
     auto mgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>();
 
     if (!mgr->Has(handle_)) {
         ImGui::Text("invalid audio handle");
-        if (ImGui::Button("close")) {
-            Hide();
-        }
         return;
     }
 
-    auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
-    auto& elem = ctx->FindOrGenSoundPlayer(handle_);
+    auto& ctx = EditorContext::Instance();
 
-    // char buf[512] = {0};
-    // snprintf(buf, sizeof(buf), "Res://%s",
-    //          elem.RelativePath().string().c_str());
-    // ImGui::InputText("filename", buf, sizeof(buf),
-    //                  ImGuiInputTextFlags_ReadOnly);
-
-    if (elem.IsPlaying()) {
+    if (player_.IsPlaying()) {
         if (ImGui::Button("pause")) {
-            elem.Pause();
+            player_.Pause();
         }
     } else {
         if (ImGui::Button("play")) {
-            elem.Play();
+            player_.Play();
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("rewind")) {
-        elem.Rewind();
+        player_.Rewind();
     }
 
-    float cursor = elem.GetCursor();
-    float len = elem.Length();
+    float cursor = player_.GetCursor();
+    float len = player_.Length();
     std::string progress =
         std::to_string(cursor) + "/" + std::to_string(len) + "s";
     ImGui::SliderFloat(progress.c_str(), &cursor, 0, len, "%.2f");
 
-    bool isLooping = elem.IsLooping();
+    bool isLooping = player_.IsLooping();
     ImGui::Checkbox("looping", &isLooping);
-    if (isLooping != elem.IsLooping()) {
-        elem.SetLoop(isLooping);
-    }
-
-    // show cancel button
-    if (ImGui::Button("cancel")) {
-        elem.Stop();
-        Hide();
+    if (isLooping != player_.IsLooping()) {
+        player_.SetLoop(isLooping);
     }
 }
 
-void FontPropertyPopupWindow::update() {
-    auto& mgr = nickel::ECS::Instance().World().res_mut<nickel::AssetManager>()->FontMgr();
+void FontPropertyWidget::Update() {
+    auto& mgr = nickel::ECS::Instance()
+                    .World()
+                    .res_mut<nickel::AssetManager>()
+                    ->FontMgr();
 
     if (!mgr.Has(handle_)) {
         ImGui::Text("invalid audio handle");
-        if (ImGui::Button("close")) {
-            Hide();
-        }
         return;
     }
 
     auto& elem = mgr.Get(handle_);
 
-    char buf[512] = {0};
+    char buf[MAX_PATH_LENGTH] = {0};
     snprintf(buf, sizeof(buf), "Res://%s",
              elem.RelativePath().string().c_str());
     ImGui::InputText("filename", buf, sizeof(buf),
                      ImGuiInputTextFlags_ReadOnly);
 
-    auto ctx = nickel::ECS::Instance().World().res_mut<EditorContext>();
-    auto& preview = ctx->FindOrGenFontPrewview(handle_);
+    auto& ctx = EditorContext::Instance();
+    auto& preview = ctx.FindOrGenFontPrewview(handle_);
     for (auto& ch : preview.Texts()) {
-        ImGui::Image(ch.texture->Raw(),
-                     {ch.texture->Size().w, ch.texture->Size().h});
+        ImGui::Image(*ch.texture, {ch.texture->Size().w, ch.texture->Size().h});
         ImGui::SameLine();
     }
 }
+
+void Material2DPropertyWidget::Update() {
+    auto mgr =
+        nickel::ECS::Instance().World().res_mut<nickel::Material2DManager>();
+    if (!mgr->Has(handle_)) {
+        ImGui::Text("invalid material handle");
+        return;
+    }
+
+    auto& elem = mgr->Get(handle_);
+
+    if (ImGui::CollapsingHeader("texture")) {
+        auto textureMgr =
+            nickel::ECS::Instance().World().res_mut<nickel::TextureManager>();
+        auto handle = elem.GetTexture();
+
+        char str[MAX_PATH_LENGTH] = "no texture";
+        if (textureMgr->Has(handle)) {
+            static ImageViewCanva canva;
+            canva.ChangeTexture(handle);
+            canva.Update();
+
+            auto path = textureMgr->Get(handle).RelativePath().string();
+            std::strncpy(str, path.c_str(), path.size());
+        }
+
+        ImGui::Text("path");
+        ImGui::SameLine();
+        ImGui::BeginDisabled();
+        ImGui::InputText("###mtl2dpropwindow-texture", str, sizeof(str));
+        ImGui::EndDisabled();
+        if (ImGui::Button("change")) {
+            auto& window = EditorContext::Instance().textureAssetListWindow;
+            window.Show();
+            window.SetSelectCallback([&elem](nickel::TextureHandle handle) {
+                elem.ChangeTexture(handle);
+            });
+        }
+    }
+
+    if (ImGui::CollapsingHeader("sampler")) {
+        auto desc = elem.GetSamplerDesc();
+
+        auto uPayload = mirrow::drefl::any_make_ref(desc.u);
+        ImGui::Text("u");
+        ImGui::SameLine();
+        DisplayEnum(uPayload);
+
+        auto vPayload = mirrow::drefl::any_make_ref(desc.v);
+        ImGui::Text("v");
+        ImGui::SameLine();
+        DisplayEnum(vPayload);
+
+        auto minPayload = mirrow::drefl::any_make_ref(desc.min);
+        ImGui::Text("min");
+        ImGui::SameLine();
+        DisplayEnum(minPayload);
+
+        auto magPayload = mirrow::drefl::any_make_ref(desc.mag);
+        ImGui::Text("mag");
+        ImGui::SameLine();
+        DisplayEnum(magPayload);
+
+        if (desc != elem.GetSamplerDesc()) {
+            elem.ChangeSampler(desc.u, desc.v, desc.min, desc.mag);
+        }
+    }
+}
+
+void DisplayTransform(mirrow::drefl::any& payload);

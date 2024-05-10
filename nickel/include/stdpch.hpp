@@ -21,6 +21,13 @@
 #include <variant>
 #include <charconv>
 #include <functional>
+#include <optional>
+#include <set>
+#include <cassert>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #if _WIN32
 #ifndef DLLEXPORT

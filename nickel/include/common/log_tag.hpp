@@ -11,6 +11,7 @@ constexpr std::string_view Glad = "Glad";
 constexpr std::string_view GL = "GL";
 constexpr std::string_view Config = "Config";
 constexpr std::string_view Asset = "Asset";
+constexpr std::string_view RHI = "RHI";
 constexpr std::string_view Renderer = "Renderer";
 constexpr std::string_view Nickel = "Nickel";
 constexpr std::string_view Misc = "Misc";
@@ -18,6 +19,7 @@ constexpr std::string_view Editor = "Editor";
 constexpr std::string_view Audio = "Audio";
 constexpr std::string_view Filesystem = "Filesystem";
 constexpr std::string_view Script = "Script";
+constexpr std::string_view Vulkan = "Vulkan";
 
 }
 

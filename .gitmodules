@@ -13,12 +13,19 @@
 [submodule "3rdlibs/freetype2"]
 	path = 3rdlibs/freetype2
 	url = https://gitlab.freedesktop.org/freetype/freetype.git
+	branch = VER-2-9
 [submodule "3rdlibs/lunasvg"]
 	path = 3rdlibs/lunasvg
 	url = https://github.com/sammycage/lunasvg.git
 [submodule "3rdlibs/easy_profiler"]
 	path = 3rdlibs/easy_profiler
 	url = https://github.com/yse/easy_profiler.git
+[submodule "external/glTF-Sample-Models"]
+	path = external/glTF-Sample-Models
+	url = https://github.com/KhronosGroup/glTF-Sample-Models.git
+[submodule "3rdlibs/tinygltf"]
+	path = 3rdlibs/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
 [submodule "3rdlibs/luau"]
 	path = 3rdlibs/luau
 	url = https://github.com/luau-lang/luau.git

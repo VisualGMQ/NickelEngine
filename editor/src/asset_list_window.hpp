@@ -15,8 +15,11 @@ template <typename T>
 void ShowAsset(nickel::Handle<T>, const T&) {}
 
 template <>
-void ShowAsset<nickel::Texture>(nickel::TextureHandle handle,
-                                const nickel::Texture&);
+void ShowAsset<nickel::Texture>(nickel::TextureHandle, const nickel::Texture&);
+
+template <>
+void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle,
+                                  const nickel::Tilesheet&);
 
 template <>
 void ShowAsset<nickel::Font>(nickel::FontHandle handle, const nickel::Font&);
@@ -27,10 +30,6 @@ void ShowAsset<nickel::Animation>(nickel::AnimationHandle handle,
 
 template <>
 void ShowAsset<nickel::Sound>(nickel::SoundHandle, const nickel::Sound&);
-
-template <>
-void ShowAsset<nickel::Tilesheet>(nickel::TilesheetHandle handle,
-                                  const nickel::Tilesheet&);
 
 template <>
 void ShowAsset<nickel::LuaScript>(nickel::ScriptHandle handle,
@@ -49,8 +48,11 @@ public:
 
 protected:
     void update() override {
-        auto& datas =
-            nickel::ECS::Instance().World().res<nickel::AssetManager>()->SwitchManager<T>().AllDatas();
+        auto& datas = nickel::ECS::Instance()
+                          .World()
+                          .res<nickel::AssetManager>()
+                          ->SwitchManager<T>()
+                          .AllDatas();
         if (datas.empty()) {
             ImGui::Text("no asset");
             return;
@@ -89,4 +91,5 @@ using FontAssetListWindow = AssetListWindow<nickel::Font>;
 using TilesheetAssetListWindow = AssetListWindow<nickel::Tilesheet>;
 using SoundAssetListWindow = AssetListWindow<nickel::Sound>;
 using AnimationAssetListWindow = AssetListWindow<nickel::Animation>;
+using Material2DAssetListWindow = AssetListWindow<nickel::Material2D>;
 using ScriptAssetListWindow = AssetListWindow<nickel::LuaScript>;

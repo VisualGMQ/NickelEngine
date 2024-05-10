@@ -1,5 +1,5 @@
 #include "anim_editor.hpp"
-#include "show_component.hpp"
+#include "type_displayer.hpp"
 
 void TrackNameMenu::update() {
     if (ImGui::Button("add track")) {
@@ -396,10 +396,7 @@ void AnimationEditor::renderInspector(const ImVec2& canvasPos,
         if (auto track = sequence->Get(trackIdx_.value()); track) {
             auto& keyframe = track->KeyFrames()[keyframeIdx_.value()];
             auto value = keyframe->GetValue();
-            if (!DisplayComponent(value.type_info(), value.type_info()->name(),
-                                  value, *reg)) {
-                ImGui::Text("don't know how to show this component");
-            }
+            TypeDisplayerRegistrar::Instance().Display(value);
 
             // TODO: check type whether can do arithmetic to determine which
             // func can apply

@@ -63,7 +63,7 @@ private:
 using ScriptHandle = Handle<LuaScript>;
 
 template <>
-std::unique_ptr<LuaScript> LoadAssetFromMeta(const toml::table&);
+std::unique_ptr<LuaScript> LoadAssetFromMetaTable(const toml::table&);
 
 class ScriptManager: public Manager<LuaScript> {
 public:

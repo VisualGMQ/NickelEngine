@@ -1,53 +1,49 @@
 #pragma once
 
 #include "common/cgmath.hpp"
-#include "graphics/gogl.hpp"
+#include "common/ecs.hpp"
+#include "graphics/rhi/rhi.hpp"
 
 namespace nickel {
+
+struct SphericalCoordCameraProxy;
+
 class Camera {
 public:
+    friend class SphericalCoordCameraProxy;
+
     enum class Type {
         Ortho,
         Perspective,
     };
 
     static Camera CreateOrtho(float left, float right, float top, float bottom,
-                              float near, float far) {
+                              float near, float far,
+                              const nickel::cgmath::Rect& viewport) {
+        auto api = ECS::Instance()
+                       .World()
+                       .res<rhi::Adapter>()
+                       ->RequestAdapterInfo()
+                       .api;
         return {Type::Ortho,
-                cgmath::CreateOrtho(left, right, top, bottom, near, far),
-                cgmath::Mat44::Identity()};
+                cgmath::CreateOrtho(left, right, top, bottom, near, far,
+                                    api == rhi::APIPreference::GL),
+                cgmath::Mat44::Identity(), viewport};
     }
 
     static Camera CreateOrthoByWindowRegion(const cgmath::Vec2& size) {
-        return CreateOrtho(0.0, size.w, 0.0, size.h, 1.0, -1.0);
+        auto halfSize = size * 0.5;
+        return CreateOrtho(-halfSize.w, halfSize.w, halfSize.h, -halfSize.h,
+                           1000.0, -1000.0, {0, 0, size.w, size.h});
     }
 
     auto& Project() const { return proj_; }
 
     void SetProject(const cgmath::Mat44& proj) { proj_ = proj; }
+
     void SetView(const cgmath::Mat44& view) { view_ = view; }
 
     auto& View() const { return view_; }
-
-    void SetRenderTarget(gogl::Framebuffer& target) { renderTarget_ = &target; }
-
-    auto& GetRenderTarget() const { return renderTarget_; }
-
-    void ApplyRenderTarget() {
-        if (renderTarget_) {
-            renderTarget_->Bind();
-            GL_CALL(glViewport(0, 0, renderTarget_->Size().w,
-                               renderTarget_->Size().h));
-            if (IsOrtho()) {
-                // TODO: record cube to create ortho
-                SetProject(cgmath::CreateOrtho(0, renderTarget_->Size().w, 0,
-                                               renderTarget_->Size().h, 10000,
-                                               -10000));
-            }
-        } else {
-            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-        }
-    }
 
     auto GetType() const { return type_; }
 
@@ -81,15 +77,8 @@ public:
         recalcView();
     }
 
-    void ScaleTo(const cgmath::Vec3& scale) {
-        scale_ = scale;
-        recalcView();
-    }
-
     void ScaleTo(const cgmath::Vec2& scale) {
-        scale_.x = scale.x;
-        scale_.y = scale.y;
-        scale_.z = 1.0;
+        scale_ = scale;
         recalcView();
     }
 
@@ -97,23 +86,104 @@ public:
 
     auto& Scale() const { return scale_; }
 
+    void SetRenderTarget(rhi::TextureView view) { target_ = view; }
+
+    void SetViewport(const nickel::cgmath::Rect& rect) { viewport_ = rect; }
+
+    auto& GetViewport() const { return viewport_; }
+
+    void SetTarget2Default() { target_ = {}; }
+
+    rhi::TextureView GetTarget() const { return target_; }
+
 private:
-    Camera(Type type, const cgmath::Mat44& proj, const cgmath::Mat44 view)
-        : proj_{proj}, view_{view}, type_{type} {}
+    Camera(Type type, const cgmath::Mat44& proj, const cgmath::Mat44 view,
+           const cgmath::Rect& viewport)
+        : proj_{proj}, view_{view}, viewport_{viewport}, type_{type} {}
 
     cgmath::Mat44 proj_;
     cgmath::Mat44 view_;
     cgmath::Vec3 position_;
-    cgmath::Vec3 scale_{1, 1};
+    cgmath::Vec2 scale_{1, 1};
+    cgmath::Rect viewport_;
+    rhi::TextureView target_;
 
-    gogl::Framebuffer* renderTarget_ = nullptr;
     Type type_;
     cgmath::Color clearColor_{0.1, 0.1, 0.1, 1};
 
     void recalcView() {
-        view_ =
-            cgmath::CreateScale(scale_) * cgmath::CreateTranslation(position_);
+        view_ = cgmath::CreateScale({scale_.x, scale_.y, 1.0}) *
+                cgmath::CreateTranslation(position_);
     }
+};
+
+struct SphericalCoordCameraProxy final {
+public:
+    SphericalCoordCameraProxy(Camera& camera,
+                              const nickel::cgmath::Vec3& center)
+        : camera_{camera}, center_{center} {
+        auto dir = camera_.Position() - center_;
+        auto zAxis = nickel::cgmath::Vec3{0, 1, 0};
+        radius_ = dir.Length();
+        dir.Normalize();
+        Assert(radius_ != 0, "your camera too close to origin (distance = 0)");
+
+        auto xozVec = nickel::cgmath::Normalize(dir - (dir.Dot(zAxis) * zAxis));
+
+        theta_ = nickel::cgmath::GetRadianIn360(
+            nickel::cgmath::Vec3{0, 1, 0}, dir,
+            nickel::cgmath::Cross({0, 1, 0}, xozVec));
+
+        phi_ = nickel::cgmath::GetRadianInPISigned(
+            nickel::cgmath::Vec2{1, 0},
+            nickel::cgmath::Vec2{xozVec.x, xozVec.z});
+    }
+
+    void SetRadius(float r) {
+        if (r < MinRadius) {
+            radius_ = MinRadius;
+        } else {
+            radius_ = r;
+        }
+    }
+
+    auto GetRadius() const { return radius_; }
+
+    void SetPhi(float p) { phi_ = p; }
+
+    auto GetPhi() const { return phi_; }
+
+    void SetTheta(float t) {
+        if (t > MaxTheta) {
+            t = MaxTheta;
+        } else if (t < MinTheta) {
+            t = MinTheta;
+        }
+        theta_ = t;
+    }
+
+    auto GetTheta() const { return theta_; }
+
+    void Update2Camera() {
+        auto xoyAxis = nickel::cgmath::Vec2{std::cos(phi_), std::sin(phi_)} *
+                       std::sin(theta_) * radius_;
+        auto y = std::cos(theta_) * radius_;
+
+        camera_.position_.Set(xoyAxis.x, y, xoyAxis.y);
+        camera_.view_ =
+            nickel::cgmath::LookAt(center_, camera_.position_, {0, 1, 0});
+    }
+
+private:
+    Camera& camera_;
+    nickel::cgmath::Vec3 center_;
+    float radius_;
+    float phi_;
+    float theta_;
+
+    static constexpr float MaxTheta = cgmath::PI - 0.001;
+    static constexpr float MinTheta = 0.001;
+    static constexpr float MinRadius = 0.0001;
 };
 
 }  // namespace nickel

@@ -319,7 +319,7 @@ struct MouseButtonEvent final {
     uint8_t clicks;  // 1 for singl-click, 2 for double-click
 };
 
-struct ScrollEvent final {
+struct MouseWheelEvent final {
     cgmath::Vec2 offset;
 };
 

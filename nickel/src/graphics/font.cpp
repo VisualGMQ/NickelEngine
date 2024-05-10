@@ -1,6 +1,5 @@
 #include "graphics/font.hpp"
 #include "common/profile.hpp"
-#include "graphics/gogl.hpp"
 
 #include "ft2build.h"
 #include FT_FREETYPE_H
@@ -10,6 +9,15 @@ namespace nickel {
 TextCache TextCache::Null;
 
 FT_Library gFtLib;
+
+const char* FT_Error_String(FT_Error error_code) {
+    #undef FTERRORS_H_
+    #define FT_ERRORDEF( e, v, s )  case e: return s;
+    #define FT_ERROR_START_LIST     switch (error_code) {
+    #define FT_ERROR_END_LIST       }
+    #include FT_ERRORS_H
+    return "(Unknown error)";
+}
 
 void FontSystemInit() {
     PROFILE_BEGIN();
@@ -29,12 +37,6 @@ void FontSystemShutdown() {
 
 Font Font::Null;
 
-Font::Font(const toml::table& tbl) {
-    if (auto node = tbl.get("path"); node && node->is_string()) {
-        *this = Font{node->as_string()->get()};
-    }
-}
-
 Font::Font(const std::filesystem::path& filename) : Asset(filename) {
     if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &face_);
         err) {
@@ -51,7 +53,7 @@ Font::Font(const std::filesystem::path& filename) : Asset(filename) {
 }
 
 template <>
-std::unique_ptr<Font> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Font> LoadAssetFromMetaTable(const toml::table& tbl) {
     if (auto path = tbl.get("path"); path && path->is_string()) {
         return std::make_unique<Font>(path->as_string()->get());
     }
@@ -66,14 +68,8 @@ Character::Character(const FT_GlyphSlot& g)
 
     auto mgr =
         ECS::Instance().World().cur_registry()->res_mut<TextureManager>();
-    gogl::Sampler sampler = gogl::Sampler::CreateLinearRepeat();
-    sampler.wrapper.s = gogl::TextureWrapperType::ClampToEdge;
-    sampler.wrapper.t = gogl::TextureWrapperType::ClampToEdge;
-    GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
     texture =
-        mgr->CreateSolitary(bitmap.buffer, bitmap.width, bitmap.rows, sampler,
-                            gogl::Format::Red, gogl::Format::Red);
-    GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
+        mgr->CreateSolitary(bitmap.buffer, bitmap.width, bitmap.rows);
 }
 
 FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {

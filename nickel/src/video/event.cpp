@@ -274,7 +274,7 @@ void EventPoller::Poll() const {
                                                         : Action::Release);
             e.mod = static_cast<Modifier>(event.key.keysym.mod);
 
-            reg->event_dispatcher<KeyboardEvent>().enqueue(e);
+            reg->event_dispatcher<KeyboardEvent>().happend(e);
         }
 
         if (event.type == SDL_MOUSEMOTION) {
@@ -283,7 +283,7 @@ void EventPoller::Poll() const {
             e.position.y = event.motion.y;
             e.offset.x = event.motion.xrel;
             e.offset.y = event.motion.yrel;
-            reg->event_dispatcher<MouseMotionEvent>().enqueue(e);
+            reg->event_dispatcher<MouseMotionEvent>().happend(e);
         }
 
         if (event.type == SDL_MOUSEBUTTONDOWN ||
@@ -294,40 +294,49 @@ void EventPoller::Poll() const {
             e.btn = static_cast<MouseButtonType>(event.button.button);
             e.clicks = event.button.clicks;
 
-            reg->event_dispatcher<MouseButtonEvent>().enqueue(e);
+            reg->event_dispatcher<MouseButtonEvent>().happend(e);
+        }
+
+        if (event.type == SDL_MOUSEWHEEL) {
+            MouseWheelEvent e;
+            int factor =
+                event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1;
+            e.offset.x = event.wheel.preciseX * factor;
+            e.offset.y = event.wheel.preciseY * factor;
+
+            reg->event_dispatcher<MouseWheelEvent>().happend(e);
         }
 
         if (event.type == SDL_WINDOWEVENT) {
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
-                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 WindowResizeEvent e;
                 e.size.x = event.window.data1;
                 e.size.y = event.window.data2;
 
-                reg->event_dispatcher<WindowResizeEvent>().enqueue(e);
+                reg->event_dispatcher<WindowResizeEvent>().happend(e);
             }
         }
 
         if (event.type == SDL_DROPBEGIN) {
-            reg->event_dispatcher<DropBeginEvent>().enqueue(DropBeginEvent{});
+            reg->event_dispatcher<DropBeginEvent>().happend(DropBeginEvent{});
         }
 
         if (event.type == SDL_DROPCOMPLETE) {
-            reg->event_dispatcher<DropEndEvent>().enqueue(DropEndEvent{});
+            reg->event_dispatcher<DropEndEvent>().happend(DropEndEvent{});
         }
 
         if (event.type == SDL_DROPTEXT) {
             DropTextEvent e;
             e.text = event.drop.file;
             SDL_free(event.drop.file);
-            reg->event_dispatcher<DropTextEvent>().enqueue(e);
+            reg->event_dispatcher<DropTextEvent>().happend(e);
         }
 
         if (event.type == SDL_DROPFILE) {
             DropFileEvent e;
             e.path = event.drop.file;
             SDL_free(event.drop.file);
-            reg->event_dispatcher<DropFileEvent>().enqueue(e);
+            reg->event_dispatcher<DropFileEvent>().happend(e);
         }
     }
 }

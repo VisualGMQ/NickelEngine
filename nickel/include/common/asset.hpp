@@ -12,7 +12,7 @@ class Asset {
 public:
     virtual ~Asset() = default;
 
-    template <typename T>
+    template <typename, typename>
     friend class Manager;
 
     Asset(const std::filesystem::path& relativePath)
@@ -44,6 +44,13 @@ public:
         }
     }
 
+    void Save2AssociateFile() const {
+        std::ofstream file(relativePath_);
+        if (file) {
+            file << toml::toml_formatter{Save2Toml()};
+        }
+    }
+
     auto& RelativePath() const { return relativePath_; }
 
     bool HasAssociatedFile() const { return !relativePath_.empty(); }
@@ -64,16 +71,18 @@ private:
 };
 
 template <typename T>
-std::unique_ptr<T> LoadAssetFromMeta(const toml::table&);
+std::unique_ptr<T> LoadAssetFromMetaTable(const toml::table&);
 
 template <typename T>
-std::unique_ptr<T> LoadAssetFromFile(const std::filesystem::path& path) {
+std::unique_ptr<T> LoadAssetFromMeta(const std::filesystem::path& path) {
     if (auto result = toml::parse_file(path.string()); result) {
-        return LoadAssetFromMeta<T>(result.table());
+        auto elem = LoadAssetFromMetaTable<T>(result.table());
+        elem->AssociateFile(path);
+        return elem;
     } else {
         LOGW(log_tag::Asset, "load asset from ", path,
              " failed: ", result.error());
-        return false;
+        return {};
     }
 }
 

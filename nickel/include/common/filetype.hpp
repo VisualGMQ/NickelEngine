@@ -15,6 +15,8 @@ enum class FileType {
     Animation,
     Timer,
     Script,
+    GLTF,
+    Material2D,
 
     FileTypeCount,
 };
@@ -29,6 +31,7 @@ class Tilesheet;
 class Animation;
 class Timer;
 class LuaScript;
+class Material2D;
 
 template <typename T>
 FileType DetectFileType() {
@@ -46,6 +49,8 @@ FileType DetectFileType() {
         return FileType::Timer;
     } else if constexpr (std::is_same_v<T, LuaScript>) {
         return FileType::Script;
+    } else if constexpr (std::is_same_v<T, Material2D>) {
+        return FileType::Material2D;
     }
     return FileType::Unknown;
 }

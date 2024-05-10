@@ -5,56 +5,66 @@
 #include "nickel.hpp"
 #include "widget.hpp"
 
-
-class TexturePropertyPopupWindow : public PopupWindow {
+class TexturePropertyWidget: public Widget {
 public:
-    TexturePropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    TexturePropertyWidget() = default;
 
     void ChangeTexture(nickel::TextureHandle handle) {
         handle_ = handle;
         imageViewer_.ChangeTexture(handle);
         auto assetMgr = nickel::ECS::Instance().World().res<nickel::AssetManager>();
         if (assetMgr->Has(handle_)) {
-            sampler_ = assetMgr->Get(handle_).Sampler();
+            // TODO: not finish
         }
     }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
-    nickel::gogl::Sampler sampler_ =
-        nickel::gogl::Sampler::CreateLinearRepeat();
     nickel::TextureHandle handle_;
     ImageViewCanva imageViewer_;
-
-    void showWrapper(nickel::gogl::Sampler::Wrapper& wrapper,
-                     gecs::registry reg);
-    void showSampler(nickel::gogl::Sampler& sampler, gecs::registry reg);
 };
 
-class SoundPropertyPopupWindow : public PopupWindow {
+class SoundPropertyWidget : public Widget {
 public:
-    SoundPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    SoundPropertyWidget() = default;
 
-    void ChangeAudio(nickel::SoundHandle handle) { handle_ = handle; }
+    void ChangeAudio(nickel::SoundHandle handle) {
+        handle_ = handle;
+        if (handle_) {
+            player_.ChangeSound(handle);
+            player_.Stop();
+            player_.Rewind();
+        }
+    }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
     nickel::SoundHandle handle_;
+    nickel::SoundPlayer player_;
 };
 
-class FontPropertyPopupWindow : public PopupWindow {
+class FontPropertyWidget: public Widget {
 public:
-    FontPropertyPopupWindow(const std::string& title) : PopupWindow(title) {}
+    FontPropertyWidget() = default;
 
     void ChangeFont(nickel::FontHandle handle) { handle_ = handle; }
 
-protected:
-    void update() override;
+    void Update() override;
 
 private:
     nickel::FontHandle handle_;
+};
+
+class Material2DPropertyWidget: public Widget {
+public:
+    Material2DPropertyWidget() = default;
+
+    void ChangeMaterial(nickel::Material2DHandle handle) { handle_ = handle; }
+
+    void Update() override;
+
+private:
+    nickel::Material2DHandle handle_;
 };

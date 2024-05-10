@@ -1,8 +1,27 @@
 #include "spawn_component.hpp"
 
-SpawnComponentMethods::spawn_fn SpawnComponentMethods::Find(type_info type) {
+void SpawnComponentMethods::Spawn(const mirrow::drefl::type* type,
+                                  gecs::entity ent) {
     if (auto it = methods_.find(type); it != methods_.end()) {
-        return it->second;
+        it->second(ent);
     }
-    return {};
+}
+
+const std::vector<SpawnComponentMethods::TypeInfo>&
+SpawnComponentMethods::RegistedTypes() const {
+    return types_;
+}
+
+void RegistSpawnMethods() {
+    auto& instance = SpawnComponentMethods::Instance();
+
+    instance.Regist<nickel::Transform>();
+    instance.Regist<nickel::GlobalTransform>();
+    instance.Regist<nickel::Sprite>();
+    instance.Regist<nickel::SoundPlayer>();
+    instance.Regist<nickel::SpriteMaterial>();
+    instance.Regist<nickel::AnimationPlayer>();
+    instance.Regist<nickel::ui::Style>();
+    instance.Regist<nickel::ui::Button>();
+    // instance.Regist<nickel::ui::Label>(GeneralSpawnMethod<nickel::ui::Label>);
 }

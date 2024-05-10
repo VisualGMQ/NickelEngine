@@ -5,7 +5,6 @@ macro(AddConsoleTest name)
     add_test(NAME ${name}
              COMMAND $<TARGET_FILE:${name}>)
     set_tests_properties(${name} PROPERTIES LABELS "console")
-    CopyDLL(${name})
 endmacro()
 
 macro(AddVisualableTest name)
@@ -27,3 +26,4 @@ AddVisualableTest(gjk)
 AddVisualableTest(script)
 
 add_subdirectory(testbed)
+add_subdirectory(graphics)

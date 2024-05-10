@@ -5,10 +5,7 @@
 class Sequence {
 public:
     Sequence()
-        : player{*nickel::ECS::Instance()
-                      .World()
-                      .res_mut<nickel::AnimationManager>()},
-          animMgr{*nickel::ECS::Instance()
+        : animMgr{*nickel::ECS::Instance()
                        .World()
                        .res_mut<nickel::AnimationManager>()} {}
 
@@ -97,7 +94,6 @@ protected:
 
     void update() override;
 };
-
 
 class PropertyTreePopupWindow final : public PopupWindow {
 public:

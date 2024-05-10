@@ -12,35 +12,14 @@ Time::Time() : elapse_(1) {
 
 Timer Timer::Null;
 
-Timer::Timer(const toml::table& tbl) {
-    do {
-        if (auto node = tbl.get("id"); node && node->is_integer()) {
-            id_ = node->as_integer()->get();
-        } else {
-            break;
-        }
-
-        if (auto node = tbl.get("time"); node && node->is_integer()) {
-            dstTime_ = node->as_integer()->get();
-        } else {
-            break;
-        }
-
-        if (auto node = tbl.get("loop"); node && node->is_integer()) {
-            loop_ = node->as_integer()->get();
-        } else {
-            break;
-        }
-    } while (0);
-}
-
 Timer::Timer(const std::filesystem::path& filename) : Asset(filename) {
     auto parse = toml::parse_file(filename.string());
     if (!parse) {
         LOGW(log_tag::Asset, "load timer from ", filename,
              " failed:", parse.error());
     } else {
-        *this = Timer{parse.table()};
+        auto ptr = LoadAssetFromMetaTable<Timer>(parse.table());
+        *this = std::move(*ptr);
     }
 }
 
@@ -69,11 +48,26 @@ void Timer::Save(const std::filesystem::path& path) {
 }
 
 template <>
-std::unique_ptr<Timer> LoadAssetFromMeta(const toml::table& tbl) {
+std::unique_ptr<Timer> LoadAssetFromMetaTable(const toml::table& tbl) {
+    TimerID id;
+    TimeType time;
+    int loop = 0;
+
     if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Timer>(path->as_string()->get());
+        if (auto node = tbl.get("id"); node && node->is_integer()) {
+            id = node->as_integer()->get();
+        }
+
+        if (auto node = tbl.get("time"); node && node->is_integer()) {
+            time = node->as_integer()->get();
+        }
+
+        if (auto node = tbl.get("loop"); node && node->is_integer()) {
+            loop = node->as_integer()->get();
+        }
     }
-    return nullptr;
+
+    return std::make_unique<Timer>(id, time, loop);
 }
 
 TimerHandle TimerManager::Create(const std::filesystem::path& path, TimerID id,

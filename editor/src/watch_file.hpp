@@ -1,8 +1,9 @@
 #pragma once
 
-#include "nickel.hpp"
-#include "efsw/efsw.hpp"
 #include "context.hpp"
+#include "efsw/efsw.hpp"
+#include "nickel.hpp"
+
 
 // Inherits from the abstract listener class, and implements the the file action
 // handler
@@ -44,5 +45,4 @@ struct FileChangeEvent final {
 void RegistFileChangeEventHandler(gecs::event_dispatcher<FileChangeEvent>);
 void FileChangeEventHandler(
     const FileChangeEvent& event,
-    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr,
-    gecs::resource<gecs::mut<EditorContext>> ctx);
+    gecs::resource<gecs::mut<nickel::AssetManager>> assetMgr);

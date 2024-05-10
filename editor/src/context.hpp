@@ -11,11 +11,14 @@
 #include "input_text_window.hpp"
 #include "anim_editor.hpp"
 
-struct EditorContext {
+struct EditorContext: public nickel::Singlton<EditorContext, true> {
 private:
-    std::filesystem::path editorPath_;
+    std::filesystem::path editorPath_;  // must first init
 
 public:
+    // for game off-screen rendering
+    std::unique_ptr<nickel::Texture> texture;
+
     // normal windows
     ContentBrowserWindow contentBrowserWindow;
     EntityListWindow entityListWindow;
@@ -30,9 +33,8 @@ public:
     AnimationAssetListWindow animAssetListWindow;
     SoundAssetListWindow soundAssetListWindow;
     ScriptAssetListWindow scriptAssetListWindow;
-    TexturePropertyPopupWindow texturePropWindow;
-    SoundPropertyPopupWindow soundPropWindow;
-    FontPropertyPopupWindow fontPropWindow;
+    Material2DAssetListWindow mtl2dAssetListWindow;
+
     TilesheetEditor tilesheetEditor;
     InputTextWindow inputTextWindow;
 
@@ -66,7 +68,6 @@ public:
     ~EditorContext();
 
     const nickel::TextCache& FindOrGenFontPrewview(nickel::FontHandle);
-    nickel::SoundPlayer& FindOrGenSoundPlayer(nickel::SoundHandle);
 
 private:
     std::unordered_map<nickel::FontHandle, nickel::TextCache,
@@ -75,8 +76,17 @@ private:
     std::unordered_map<nickel::SoundHandle, nickel::SoundPlayer,
                        nickel::SoundHandle::Hash, nickel::SoundHandle::Eq>
         soundPlayers_;
+
+    void updateMenubar();
+
+    void initGameWindowTexture();
 };
 
-inline void InitEditorContext(gecs::commands cmds) {
-    cmds.emplace_resource<EditorContext>();
+inline void InitEditorContext(
+    gecs::commands cmds, gecs::resource<gecs::mut<nickel::Camera>> camera,
+    gecs::resource<gecs::mut<nickel::ui::UIContext>> uiCtx) {
+    EditorContext::Init();
+    auto& target = EditorContext::Instance().texture;
+    camera->SetRenderTarget(target->View());
+    uiCtx->renderCtx.camera.SetRenderTarget(target->View());
 }

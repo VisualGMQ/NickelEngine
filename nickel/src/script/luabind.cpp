@@ -140,201 +140,201 @@ void bindCommon(luabridge::Namespace& scope) {
 }
 
 void bindMath(luabridge::Namespace& scope) {
-    scope = scope.beginNamespace("cgmath")
-        .beginClass<cgmath::Vec2>("Vec2")
-            .addConstructor<void(float, float), void(void)>()
-            .addProperty("x", &cgmath::Vec2::x)
-            .addProperty("y", &cgmath::Vec2::y)
-            .addProperty("w", &cgmath::Vec2::w)
-            .addProperty("h", &cgmath::Vec2::h)
-            .addFunction("Dot", &cgmath::Vec2::Dot) 
-            .addFunction("__add", &cgmath::operator+<float, 2>)
-            .addFunction("__sub", &cgmath::operator-<float, 2>)
-            .addFunction("__mul", &cgmath::operator*<float, 2>)
-            .addFunction("__div", &cgmath::operator/<float, 2>)
-            .addFunction("__eq", &cgmath::operator==<float, 2>)
-            .addFunction("__tostring", [](const cgmath::Vec2& v) {
-                return "vec2[ " + std::to_string(v.x) + ", " + std::to_string(v.y) + "]";
-            })
-            .addFunction("Set", &cgmath::Vec2::Set)
-        .endClass()
-        .beginClass<cgmath::Vec3>("Vec3")
-            .addConstructor<void(float, float, float), void(void)>()
-            .addProperty("x", &cgmath::Vec3::x)
-            .addProperty("y", &cgmath::Vec3::y)
-            .addProperty("z", &cgmath::Vec3::z)
-            .addProperty("s", &cgmath::Vec3::s)
-            .addProperty("r", &cgmath::Vec3::r)
-            .addProperty("t", &cgmath::Vec3::t)
-            .addFunction("Dot", &cgmath::Vec3::Dot) 
-            .addFunction("__add", &cgmath::operator+<float, 3>)
-            .addFunction("__sub", &cgmath::operator-<float, 3>)
-            .addFunction("__mul", &cgmath::operator*<float, 3>)
-            .addFunction("__div", &cgmath::operator/<float, 3>)
-            .addFunction("__eq", &cgmath::operator==<float, 3>)
-            .addFunction("__tostring", [](const cgmath::Vec3& v) {
-                return "vec3[ " + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + "]";
-            })
-            .addFunction("Set", &cgmath::Vec3::Set)
-        .endClass()
-        .beginClass<cgmath::Vec4>("Vec4")
-            .addConstructor<void(float, float, float, float), void(void)>()
-            .addProperty("x", &cgmath::Vec4::x)
-            .addProperty("y", &cgmath::Vec4::y)
-            .addProperty("z", &cgmath::Vec4::z)
-            .addProperty("w", &cgmath::Vec4::w)
-            .addProperty("r", &cgmath::Vec4::r)
-            .addProperty("g", &cgmath::Vec4::g)
-            .addProperty("b", &cgmath::Vec4::b)
-            .addProperty("a", &cgmath::Vec4::a)
-            .addFunction("Dot", &cgmath::Vec4::Dot) 
-            .addFunction("__add", &cgmath::operator+<float, 4>)
-            .addFunction("__sub", &cgmath::operator-<float, 4>)
-            .addFunction("__mul", &cgmath::operator*<float, 4>)
-            .addFunction("__div", &cgmath::operator/<float, 4>)
-            .addFunction("__eq", &cgmath::operator==<float, 4>)
-            .addFunction("__tostring", [](const cgmath::Vec4& v) {
-                return "vec4[ " + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ", " + std::to_string(v.w) + "]";
-            })
-            .addFunction("Set", &cgmath::Vec4::Set)
-        .endClass()
-        .addFunction("Dot", &cgmath::Dot<float, 2>, &cgmath::Dot<float, 3>, &cgmath::Dot<float, 4>)
-        .addFunction("Cross",
-            luabridge::overload<const cgmath::Vec2&, const cgmath::Vec2&>(&cgmath::Cross<float>),
-            luabridge::overload<const cgmath::Vec3&, const cgmath::Vec3&>(&cgmath::Cross<float>))
-        .addFunction("TripleCross", &cgmath::TripleCross<float>)
-        .addFunction("Length", &cgmath::Length<float, 2>, &cgmath::Length<float, 3>, &cgmath::Length<float, 4>)
-        .addFunction("LengthSqrd", &cgmath::LengthSqrd<float, 2>, &cgmath::LengthSqrd<float, 3>, &cgmath::LengthSqrd<float, 4>)
-        .addFunction("Project", &cgmath::Project<float, 2>, &cgmath::Project<float, 3>, &cgmath::Project<float, 4>)
-        .addFunction("Normalize", &cgmath::Normalize<float, 2>, &cgmath::Normalize<float, 3>, &cgmath::Normalize<float, 4>)
-        .addFunction("Rad2Deg", &cgmath::Rad2Deg<float>, &cgmath::Rad2Deg<double>)
-        .addFunction("Deg2Rad", &cgmath::Deg2Rad<float>, &cgmath::Deg2Rad<double>)
-        .beginClass<cgmath::Mat22>("Mat22")
-            .addConstructor<void(void)>()
-            .addFunction("Set", &cgmath::Mat22::Set)
-            .addFunction("W", &cgmath::Mat22::W)
-            .addFunction("H", &cgmath::Mat22::H)
-            .addFunction("Get",
-                luabridge::nonConstOverload<int, int>(&cgmath::Mat22::Get),
-                luabridge::constOverload<int, int>(&cgmath::Mat22::Get))
-            .addStaticFunction("Identity", &cgmath::Mat22::Identity)
-            .addStaticFunction("Ones", &cgmath::Mat22::Ones)
-            .addStaticFunction("Zeros", &cgmath::Mat22::Zeros)
-            .addStaticFunction("FromRow",
-                [](float m00, float m10,
-                   float m01, float m11) {
-                    return cgmath::Mat22::FromRow(
-                        {m00, m10, 
-                        m01, m11, });
-            })
-            .addFunction("__mul", &cgmath::MulEach<float, 2, 2>)
-            .addFunction("__div", &cgmath::DivEach<float, 2, 2>)
-            .addFunction("__add", &cgmath::operator+<float, 2, 2>)
-            .addFunction("__sub", &cgmath::operator-<float, 2, 2>)
-            .addFunction("Transpose", &cgmath::Transpose<float, 2, 2>)
-        .endClass()
-        .beginClass<cgmath::Mat33>("Mat33")
-            .addConstructor<void(void)>()
-            .addFunction("Set", &cgmath::Mat33::Set)
-            .addFunction("W", &cgmath::Mat33::W)
-            .addFunction("H", &cgmath::Mat33::H)
-            .addFunction("Get",
-                luabridge::nonConstOverload<int, int>(&cgmath::Mat33::Get),
-                luabridge::constOverload<int, int>(&cgmath::Mat33::Get))
-            .addStaticFunction("Identity", &cgmath::Mat33::Identity)
-            .addStaticFunction("Ones", &cgmath::Mat33::Ones)
-            .addStaticFunction("Zeros", &cgmath::Mat33::Zeros)
-            .addStaticFunction("FromRow",
-                [](float m00, float m10, float m20,
-                   float m01, float m11, float m21,
-                   float m02, float m12, float m22) {
-                    return cgmath::Mat33::FromRow(
-                        {m00, m10, m20,
-                        m01, m11, m21,
-                        m02, m12, m22});
-            })
-            .addFunction("__mul", &cgmath::MulEach<float, 3, 3>)
-            .addFunction("__div", &cgmath::DivEach<float, 3, 3>)
-            .addFunction("__add", &cgmath::operator+<float, 3, 3>)
-            .addFunction("__sub", &cgmath::operator-<float, 3, 3>)
-            .addFunction("Transpose", &cgmath::Transpose<float, 3, 3>)
-        .endClass()
-        .beginClass<cgmath::Mat44>("Mat44")
-            .addConstructor<void(void)>()
-            .addFunction("Set", &cgmath::Mat44::Set)
-            .addFunction("W", &cgmath::Mat44::W)
-            .addFunction("H", &cgmath::Mat44::H)
-            .addFunction("Get",
-                luabridge::nonConstOverload<int, int>(&cgmath::Mat44::Get),
-                luabridge::constOverload<int, int>(&cgmath::Mat44::Get))
-            .addStaticFunction("Identity", &cgmath::Mat44::Identity)
-            .addStaticFunction("Ones", &cgmath::Mat44::Ones)
-            .addStaticFunction("Zeros", &cgmath::Mat44::Zeros)
-            .addStaticFunction("FromRow",
-                [](float m00, float m10, float m20, float m30,
-                   float m01, float m11, float m21, float m31,
-                   float m02, float m12, float m22, float m32,
-                   float m03, float m13, float m23, float m33) {
-                    return cgmath::Mat44::FromRow(
-                        {m00, m10, m20, m30,
-                        m01, m11, m21, m31,
-                        m02, m12, m22, m32,
-                        m03, m13, m23, m33});
-            })
-            .addFunction("__mul", &cgmath::MulEach<float, 4, 4>)
-            .addFunction("__div", &cgmath::DivEach<float, 4, 4>)
-            .addFunction("__add", &cgmath::operator+<float, 4, 4>)
-            .addFunction("__sub", &cgmath::operator-<float, 4, 4>)
-            .addFunction("Transpose", &cgmath::Transpose<float, 4, 4>)
-        .endClass()
-        .addFunction("Mul",
-            luabridge::overload<const cgmath::Vec2&, float>(&cgmath::operator*<float, float, 2>),
-            luabridge::overload<float, const cgmath::Vec2&>(&cgmath::operator*<float, float, 2>),
-            luabridge::overload<const cgmath::Vec3&, float>(&cgmath::operator*<float, float, 3>),
-            luabridge::overload<float, const cgmath::Vec3&>(&cgmath::operator*<float, float, 3>),
-            luabridge::overload<const cgmath::Vec4&, float>(&cgmath::operator*<float, float, 4>),
-            luabridge::overload<float, const cgmath::Vec4&>(&cgmath::operator*<float, float, 4>),
-            luabridge::overload<const cgmath::Mat22&, float>(&cgmath::operator*<float, float, 2, 2>),
-            luabridge::overload<float, const cgmath::Mat22&>(&cgmath::operator*<float, float, 2, 2>),
-            luabridge::overload<const cgmath::Mat22&, const cgmath::Mat22&>(&cgmath::operator*<float, 2, 2, 2>),
-            luabridge::overload<const cgmath::Mat22&, const cgmath::Vec2&>(&cgmath::operator*<float, 2, 2>),
-            luabridge::overload<const cgmath::Mat33&, float>(&cgmath::operator*<float, float, 3, 3>),
-            luabridge::overload<float, const cgmath::Mat33&>(&cgmath::operator*<float, float, 3, 3>),
-            luabridge::overload<const cgmath::Mat33&, const cgmath::Mat33&>(&cgmath::operator*<float, 3, 3, 3>),
-            luabridge::overload<const cgmath::Mat33&, const cgmath::Vec3&>(&cgmath::operator*<float, 3, 3>),
-            luabridge::overload<const cgmath::Mat44&, float>(&cgmath::operator*<float, float, 4, 4>),
-            luabridge::overload<float, const cgmath::Mat44&>(&cgmath::operator*<float, float, 4, 4>),
-            luabridge::overload<const cgmath::Mat44&, const cgmath::Mat44&>(&cgmath::operator*<float, 4, 4, 4>),
-            luabridge::overload<const cgmath::Mat44&, const cgmath::Vec4&>(&cgmath::operator*<float, 4, 4>))
-        .addFunction("Div",
-            luabridge::overload<const cgmath::Mat22&, float>(&cgmath::operator/<float, float, 2, 2>),
-            luabridge::overload<const cgmath::Mat33&, float>(&cgmath::operator/<float, float, 3, 3>),
-            luabridge::overload<const cgmath::Mat44&, float>(&cgmath::operator/<float, float, 4, 4>),
-            luabridge::overload<const cgmath::Vec2&, float>(&cgmath::operator/<float, float, 2>),
-            luabridge::overload<const cgmath::Vec3&, float>(&cgmath::operator/<float, float, 3>),
-            luabridge::overload<const cgmath::Vec4&, float>(&cgmath::operator/<float, float, 4>))
-        .addFunction("CreateTranslation", &cgmath::CreateTranslation)
-        .addFunction("CreateScale", &cgmath::CreateScale)
-        .addFunction("CreateXRotation", &cgmath::CreateXRotation)
-        .addFunction("CreateYRotation", &cgmath::CreateYRotation)
-        .addFunction("CreateZRotation", &cgmath::CreateZRotation)
-        .addFunction("CreateXYZRotation", &cgmath::CreateXYZRotation)
-        .addFunction("CreateRotation2D", &cgmath::CreateRotation2D)
-        .addFunction("Sign", &cgmath::Sign<float>)
-        .addFunction("IsOverlap", &cgmath::IsOverlap<float>)
-        .addFunction("Wrap", &cgmath::Wrap<float>)
-        .addFunction("GetRadianIn2PI", &cgmath::GetRadianIn2PI<float>)
-        .addFunction("GetRadianInPISigned", &cgmath::GetRadianInPISigned<float>)
-        .beginClass<cgmath::Rect>("Rect")
-            .addProperty("position", &cgmath::Rect::position)
-            .addProperty("size", &cgmath::Rect::size)
-            .addConstructor<void(const cgmath::Vec2&, const cgmath::Vec2&), void(float, float, float, float)>()
-            .addStaticFunction("FromCenter", cgmath::Rect::FromCenter)
-            .addFunction("IsPtIn", &cgmath::Rect::IsPtIn)
-            .addFunction("Intrersect", &cgmath::Rect::Intersect)
-            .addFunction("IsIntrersect", &cgmath::Rect::IsIntersect)
-        .endClass()
-    .endNamespace();
+    // scope = scope.beginNamespace("cgmath")
+    //     .beginClass<cgmath::Vec2>("Vec2")
+    //         .addConstructor<void(float, float), void(void)>()
+    //         .addProperty("x", &cgmath::Vec2::x)
+    //         .addProperty("y", &cgmath::Vec2::y)
+    //         .addProperty("w", &cgmath::Vec2::w)
+    //         .addProperty("h", &cgmath::Vec2::h)
+    //         .addFunction("Dot", &cgmath::Vec2::Dot) 
+    //         .addFunction("__add", &cgmath::operator+<float, 2>)
+    //         .addFunction("__sub", &cgmath::operator-<float, 2>)
+    //         .addFunction("__mul", &cgmath::operator*<float, 2>)
+    //         .addFunction("__div", &cgmath::operator/<float, 2>)
+    //         .addFunction("__eq", &cgmath::operator==<float, 2>)
+    //         .addFunction("__tostring", [](const cgmath::Vec2& v) {
+    //             return "vec2[ " + std::to_string(v.x) + ", " + std::to_string(v.y) + "]";
+    //         })
+    //         .addFunction("Set", &cgmath::Vec2::Set)
+    //     .endClass()
+    //     .beginClass<cgmath::Vec3>("Vec3")
+    //         .addConstructor<void(float, float, float), void(void)>()
+    //         .addProperty("x", &cgmath::Vec3::x)
+    //         .addProperty("y", &cgmath::Vec3::y)
+    //         .addProperty("z", &cgmath::Vec3::z)
+    //         .addProperty("s", &cgmath::Vec3::s)
+    //         .addProperty("r", &cgmath::Vec3::r)
+    //         .addProperty("t", &cgmath::Vec3::t)
+    //         .addFunction("Dot", &cgmath::Vec3::Dot) 
+    //         .addFunction("__add", &cgmath::operator+<float, 3>)
+    //         .addFunction("__sub", &cgmath::operator-<float, 3>)
+    //         .addFunction("__mul", &cgmath::operator*<float, 3>)
+    //         .addFunction("__div", &cgmath::operator/<float, 3>)
+    //         .addFunction("__eq", &cgmath::operator==<float, 3>)
+    //         .addFunction("__tostring", [](const cgmath::Vec3& v) {
+    //             return "vec3[ " + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + "]";
+    //         })
+    //         .addFunction("Set", &cgmath::Vec3::Set)
+    //     .endClass()
+    //     .beginClass<cgmath::Vec4>("Vec4")
+    //         .addConstructor<void(float, float, float, float), void(void)>()
+    //         .addProperty("x", &cgmath::Vec4::x)
+    //         .addProperty("y", &cgmath::Vec4::y)
+    //         .addProperty("z", &cgmath::Vec4::z)
+    //         .addProperty("w", &cgmath::Vec4::w)
+    //         .addProperty("r", &cgmath::Vec4::r)
+    //         .addProperty("g", &cgmath::Vec4::g)
+    //         .addProperty("b", &cgmath::Vec4::b)
+    //         .addProperty("a", &cgmath::Vec4::a)
+    //         .addFunction("Dot", &cgmath::Vec4::Dot) 
+    //         .addFunction("__add", &cgmath::operator+<float, 4>)
+    //         .addFunction("__sub", &cgmath::operator-<float, 4>)
+    //         .addFunction("__mul", &cgmath::operator*<float, 4>)
+    //         .addFunction("__div", &cgmath::operator/<float, 4>)
+    //         .addFunction("__eq", &cgmath::operator==<float, 4>)
+    //         .addFunction("__tostring", [](const cgmath::Vec4& v) {
+    //             return "vec4[ " + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ", " + std::to_string(v.w) + "]";
+    //         })
+    //         .addFunction("Set", &cgmath::Vec4::Set)
+    //     .endClass()
+    //     .addFunction("Dot", &cgmath::Dot<float, 2>, &cgmath::Dot<float, 3>, &cgmath::Dot<float, 4>)
+    //     .addFunction("Cross",
+    //         luabridge::overload<const cgmath::Vec2&, const cgmath::Vec2&>(&cgmath::Cross<float>),
+    //         luabridge::overload<const cgmath::Vec3&, const cgmath::Vec3&>(&cgmath::Cross<float>))
+    //     .addFunction("TripleCross", &cgmath::TripleCross<float>)
+    //     .addFunction("Length", &cgmath::Length<float, 2>, &cgmath::Length<float, 3>, &cgmath::Length<float, 4>)
+    //     .addFunction("LengthSqrd", &cgmath::LengthSqrd<float, 2>, &cgmath::LengthSqrd<float, 3>, &cgmath::LengthSqrd<float, 4>)
+    //     .addFunction("Project", &cgmath::Project<float, 2>, &cgmath::Project<float, 3>, &cgmath::Project<float, 4>)
+    //     .addFunction("Normalize", &cgmath::Normalize<float, 2>, &cgmath::Normalize<float, 3>, &cgmath::Normalize<float, 4>)
+    //     .addFunction("Rad2Deg", &cgmath::Rad2Deg<float>, &cgmath::Rad2Deg<double>)
+    //     .addFunction("Deg2Rad", &cgmath::Deg2Rad<float>, &cgmath::Deg2Rad<double>)
+    //     .beginClass<cgmath::Mat22>("Mat22")
+    //         .addConstructor<void(void)>()
+    //         .addFunction("Set", &cgmath::Mat22::Set)
+    //         .addFunction("W", &cgmath::Mat22::W)
+    //         .addFunction("H", &cgmath::Mat22::H)
+    //         .addFunction("Get",
+    //             luabridge::nonConstOverload<int, int>(&cgmath::Mat22::Get),
+    //             luabridge::constOverload<int, int>(&cgmath::Mat22::Get))
+    //         .addStaticFunction("Identity", &cgmath::Mat22::Identity)
+    //         .addStaticFunction("Ones", &cgmath::Mat22::Ones)
+    //         .addStaticFunction("Zeros", &cgmath::Mat22::Zeros)
+    //         .addStaticFunction("FromRow",
+    //             [](float m00, float m10,
+    //                float m01, float m11) {
+    //                 return cgmath::Mat22::FromRow(
+    //                     {m00, m10, 
+    //                     m01, m11, });
+    //         })
+    //         .addFunction("__mul", &cgmath::MulEach<float, 2, 2>)
+    //         .addFunction("__div", &cgmath::DivEach<float, 2, 2>)
+    //         .addFunction("__add", &cgmath::operator+<float, 2, 2>)
+    //         .addFunction("__sub", &cgmath::operator-<float, 2, 2>)
+    //         .addFunction("Transpose", &cgmath::Transpose<float, 2, 2>)
+    //     .endClass()
+    //     .beginClass<cgmath::Mat33>("Mat33")
+    //         .addConstructor<void(void)>()
+    //         .addFunction("Set", &cgmath::Mat33::Set)
+    //         .addFunction("W", &cgmath::Mat33::W)
+    //         .addFunction("H", &cgmath::Mat33::H)
+    //         .addFunction("Get",
+    //             luabridge::nonConstOverload<int, int>(&cgmath::Mat33::Get),
+    //             luabridge::constOverload<int, int>(&cgmath::Mat33::Get))
+    //         .addStaticFunction("Identity", &cgmath::Mat33::Identity)
+    //         .addStaticFunction("Ones", &cgmath::Mat33::Ones)
+    //         .addStaticFunction("Zeros", &cgmath::Mat33::Zeros)
+    //         .addStaticFunction("FromRow",
+    //             [](float m00, float m10, float m20,
+    //                float m01, float m11, float m21,
+    //                float m02, float m12, float m22) {
+    //                 return cgmath::Mat33::FromRow(
+    //                     {m00, m10, m20,
+    //                     m01, m11, m21,
+    //                     m02, m12, m22});
+    //         })
+    //         .addFunction("__mul", &cgmath::MulEach<float, 3, 3>)
+    //         .addFunction("__div", &cgmath::DivEach<float, 3, 3>)
+    //         .addFunction("__add", &cgmath::operator+<float, 3, 3>)
+    //         .addFunction("__sub", &cgmath::operator-<float, 3, 3>)
+    //         .addFunction("Transpose", &cgmath::Transpose<float, 3, 3>)
+    //     .endClass()
+    //     .beginClass<cgmath::Mat44>("Mat44")
+    //         .addConstructor<void(void)>()
+    //         .addFunction("Set", &cgmath::Mat44::Set)
+    //         .addFunction("W", &cgmath::Mat44::W)
+    //         .addFunction("H", &cgmath::Mat44::H)
+    //         .addFunction("Get",
+    //             luabridge::nonConstOverload<int, int>(&cgmath::Mat44::Get),
+    //             luabridge::constOverload<int, int>(&cgmath::Mat44::Get))
+    //         .addStaticFunction("Identity", &cgmath::Mat44::Identity)
+    //         .addStaticFunction("Ones", &cgmath::Mat44::Ones)
+    //         .addStaticFunction("Zeros", &cgmath::Mat44::Zeros)
+    //         .addStaticFunction("FromRow",
+    //             [](float m00, float m10, float m20, float m30,
+    //                float m01, float m11, float m21, float m31,
+    //                float m02, float m12, float m22, float m32,
+    //                float m03, float m13, float m23, float m33) {
+    //                 return cgmath::Mat44::FromRow(
+    //                     {m00, m10, m20, m30,
+    //                     m01, m11, m21, m31,
+    //                     m02, m12, m22, m32,
+    //                     m03, m13, m23, m33});
+    //         })
+    //         .addFunction("__mul", &cgmath::MulEach<float, 4, 4>)
+    //         .addFunction("__div", &cgmath::DivEach<float, 4, 4>)
+    //         .addFunction("__add", &cgmath::operator+<float, 4, 4>)
+    //         .addFunction("__sub", &cgmath::operator-<float, 4, 4>)
+    //         .addFunction("Transpose", &cgmath::Transpose<float, 4, 4>)
+    //     .endClass()
+    //     .addFunction("Mul",
+    //         luabridge::overload<const cgmath::Vec2&, float>(&cgmath::operator*<float, float, 2>),
+    //         luabridge::overload<float, const cgmath::Vec2&>(&cgmath::operator*<float, float, 2>),
+    //         luabridge::overload<const cgmath::Vec3&, float>(&cgmath::operator*<float, float, 3>),
+    //         luabridge::overload<float, const cgmath::Vec3&>(&cgmath::operator*<float, float, 3>),
+    //         luabridge::overload<const cgmath::Vec4&, float>(&cgmath::operator*<float, float, 4>),
+    //         luabridge::overload<float, const cgmath::Vec4&>(&cgmath::operator*<float, float, 4>),
+    //         luabridge::overload<const cgmath::Mat22&, float>(&cgmath::operator*<float, float, 2, 2>),
+    //         luabridge::overload<float, const cgmath::Mat22&>(&cgmath::operator*<float, float, 2, 2>),
+    //         luabridge::overload<const cgmath::Mat22&, const cgmath::Mat22&>(&cgmath::operator*<float, 2, 2, 2>),
+    //         luabridge::overload<const cgmath::Mat22&, const cgmath::Vec2&>(&cgmath::operator*<float, 2, 2>),
+    //         luabridge::overload<const cgmath::Mat33&, float>(&cgmath::operator*<float, float, 3, 3>),
+    //         luabridge::overload<float, const cgmath::Mat33&>(&cgmath::operator*<float, float, 3, 3>),
+    //         luabridge::overload<const cgmath::Mat33&, const cgmath::Mat33&>(&cgmath::operator*<float, 3, 3, 3>),
+    //         luabridge::overload<const cgmath::Mat33&, const cgmath::Vec3&>(&cgmath::operator*<float, 3, 3>),
+    //         luabridge::overload<const cgmath::Mat44&, float>(&cgmath::operator*<float, float, 4, 4>),
+    //         luabridge::overload<float, const cgmath::Mat44&>(&cgmath::operator*<float, float, 4, 4>),
+    //         luabridge::overload<const cgmath::Mat44&, const cgmath::Mat44&>(&cgmath::operator*<float, 4, 4, 4>),
+    //         luabridge::overload<const cgmath::Mat44&, const cgmath::Vec4&>(&cgmath::operator*<float, 4, 4>))
+    //     .addFunction("Div",
+    //         luabridge::overload<const cgmath::Mat22&, float>(&cgmath::operator/<float, float, 2, 2>),
+    //         luabridge::overload<const cgmath::Mat33&, float>(&cgmath::operator/<float, float, 3, 3>),
+    //         luabridge::overload<const cgmath::Mat44&, float>(&cgmath::operator/<float, float, 4, 4>),
+    //         luabridge::overload<const cgmath::Vec2&, float>(&cgmath::operator/<float, float, 2>),
+    //         luabridge::overload<const cgmath::Vec3&, float>(&cgmath::operator/<float, float, 3>),
+    //         luabridge::overload<const cgmath::Vec4&, float>(&cgmath::operator/<float, float, 4>))
+    //     .addFunction("CreateTranslation", &cgmath::CreateTranslation)
+    //     .addFunction("CreateScale", &cgmath::CreateScale)
+    //     .addFunction("CreateXRotation", &cgmath::CreateXRotation)
+    //     .addFunction("CreateYRotation", &cgmath::CreateYRotation)
+    //     .addFunction("CreateZRotation", &cgmath::CreateZRotation)
+    //     .addFunction("CreateXYZRotation", &cgmath::CreateXYZRotation)
+    //     .addFunction("CreateRotation2D", &cgmath::CreateRotation2D)
+    //     .addFunction("Sign", &cgmath::Sign<float>)
+    //     .addFunction("IsOverlap", &cgmath::IsOverlap<float>)
+    //     .addFunction("Wrap", &cgmath::Wrap<float>)
+    //     .addFunction("GetRadianIn2PI", &cgmath::GetRadianIn2PI<float>)
+    //     .addFunction("GetRadianInPISigned", &cgmath::GetRadianInPISigned<float>)
+    //     .beginClass<cgmath::Rect>("Rect")
+    //         .addProperty("position", &cgmath::Rect::position)
+    //         .addProperty("size", &cgmath::Rect::size)
+    //         .addConstructor<void(const cgmath::Vec2&, const cgmath::Vec2&), void(float, float, float, float)>()
+    //         .addStaticFunction("FromCenter", cgmath::Rect::FromCenter)
+    //         .addFunction("IsPtIn", &cgmath::Rect::IsPtIn)
+    //         .addFunction("Intrersect", &cgmath::Rect::Intersect)
+    //         .addFunction("IsIntrersect", &cgmath::Rect::IsIntersect)
+    //     .endClass()
+    // .endNamespace();
 }
 
 void bindTransform(luabridge::Namespace& scope) {
@@ -388,8 +388,7 @@ void bindGraphics(luabridge::Namespace& scope) {
         .addProperty("region", &Sprite::region)
         .addProperty("flip", &Sprite::flip)
         .addProperty("visible", &Sprite::visiable)
-        .addProperty("texture", &Sprite::texture)
-        .addProperty("zIndex", &Sprite::zIndex)
+        .addProperty("orderInLayer", &Sprite::orderInLayer)
     .endClass()
     .beginClass<SpriteBundle>("SpriteBundle")
         .addConstructor<void(void)>()
@@ -400,13 +399,7 @@ void bindGraphics(luabridge::Namespace& scope) {
         .addFunction("Width", &Texture::Width)
         .addFunction("Height", &Texture::Height)
         .addFunction("Size", &Texture::Size)
-        .addFunction("Sampler", &Texture::Sampler)
         .addFunction("IsValid", &Texture::operator bool)
-    .endClass()
-    .beginClass<gogl::Sampler>("Sampler")
-        .addProperty("filter", &gogl::Sampler::filter)
-        .addProperty("wrapper", &gogl::Sampler::wrapper)
-        .addProperty("mipmap", &gogl::Sampler::mipmap)
     .endClass()
     .beginClass<TextureManager>("TextureManager")
         .addStaticFunction("GetFileType", &TextureManager::GetFileType)

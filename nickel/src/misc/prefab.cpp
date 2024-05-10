@@ -1,11 +1,25 @@
 #include "misc/prefab.hpp"
+#include "anim/anim.hpp"
+#include "audio/audio.hpp"
+#include "common/hierarchy.hpp"
 #include "common/log_tag.hpp"
+#include "graphics/sprite.hpp"
 #include "mirrow/drefl/any.hpp"
 #include "mirrow/drefl/drefl.hpp"
 #include "mirrow/serd/dynamic/backends/tomlplusplus.hpp"
-#include "common/hierarchy.hpp"
+#include "misc/name.hpp"
+#include "misc/serd.hpp"
+#include "ui/ui.hpp"
 
 namespace nickel {
+
+void ComponentEmplaceRegistrar::Emplace(gecs::entity entity,
+                                        mirrow::drefl::any& payload) {
+    if (auto it = fns_.find(payload.type_info()); it != fns_.end()) {
+        it->second(ECS::Instance().World().cur_registry()->commands(), entity,
+                   payload);
+    }
+}
 
 toml::table saveAsPrefabNoHierarchy(gecs::entity entity, gecs::registry reg) {
     if (!reg.alive(entity)) {
@@ -22,13 +36,9 @@ toml::table saveAsPrefabNoHierarchy(gecs::entity entity, gecs::registry reg) {
             continue;
         }
 
-        toml::table componentTbl;
-
         if (reg.has(entity, typeinfo.type_info)) {
             auto component = reg.get_mut(entity, typeinfo.type_info);
-            mirrow::serd::drefl::serialize(tbl, component,
-                                           typeinfo.type_info->name());
-            tbl.emplace(typeinfo.type_info->name(), std::move(componentTbl));
+            mirrow::serd::drefl::serialize(tbl, component, typeinfo.type_info->name());
         }
     }
 
@@ -81,24 +91,15 @@ gecs::entity createFromPrefabNoHierarchy(const toml::table& tbl,
         }
 
         auto typeinfo = mirrow::drefl::typeinfo(key);
-        mirrow::drefl::any component;
-        auto class_info = typeinfo->as_class();
-        if (class_info->is_default_constructible()) {
-            component = class_info->default_construct();
-        }
 
-        if (!component.has_value()) {
-            LOGW(log_tag::Nickel, "read component ", key,
-                 " from prefab failed");
-            continue;
-        }
+        auto component = typeinfo->default_construct();
+        mirrow::serd::drefl::deserialize(component, value);
 
-        mirrow::serd::drefl::deserialize(component, *tbl[key].as_table());
-
-        if (auto fn =
-                PrefabEmplaceMethods::Instance().Find(component.type_info());
-            fn) {
-            fn(reg.commands(), ent, component);
+        if (component.has_value()) {
+            ComponentEmplaceRegistrar::Instance().Emplace(ent, component);
+        } else {
+            LOGW(log_tag::Nickel, "load component ", typeinfo->name(),
+                 " from file failed");
         }
     }
 
@@ -136,6 +137,24 @@ gecs::entity CreateFromPrefab(const toml::array& arr, gecs::registry reg) {
     }
 
     return ent;
+}
+
+void RegistComponents() {
+    auto& registrar = ComponentEmplaceRegistrar::Instance();
+    registrar.RegistEmplaceFn<Transform>();
+    registrar.RegistEmplaceFn<GlobalTransform>();
+    registrar.RegistEmplaceFn<Sprite>();
+    registrar.RegistEmplaceFn<SpriteMaterial>();
+    // registrar.RegistEmplaceFn<Tilesheet>();
+    registrar.RegistEmplaceFn<AnimationPlayer>();
+    registrar.RegistEmplaceFn<SoundPlayer>();
+    registrar.RegistEmplaceFn<Name>();
+    registrar.RegistEmplaceFn<Parent>();
+    registrar.RegistEmplaceFn<Child>();
+    registrar.RegistEmplaceFn<ui::Style>();
+    registrar.RegistEmplaceFn<ui::Button>();
+    // registrar.RegistEmplaceFn<ui::Label>();
+
 }
 
 }  // namespace nickel

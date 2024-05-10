@@ -23,7 +23,7 @@ namespace nickel {
 LuaScript LuaScript::Null;
 
 template <>
-std::unique_ptr<LuaScript> LoadAssetFromMeta(const toml::table& path) {
+std::unique_ptr<LuaScript> LoadAssetFromMetaTable(const toml::table& path) {
     if (auto node = path.get("path"); node && node->is_string()) {
         return std::make_unique<LuaScript>(node->as_string()->get());
     }

@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cstring>
+#include <cstdint>
 
 namespace nickel {
 
