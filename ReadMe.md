@@ -28,6 +28,26 @@ to enable auto copy dlls.
 
 **Each program should run at project root path**
 
+### WASM support
+
+some unittest & demo can build under WASM and show in Web. use
+
+```bash
+emcmake cmake -S . -B cmake-build
+cmake --build cmake-build <your-target>
+```
+
+to build one.
+
+currently support targets are:
+
+* `rhi_cube`: to show a colorful cube
+* `rhi_triangle`: to show basic triangle
+* `rhi_texture_cube`: to show a textured cube
+* `rhi_normal_map`: to show normal map dmeo
+
+you can [view these demos online](https://visualgmq.github.io/nickelengine/)
+
 ## 3rd Libraries
 
 |library|description|
@@ -69,6 +89,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [x] RHI covered OpenGL4 and Vulkan
     - [x] vulkan layer
     - [x] GL4.3 layer(Only For Fun)
+    - [x] OpenGLES 3.0 layer(for WASM)
 - [ ] Game sound playing(WIP)
 - [x] 3D rendering
     - [x] glTF2.0 support(not full support yet)
