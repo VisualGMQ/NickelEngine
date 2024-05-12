@@ -8,7 +8,7 @@ QueueImpl::QueueImpl(DeviceImpl& device): device_{device} {}
 
 void QueueImpl::Submit(const std::vector<CommandBuffer>& cmds) {
     for (auto cmd : cmds) {
-        static_cast<const CommandBufferImpl*>(cmd.Impl())->Execute(device_);
+        static_cast<CommandBufferImpl*>(cmd.Impl())->Execute(device_);
     }
 }
 

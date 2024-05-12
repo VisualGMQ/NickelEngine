@@ -738,8 +738,8 @@ inline GLenum GetVertexFormatGLType(VertexFormat fmt) {
         case VertexFormat::Sint32x3:
         case VertexFormat::Sint32x4:
             return GL_INT;
-            // case VertexFormat::Unorm10_10_10_2:
-            //     return GL_UNSIGNED_INT_10_10_10_2;
+        case VertexFormat::Unorm10_10_10_2:
+            return GL_UNSIGNED_INT_10_10_10_2;
     }
 }
 

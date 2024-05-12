@@ -11,9 +11,17 @@ void GameWindow::update() {
     ImGuizmo::SetDrawlist(drawList);
 
     // draw game content
-    auto vkCtx = nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
+    auto api = nickel::ECS::Instance()
+                   .World()
+                   .res<nickel::rhi::Adapter>()
+                   ->RequestAdapterInfo()
+                   .api;
+#ifdef NICKEL_HAS_VULKAN
+    auto vkCtx =
+        nickel::ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
     drawList->AddImage(vkCtx->GetTextureBindedDescriptorSet(*texture), {0, 0},
                        ImVec2(texture->Width(), texture->Height()));
+#endif
 
     auto reg = nickel::ECS::Instance().World().cur_registry();
     auto camera = reg->res_mut<nickel::Camera>();
@@ -40,9 +48,9 @@ void GameWindow::update() {
 
     for (auto& pt : points) {
         pt *= camera->Scale();
-        pt += halfGameCanvaSize +
-             nickel::cgmath::Vec2{camera->Position().x, -camera->Position().y} *
-                 camera->Scale();
+        pt += halfGameCanvaSize + nickel::cgmath::Vec2{camera->Position().x,
+                                                       -camera->Position().y} *
+                                      camera->Scale();
     }
 
     drawList->AddRect(ImVec2{points[2].x, points[2].y},

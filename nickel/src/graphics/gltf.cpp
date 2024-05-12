@@ -169,9 +169,13 @@ private:
             imageHandles[i] = mgr.Load(rootDir / ParseURI2Path(image.uri));
         }
 
+        bool supportSeparateSampler = adapter.Limits().supportSeparateSampler;
+
         std::vector<rhi::Sampler> samplers;
-        for (auto& sampler : model_.samplers) {
-            samplers.emplace_back(createSampler(device, sampler));
+        if (supportSeparateSampler) {
+            for (auto& sampler : model_.samplers) {
+                samplers.emplace_back(createSampler(device, sampler));
+            }
         }
 
         std::vector<unsigned char> pbrParams;
@@ -214,39 +218,21 @@ private:
             if (auto idx =
                     mtl.pbrMetallicRoughness.metallicRoughnessTexture.index;
                 idx != -1) {
-                Material3D::TextureInfo textureInfo;
-                auto& info = model_.textures[idx];
-                if (info.source != -1) {
-                    textureInfo.texture = imageHandles[info.source];
-                    if (info.sampler != -1) {
-                        textureInfo.sampler = info.sampler;
-                    }
-                }
-                material.metalicRoughnessTexture = textureInfo;
+                material.metalicRoughnessTexture =
+                    parseTextureInfo(device, idx, imageHandles, samplers,
+                                     supportSeparateSampler);
             }
 
             if (auto idx = mtl.normalTexture.index; idx != -1) {
-                Material3D::TextureInfo textureInfo;
-                auto& info = model_.textures[idx];
-                if (info.source != -1) {
-                    textureInfo.texture = imageHandles[info.source];
-                    if (info.sampler != -1) {
-                        textureInfo.sampler = info.sampler;
-                    }
-                }
-                material.normalTexture = textureInfo;
+                material.normalTexture =
+                    parseTextureInfo(device, idx, imageHandles, samplers,
+                                     supportSeparateSampler);
             }
 
             if (auto idx = mtl.occlusionTexture.index; idx != -1) {
-                Material3D::TextureInfo textureInfo;
-                auto& info = model_.textures[idx];
-                if (info.source != -1) {
-                    textureInfo.texture = imageHandles[info.source];
-                    if (info.sampler != -1) {
-                        textureInfo.sampler = info.sampler;
-                    }
-                }
-                material.occlusionTexture = textureInfo;
+                material.occlusionTexture =
+                    parseTextureInfo(device, idx, imageHandles, samplers,
+                                     supportSeparateSampler);
             }
 
             materials.emplace_back(
@@ -257,8 +243,9 @@ private:
             copyBuffer2GPU(device, pbrParams, rhi::BufferUsage::Uniform);
 
         for (auto& material : materials) {
-            material->bindGroup = createBindGroup(device, ctx, pbrParamsBuffer,
-                                                  mgr, samplers, *material);
+            material->bindGroup =
+                createBindGroup(device, ctx, pbrParamsBuffer, mgr,
+                                supportSeparateSampler, samplers, *material);
         }
 
         std::vector<Scene> scenes;
@@ -274,6 +261,31 @@ private:
 
         return {std::move(scenes), std::move(samplers), std::move(materials),
                 std::move(pbrParamsBuffer)};
+    }
+
+    Material3D::TextureInfo parseTextureInfo(
+        rhi::Device device, int idx,
+        const std::vector<TextureHandle>& imageHandles,
+        std::vector<rhi::Sampler>& samplers, bool supportSeparateSampler) {
+        Material3D::TextureInfo textureInfo;
+        auto& info = model_.textures[idx];
+        if (info.source != -1) {
+            textureInfo.texture = imageHandles[info.source];
+            if (supportSeparateSampler) {
+                if (info.sampler != -1) {
+                    textureInfo.sampler = info.sampler;
+                }
+            } else {
+                if (info.sampler != -1) {
+                    samplers.emplace_back(
+                        createSampler(device, model_.samplers[info.sampler]));
+                } else {
+                    samplers.emplace_back(device.CreateSampler({}));
+                }
+                textureInfo.sampler = samplers.size() - 1;
+            }
+        }
+        return textureInfo;
     }
 
     rhi::Buffer copyBuffer2GPU(rhi::Device device,
@@ -314,6 +326,7 @@ private:
     rhi::BindGroup createBindGroup(rhi::Device device, RenderContext& ctx,
                                    rhi::Buffer pbrParamsBuffer,
                                    TextureManager& mgr,
+                                   bool supportSeparateSampler,
                                    const std::vector<rhi::Sampler> samplers,
                                    const Material3D& material) {
         rhi::BindGroup::Descriptor desc;
@@ -334,47 +347,58 @@ private:
 
         // color texture
         if (material.basicTexture) {
-            pushTextureBindingPoint(desc, mgr, material.basicTexture.value(), 2,
-                                    "baseColorTexture");
+            if (supportSeparateSampler) {
+                pushTextureBindingPoint(desc, mgr,
+                                        material.basicTexture.value(), 2,
+                                        "baseColorTexture");
+            }
             if (material.basicTexture->sampler) {
-                pushSamplerBindingPoint(desc, samplers,
-                                        material.basicTexture.value(), 6,
+                pushSamplerBindingPoint(desc, supportSeparateSampler, samplers,
+                                        mgr, material.basicTexture.value(), 6,
                                         "baseColorSampler");
             }
         }
 
         // normal texture
         if (material.normalTexture) {
-            pushTextureBindingPoint(desc, mgr, material.normalTexture.value(),
-                                    3, "normalMapTexture");
+            if (supportSeparateSampler) {
+                pushTextureBindingPoint(desc, mgr,
+                                        material.normalTexture.value(), 3,
+                                        "normalMapTexture");
+            }
             if (material.normalTexture->sampler) {
-                pushSamplerBindingPoint(desc, samplers,
-                                        material.normalTexture.value(), 7,
+                pushSamplerBindingPoint(desc, supportSeparateSampler, samplers,
+                                        mgr, material.normalTexture.value(), 7,
                                         "normalMapSampler");
             }
         }
 
         // metalicRoughtness texture
         if (material.metalicRoughnessTexture) {
-            pushTextureBindingPoint(desc, mgr,
-                                    material.metalicRoughnessTexture.value(), 4,
-                                    "metalicRoughnessTexture");
+            if (supportSeparateSampler) {
+                pushTextureBindingPoint(
+                    desc, mgr, material.metalicRoughnessTexture.value(), 4,
+                    "metalicRoughnessTexture");
+            }
             if (material.metalicRoughnessTexture->sampler) {
                 pushSamplerBindingPoint(
-                    desc, samplers, material.metalicRoughnessTexture.value(), 8,
+                    desc, supportSeparateSampler, samplers, mgr,
+                    material.metalicRoughnessTexture.value(), 8,
                     "metalicRoughnessSampler");
             }
         }
 
         // occlusion texture
         if (material.occlusionTexture) {
-            pushTextureBindingPoint(desc, mgr,
-                                    material.occlusionTexture.value(), 5,
-                                    "occlusionTexture");
+            if (supportSeparateSampler) {
+                pushTextureBindingPoint(desc, mgr,
+                                        material.occlusionTexture.value(), 5,
+                                        "occlusionTexture");
+            }
             if (material.occlusionTexture->sampler) {
-                pushSamplerBindingPoint(desc, samplers,
-                                        material.occlusionTexture.value(), 9,
-                                        "occlusionSampler");
+                pushSamplerBindingPoint(desc, supportSeparateSampler, samplers,
+                                        mgr, material.occlusionTexture.value(),
+                                        9, "occlusionSampler");
             }
         }
 
@@ -395,7 +419,9 @@ private:
     }
 
     void pushSamplerBindingPoint(rhi::BindGroup::Descriptor& desc,
+                                 bool supportSeparateSampler,
                                  const std::vector<rhi::Sampler>& samplers,
+                                 const TextureManager& mgr,
                                  const Material3D::TextureInfo& info,
                                  uint32_t slot, const std::string& name) {
         rhi::BindingPoint bindingPoint;
@@ -403,6 +429,9 @@ private:
         rhi::SamplerBinding binding;
         binding.name = name;
         binding.sampler = samplers[info.sampler.value()];
+        if (!supportSeparateSampler) {
+            binding.view = mgr.Get(info.texture).View();
+        }
         bindingPoint.entry = binding;
         desc.entries.push_back(bindingPoint);
     }

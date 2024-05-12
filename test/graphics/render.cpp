@@ -1,13 +1,12 @@
 #include "nickel.hpp"
 
-void StartupSystem(gecs::commands cmds,
-                   gecs::resource<gecs::mut<nickel::TextureManager>> mgr,
-                   gecs::resource<gecs::mut<nickel::Material2DManager>> mtl2dMgr,
-                   gecs::resource<gecs::mut<nickel::GLTFManager>> modelMgr) {
-
-    auto&& [tilesheetHandle, tilesheet] = mgr->LoadAndGet("test/graphics/assets/tileset.png");
+void StartupSystem(
+    gecs::commands cmds, gecs::resource<gecs::mut<nickel::TextureManager>> mgr,
+    gecs::resource<gecs::mut<nickel::Material2DManager>> mtl2dMgr,
+    gecs::resource<gecs::mut<nickel::GLTFManager>> modelMgr) {
+    auto&& [tilesheetHandle, tilesheet] =
+        mgr->LoadAndGet("test/graphics/assets/tileset.png");
     auto tilesheetMtl = mtl2dMgr->Create("test.mtl2d", tilesheetHandle);
-    /*
     {
         auto ent = cmds.create();
 
@@ -32,10 +31,11 @@ void StartupSystem(gecs::commands cmds,
         auto ent = cmds.create();
         nickel::GLTFBundle bundle;
         bundle.transform.scale.Set(10, 10);
-        bundle.gltf = modelMgr->Load("external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf");
+        bundle.gltf =
+            modelMgr->Load("external/glTF-Sample-Models/2.0/CesiumMilkTruck/"
+                           "glTF/CesiumMilkTruck.gltf");
         cmds.emplace_bundle(ent, std::move(bundle));
     }
-    */
 
     {
         auto ent = cmds.create();

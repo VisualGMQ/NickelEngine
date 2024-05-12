@@ -17,6 +17,7 @@ struct GPUSupportLimits {
     bool supportGeometryShader = true;
     bool supportComputeShader = true;
     bool supportPolygonModeChange = true;
+    bool supportSeparateSampler = true;
 };
 
 APIPreference GetSupportRenderAPI(APIPreference desired);

@@ -18,6 +18,9 @@ void UpdateCamera2GPU(gecs::resource<Camera> camera,
     auto map = (cgmath::Mat44*)ctx->mvpBuffer.GetMappedRange();
     memcpy(map, camera->View().data, sizeof(cgmath::Mat44));
     memcpy(map + 1, camera->Project().data, sizeof(cgmath::Mat44));
+    if (!ctx->mvpBuffer.IsMappingCoherence()) {
+        ctx->mvpBuffer.Flush(0, sizeof(cgmath::Mat44) * 2);
+    }
 
     PROFILE_END();
 }

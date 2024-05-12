@@ -2,13 +2,15 @@
 
 namespace nickel::ui {
 
-RenderUIContext::RenderUIContext(rhi::APIPreference api, rhi::Device device,
+RenderUIContext::RenderUIContext(rhi::Adapter adapter, rhi::Device device,
                                  RenderContext& ctx,
                                  const cgmath::Vec2& windowSize)
     : device_{device},
       camera{Camera::CreateOrtho(0, windowSize.w, -windowSize.h, 0, 1, 0,
                                  {0, 0, windowSize.w, windowSize.h})} {
-    bindGroupLayout = createBindGroupLayout(ctx);
+    auto api = adapter.RequestAdapterInfo().api;
+    bindGroupLayout =
+        createBindGroupLayout(ctx, adapter.Limits().supportSeparateSampler);
     pipelineLayout = createPipelineLayout();
     initPipelineShader(api);
     initPipelines(api);
@@ -100,12 +102,12 @@ void RenderUIContext::initPipelineShader(rhi::APIPreference api) {
 
     if (api == rhi::APIPreference::GL) {
         shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>("shader/gl/ui.vert")
+            nickel::ReadWholeFile<std::vector<char>>("nickel/shader/gl/ui.vert")
                 .value();
         vertexShader = device_.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>("shader/gl/ui.frag")
+            nickel::ReadWholeFile<std::vector<char>>("nickel/shader/gl/ui.frag")
                 .value();
         fragmentShader = device_.CreateShaderModule(shaderDesc);
     } else if (api == rhi::APIPreference::Vulkan) {
@@ -122,7 +124,7 @@ void RenderUIContext::initPipelineShader(rhi::APIPreference api) {
 }
 
 rhi::BindGroupLayout RenderUIContext::createBindGroupLayout(
-    RenderContext& ctx) {
+    RenderContext& ctx, bool supportSeparateSampler) {
     rhi::BindGroupLayout::Descriptor desc;
 
     // sampler2D
@@ -133,6 +135,9 @@ rhi::BindGroupLayout RenderUIContext::createBindGroupLayout(
                                   rhi::SamplerAddressMode::ClampToEdge,
                                   rhi::Filter::Linear, rhi::Filter::Linear);
         binding.name = "mySampler";
+        if (!supportSeparateSampler) {
+            binding.view = ctx.whiteTextureView;
+        }
 
         rhi::Entry entry;
         entry.arraySize = 1;
@@ -142,20 +147,22 @@ rhi::BindGroupLayout RenderUIContext::createBindGroupLayout(
         desc.entries.emplace_back(entry);
     }
 
-    // texture2D
-    {
-        rhi::TextureBinding binding;
-        binding.view = ctx.whiteTextureView;
-        binding.viewDimension = rhi::TextureViewType::Dim2;
-        binding.sampleType = rhi::TextureBinding::SampleType::Float;
-        binding.name = "myTexture";
+    if (supportSeparateSampler) {
+        // texture2D
+        {
+            rhi::TextureBinding binding;
+            binding.view = ctx.whiteTextureView;
+            binding.viewDimension = rhi::TextureViewType::Dim2;
+            binding.sampleType = rhi::TextureBinding::SampleType::Float;
+            binding.name = "myTexture";
 
-        rhi::Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 1;
-        entry.binding.entry = binding;
-        entry.visibility = rhi::ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
+            rhi::Entry entry;
+            entry.arraySize = 1;
+            entry.binding.binding = 1;
+            entry.binding.entry = binding;
+            entry.visibility = rhi::ShaderStage::Fragment;
+            desc.entries.emplace_back(entry);
+        }
     }
 
     return device_.CreateBindGroupLayout(desc);
@@ -250,7 +257,8 @@ rhi::BindGroup RenderUIContext::FindBindGroup(TextureHandle handle) {
     }
 }
 
-rhi::TextureView RenderUIContext::GetFontChar(FontHandle handle, uint32_t code) {
+rhi::TextureView RenderUIContext::GetFontChar(FontHandle handle,
+                                              uint32_t code) {
     auto mgr = ECS::Instance().World().res<FontManager>();
     if (!mgr->Has(handle)) {
         return {};
@@ -258,7 +266,7 @@ rhi::TextureView RenderUIContext::GetFontChar(FontHandle handle, uint32_t code) 
 
     auto& font = mgr->Get(handle);
 
-    constexpr int size = 20;    // TODO: use custom size to generate font
+    constexpr int size = 20;  // TODO: use custom size to generate font
 
     auto glyph = font.GetGlyph(code, size);
 }
@@ -269,8 +277,8 @@ void RenderUIContext::initDefaultBindGroup() {
     defaultBindGroup = device_.CreateBindGroup(desc);
 }
 
-UIContext::UIContext(rhi::APIPreference api, rhi::Device device,
+UIContext::UIContext(rhi::Adapter adapter, rhi::Device device,
                      RenderContext& ctx, const cgmath::Vec2& windowSize)
-    : renderCtx(api, device, ctx, windowSize) {}
+    : renderCtx(adapter, device, ctx, windowSize) {}
 
 }  // namespace nickel::ui

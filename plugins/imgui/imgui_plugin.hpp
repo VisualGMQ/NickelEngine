@@ -69,18 +69,20 @@ void ImGuiInit(gecs::commands, gecs::resource<gecs::mut<Window>>,
                gecs::resource<rhi::Adapter>, gecs::resource<rhi::Device>,
                gecs::event_dispatcher<WindowResizeEvent>);
 
+#ifdef NICKEL_HAS_VULKAN
 void ImGuiGameWindowLayoutTransition(gecs::resource<gecs::mut<rhi::Device>>,
                                      gecs::resource<gecs::mut<Camera>>,
                                      gecs::resource<gecs::mut<RenderContext>>,
                                      gecs::resource<gecs::mut<ImGuiVkContext>>);
+#else
+void ImGuiGameWindowLayoutTransition();
+#endif
 
 void ImGuiStart(gecs::resource<rhi::Adapter>,
-                gecs::resource<gecs::mut<rhi::Device>>,
-                gecs::resource<gecs::mut<ImGuiVkContext>>);
+                gecs::resource<gecs::mut<rhi::Device>>);
 
 void ImGuiEnd(gecs::resource<gecs::mut<Window>>, gecs::resource<rhi::Adapter>,
               gecs::resource<rhi::Device>,
-              gecs::resource<gecs::mut<ImGuiVkContext>>,
               gecs::resource<gecs::mut<RenderContext>>);
 
 void ImGuiShutdown(gecs::commands, gecs::resource<rhi::Adapter>,

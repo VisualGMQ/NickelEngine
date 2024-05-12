@@ -63,14 +63,6 @@ void StartupSystem(gecs::commands cmds,
     auto& ctx = cmds.emplace_resource<Context>();
 
     RenderPipeline::Descriptor desc;
-    desc.viewport.viewport.x = 0;
-    desc.viewport.viewport.y = 0;
-    desc.viewport.viewport.w = window->Size().w;
-    desc.viewport.viewport.h = window->Size().h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = window->Size().w;
-    desc.viewport.scissor.extent.height = window->Size().h;
 
     initShaders(adapter.RequestAdapterInfo().api, device, desc);
 

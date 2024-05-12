@@ -37,7 +37,7 @@ struct Render2DContext {
     rhi::Buffer vertexBuffer;           // for 2D texture vertices
     rhi::Buffer indexBuffer;            // for 2D texture vertices
 
-    Render2DContext(rhi::APIPreference, rhi::Device,
+    Render2DContext(rhi::Adapter, rhi::Device,
                     const cgmath::Rect& viewport, RenderContext&);
     ~Render2DContext();
 
@@ -61,9 +61,9 @@ private:
 
     rhi::PipelineLayout createPipelineLayout();
     void initPipelineShader(rhi::APIPreference);
-    rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
-    rhi::RenderPipeline createPipeline(rhi::APIPreference,
-                                       RenderContext&);
+    rhi::BindGroupLayout createBindGroupLayout(bool supportSeparateSampler,
+                                               RenderContext& ctx);
+    rhi::RenderPipeline createPipeline(rhi::APIPreference, RenderContext&);
     void initSamplers();
     rhi::BindGroup createDefaultBindGroup();
     void initBuffers();
@@ -77,7 +77,7 @@ struct Render3DContext {
     rhi::ShaderModule vertexShader;
     rhi::ShaderModule fragmentShader;
 
-    Render3DContext(rhi::APIPreference, rhi::Device, RenderContext&);
+    Render3DContext(rhi::Adapter, rhi::Device, RenderContext&);
     ~Render3DContext();
 
     void RecreatePipeline(rhi::APIPreference api, RenderContext& ctx);
@@ -87,7 +87,8 @@ private:
 
     rhi::PipelineLayout createPipelineLayout();
     void initPipelineShader(rhi::APIPreference);
-    rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
+    rhi::BindGroupLayout createBindGroupLayout(bool supportSeparateSampler,
+                                               RenderContext& ctx);
     rhi::RenderPipeline createPipeline(rhi::APIPreference, RenderContext&);
 };
 
@@ -98,8 +99,7 @@ struct RenderContext final {
     static void OnWindowResize(const WindowResizeEvent&,
                                gecs::resource<gecs::mut<RenderContext>>);
 
-    RenderContext(rhi::APIPreference, rhi::Device,
-                  const cgmath::Vec2& windowSize);
+    RenderContext(rhi::Adapter, rhi::Device, const cgmath::Vec2& windowSize);
     ~RenderContext();
 
     void RecreatePipeline(const cgmath::Vec2& size);

@@ -28,8 +28,15 @@ Material2D::Material2D(TextureHandle handle, rhi::SamplerAddressMode u,
     } else {
         // TODO: maybe we need function `Update()` to update part of bindGroup
         // for more performance?
+        auto supportSeparateSampler = ECS::Instance()
+                                          .World()
+                                          .res<rhi::Adapter>()
+                                          ->Limits()
+                                          .supportSeparateSampler;
+
         bindGroup_.Destroy();
-        bindGroup_ = createBindGroup(mgr->Get(texture_).View());
+        bindGroup_ =
+            createBindGroup(supportSeparateSampler, mgr->Get(texture_).View());
     }
 }
 
@@ -68,7 +75,13 @@ void Material2D::ChangeTexture(TextureHandle handle) {
         // TODO: maybe we need function `Update()` to update part of bindGroup
         // for more performance?
         bindGroup_.Destroy();
-        bindGroup_ = createBindGroup(mgr->Get(texture_).View());
+        auto supportSeparateSampler = ECS::Instance()
+                                          .World()
+                                          .res<rhi::Adapter>()
+                                          ->Limits()
+                                          .supportSeparateSampler;
+        bindGroup_ =
+            createBindGroup(supportSeparateSampler, mgr->Get(texture_).View());
     }
 }
 
@@ -89,11 +102,18 @@ void Material2D::ChangeSampler(rhi::SamplerAddressMode u,
         // TODO: maybe we need function `Update()` to update part of bindGroup
         // for more performance?
         bindGroup_.Destroy();
-        bindGroup_ = createBindGroup(mgr->Get(texture_).View());
+        auto supportSeparateSampler = ECS::Instance()
+                                          .World()
+                                          .res<rhi::Adapter>()
+                                          ->Limits()
+                                          .supportSeparateSampler;
+        bindGroup_ =
+            createBindGroup(supportSeparateSampler, mgr->Get(texture_).View());
     }
 }
 
-rhi::BindGroup Material2D::createBindGroup(rhi::TextureView texture) {
+rhi::BindGroup Material2D::createBindGroup(bool supportSeparateSampler,
+                                           rhi::TextureView texture) {
     auto ctx = ECS::Instance().World().res<RenderContext>();
     auto device = ECS::Instance().World().res_mut<rhi::Device>();
 
@@ -107,20 +127,26 @@ rhi::BindGroup Material2D::createBindGroup(rhi::TextureView texture) {
         rhi::SamplerBinding binding;
         binding.sampler = ctx->ctx2D->GetSampler(
             samplerDesc_.u, samplerDesc_.v, samplerDesc_.min, samplerDesc_.mag);
+        binding.name = "mySampler";
+        if (!supportSeparateSampler) {
+            binding.view = texture;
+        }
         entry.entry = binding;
 
         desc.entries.emplace_back(std::move(entry));
     }
 
-    // texture binding
-    {
-        rhi::BindingPoint entry;
-        entry.binding = 2;
-        rhi::TextureBinding binding;
-        binding.view = texture;
-        entry.entry = binding;
+    if (supportSeparateSampler) {
+        // texture binding
+        {
+            rhi::BindingPoint entry;
+            entry.binding = 2;
+            rhi::TextureBinding binding;
+            binding.view = texture;
+            entry.entry = binding;
 
-        desc.entries.emplace_back(std::move(entry));
+            desc.entries.emplace_back(std::move(entry));
+        }
     }
 
     return device->CreateBindGroup(desc);
@@ -131,7 +157,8 @@ TextureBundle::~TextureBundle() {
     texture.Destroy();
 }
 
-Material2DHandle Material2DManager::Create(const std::filesystem::path& filename) {
+Material2DHandle Material2DManager::Create(
+    const std::filesystem::path& filename) {
     auto elem = std::make_unique<Material2D>();
     if (elem) {
         auto handle = Material2DHandle::Create();
@@ -143,7 +170,7 @@ Material2DHandle Material2DManager::Create(const std::filesystem::path& filename
 }
 
 Material2DHandle Material2DManager::Create(
-    const std::filesystem::path& filename , TextureHandle handle,
+    const std::filesystem::path& filename, TextureHandle handle,
     rhi::SamplerAddressMode u, rhi::SamplerAddressMode v, rhi::Filter min,
     rhi::Filter mag) {
     auto elem = std::make_unique<Material2D>(handle, u, v, min, mag);

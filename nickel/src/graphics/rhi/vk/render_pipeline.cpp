@@ -108,21 +108,6 @@ void RenderPipelineImpl::createRenderPipeline(
         }
     }
 
-    // viewport
-    vk::PipelineViewportStateCreateInfo viewportState;
-    vk::Viewport viewport{desc.viewport.viewport.x,
-                          desc.viewport.viewport.y,
-                          desc.viewport.viewport.w,
-                          desc.viewport.viewport.h,
-                          0,
-                          1};
-    vk::Rect2D scissor{
-        {    desc.viewport.scissor.offset.x,desc.viewport.scissor.offset.y             },
-        {desc.viewport.scissor.extent.width,
-         desc.viewport.scissor.extent.height}
-    };
-    viewportState.setViewports(viewport).setScissors(scissor);
-
     // rasterization
     vk::PipelineRasterizationStateCreateInfo rasterState;
     rasterState.setRasterizerDiscardEnable(false);
@@ -220,6 +205,13 @@ void RenderPipelineImpl::createRenderPipeline(
         vk::DynamicState::eScissor,
     };
     dynState.setDynamicStates(states);
+
+    // temporary viewport
+    vk::PipelineViewportStateCreateInfo viewportState;
+    vk::Viewport viewport;
+    vk::Rect2D scissor;
+    viewportState.setViewports(viewport)
+        .setScissors(scissor);
 
     // create render pipeline
     info.setPVertexInputState(&vertexInput)

@@ -96,14 +96,6 @@ public:
         PolygonMode polygonMode = PolygonMode::Fill;
     };
 
-    struct ViewportState final {
-        struct {
-            float x, y, w, h;
-        } viewport;
-
-        Rect2D scissor;
-    };
-
     struct GeometryState {
         ShaderModule module;
         std::string entryPoint = "main";
@@ -117,7 +109,6 @@ public:
         MultisampleState multisample;
         PrimitiveState primitive;
         PipelineLayout layout;
-        ViewportState viewport;
     };
 
     RenderPipeline() = default;

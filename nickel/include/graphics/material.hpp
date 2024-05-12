@@ -41,7 +41,8 @@ private:
     rhi::Sampler::Descriptor samplerDesc_;
     rhi::BindGroup bindGroup_;
 
-    rhi::BindGroup createBindGroup(rhi::TextureView);
+    rhi::BindGroup createBindGroup(bool supportSeparateSampler,
+                                   rhi::TextureView);
 };
 
 template <>

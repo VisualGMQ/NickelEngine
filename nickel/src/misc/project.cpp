@@ -227,7 +227,7 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
                                         tilesheetMgr, animMgr, audioMgr,
                                         gltfMgr,
                                         scriptMgr);
-    cmds.emplace_resource<RenderContext>(renderAPI, device, window.Size());
+    cmds.emplace_resource<RenderContext>(adapter, device, window.Size());
 
     auto windowSize = window.Size();
 

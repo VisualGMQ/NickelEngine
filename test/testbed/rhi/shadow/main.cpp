@@ -246,15 +246,6 @@ RenderPipeline createRenderPipeline(Device device, APIPreference api,
     bufferState.arrayStride = 8 * 4;
     desc.vertex.buffers.emplace_back(bufferState);
 
-    desc.viewport.viewport.x = 0;
-    desc.viewport.viewport.y = 0;
-    desc.viewport.viewport.w = window.Size().w;
-    desc.viewport.viewport.h = window.Size().h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = window.Size().w;
-    desc.viewport.scissor.extent.height = window.Size().h;
-
     RenderPipeline::FragmentTarget target;
     target.format = TextureFormat::Presentation;
     desc.layout = layout;
@@ -287,15 +278,6 @@ RenderPipeline createShadowRenderPipeline(Device device, APIPreference api,
     bufferState.attributes.push_back( {VertexFormat::Float32x2, 6 * sizeof(float), 2});
     bufferState.arrayStride = 8 * 4;
     desc.vertex.buffers.emplace_back(bufferState);
-
-    desc.viewport.viewport.x = 0;
-    desc.viewport.viewport.y = 0;
-    desc.viewport.viewport.w = window.Size().w;
-    desc.viewport.viewport.h = window.Size().h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = window.Size().w;
-    desc.viewport.scissor.extent.height = window.Size().h;
 
     desc.layout = layout;
 

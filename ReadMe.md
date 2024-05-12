@@ -2,6 +2,8 @@
 
 An opensource, data-oriented ECS game engine.
 
+(OpenGL backend now workable currently)
+
 ## How-To-Build
 
 use cmake:

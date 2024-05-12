@@ -73,12 +73,12 @@ void RenderPipelineImpl::Apply() const {
 #endif
 
     // viewport apply
-    auto& viewport = desc_.viewport.viewport;
-    GL_CALL(glViewport(viewport.x, viewport.y, viewport.w, viewport.h));
-    GL_CALL(glEnable(GL_SCISSOR_TEST));
-    auto& scissor = desc_.viewport.scissor;
-    GL_CALL(glScissor(scissor.offset.x, scissor.offset.y, scissor.extent.width,
-                      scissor.extent.height));
+    // auto& viewport = desc_.viewport.viewport;
+    // GL_CALL(glViewport(viewport.x, viewport.y, viewport.w, viewport.h));
+    // GL_CALL(glEnable(GL_SCISSOR_TEST));
+    // auto& scissor = desc_.viewport.scissor;
+    // GL_CALL(glScissor(scissor.offset.x, scissor.offset.y, scissor.extent.width,
+    //                   scissor.extent.height));
 
     // rasterization apply
     if (desc_.primitive.cullMode != CullMode::None) {

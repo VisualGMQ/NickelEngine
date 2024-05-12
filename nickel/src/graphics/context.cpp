@@ -7,14 +7,16 @@ GPUMesh2D::~GPUMesh2D() {
     indicesBuffer.Destroy();
 }
 
-Render2DContext::Render2DContext(rhi::APIPreference api, rhi::Device device,
+Render2DContext::Render2DContext(rhi::Adapter adapter, rhi::Device device,
                                  const cgmath::Rect& viewport,
                                  RenderContext& ctx)
     : device_{device} {
+    auto api = adapter.RequestAdapterInfo().api;
     initUsableVertexSlots();
     initBuffers();
     initPipelineShader(api);
-    bindGroupLayout = createBindGroupLayout(ctx);
+    bindGroupLayout =
+        createBindGroupLayout(adapter.Limits().supportSeparateSampler, ctx);
     defaultBindGroup = createDefaultBindGroup();
     pipelineLayout = createPipelineLayout();
     pipeline = createPipeline(api, ctx);
@@ -48,7 +50,7 @@ rhi::PipelineLayout Render2DContext::createPipelineLayout() {
 }
 
 rhi::BindGroupLayout Render2DContext::createBindGroupLayout(
-    RenderContext& ctx) {
+    bool supportSeparateSampler, RenderContext& ctx) {
     rhi::BindGroupLayout::Descriptor desc;
 
     // mvp buffer
@@ -73,6 +75,9 @@ rhi::BindGroupLayout Render2DContext::createBindGroupLayout(
                                      rhi::SamplerAddressMode::ClampToEdge,
                                      rhi::Filter::Linear, rhi::Filter::Linear);
         binding.name = "mySampler";
+        if (!supportSeparateSampler) {
+            binding.view = ctx.whiteTextureView;
+        }
 
         rhi::Entry entry;
         entry.arraySize = 1;
@@ -82,20 +87,22 @@ rhi::BindGroupLayout Render2DContext::createBindGroupLayout(
         desc.entries.emplace_back(entry);
     }
 
-    // texture2D
-    {
-        rhi::TextureBinding binding;
-        binding.view = ctx.whiteTextureView;
-        binding.viewDimension = rhi::TextureViewType::Dim2;
-        binding.sampleType = rhi::TextureBinding::SampleType::Float;
-        binding.name = "myTexture";
+    if (supportSeparateSampler) {
+        // texture2D
+        {
+            rhi::TextureBinding binding;
+            binding.view = ctx.whiteTextureView;
+            binding.viewDimension = rhi::TextureViewType::Dim2;
+            binding.sampleType = rhi::TextureBinding::SampleType::Float;
+            binding.name = "myTexture";
 
-        rhi::Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 2;
-        entry.binding.entry = binding;
-        entry.visibility = rhi::ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
+            rhi::Entry entry;
+            entry.arraySize = 1;
+            entry.binding.binding = 2;
+            entry.binding.entry = binding;
+            entry.visibility = rhi::ShaderStage::Fragment;
+            desc.entries.emplace_back(entry);
+        }
     }
 
     return device_.CreateBindGroupLayout(desc);
@@ -243,14 +250,14 @@ void Render2DContext::initPipelineShader(rhi::APIPreference api) {
     rhi::ShaderModule::Descriptor shaderDesc;
 
     if (api == rhi::APIPreference::GL) {
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>("shader/gl/shader.vert")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "nickel/shader/gl/shader2d.vert")
+                              .value();
         vertexShader = device_.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>("shader/gl/shader.frag")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "nickel/shader/gl/shader2d.frag")
+                              .value();
         fragmentShader = device_.CreateShaderModule(shaderDesc);
     } else if (api == rhi::APIPreference::Vulkan) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
@@ -265,11 +272,13 @@ void Render2DContext::initPipelineShader(rhi::APIPreference api) {
     }
 }
 
-Render3DContext::Render3DContext(rhi::APIPreference api, rhi::Device device,
+Render3DContext::Render3DContext(rhi::Adapter adapter, rhi::Device device,
                                  RenderContext& ctx)
     : device_{device} {
+    auto api = adapter.RequestAdapterInfo().api;
     initPipelineShader(api);
-    bindGroupLayout = createBindGroupLayout(ctx);
+    bindGroupLayout =
+        createBindGroupLayout(adapter.Limits().supportSeparateSampler, ctx);
     pipelineLayout = createPipelineLayout();
     pipeline = createPipeline(api, ctx);
 }
@@ -303,14 +312,14 @@ void Render3DContext::initPipelineShader(rhi::APIPreference api) {
     rhi::ShaderModule::Descriptor shaderDesc;
 
     if (api == rhi::APIPreference::GL) {
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>("shader/gl/pbr.vert")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "nickel/shader/gl/shader_pbr.vert")
+                              .value();
         vertexShader = device_.CreateShaderModule(shaderDesc);
 
-        shaderDesc.code =
-            nickel::ReadWholeFile<std::vector<char>>("shader/gl/pbr.frag")
-                .value();
+        shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
+                              "nickel/shader/gl/shader_pbr.frag")
+                              .value();
         fragmentShader = device_.CreateShaderModule(shaderDesc);
     } else if (api == rhi::APIPreference::Vulkan) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
@@ -326,7 +335,7 @@ void Render3DContext::initPipelineShader(rhi::APIPreference api) {
 }
 
 rhi::BindGroupLayout Render3DContext::createBindGroupLayout(
-    RenderContext& ctx) {
+    bool supportSeparateSampler, RenderContext& ctx) {
     rhi::BindGroupLayout::Descriptor desc;
 
     // MVP uniform buffer
@@ -359,87 +368,95 @@ rhi::BindGroupLayout Render3DContext::createBindGroupLayout(
         desc.entries.emplace_back(entry);
     }
 
-    // base color texture
-    {
-        rhi::TextureBinding colorTextureBinding;
-        colorTextureBinding.name = "baseColorTexture";
-        colorTextureBinding.view = ctx.whiteTextureView;
+    if (supportSeparateSampler) {
+        // base color texture
+        {
+            rhi::TextureBinding colorTextureBinding;
+            colorTextureBinding.name = "baseColorTexture";
+            colorTextureBinding.view = ctx.whiteTextureView;
 
-        rhi::Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 2;
-        entry.binding.entry = colorTextureBinding;
-        entry.visibility = rhi::ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
-    }
+            rhi::Entry entry;
+            entry.arraySize = 1;
+            entry.binding.binding = 2;
+            entry.binding.entry = colorTextureBinding;
+            entry.visibility = rhi::ShaderStage::Fragment;
+            desc.entries.emplace_back(entry);
+        }
 
-    // normal map texture
-    {
-        rhi::TextureBinding normalTextureBinding;
-        normalTextureBinding.name = "normalMapTexture";
-        normalTextureBinding.view = ctx.whiteTextureView;
+        // normal map texture
+        {
+            rhi::TextureBinding normalTextureBinding;
+            normalTextureBinding.name = "normalMapTexture";
+            normalTextureBinding.view = ctx.whiteTextureView;
 
-        rhi::Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 3;
-        entry.binding.entry = normalTextureBinding;
-        entry.visibility = rhi::ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
-    }
+            rhi::Entry entry;
+            entry.arraySize = 1;
+            entry.binding.binding = 3;
+            entry.binding.entry = normalTextureBinding;
+            entry.visibility = rhi::ShaderStage::Fragment;
+            desc.entries.emplace_back(entry);
+        }
 
-    // metalic roughness texture
-    {
-        rhi::TextureBinding binding;
-        binding.name = "metalroughnessTexture";
-        binding.view = ctx.whiteTextureView;
+        // metalic roughness texture
+        {
+            rhi::TextureBinding binding;
+            binding.name = "metalroughnessTexture";
+            binding.view = ctx.whiteTextureView;
 
-        rhi::Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 4;
-        entry.binding.entry = binding;
-        entry.visibility = rhi::ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
-    }
+            rhi::Entry entry;
+            entry.arraySize = 1;
+            entry.binding.binding = 4;
+            entry.binding.entry = binding;
+            entry.visibility = rhi::ShaderStage::Fragment;
+            desc.entries.emplace_back(entry);
+        }
 
-    // occlusion texture
-    {
-        rhi::TextureBinding binding;
-        binding.view = ctx.whiteTextureView;
-        binding.name = "occlusionTexture";
+        // occlusion texture
+        {
+            rhi::TextureBinding binding;
+            binding.view = ctx.whiteTextureView;
+            binding.name = "occlusionTexture";
 
-        rhi::Entry entry;
-        entry.arraySize = 1;
-        entry.binding.binding = 5;
-        entry.binding.entry = binding;
-        entry.visibility = rhi::ShaderStage::Fragment;
-        desc.entries.emplace_back(entry);
+            rhi::Entry entry;
+            entry.arraySize = 1;
+            entry.binding.binding = 5;
+            entry.binding.entry = binding;
+            entry.visibility = rhi::ShaderStage::Fragment;
+            desc.entries.emplace_back(entry);
+        }
     }
 
     // base color sampler
     {
-        rhi::SamplerBinding colorTextureBinding;
-        colorTextureBinding.type = rhi::SamplerBinding::SamplerType::Filtering;
-        colorTextureBinding.name = "baseColorSampler";
-        colorTextureBinding.sampler = ctx.defaultSampler;
+        rhi::SamplerBinding binding;
+        binding.type = rhi::SamplerBinding::SamplerType::Filtering;
+        binding.name = "baseColorSampler";
+        binding.sampler = ctx.defaultSampler;
+        if (!supportSeparateSampler) {
+            binding.view = ctx.whiteTextureView;
+        }
 
         rhi::Entry entry;
         entry.arraySize = 1;
         entry.binding.binding = 6;
-        entry.binding.entry = colorTextureBinding;
+        entry.binding.entry = binding;
         entry.visibility = rhi::ShaderStage::Fragment;
         desc.entries.emplace_back(entry);
     }
 
     // normal map sampler
     {
-        rhi::SamplerBinding normalTextureBinding;
-        normalTextureBinding.name = "normalMapSampelr";
-        normalTextureBinding.sampler = ctx.defaultSampler;
+        rhi::SamplerBinding binding;
+        binding.name = "normalMapSampelr";
+        binding.sampler = ctx.defaultSampler;
+        if (!supportSeparateSampler) {
+            binding.view = ctx.whiteTextureView;
+        }
 
         rhi::Entry entry;
         entry.arraySize = 1;
         entry.binding.binding = 7;
-        entry.binding.entry = normalTextureBinding;
+        entry.binding.entry = binding;
         entry.visibility = rhi::ShaderStage::Fragment;
         desc.entries.emplace_back(entry);
     }
@@ -449,6 +466,9 @@ rhi::BindGroupLayout Render3DContext::createBindGroupLayout(
         rhi::SamplerBinding binding;
         binding.name = "metalroughnessSampler";
         binding.sampler = ctx.defaultSampler;
+        if (!supportSeparateSampler) {
+            binding.view = ctx.whiteTextureView;
+        }
 
         rhi::Entry entry;
         entry.arraySize = 1;
@@ -463,6 +483,9 @@ rhi::BindGroupLayout Render3DContext::createBindGroupLayout(
         rhi::SamplerBinding binding;
         binding.sampler = ctx.defaultSampler;
         binding.name = "occlusionSampler";
+        if (!supportSeparateSampler) {
+            binding.view = ctx.whiteTextureView;
+        }
 
         rhi::Entry entry;
         entry.arraySize = 1;
@@ -567,7 +590,7 @@ rhi::RenderPipeline Render3DContext::createPipeline(rhi::APIPreference api,
     return device_.CreateRenderPipeline(desc);
 }
 
-RenderContext::RenderContext(rhi::APIPreference api, rhi::Device device,
+RenderContext::RenderContext(rhi::Adapter adapter, rhi::Device device,
                              const cgmath::Vec2& windowSize) {
     initMVPBuffer(device);
     initDepthTexture(device, windowSize);
@@ -580,8 +603,8 @@ RenderContext::RenderContext(rhi::APIPreference api, rhi::Device device,
     defaultNormalTextureView = defaultNormalTexture.CreateView();
     defaultSampler = createDefaultSampler(device);
     ctx2D = std::make_unique<Render2DContext>(
-        api, device, cgmath::Rect{0, 0, windowSize.w, windowSize.h}, *this);
-    ctx3D = std::make_unique<Render3DContext>(api, device, *this);
+        adapter, device, cgmath::Rect{0, 0, windowSize.w, windowSize.h}, *this);
+    ctx3D = std::make_unique<Render3DContext>(adapter, device, *this);
 }
 
 RenderContext::~RenderContext() {

@@ -154,6 +154,7 @@ void AdapterImpl::querySupportLimits() {
     GL_CALL(glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &value));
     limits_.minUniformBufferOffsetAlignment = value;
     limits_.maxPushConstantSize = _NICKEL_GL_MAX_PUSHCONSTANT_SIZE;
+    limits_.supportSeparateSampler = false;
 
 #ifdef NICKEL_HAS_GL4
     GL_CALL(glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &value));

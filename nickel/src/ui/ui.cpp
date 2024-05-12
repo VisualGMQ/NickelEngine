@@ -10,9 +10,8 @@ void InitSystem(gecs::commands cmds, gecs::resource<rhi::Adapter> adapter,
                 gecs::resource<Window> window) {
     PROFILE_BEGIN();
 
-    cmds.emplace_resource<UIContext>(adapter->RequestAdapterInfo().api,
-                                     device.get(), renderCtx.get(),
-                                     window->Size());
+    cmds.emplace_resource<UIContext>(adapter.get(), device.get(),
+                                     renderCtx.get(), window->Size());
 
     PROFILE_END();
 }
@@ -60,8 +59,9 @@ void UpdateGlobalPosition(
     }
 }
 
-void collectRenderElem(gecs::entity ent, const Style& style, const Button* btn, const Label* label,
-                       UIContext& ctx, const RenderContext& renderCtx) {
+void collectRenderElem(gecs::entity ent, const Style& style, const Button* btn,
+                       const Label* label, UIContext& ctx,
+                       const RenderContext& renderCtx) {
     auto rect = nickel::cgmath::Rect::FromCenter(
         style.GlobalCenter(), (style.size + style.padding) * 0.5);
 

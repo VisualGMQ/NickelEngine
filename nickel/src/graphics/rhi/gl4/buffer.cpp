@@ -111,24 +111,24 @@ void BufferImpl::MapAsync(Flags<Buffer::Mode> mode, uint64_t offset,
 #ifdef NICKEL_HAS_GL4
     if (!isMappingCoherence_) {
         map_ =
-            glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT | access);
+            GL_RET_CALL(glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT | access));
         isMappingCoherence_ = true;
         if (!map_) {
             isMappingCoherence_ = false;
-            map_ = glMapBufferRange(type_, offset, size,
-                                    GL_MAP_FLUSH_EXPLICIT_BIT | access);
+            map_ = GL_RET_CALL(glMapBufferRange(type_, offset, size,
+                                    GL_MAP_FLUSH_EXPLICIT_BIT | access));
         }
     } else if (isMappingCoherence_.value()) {
         map_ =
-            glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT | access);
+            GL_RET_CALL(glMapBufferRange(type_, offset, size, GL_MAP_COHERENT_BIT | access));
     } else {
-        map_ = glMapBufferRange(type_, offset, size,
-                                GL_MAP_FLUSH_EXPLICIT_BIT | access);
+        map_ = GL_RET_CALL(glMapBufferRange(type_, offset, size,
+                                GL_MAP_FLUSH_EXPLICIT_BIT | access));
     }
 #else
-    map_ = glMapBufferRange(type_, offset, size,
+    map_ = GL_RET_CALL(glMapBufferRange(type_, offset, size,
                             GL_MAP_FLUSH_EXPLICIT_BIT |
-                                GL_MAP_INVALIDATE_RANGE_BIT | access);
+                                GL_MAP_INVALIDATE_RANGE_BIT | access));
     isMappingCoherence_ = false;
 #endif
     mappedOffset_ = offset;

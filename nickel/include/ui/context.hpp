@@ -1,9 +1,10 @@
 #pragma once
 
 #include "graphics/camera.hpp"
+#include "graphics/context.hpp"
 #include "graphics/font.hpp"
 #include "ui/event.hpp"
-#include "graphics/context.hpp"
+
 
 namespace nickel::ui {
 
@@ -35,17 +36,18 @@ struct RenderUIContext final {
     rhi::Buffer vertexBuffer;
     rhi::Buffer indexBuffer;
     std::vector<BatchBreakInfo> batchBreakInfos;
-    std::unordered_map<TextureHandle, rhi::BindGroup, typename TextureHandle::Hash,
-                       typename TextureHandle::Eq>
+    std::unordered_map<TextureHandle, rhi::BindGroup,
+                       typename TextureHandle::Hash, typename TextureHandle::Eq>
         bindGroups;
     rhi::BindGroup defaultBindGroup;
     Camera camera;
 
-    struct FontCharSet{
+    struct FontCharSet {
         uint32_t code;
         rhi::Texture texture;
         rhi::TextureView view;
     };
+
     using FontCharMap = std::unordered_map<uint32_t, FontCharSet>;
 
     std::unordered_map<FontHandle, FontCharMap, typename FontHandle::Hash,
@@ -56,7 +58,7 @@ struct RenderUIContext final {
 
     static constexpr uint32_t MaxRectSize = 4096;
 
-    RenderUIContext(rhi::APIPreference, rhi::Device, RenderContext&,
+    RenderUIContext(rhi::Adapter, rhi::Device, RenderContext&,
                     const cgmath::Vec2& windowSize);
     ~RenderUIContext();
 
@@ -73,7 +75,8 @@ private:
 
     rhi::PipelineLayout createPipelineLayout();
     void initPipelineShader(rhi::APIPreference);
-    rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx);
+    rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx,
+                                               bool supportSeparateSampler);
     void initPipelines(rhi::APIPreference);
     rhi::Buffer createIndexBuffer();
     rhi::Buffer createVertexBuffer();
@@ -84,11 +87,10 @@ struct UIContext final {
     RenderUIContext renderCtx;
     EventRecorder eventRecorder;
 
-    UIContext(rhi::APIPreference api, rhi::Device device, RenderContext& ctx,
+    UIContext(rhi::Adapter, rhi::Device device, RenderContext& ctx,
               const cgmath::Vec2& windowSize);
     UIContext(const UIContext&) = delete;
     UIContext& operator=(const UIContext&) = delete;
 };
-
 
 }  // namespace nickel::ui

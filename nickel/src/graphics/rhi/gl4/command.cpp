@@ -18,6 +18,11 @@ struct CmdExecutor final {
     CmdExecutor(DeviceImpl& dev, const CommandBufferImpl& buffer)
         : buffer_{buffer}, device_{dev} {}
 
+    void operator()(const CmdSetViewport& cmd) const {
+        GL_CALL(glViewport(cmd.x, cmd.y, cmd.w, cmd.h));
+        GL_CALL(glScissor(cmd.x, cmd.y, cmd.w, cmd.h));
+    }
+
     void operator()(const CmdCopyBuf2Buf& cmd) const {
         auto src = static_cast<const BufferImpl*>(cmd.src.Impl());
         auto dst = static_cast<const BufferImpl*>(cmd.dst.Impl());
@@ -99,9 +104,9 @@ struct CmdExecutor final {
             cmd.firstVertex, cmd.vertexCount, cmd.instanceCount,
             cmd.firstInstance));
 #else
-        GL_CALL(glDrawArraysInstanced(Topology2GL(
-                    renderPipeline_->Descriptor().primitive.topology),
-                cmd.firstVertex, cmd.vertexCount, cmd.instanceCount));
+        GL_CALL(glDrawArraysInstanced(
+            Topology2GL(renderPipeline_->Descriptor().primitive.topology),
+            cmd.firstVertex, cmd.vertexCount, cmd.instanceCount));
 #endif
     }
 
@@ -151,6 +156,7 @@ struct CmdExecutor final {
     }
 
     void operator()(const CmdSetIndexBuffer& cmd) {
+        // cmd.buffer.Unmap();
         // first we set index buffer and init vao
         if (auto it = device_.vaos.find((size_t)cmd.buffer.Impl());
             it != device_.vaos.end()) {
@@ -180,21 +186,20 @@ struct CmdExecutor final {
 
     void operator()(const CmdPushConstant& cmd) {
 #ifdef NICKEL_HAS_GL4
-
         GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, device_.pushConstantBuf));
         GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, cmd.offset, cmd.size,
                                 cmd.data.data()));
 #else
         auto id = renderPipeline_->GetShaderID();
-        auto index =
-            glGetUniformBlockIndex(id, "PushConstant");
+        auto index = glGetUniformBlockIndex(id, "PushConstant");
         if (index == GL_INVALID_INDEX) {
             LOGE(log_tag::GL, "push constant uniform buffer not exists");
         }
         GL_CALL(glUniformBlockBinding(id, index, 16));
         GL_CALL(glBindBuffer(GL_UNIFORM_BUFFER, device_.pushConstantBuf));
-        GL_CALL(glBindBufferRange(GL_UNIFORM_BUFFER, 16, device_.pushConstantBuf,
-                                  cmd.offset, cmd.size));
+        GL_CALL(glBindBufferRange(GL_UNIFORM_BUFFER, 16,
+                                  device_.pushConstantBuf, cmd.offset,
+                                  cmd.size));
 
 #endif
     }
@@ -264,6 +269,7 @@ private:
         for (auto& cmd : setVertexBufferCmds_) {
             auto& vertexState = renderPipeline_->Descriptor().vertex;
             auto buffer = vertexState.buffers.at(cmd.slot);
+            // cmd.buffer.Unmap();
             GL_CALL(glBindBuffer(
                 GL_ARRAY_BUFFER,
                 static_cast<const BufferImpl*>(cmd.buffer.Impl())->id));
@@ -283,7 +289,7 @@ private:
 void CommandBufferImpl::Execute(DeviceImpl& device) const {
     CmdExecutor executor{device, *this};
     for (auto& cmd : cmds) {
-        std::visit(executor, cmd.cmd);
+        std::visit(executor, cmd);
     }
 }
 
@@ -297,27 +303,22 @@ void CommandEncoderImpl::CopyBufferToBuffer(const Buffer& src,
                                             uint64_t srcOffset,
                                             const Buffer& dst,
                                             uint64_t dstOffset, uint64_t size) {
-    buffer_.cmds.push_back({
-        CmdType::CopyBuf2Buf,
-        CmdCopyBuf2Buf{src, srcOffset, dst, dstOffset, size}
-    });
+    buffer_.cmds.push_back(
+        CmdCopyBuf2Buf{src, srcOffset, dst, dstOffset, size});
 }
 
 void CommandEncoderImpl::CopyBufferToTexture(
     const CommandEncoder::BufTexCopySrc& src,
     const CommandEncoder::BufTexCopyDst& dst, const Extent3D& copySize) {
-    buffer_.cmds.push_back({
-        CmdType::CopyBuf2Texture,
-        CmdCopyBuf2Texture{dst.texture.Dimension(), src, dst, copySize}
-    });
+    buffer_.cmds.push_back(
+        CmdCopyBuf2Texture{dst.texture.Dimension(), src, dst, copySize});
 }
 
 RenderPassEncoder CommandEncoderImpl::BeginRenderPass(
     const RenderPass::Descriptor& desc) {
     CmdBeginRenderPass cmd;
     cmd.desc = desc;
-    buffer_.cmds.emplace_back(
-        Command{CmdType::BeginRenderPass, std::move(cmd)});
+    buffer_.cmds.emplace_back(std::move(cmd));
 
     return RenderPassEncoder{new RenderPassEncoderImpl(*device_, buffer_)};
 }
@@ -328,10 +329,8 @@ RenderPassEncoderImpl::RenderPassEncoderImpl(DeviceImpl& device,
 
 void RenderPassEncoderImpl::Draw(uint32_t vertexCount, uint32_t instanceCount,
                                  uint32_t firstVertex, uint32_t firstInstance) {
-    buffer_->cmds.push_back({
-        CmdType::Draw,
-        CmdDraw{vertexCount, instanceCount, firstVertex, firstInstance}
-    });
+    buffer_->cmds.push_back(
+        CmdDraw{vertexCount, instanceCount, firstVertex, firstInstance});
 }
 
 void RenderPassEncoderImpl::DrawIndexed(uint32_t indexCount,
@@ -339,11 +338,8 @@ void RenderPassEncoderImpl::DrawIndexed(uint32_t indexCount,
                                         uint32_t firstIndex,
                                         uint32_t baseVertex,
                                         uint32_t firstInstance) {
-    buffer_->cmds.push_back({
-        CmdType::DrawIndexed,
-        CmdDrawIndexed{indexCount, instanceCount, firstIndex, baseVertex,
-                       firstInstance}
-    });
+    buffer_->cmds.push_back(CmdDrawIndexed{
+        indexCount, instanceCount, firstIndex, baseVertex, firstInstance});
 }
 
 void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
@@ -353,7 +349,7 @@ void RenderPassEncoderImpl::SetVertexBuffer(uint32_t slot, Buffer buffer,
     cmd.buffer = buffer;
     cmd.offset = offset;
     cmd.size = size;
-    buffer_->cmds.push_back(Command{CmdType::SetVertexBuffer, std::move(cmd)});
+    buffer_->cmds.push_back(std::move(cmd));
 }
 
 void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType type,
@@ -363,13 +359,13 @@ void RenderPassEncoderImpl::SetIndexBuffer(Buffer buffer, IndexType type,
     cmd.offset = offset;
     cmd.size = size;
     cmd.indexType = type;
-    buffer_->cmds.push_back({CmdType::SetIndexBuffer, std::move(cmd)});
+    buffer_->cmds.push_back(std::move(cmd));
 }
 
 void RenderPassEncoderImpl::SetBindGroup(BindGroup group) {
     CmdSetBindGroup cmd;
     cmd.group = group;
-    buffer_->cmds.push_back({CmdType::SetBindGroup, std::move(cmd)});
+    buffer_->cmds.push_back(std::move(cmd));
 }
 
 void RenderPassEncoderImpl::SetBindGroup(
@@ -377,13 +373,13 @@ void RenderPassEncoderImpl::SetBindGroup(
     CmdSetBindGroup cmd;
     cmd.group = group;
     cmd.dynamicOffset = dynamicOffset;
-    buffer_->cmds.push_back({CmdType::SetBindGroup, std::move(cmd)});
+    buffer_->cmds.push_back(std::move(cmd));
 }
 
 void RenderPassEncoderImpl::SetPipeline(RenderPipeline pipeline) {
     CmdSetRenderPipeline cmd;
     cmd.pipeline = pipeline;
-    buffer_->cmds.push_back({CmdType::SetRenderPipeline, cmd});
+    buffer_->cmds.push_back(cmd);
 }
 
 void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage,
@@ -396,18 +392,23 @@ void RenderPassEncoderImpl::SetPushConstant(ShaderStage stage,
     cmd.data.resize(size);
     memcpy(cmd.data.data(), value, size);
     auto maxSize = device_.adapter->Limits().maxPushConstantSize;
-    if (offset + size >= maxSize) {
+    if (offset + size > maxSize) {
         LOGE(log_tag::GL, "push constant out of range: require ", offset + size,
              ", has ", maxSize);
     }
 
-    buffer_->cmds.push_back({CmdType::PushConstant, cmd});
+    buffer_->cmds.push_back(cmd);
 }
 
 void RenderPassEncoderImpl::SetViewport(float x, float y, float width,
                                         float height) {
-    GL_CALL(glViewport(x, y, width, height));
-    GL_CALL(glScissor(x, y, width, height));
+    CmdSetViewport cmd;
+    cmd.x = x;
+    cmd.y = y;
+    cmd.w = width;
+    cmd.h = height;
+
+    buffer_->cmds.emplace_back(std::move(cmd));
 }
 
 void RenderPassEncoderImpl::End() {}

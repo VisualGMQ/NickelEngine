@@ -444,15 +444,6 @@ void initWhiteImage(Context& ctx, Device& dev) {
 void initRenderPipeline(APIPreference api, Device device, Context& ctx, const nickel::Window& window) {
     RenderPipeline::Descriptor desc;
 
-    desc.viewport.viewport.x = 0;
-    desc.viewport.viewport.y = 0;
-    desc.viewport.viewport.w = window.Size().w;
-    desc.viewport.viewport.h = window.Size().h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = window.Size().w;
-    desc.viewport.scissor.extent.height = window.Size().h;
-
     initRenderShaders(api, device, desc);
 
     RenderPipeline::VertexState vertexState;
@@ -481,15 +472,6 @@ void initGBufferPipeline(APIPreference api, Device device, Context& ctx, const n
     RenderPipeline::Descriptor desc;
 
     initGBufferShaders(api, device, desc);
-
-    desc.viewport.viewport.x = 0;
-    desc.viewport.viewport.y = 0;
-    desc.viewport.viewport.w = window.Size().w;
-    desc.viewport.viewport.h = window.Size().h;
-    desc.viewport.scissor.offset.x = 0;
-    desc.viewport.scissor.offset.y = 0;
-    desc.viewport.scissor.extent.width = window.Size().w;
-    desc.viewport.scissor.extent.height = window.Size().h;
 
     RenderPipeline::VertexState vertexState;
     RenderPipeline::BufferState bufferState;

@@ -70,34 +70,19 @@ struct CmdPushConstant final {
     uint32_t size;
 };
 
+struct CmdSetViewport final {
+    float x, y, w, h;
+};
+
 struct CmdBeginRenderPass final {
     RenderPass::Descriptor desc;
 };
 
-enum class CmdType {
-    Unknown,
-    SetBindGroup,
-    SetRenderPipeline,
-    SetVertexBuffer,
-    SetIndexBuffer,
-    Draw,
-    DrawIndexed,
-    CopyBuf2Buf,
-    CopyBuf2Texture,
-    PushConstant,
-    BeginRenderPass,
-};
-
-struct Command final {
-    using CmdUnion =
-        std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw,
-                     CmdDrawIndexed, CmdSetVertexBuffer, CmdSetIndexBuffer,
-                     CmdSetBindGroup, CmdSetRenderPipeline, CmdPushConstant,
-                     CmdBeginRenderPass>;
-
-    CmdType type = CmdType::Unknown;
-    CmdUnion cmd;
-};
+using Command =
+    std::variant<CmdCopyBuf2Buf, CmdCopyBuf2Texture, CmdDraw, CmdDrawIndexed,
+                 CmdSetVertexBuffer, CmdSetIndexBuffer, CmdSetBindGroup,
+                 CmdSetRenderPipeline, CmdPushConstant, CmdBeginRenderPass,
+                 CmdSetViewport>;
 
 class CommandBufferImpl : public rhi::CommandBufferImpl {
 public:

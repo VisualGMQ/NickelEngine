@@ -51,9 +51,26 @@ void ImageViewCanva::Update() {
 
             minPt = transformPt(minPt, -texture.Size() * 0.5) + canvasMin;
             maxPt = transformPt(maxPt, -texture.Size() * 0.5) + canvasMin;
-            auto imguiCtx = ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
-            drawList->AddImage(imguiCtx->GetTextureBindedDescriptorSet(texture),
-                               {minPt.x, minPt.y}, {maxPt.x, maxPt.y});
+            auto api = ECS::Instance()
+                           .World()
+                           .res<nickel::rhi::Adapter>()
+                           ->RequestAdapterInfo()
+                           .api;
+#ifdef NICKEL_HAS_VULKAN
+            if (api == nickel::rhi::APIPreference::Vulkan) {
+                auto imguiCtx =
+                    ECS::Instance().World().res_mut<plugin::ImGuiVkContext>();
+                drawList->AddImage(imguiCtx->GetTextureBindedDescriptorSet(texture),
+                                {minPt.x, minPt.y}, {maxPt.x, maxPt.y});
+            }
+#else
+            if (api == nickel::rhi::APIPreference::GL) {
+                drawList->AddImage((void*)static_cast<nickel::rhi::gl4::TextureImpl*>(
+                                       texture.RawTexture().Impl())
+                                       ->id,
+                                   {minPt.x, minPt.y}, {maxPt.x, maxPt.y});
+            }
+#endif
 
             additionalDraw(drawList, texture, canvasMin);
         }

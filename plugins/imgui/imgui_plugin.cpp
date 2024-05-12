@@ -6,10 +6,12 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_internal.h"
+#include "graphics/rhi/gl4/texture.hpp"
+#include "graphics/rhi/gl4/texture_view.hpp"
+
+#include "graphics/context.hpp"
 
 #ifdef NICKEL_HAS_VULKAN
-#include "graphics/context.hpp"
-#include "graphics/rhi/gl4/texture_view.hpp"
 #include "graphics/rhi/vk/adapter.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/queue.hpp"
@@ -17,8 +19,8 @@
 #include "graphics/rhi/vk/texture_view.hpp"
 #include "graphics/rhi/vk/util.hpp"
 #include "imgui_impl_vulkan.h"
-
 #endif
+
 #include "GraphEditor.h"
 #include "ImCurveEdit.h"
 #include "ImGuizmo.h"
@@ -33,13 +35,13 @@ void imguiProcessEvent(const SDL_Event& event) {
     ImGui_ImplSDL2_ProcessEvent(&event);
 }
 
+#ifdef NICKEL_HAS_VULKAN
 void CheckVkResult(VkResult err) {
     if (err == 0) return;
     LOGE(stderr, "[imgui-vulkan] Error: VkResult = %d\n", err);
     if (err < 0) abort();
 }
 
-#ifdef NICKEL_HAS_VULKAN
 ImGuiVkContext::ImGuiVkContext(rhi::Device device) : device_{device} {
     auto vkDevice = static_cast<rhi::vulkan::DeviceImpl*>(device.Impl());
     initDescriptorPool(vkDevice->device);
@@ -249,29 +251,33 @@ void renderVkFrame(RenderContext& ctx, ImGuiVkContext& vkCtx,
 
     device.needPresent = true;
 }
+#endif
 
 void ImGuiOnWindowResize(const WindowResizeEvent& event,
                          gecs::resource<rhi::Adapter> adapter,
                          gecs::resource<rhi::Device> device,
-                         gecs::resource<gecs::mut<ImGuiVkContext>> ctx,
                          gecs::resource<Window> window) {
-    if (adapter->RequestAdapterInfo().api != rhi::APIPreference::Vulkan) {
-        return;
-    }
 
     auto size = window->Size();
     if (size.w == 0 || size.h == 0) {
         return;
     }
 
-    auto vkDevice = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());
-    auto vkAdapter = static_cast<rhi::vulkan::AdapterImpl*>(adapter->Impl());
+#ifdef NICKEL_HAS_VULKAN
+    if (adapter->RequestAdapterInfo().api != rhi::APIPreference::Vulkan) {
+        auto ctx = ECS::Instance().World().res_mut<ImGuiVkContext>();
 
-    ctx->RecreateFramebuffers(*vkDevice);
+        auto vkDevice = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());
+        auto vkAdapter =
+            static_cast<rhi::vulkan::AdapterImpl*>(adapter->Impl());
 
-    ImGui_ImplVulkan_SetMinImageCount(vkDevice->swapchain.imageInfo.imagCount);
-}
+        ctx->RecreateFramebuffers(*vkDevice);
+
+        ImGui_ImplVulkan_SetMinImageCount(
+            vkDevice->swapchain.imageInfo.imagCount);
+    }
 #endif
+}
 
 void ImGuiInit(gecs::commands cmds, gecs::resource<gecs::mut<Window>> window,
                gecs::resource<gecs::mut<EventPoller>> poller,
@@ -331,6 +337,7 @@ void ImGuiInit(gecs::commands cmds, gecs::resource<gecs::mut<Window>> window,
     PROFILE_END();
 }
 
+#ifdef NICKEL_HAS_VULKAN
 void ImGuiGameWindowLayoutTransition(
     gecs::resource<gecs::mut<rhi::Device>> device,
     gecs::resource<gecs::mut<Camera>> camera,
@@ -377,12 +384,17 @@ void ImGuiGameWindowLayoutTransition(
 
     texture->layouts[0] = vk::ImageLayout::eShaderReadOnlyOptimal;
 }
+#else
+void ImGuiGameWindowLayoutTransition() {}
+
+#endif
 
 void ImGuiStart(gecs::resource<rhi::Adapter> adapter,
-                gecs::resource<gecs::mut<rhi::Device>> device,
-                gecs::resource<gecs::mut<ImGuiVkContext>> vkCtx) {
+                gecs::resource<gecs::mut<rhi::Device>> device) {
     PROFILE_BEGIN();
 
+#ifdef NICKEL_HAS_VULKAN
+    auto vkCtx = ECS::Instance().World().res_mut<ImGuiVkContext>();
     auto vkDevice = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());
 
     auto cmd = vkCtx->cmdBuf;
@@ -391,6 +403,7 @@ void ImGuiStart(gecs::resource<rhi::Adapter> adapter,
     vk::CommandBufferBeginInfo beginInfo;
     beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     VK_CALL_NO_VALUE(cmd.begin(beginInfo));
+#endif
 
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
         ImGui_ImplOpenGL3_NewFrame();
@@ -409,7 +422,6 @@ void ImGuiStart(gecs::resource<rhi::Adapter> adapter,
 void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
               gecs::resource<rhi::Adapter> adapter,
               gecs::resource<rhi::Device> device,
-              gecs::resource<gecs::mut<ImGuiVkContext>> vkCtx,
               gecs::resource<gecs::mut<RenderContext>> ctx) {
     PROFILE_BEGIN();
 
@@ -421,6 +433,7 @@ void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
     } else {
 #ifdef NICKEL_HAS_VULKAN
         ImDrawData* main_draw_data = ImGui::GetDrawData();
+        auto vkCtx = ECS::Instance().World().res_mut<ImGuiVkContext>();
         renderVkFrame(ctx.get(), vkCtx.get(),
                       *static_cast<rhi::vulkan::DeviceImpl*>(device->Impl()),
                       main_draw_data);
@@ -482,6 +495,7 @@ void Image(const ::nickel::Texture& texture, const ImVec2& image_size,
     }
 }
 
+#ifdef NICKEL_HAS_VULKAN
 void transferLayout2ShaderReadOnly(const ::nickel::Texture& texture,
                                    ::nickel::rhi::Device device) {
     auto dev = static_cast<::nickel::rhi::vulkan::DeviceImpl*>(device.Impl());
@@ -530,6 +544,7 @@ void transferLayout2ShaderReadOnly(const ::nickel::Texture& texture,
     VK_CALL_NO_VALUE(queue->queue.submit(submitInfo));
     VK_CALL_NO_VALUE(queue->queue.waitIdle());
 }
+#endif
 
 bool ImageButton(const char* str_id, const ::nickel::Texture& texture,
                  const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1,
