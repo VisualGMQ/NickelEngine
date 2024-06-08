@@ -342,7 +342,7 @@ void initGBuffer(Context& ctx, Device& dev, nickel::Window& window) {
 
 void loadImage(Context& ctx, Device& dev) {
     int w, h;
-    void* data = stbi_load("test/testbed/rhi/texture_cube/texture.jpg", &w, &h,
+    void* data = stbi_load("test/testbed/rhi/defer_rendering/texture.jpg", &w, &h,
                            nullptr, STBI_rgb_alpha);
 
     Texture::Descriptor desc;
@@ -696,8 +696,6 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-#else
-    bool isVulkanBackend = true;
 #endif
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
         "defered rendering", 1024, 720, API == APIPreference::Vulkan);

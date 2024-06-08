@@ -79,8 +79,7 @@ TextureImpl::TextureImpl(DeviceImpl& device, const Texture::Descriptor& desc)
 }
 
 TextureImpl::TextureImpl(GLuint id, GLenum type)
-    : rhi::TextureImpl{Texture::Descriptor{
-          .format = rhi::TextureFormat::Presentation}},
+    : rhi::TextureImpl{Texture::Descriptor{rhi::TextureFormat::Presentation}},
       id{id},
       type_{type} {}
 

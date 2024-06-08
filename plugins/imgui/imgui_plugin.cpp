@@ -264,7 +264,7 @@ void ImGuiOnWindowResize(const WindowResizeEvent& event,
     }
 
 #ifdef NICKEL_HAS_VULKAN
-    if (adapter->RequestAdapterInfo().api != rhi::APIPreference::Vulkan) {
+    if (adapter->RequestAdapterInfo().api == rhi::APIPreference::Vulkan) {
         auto ctx = ECS::Instance().World().res_mut<ImGuiVkContext>();
 
         auto vkDevice = static_cast<rhi::vulkan::DeviceImpl*>(device->Impl());

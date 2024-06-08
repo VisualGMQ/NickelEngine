@@ -268,8 +268,6 @@ void BootstrapSystem(gecs::world& world,
     } else {
         API = APIPreference::GL;
     }
-#else
-    bool isVulkanBackend = false;
 #endif
 
     nickel::Window& window = reg.commands().emplace_resource<nickel::Window>(
