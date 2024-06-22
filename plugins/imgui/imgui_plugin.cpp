@@ -112,7 +112,6 @@ void ImGuiVkContext::initDescriptorSets(vk::Device device) {
 
     auto vkDevice =
         static_cast<nickel::rhi::vulkan::DeviceImpl*>(device_.Impl());
-    std::vector<vk::DescriptorSet> sets;
     VK_CALL(descriptorSets, vkDevice->device.allocateDescriptorSets(allocInfo));
 }
 
@@ -154,7 +153,7 @@ void ImGuiVkContext::RecreateFramebuffers(rhi::vulkan::DeviceImpl& device) {
 
 void ImGuiVkContext::initDescriptorPool(vk::Device device) {
     vk::DescriptorPoolSize poolSize(vk::DescriptorType::eCombinedImageSampler,
-                                    1);
+                                    MAX_DESCRIPTOR_SET_FOR_TEXTURE);
     vk::DescriptorPoolCreateInfo info;
     info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
         .setMaxSets(1 + MAX_DESCRIPTOR_SET_FOR_TEXTURE)

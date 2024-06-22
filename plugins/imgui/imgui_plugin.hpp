@@ -30,7 +30,7 @@ namespace plugin {
 using namespace nickel;
 
 #ifdef NICKEL_HAS_VULKAN
-#define MAX_DESCRIPTOR_SET_FOR_TEXTURE 100
+#define MAX_DESCRIPTOR_SET_FOR_TEXTURE 64
 
 struct ImGuiVkContext {
     vk::DescriptorPool descriptorPool;
