@@ -9,6 +9,7 @@
 #include "graphics/rhi/gl/adapter.hpp"
 #endif
 #include "graphics/rhi/null/buffer.hpp"
+#include "graphics/rhi/null/adapter.hpp"
 
 namespace nickel::rhi {
 

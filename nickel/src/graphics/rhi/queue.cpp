@@ -5,6 +5,7 @@
 #ifdef NICKEL_HAS_GLES3
 #include "graphics/rhi/gl/queue.hpp"
 #endif
+#include "graphics/rhi/null/queue.hpp"
 
 namespace nickel::rhi {
 

@@ -1,6 +1,5 @@
 #include "graphics/rhi/device.hpp"
 #include "graphics/rhi/common.hpp"
-#include "graphics/rhi/null/device.hpp"
 #ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/device.hpp"
 #endif
@@ -8,6 +7,8 @@
 #include "graphics/rhi/gl/device.hpp"
 #include "graphics/rhi/gl/adapter.hpp"
 #endif
+#include "graphics/rhi/null/device.hpp"
+#include "graphics/rhi/null/adapter.hpp"
 
 
 namespace nickel::rhi {

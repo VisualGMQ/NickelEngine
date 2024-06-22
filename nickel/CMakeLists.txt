@@ -13,6 +13,7 @@ target_compile_features(Nickel.Common PUBLIC cxx_std_17)
 target_link_libraries(Nickel.Common PUBLIC mirrow gecs)
 target_link_libraries(Nickel.Common PRIVATE debugbreak "$<$<CONFIG:Debug>:easy_profiler>")
 target_compile_definitions(Nickel.Common PUBLIC "$<$<CONFIG:Debug>:NICKEL_ENABLE_PROFILE>" _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(Nickel.Common PUBLIC "$<$<CONFIG:Debug>:NICKEL_DEBUG>" _CRT_SECURE_NO_WARNINGS)
 
 # Nickel.Graphics
 aux_source_directory(src/graphics nickel_graphics_src)

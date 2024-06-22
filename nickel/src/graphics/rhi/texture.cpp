@@ -9,6 +9,9 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/texture.hpp"
 #endif
+#include "graphics/rhi/null/device.hpp"
+#include "graphics/rhi/null/texture.hpp"
+#include "graphics/rhi/null/adapter.hpp"
 
 namespace nickel::rhi {
 
