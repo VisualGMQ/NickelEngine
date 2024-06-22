@@ -34,7 +34,11 @@ void AdapterImpl::createInstance(void* window) {
 
     std::vector<vk::LayerProperties> supportLayers;
     VK_CALL(supportLayers, vk::enumerateInstanceLayerProperties());
-    std::vector<const char*> requireLayers = {"VK_LAYER_KHRONOS_validation"};
+    std::vector<const char*> requireLayers;
+#ifdef NICKEL_DEBUG
+    requireLayers.push_back("VK_LAYER_KHRONOS_validation");
+    LOGI(log_tag::Vulkan, "enable validation layer");
+#endif
     using LiteralString = const char*;
     RemoveUnexistsElems<const char*, vk::LayerProperties>(
         requireLayers, supportLayers,
@@ -118,8 +122,10 @@ const GPUSupportLimits& AdapterImpl::Limits() const {
 void AdapterImpl::querySupportLimits() {
     auto limits = phyDevice.getProperties().limits;
     limits_.nonCoherentAtomSize = limits.nonCoherentAtomSize;
-    limits_.minUniformBufferOffsetAlignment = limits.minUniformBufferOffsetAlignment;
-    limits_.minStorageBufferOffsetAlignment = limits.minStorageBufferOffsetAlignment;
+    limits_.minUniformBufferOffsetAlignment =
+        limits.minUniformBufferOffsetAlignment;
+    limits_.minStorageBufferOffsetAlignment =
+        limits.minStorageBufferOffsetAlignment;
     limits_.maxPushConstantSize = limits.maxPushConstantsSize;
     limits_.supportGeometryShader = limits.maxGeometryShaderInvocations != 0;
 }
