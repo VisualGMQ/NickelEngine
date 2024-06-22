@@ -37,8 +37,11 @@ struct Context final {
     ~Context() {
         layout.Destroy();
         pipeline.Destroy();
+
         MVPBuffer.Destroy();
+        vertexBuffer.Destroy();
         eyePosBuffer.Destroy();
+
         depth.Destroy();
         depthView.Destroy();
         colorTexture.view.Destroy();
@@ -47,6 +50,7 @@ struct Context final {
         defaultNormalTexture.view.Destroy();
         defaultNormalTexture.texture.Destroy();
         defaultNormalTexture.sampler.Destroy();
+
         bindGroup.Destroy();
         bindGroupLayout.Destroy();
     }

@@ -179,7 +179,7 @@ void initDepthTexture(Context& ctx, Device& dev, nickel::Window& window) {
 
 void initImage(Context& ctx, Device& dev) {
     int w, h;
-    void* data = stbi_load("test/testbed/rhi/04texture_cube/texture.jpg", &w,
+    void* data = stbi_load("test/testbed/rhi/instance/texture.jpg", &w,
                            &h, nullptr, STBI_rgb_alpha);
 
     Texture::Descriptor desc;
@@ -328,13 +328,18 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
     ctx->sampler.Destroy();
+    ctx->imageView.Destroy();
+    ctx->image.Destroy();
+
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
     ctx->debugBindGroup.Destroy();
     ctx->bindGroupLayout.Destroy();
+
     ctx->instanceUniformBuffer.Destroy();
     ctx->uniformBuffer.Destroy();
     ctx->vertexBuffer.Destroy();
+
     ctx->layout.Destroy();
     ctx->pipeline.Destroy();
 }

@@ -2,8 +2,6 @@
 
 An opensource, data-oriented ECS game engine.
 
-(OpenGL backend now workable currently)
-
 ## How-To-Build
 
 use cmake:
@@ -58,7 +56,6 @@ you can [view these demos online](https://visualgmq.github.io/nickelengine/)
 |[gecs](https://github.com/VisualGMQ/gecs.git)| basic ECS framework|
 |[mirrow](https://github.com/VisualGMQ/mirrow.git)| TMP framework, use to do dynamic/static reflection and serialization|
 |[stb_image](http://nothings.org/stb)| use to loading images|
-|[glad](https://glad.dav1d.de/)| use to load opengl|
 |[Vulkan](https://www.vulkan.org/)| Vulkan1.3 |
 |[dear-imgui](https://github.com/ocornut/imgui)| use to support GUI in editor|
 |[miniaudio](https://miniaud.io/)| use to play audio cross platform|
@@ -77,7 +74,7 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 
 ## Features
 
-- [x] 2D renderer based on OpenGL4
+- [x] 2D renderer based on Vulkan
 - [ ] 3D renderer(currently only in rhi example)
     - [x] gltf2.0 load&display(not full support)
     - [x] defered rendering
@@ -88,10 +85,9 @@ editor icon: [vscode-material-icon-theme](https://github.com/PKief/vscode-materi
 - [x] Prefab save/load
 - [ ] UI(WIP)
 - [ ] Game physics(WIP)
-- [x] RHI covered OpenGL4 and Vulkan
+- [x] RHI covered OpenGL and Vulkan
     - [x] vulkan layer
-    - [x] GL4.3 layer(Only For Fun)
-    - [x] OpenGLES 3.0 layer(for WASM)
+    - [x] OpenGLES 3.0 layer(for WASM & Android)
 - [ ] Game sound playing(WIP)
 - [x] 3D rendering
     - [x] glTF2.0 support(not full support yet)

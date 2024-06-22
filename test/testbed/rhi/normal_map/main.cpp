@@ -22,15 +22,16 @@ struct Context final {
     BindGroup bindGroup;
     Texture depth;
     TextureView depthView;
-
     TextureBundle colorTexture;
-
     TextureBundle defaultNormalTexture;
 
     ~Context() {
         layout.Destroy();
         pipeline.Destroy();
+
         uniformBuffer.Destroy();
+        vertexBuffer.Destroy();
+
         depth.Destroy();
         depthView.Destroy();
         colorTexture.view.Destroy();
@@ -39,6 +40,7 @@ struct Context final {
         defaultNormalTexture.view.Destroy();
         defaultNormalTexture.texture.Destroy();
         defaultNormalTexture.sampler.Destroy();
+
         bindGroup.Destroy();
         bindGroupLayout.Destroy();
     }

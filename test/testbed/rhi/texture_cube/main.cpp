@@ -308,9 +308,12 @@ void LogicUpdate(gecs::resource<gecs::mut<Context>> ctx) {
 
 void ShutdownSystem(gecs::commands cmds,
                     gecs::resource<gecs::mut<Context>> ctx) {
-    ctx->sampler.Destroy();
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
+    ctx->sampler.Destroy();
+    ctx->imageView.Destroy();
+    ctx->image.Destroy();
+
     ctx->debugBindGroup.Destroy();
     ctx->bindGroupLayout.Destroy();
     ctx->uniformBuffer.Destroy();

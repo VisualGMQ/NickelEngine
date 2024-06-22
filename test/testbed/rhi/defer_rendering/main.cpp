@@ -32,7 +32,6 @@ struct Context {
     BindGroupLayout gbufferBindGroupLayout;
     BindGroup gbufferBindGroup;
     BindGroup cubeBindGroup;
-    BindGroup floorBindGroup;
     BindGroup renderBindGroup;
     Texture depth;
     TextureView depthView;
@@ -259,26 +258,6 @@ void initRenderBindGroupAndLayout(Context& ctx, Device& device) {
     BindGroup::Descriptor bindGroupDesc;
     bindGroupDesc.layout = ctx.renderBindGroupLayout;
     ctx.renderBindGroup = device.CreateBindGroup(bindGroupDesc);
-
-    // {
-    //     BindGroup::Descriptor bindGroupDesc;
-    //     bindGroupDesc.layout = ctx.renderBindGroupLayout;
-    //     ctx.cubeBindGroup = device.CreateBindGroup(bindGroupDesc);
-    // }
-
-    // {
-    //     BindGroup::Descriptor bindGroupDesc;
-    //     BindingPoint bindingPoint;
-    //     bindingPoint.binding = 1;
-    //     SamplerBinding entry;
-    //     entry.sampler = ctx.whiteImageBundle.sampler;
-    //     entry.name = "mySampler";
-    //     entry.view = ctx.whiteImageBundle.view;
-    //     bindingPoint.entry = entry;
-    //     bindGroupDesc.entries.push_back(bindingPoint);
-    //     bindGroupDesc.layout = ctx.renderBindGroupLayout;
-    //     ctx.floorBindGroup = device.CreateBindGroup(bindGroupDesc);
-    // }
 }
 
 void initGBufferBindGroupAndLayout(Context& ctx, Device& device) {
@@ -676,13 +655,30 @@ void ShutdownSystem(gecs::commands cmds,
     ctx->imageBundle.texture.Destroy();
     ctx->depthView.Destroy();
     ctx->depth.Destroy();
+    ctx->gBuffer.normal.sampler.Destroy();
+    ctx->gBuffer.normal.view.Destroy();
+    ctx->gBuffer.normal.texture.Destroy();
+    ctx->gBuffer.position.sampler.Destroy();
+    ctx->gBuffer.position.view.Destroy();
+    ctx->gBuffer.position.texture.Destroy();
+
     ctx->cubeBindGroup.Destroy();
-    ctx->floorBindGroup.Destroy();
+    ctx->gbufferBindGroup.Destroy();
+    ctx->renderBindGroup.Destroy();
+
     ctx->renderBindGroupLayout.Destroy();
+    ctx->gbufferBindGroupLayout.Destroy();
+
+    ctx->gBufferLayout.Destroy();
+    ctx->layout.Destroy();
+
+    ctx->gBufferPipeline.Destroy();
+    ctx->renderPipeline.Destroy();
+
     ctx->uniformBuffer.Destroy();
     ctx->cubeVertexBuffer.Destroy();
-    ctx->layout.Destroy();
-    ctx->renderPipeline.Destroy();
+    ctx->renderVertexBuffer.Destroy();
+    ctx->lightBuffer.Destroy();
 }
 
 void BootstrapSystem(gecs::world& world,

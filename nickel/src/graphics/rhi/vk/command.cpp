@@ -89,8 +89,10 @@ private:
         auto texture = static_cast<TextureImpl*>(cmd.dst.texture.Impl());
         auto buffer = static_cast<BufferImpl*>(cmd.src.buffer.Impl());
 
-        for (int i = 0; i < texture->layouts.size(); i++) {
-            auto& layout = texture->layouts[i];
+
+        for (int i = 0; i < cmd.copySize.depthOrArrayLayers; i++) {
+            int layer = cmd.dst.origin.z + i;
+            auto& layout = texture->layouts[layer];
             if (layout == vk::ImageLayout::eTransferDstOptimal) {
                 continue;
             }
@@ -99,7 +101,7 @@ private:
                 DetermineTextureAspectByFormat(texture->Format());
             vk::ImageSubresourceRange range;
             range.setAspectMask(aspect)
-                .setBaseArrayLayer(i)
+                .setBaseArrayLayer(layer)
                 .setLevelCount(1)
                 .setLayerCount(1)
                 .setBaseMipLevel(cmd.dst.miplevel);
