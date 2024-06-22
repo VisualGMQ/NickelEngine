@@ -3,7 +3,9 @@
 #ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/adapter.hpp"
 #endif
-#include "graphics/rhi/gl4/adapter.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/adapter.hpp"
+#endif
 #include "graphics/rhi/null/adapter.hpp"
 
 namespace nickel::rhi {
@@ -14,7 +16,7 @@ APIPreference GetSupportRenderAPI(APIPreference desired) {
     if (api == APIPreference::Undefine) {
 #ifdef NICKEL_HAS_VULKAN
         api = APIPreference::Vulkan;
-#else
+#elif defined(NICKEL_HAS_GLES3)
         api = APIPreference::GL;
 #endif
     }
@@ -36,7 +38,9 @@ Adapter::Adapter(void* window, Option option) {
             Assert(false, "undefined render api");
             break;
         case APIPreference::GL:
-            impl_ = new gl4::AdapterImpl((SDL_Window*)window);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::AdapterImpl((SDL_Window*)window);
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN

@@ -1,12 +1,14 @@
 #include "graphics/rhi/render_pipeline.hpp"
 #include "graphics/rhi/common.hpp"
-#include "graphics/rhi/gl4/device.hpp"
 #ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/pipeline_layout.hpp"
 #include "graphics/rhi/vk/render_pipeline.hpp"
 #endif
-#include "graphics/rhi/gl4/render_pipeline.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/render_pipeline.hpp"
+#include "graphics/rhi/gl/device.hpp"
+#endif
 #include "graphics/rhi/null/render_pipeline.hpp"
 
 namespace nickel::rhi {
@@ -17,8 +19,10 @@ RenderPipeline::RenderPipeline(APIPreference api, DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::RenderPipelineImpl(
-                static_cast<gl4::DeviceImpl&>(dev), desc);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::RenderPipelineImpl(
+                static_cast<gl::DeviceImpl&>(dev), desc);
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN

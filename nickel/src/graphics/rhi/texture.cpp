@@ -1,7 +1,9 @@
 #include "graphics/rhi/texture.hpp"
-#include "graphics/rhi/gl4/texture.hpp"
-#include "graphics/rhi/gl4/adapter.hpp"
-#include "graphics/rhi/gl4/device.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/texture.hpp"
+#include "graphics/rhi/gl/adapter.hpp"
+#include "graphics/rhi/gl/device.hpp"
+#endif
 #include "graphics/rhi/null/texture.hpp"
 #ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/device.hpp"
@@ -17,8 +19,10 @@ Texture::Texture(AdapterImpl& adapter, rhi::DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
+#ifdef NICKEL_HAS_GLES3
             impl_ =
-                new gl4::TextureImpl(static_cast<gl4::DeviceImpl&>(dev), desc);
+                new gl::TextureImpl(static_cast<gl::DeviceImpl&>(dev), desc);
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN

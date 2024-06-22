@@ -63,9 +63,9 @@ void ImageViewCanva::Update() {
                 drawList->AddImage(imguiCtx->GetTextureBindedDescriptorSet(texture),
                                 {minPt.x, minPt.y}, {maxPt.x, maxPt.y});
             }
-#else
+#elif defined(NICKEL_HAS_GLES3)
             if (api == nickel::rhi::APIPreference::GL) {
-                drawList->AddImage((void*)static_cast<nickel::rhi::gl4::TextureImpl*>(
+                drawList->AddImage((void*)static_cast<nickel::rhi::gl::TextureImpl*>(
                                        texture.RawTexture().Impl())
                                        ->id,
                                    {minPt.x, minPt.y}, {maxPt.x, maxPt.y});

@@ -8,10 +8,6 @@ endif()
 
 add_subdirectory(gecs)
 
-if (NOT EMSCRIPTEN)
-    add_subdirectory(glad)
-endif()
-
 add_subdirectory(imgui)
 add_subdirectory(stb_image)
 add_subdirectory(tomlplusplus)

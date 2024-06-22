@@ -5,7 +5,9 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/pipeline_layout.hpp"
 #endif
-#include "graphics/rhi/gl4/pipeline_layout.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/pipeline_layout.hpp"
+#endif
 #include "graphics/rhi/null/pipeline_layout.hpp"
 
 namespace nickel::rhi {
@@ -16,14 +18,17 @@ PipelineLayout::PipelineLayout(APIPreference api, DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::PipelineLayoutImpl(desc);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::PipelineLayoutImpl(desc);
+#endif
             break;
         case APIPreference::Vulkan: {
 #ifdef NICKEL_HAS_VULKAN
             std::vector<vk::DescriptorSetLayout> layouts;
             for (auto& layout : desc.layouts) {
                 layouts.emplace_back(
-                    static_cast<const vulkan::BindGroupLayoutImpl*>(layout.impl_)
+                    static_cast<const vulkan::BindGroupLayoutImpl*>(
+                        layout.impl_)
                         ->layout);
             }
             std::vector<vk::PushConstantRange> ranges;

@@ -1,5 +1,5 @@
 #include "graphics/rhi/null/queue.hpp"
-#include "graphics/rhi/gl4/command.hpp"
+#include "graphics/rhi/gl/command.hpp"
 
 namespace nickel::rhi::null {
 

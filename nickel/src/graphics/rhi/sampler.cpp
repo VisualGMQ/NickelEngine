@@ -3,9 +3,10 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/sampler.hpp"
 #endif
-#include "graphics/rhi/gl4/sampler.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/sampler.hpp"
+#endif
 #include "graphics/rhi/null/sampler.hpp"
-
 
 namespace nickel::rhi {
 
@@ -15,7 +16,9 @@ Sampler::Sampler(APIPreference api, rhi::DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::SamplerImpl(desc);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::SamplerImpl(desc);
+#endif
             break;
         case APIPreference::Vulkan: {
 #ifdef NICKEL_HAS_VULKAN

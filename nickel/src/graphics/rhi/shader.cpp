@@ -6,7 +6,9 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/shader.hpp"
 #endif
-#include "graphics/rhi/gl4/shader.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/shader.hpp"
+#endif
 #include "graphics/rhi/null/shader.hpp"
 
 namespace nickel::rhi {
@@ -17,16 +19,21 @@ ShaderModule::ShaderModule(APIPreference api, DeviceImpl& device,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = std::shared_ptr<ShaderModuleImpl>(new gl4::ShaderModuleImpl(desc));
+        #ifdef NICKEL_HAS_GLES3
+            impl_ = std::shared_ptr<ShaderModuleImpl>(new gl::ShaderModuleImpl(desc));
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN
-            impl_ = std::shared_ptr<ShaderModuleImpl>(new vulkan::ShaderModuleImpl(
-                static_cast<vulkan::DeviceImpl&>(device).device, desc.code));
+            impl_ =
+                std::shared_ptr<ShaderModuleImpl>(new vulkan::ShaderModuleImpl(
+                    static_cast<vulkan::DeviceImpl&>(device).device,
+                    desc.code));
 #endif
             break;
         case APIPreference::Null:
-            impl_ = std::shared_ptr<ShaderModuleImpl>(new null::ShaderModuleImpl{});
+            impl_ =
+                std::shared_ptr<ShaderModuleImpl>(new null::ShaderModuleImpl{});
             break;
     }
 }

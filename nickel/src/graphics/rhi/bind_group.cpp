@@ -4,7 +4,10 @@
 #include "graphics/rhi/vk/bind_group.hpp"
 #include "graphics/rhi/vk/device.hpp"
 #endif
-#include "graphics/rhi/gl4/device.hpp"
+
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/device.hpp"
+#endif
 #include "graphics/rhi/null/device.hpp"
 
 
@@ -16,7 +19,9 @@ BindGroupLayout::BindGroupLayout(APIPreference api, DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::BindGroupLayoutImpl(desc);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::BindGroupLayoutImpl(desc);
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN
@@ -43,7 +48,9 @@ BindGroup::BindGroup(APIPreference api, DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::BindGroupImpl(desc);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::BindGroupImpl(desc);
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN

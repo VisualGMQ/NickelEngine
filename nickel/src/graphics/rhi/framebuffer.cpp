@@ -2,7 +2,9 @@
 #ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/framebuffer.hpp"
 #endif
-#include "graphics/rhi/gl4/framebuffer.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/framebuffer.hpp"
+#endif
 
 namespace nickel::rhi {
 

@@ -4,7 +4,6 @@
 #include "nickel.hpp"
 #include "util.hpp"
 #include "widget.hpp"
-#include "graphics/rhi/gl4/texture.hpp"
 
 
 /**

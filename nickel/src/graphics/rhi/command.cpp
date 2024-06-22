@@ -2,7 +2,9 @@
 #ifdef NICKEL_HAS_VULKAN
 #include "graphics/rhi/vk/command.hpp"
 #endif
-#include "graphics/rhi/gl4/command.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/command.hpp"
+#endif
 #include "graphics/rhi/null/command.hpp"
 
 namespace nickel::rhi {

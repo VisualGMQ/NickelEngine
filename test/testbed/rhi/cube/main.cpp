@@ -39,7 +39,7 @@ void initShaders(APIPreference api, Device device,
                 .value();
         desc.fragment.module = device.CreateShaderModule(shaderDesc);
     } else if (api == APIPreference::GL) {
-#ifdef NICKEL_HAS_GL4
+#ifdef NICKEL_HAS_GL
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "test/testbed/rhi/cube/shaders/shader.glsl.vert")
                               .value();

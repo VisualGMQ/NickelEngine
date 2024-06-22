@@ -3,7 +3,9 @@
 #include "graphics/rhi/vk/device.hpp"
 #include "graphics/rhi/vk/renderpass.hpp"
 #endif
-#include "graphics/rhi/gl4/renderpass.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/renderpass.hpp"
+#endif
 #include "graphics/rhi/null/renderpass.hpp"
 
 

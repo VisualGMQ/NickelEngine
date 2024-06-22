@@ -5,8 +5,10 @@
 #include "graphics/rhi/vk/texture.hpp"
 #include "graphics/rhi/vk/texture_view.hpp"
 #endif
-#include "graphics/rhi/gl4/texture.hpp"
-#include "graphics/rhi/gl4/texture_view.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/texture.hpp"
+#include "graphics/rhi/gl/texture_view.hpp"
+#endif
 #include "graphics/rhi/null/texture_view.hpp"
 
 
@@ -19,8 +21,10 @@ TextureView::TextureView(APIPreference api, DeviceImpl& dev,
         case APIPreference::Undefine:
             break;
         case APIPreference::GL:
-            impl_ = new gl4::TextureViewImpl(
-                static_cast<gl4::TextureImpl&>(texture), desc);
+#ifdef NICKEL_HAS_GLES3
+            impl_ = new gl::TextureViewImpl(
+                static_cast<gl::TextureImpl&>(texture), desc);
+#endif
             break;
         case APIPreference::Vulkan:
 #ifdef NICKEL_HAS_VULKAN

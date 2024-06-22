@@ -6,8 +6,10 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_internal.h"
-#include "graphics/rhi/gl4/texture.hpp"
-#include "graphics/rhi/gl4/texture_view.hpp"
+#ifdef NICKEL_HAS_GLES3
+#include "graphics/rhi/gl/texture.hpp"
+#include "graphics/rhi/gl/texture_view.hpp"
+#endif
 
 #include "graphics/context.hpp"
 
@@ -256,7 +258,6 @@ void ImGuiOnWindowResize(const WindowResizeEvent& event,
                          gecs::resource<rhi::Adapter> adapter,
                          gecs::resource<rhi::Device> device,
                          gecs::resource<Window> window) {
-
     auto size = window->Size();
     if (size.w == 0 || size.h == 0) {
         return;
@@ -297,8 +298,10 @@ void ImGuiInit(gecs::commands cmds, gecs::resource<gecs::mut<Window>> window,
     ImGui::StyleColorsDark();
 
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
+#ifdef NICKEL_HAS_GLES3
         ImGui_ImplSDL2_InitForOpenGL((SDL_Window*)window->Raw(), nullptr);
-        ImGui_ImplOpenGL3_Init("#version 430");
+        ImGui_ImplOpenGL3_Init("#version 300 es");
+#endif
     } else {
 #ifdef NICKEL_HAS_VULKAN
         ImGui_ImplSDL2_InitForVulkan((SDL_Window*)window->Raw());
@@ -427,8 +430,10 @@ void ImGuiEnd(gecs::resource<gecs::mut<Window>> window,
     ImGui::Render();
 
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
+#ifdef NICKEL_HAS_GLES3
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
     } else {
 #ifdef NICKEL_HAS_VULKAN
         ImDrawData* main_draw_data = ImGui::GetDrawData();
@@ -447,7 +452,9 @@ void ImGuiShutdown(gecs::commands cmds, gecs::resource<rhi::Adapter> adapter,
     PROFILE_BEGIN();
 
     if (adapter->RequestAdapterInfo().api == rhi::APIPreference::GL) {
+#ifdef NICKEL_HAS_GLES3
         ImGui_ImplOpenGL3_Shutdown();
+#endif
     } else {
 #ifdef NICKEL_HAS_VULKAN
         ImGui_ImplVulkan_Shutdown();
@@ -486,11 +493,12 @@ void Image(const ::nickel::Texture& texture, const ImVec2& image_size,
     }
 #endif
     if (api == nickel::rhi::APIPreference::GL) {
-        auto glTexture =
-            static_cast<const ::nickel::rhi::gl4::TextureViewImpl*>(
-                texture.View().Impl());
+#ifdef NICKEL_HAS_GLES3
+        auto glTexture = static_cast<const ::nickel::rhi::gl::TextureViewImpl*>(
+            texture.View().Impl());
         ::ImGui::Image((ImTextureID)glTexture->id, image_size, uv0, uv1,
                        tint_col, border_col);
+#endif
     }
 }
 
@@ -568,11 +576,12 @@ bool ImageButton(const char* str_id, const ::nickel::Texture& texture,
     }
 #endif
     if (api == nickel::rhi::APIPreference::GL) {
-        auto glTexture =
-            static_cast<const ::nickel::rhi::gl4::TextureViewImpl*>(
-                texture.View().Impl());
+#ifdef NICKEL_HAS_GLES3
+        auto glTexture = static_cast<const ::nickel::rhi::gl::TextureViewImpl*>(
+            texture.View().Impl());
         return ::ImGui::ImageButton(str_id, (ImTextureID)glTexture->id,
                                     image_size, uv0, uv1, bg_col, tint_col);
+#endif
     }
     return false;
 }
@@ -601,11 +610,12 @@ bool ImageButton(const ::nickel::Texture& texture, const ImVec2& size,
     }
 #endif
     if (api == nickel::rhi::APIPreference::GL) {
-        auto glTexture =
-            static_cast<const ::nickel::rhi::gl4::TextureViewImpl*>(
-                texture.View().Impl());
+#ifdef NICKEL_HAS_GLES3
+        auto glTexture = static_cast<const ::nickel::rhi::gl::TextureViewImpl*>(
+            texture.View().Impl());
         return ::ImGui::ImageButton((ImTextureID)glTexture->id, size, uv0, uv1,
                                     frame_padding, bg_col, tint_col);
+#endif
     }
     return false;
 }
