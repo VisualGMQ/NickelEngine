@@ -5,3 +5,4 @@ wasm-build
 compile_commands.json
 sandbox
 /imgui.ini
+vs-build

@@ -21,6 +21,8 @@ AddConsoleTest(geom)
 AddConsoleTest(cgmath)
 AddConsoleTest(tweeny)
 AddConsoleTest(csv_iterator)
+AddConsoleTest(sparse_set)
+AddConsoleTest(data_pool)
 
 # AddVisualableTest(gjk)
 # AddVisualableTest(script)

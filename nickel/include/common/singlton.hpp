@@ -30,6 +30,10 @@ public:
         static T instance;
         return instance;
     }
+
+    Singlton() = default;
+    Singlton(const Singlton&) = delete;
+    Singlton& operator=(const Singlton&) = delete;
 };
 
 /**
@@ -41,6 +45,10 @@ public:
 template <typename T>
 class Singlton<T, true> {
 public:
+    Singlton() = default;
+    Singlton(const Singlton&) = delete;
+    Singlton& operator=(const Singlton&) = delete;
+
     /**
      * @brief get signelton instance
      * @return The singleton instance
@@ -67,6 +75,10 @@ public:
     static void Delete() {
         instance_.reset();
         instance_ = nullptr;
+    }
+
+    static bool HasInstance() {
+        return instance_.get();
     }
 
 private:
