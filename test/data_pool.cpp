@@ -15,9 +15,9 @@ TEST_CASE("data storage") {
     auto [value1, id1] = storage.Allocate();
     auto [value2, id2] = storage.Allocate();
     auto [value3, id3] = storage.Allocate();
-    *value1.data = 1;
-    *value2.data = 2;
-    *value3.data = 3;
+    *(int*)value1.data = 1;
+    *(int*)value2.data = 2;
+    *(int*)value3.data = 3;
 
     SECTION("get") {
         REQUIRE(*storage.Get(id1) == 1);
@@ -53,20 +53,20 @@ TEST_CASE("data pool") {
     auto& pool = nickel::DataPool::Instance();
 
     auto ref1 = pool.Emplace<Data1>(1);
-    REQUIRE(ref1.Valid());
-    REQUIRE(ref1.GetData()->value == 1);
+    REQUIRE(ref1 != nickel::InvalidDataID);
+    REQUIRE(pool.Get<Data1>(ref1)->value == 1);
 
     auto ref2 = pool.Emplace<Data1>(2);
-    REQUIRE(ref2.Valid());
-    REQUIRE(ref2.GetData()->value == 2);
+    REQUIRE(ref2 != nickel::InvalidDataID);
+    REQUIRE(pool.Get<Data1>(ref2)->value == 2);
 
     SECTION("destroy") {
         pool.Destroy<Data1>(ref1);
         REQUIRE(!pool.Exists<Data1>(ref1));
         pool.Destroy<Data1>(ref2);
         REQUIRE(!pool.Exists<Data1>(ref2));
-        REQUIRE(!ref1.Valid());
-        REQUIRE(!ref2.Valid());
+        REQUIRE(ref1 != nickel::InvalidDataID);
+        REQUIRE(ref2 != nickel::InvalidDataID);
         REQUIRE(gDestructCount == 2);
     }
 

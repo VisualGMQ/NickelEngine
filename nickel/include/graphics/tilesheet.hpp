@@ -31,7 +31,8 @@ class Tilesheet final: public Asset {
 public:
     friend class TilesheetInnerAccessor;
 
-    Tilesheet(const TextureManager&, TextureHandle, uint32_t col, uint32_t row,
+    Tilesheet() = default;
+    Tilesheet(TextureHandle, uint32_t col, uint32_t row,
               const Margin& margin = Margin::Zero(),
               const Spacing& spacing = {0, 0});
 
@@ -62,7 +63,8 @@ public:
         return {tileWidth_, tileHeight_};
     }
 
-    toml::table Save2Toml() const override;
+    bool Load(const toml::table&) override;
+    bool Save(toml::table&) const override;
 
 private:
     TextureHandle handle_;
@@ -83,8 +85,6 @@ private:
                        (row_ - 1) * spacing_.y) /
                       static_cast<float>(row_);
     }
-
-    Tilesheet() = default;
 };
 
 using TilesheetHandle = Handle<Tilesheet>;
@@ -112,21 +112,5 @@ public:
 private:
     Tilesheet& ts_;
 };
-
-template <>
-std::unique_ptr<Tilesheet> LoadAssetFromMetaTable(const toml::table&);
-
-class TilesheetManager final : public Manager<Tilesheet> {
-public:
-    static FileType GetFileType() { return FileType::Tilesheet; }
-
-    TilesheetHandle Create(TextureHandle, uint32_t col, uint32_t row,
-                           const Margin& margin = Margin::Zero(),
-                           const Spacing& spacing = {0, 0});
-    TilesheetHandle Load(const std::filesystem::path&);
-};
-
-TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
-                                     const std::filesystem::path& filename);
 
 }  // namespace nickel

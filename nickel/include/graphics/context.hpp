@@ -2,11 +2,10 @@
 
 #include "common/cgmath.hpp"
 #include "common/log_tag.hpp"
-#include "graphics/material.hpp"
 #include "graphics/texture.hpp"
 #include "graphics/vertex.hpp"
 #include "video/event.hpp"
-#include <stack>
+#include "video/window.hpp"
 
 namespace nickel {
 
@@ -33,12 +32,12 @@ struct Render2DContext {
     rhi::BindGroupLayout bindGroupLayout;
     rhi::ShaderModule vertexShader;
     rhi::ShaderModule fragmentShader;
-    rhi::BindGroup defaultBindGroup;    // bind a white texture
-    rhi::Buffer vertexBuffer;           // for 2D texture vertices
-    rhi::Buffer indexBuffer;            // for 2D texture vertices
+    rhi::BindGroup defaultBindGroup;  // bind a white texture
+    rhi::Buffer vertexBuffer;         // for 2D texture vertices
+    rhi::Buffer indexBuffer;          // for 2D texture vertices
 
-    Render2DContext(rhi::Adapter, rhi::Device,
-                    const cgmath::Rect& viewport, RenderContext&);
+    Render2DContext(rhi::Adapter, rhi::Device, const cgmath::Rect& viewport,
+                    RenderContext&);
     ~Render2DContext();
 
     // get sampler(will create when not exists)
@@ -53,7 +52,8 @@ struct Render2DContext {
 
 private:
     static constexpr size_t MaxRectCount = 1024;
-    static constexpr size_t VertexBufferSize = sizeof(Vertex2D) * MaxRectCount * 4;
+    static constexpr size_t VertexBufferSize =
+        sizeof(Vertex2D) * MaxRectCount * 4;
 
     rhi::Device device_;
     std::unordered_map<uint32_t, rhi::Sampler> samplers_;
@@ -92,14 +92,11 @@ private:
     rhi::RenderPipeline createPipeline(rhi::APIPreference, RenderContext&);
 };
 
-/**
- * @brief [resource][inner] render context
- */
-struct RenderContext final {
+struct RenderContext final : public Singlton<RenderContext, true> {
     static void OnWindowResize(const WindowResizeEvent&,
                                gecs::resource<gecs::mut<RenderContext>>);
 
-    RenderContext(rhi::Adapter, rhi::Device, const cgmath::Vec2& windowSize);
+    RenderContext(const Window& window, rhi::Adapter::Option option);
     ~RenderContext();
 
     void RecreatePipeline(const cgmath::Vec2& size);
@@ -126,7 +123,11 @@ struct RenderContext final {
     rhi::CommandEncoder encoder;
     rhi::CommandBuffer cmd;
 
+    rhi::Adapter adapter;
+    rhi::Device device;
+
 private:
+    void initRenderDevice(const Window& window, rhi::Adapter::Option option);
     void initDepthTexture(rhi::Device, const nickel::cgmath::Vec2& size);
     void initMVPBuffer(rhi::Device);
     rhi::Buffer createCameraBuffer(rhi::Device);

@@ -5,7 +5,7 @@ namespace nickel {
 
 Animation Animation::Null = Animation{};
 
-Animation::Animation(const toml::table& tbl) {
+bool Animation::Load(const toml::table& tbl) {
     if (auto node = tbl.get("tracks"); node && node->is_array_of_tables()) {
         auto& arr = *node->as_array();
 
@@ -22,45 +22,20 @@ Animation::Animation(const toml::table& tbl) {
                 }
             }
         }
-    }
-}
-
-Animation::Animation(const std::filesystem::path& filename) : Asset(filename) {
-    auto result = toml::parse_file(filename.string());
-    if (!result) {
-        LOGW(log_tag::Asset, "load animation from ", filename,
-             " failed: ", result.error());
     } else {
-        *this = Animation(result.table());
+        return false;
     }
+
+    return true;
 }
 
-template <>
-std::unique_ptr<Animation> LoadAssetFromMetaTable(const toml::table& tbl) {
-    if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Animation>(path->as_string()->get());
+bool Animation::Save(toml::table& tbl) const {
+    toml::array arr;
+    for (auto& track : tracks_) {
+        arr.push_back(track->Save2Toml());
     }
-    return nullptr;
-}
-
-std::shared_ptr<Animation> AnimationManager::CreateSolitaryFromTracks(
-    typename Animation::container_type&& tracks) {
-    return std::make_shared<Animation>(std::move(tracks));
-}
-
-AnimationHandle AnimationManager::Load(const std::filesystem::path& filename) {
-    if (Has(filename)) {
-        return GetHandle(filename);
-    }
-
-    AnimationHandle handle = AnimationHandle::Create();
-    auto anim = std::make_unique<Animation>(filename);
-    if (anim && *anim) {
-        storeNewItem(handle, std::move(anim));
-        return handle;
-    } else {
-        return AnimationHandle::Null();
-    }
+    tbl.emplace("tracks", arr);
+    return true;
 }
 
 bool AnimTrackLoadMethods::Contain(type_info_type type) {
@@ -76,11 +51,11 @@ AnimTrackLoadMethods::Method AnimTrackLoadMethods::Find(
 }
 
 void AnimationPlayer::Sync(gecs::entity entity, gecs::registry reg) {
-    if (!mgr_->Has(handle_)) {
+    if (!handle_) {
         return;
     }
 
-    auto& anim = mgr_->Get(handle_);
+    auto& anim = *handle_.GetData();
     for (auto& track : anim.Tracks()) {
         if (reg.has(entity, track->GetApplyTarget())) {
             auto obj = reg.get_mut(entity, track->GetApplyTarget());

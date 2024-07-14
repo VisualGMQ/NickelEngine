@@ -20,12 +20,11 @@ void Label::ChangeFont(FontHandle handle) {
 }
 
 void Label::regenerateTextCache() {
-    auto fontMgr = ECS::Instance().World().res_mut<FontManager>();
-    if (!fontMgr->Has(font_)) {
+    if (!font_) {
         return;
     }
 
-    auto& font = fontMgr->Get(font_);
+    auto& font = *font_.GetDataConst();
     textSize_.Set(0, 0);
     cache_.Clear();
     rects_.clear();

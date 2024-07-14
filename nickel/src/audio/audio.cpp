@@ -18,15 +18,14 @@ ma_engine gEngine;
 
 Sound Sound::Null;
 
-SoundPlayer::SoundPlayer()
-    : mgr_{&ECS::Instance().World().res_mut<AudioManager>().get()} {
+SoundPlayer::SoundPlayer() {
     data_ = new ma_sound;
     memset(data_, 0, sizeof(ma_sound));
 }
 
 SoundPlayer::SoundPlayer(SoundHandle handle) : SoundPlayer() {
     handle_ = handle;
-    recreateInnerSound(handle, *mgr_);
+    recreateInnerSound(handle);
 }
 
 SoundPlayer::~SoundPlayer() {
@@ -34,18 +33,48 @@ SoundPlayer::~SoundPlayer() {
     delete data_;
 }
 
-Sound::Sound(const std::filesystem::path& filename) : Asset(filename) {
-    data_ = new ma_decoder;
-    if (auto result =
-            ma_decoder_init_file(filename.string().c_str(), NULL, data_);
-        result != MA_SUCCESS) {
-        LOGW(nickel::log_tag::Asset, "load audio from ", filename,
-             " failed: ", ma_result_description(result));
-    }
-}
-
 void* Sound::GetAudioData() {
     return data_;
+}
+
+bool Sound::Load(const std::filesystem::path& filename) {
+    return load(filename);
+}
+
+bool Sound::Load(const toml::table& tbl) {
+    if (auto node = tbl.get("path"); node) {
+        auto& filename = node->as_string()->get();
+        return load(filename);
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+bool Sound::load(const std::filesystem::path& filename) {
+    ma_decoder newDecoder;
+
+    if (auto result =
+            ma_decoder_init_file(filename.string().c_str(), NULL, &newDecoder);
+        result != MA_SUCCESS) {
+        LOGE(nickel::log_tag::Asset, "load audio from ", filename,
+                " failed: ", ma_result_description(result));
+        ma_decoder_uninit(&newDecoder);
+        return false;
+    }
+
+    if (!data_) {
+        data_ = new ma_decoder;
+    }
+    *data_ = std::move(newDecoder);
+    ChangeRelativePath(filename);
+    return true;
+}
+
+bool Sound::Save(toml::table& tbl) const {
+    NICKEL_TOML_EMPLACE_NODE(tbl, "path", GetRelativePath().string());
+    return true;
 }
 
 Sound::~Sound() {
@@ -53,14 +82,14 @@ Sound::~Sound() {
     delete data_;
 }
 
-void SoundPlayer::recreateInnerSound(SoundHandle handle, AudioManager& mgr) {
+void SoundPlayer::recreateInnerSound(SoundHandle handle) {
     if (data_->pDataSource) {
         ma_sound_uninit(data_);
     }
 
     handle_ = handle;
-    if (mgr.Has(handle)) {
-        auto& sound = mgr.Get(handle);
+    if (handle) {
+        auto& sound = *handle.GetData();
         if (auto result = ma_sound_init_from_data_source(
                 &gEngine, (ma_data_source*)sound.GetAudioData(),
                 MA_SOUND_FLAG_DECODE, nullptr, data_);
@@ -175,7 +204,7 @@ SoundPlayer::operator bool() const {
 }
 
 void SoundPlayer::ChangeSound(SoundHandle handle) {
-    recreateInnerSound(handle, *mgr_);
+    recreateInnerSound(handle);
 }
 
 void InitAudioSystem() {
@@ -189,14 +218,6 @@ void InitAudioSystem() {
 
 void ShutdownAudioSystem() {
     ma_engine_uninit(&gEngine);
-}
-
-template <>
-std::unique_ptr<Sound> LoadAssetFromMetaTable(const toml::table& tbl) {
-    if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Sound>(path->as_string()->get());
-    }
-    return nullptr;
 }
 
 }  // namespace nickel

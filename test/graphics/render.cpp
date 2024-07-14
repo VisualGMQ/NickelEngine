@@ -1,12 +1,9 @@
 #include "nickel.hpp"
 
-void StartupSystem(
-    gecs::commands cmds, gecs::resource<gecs::mut<nickel::TextureManager>> mgr,
-    gecs::resource<gecs::mut<nickel::Material2DManager>> mtl2dMgr,
-    gecs::resource<gecs::mut<nickel::GLTFManager>> modelMgr) {
-    auto&& [tilesheetHandle, tilesheet] =
-        mgr->LoadAndGet("test/graphics/assets/tileset.png");
-    auto tilesheetMtl = mtl2dMgr->Create("test.mtl2d", tilesheetHandle);
+void StartupSystem(gecs::commands cmds) {
+    auto& mgr = nickel::AssetManager::Instance();
+    auto textureHandle = mgr.Load<nickel::Texture>("test/graphics/assets/tileset.png");
+    auto tilesheetMtl = mgr.Create<nickel::Material2D>(textureHandle);
     {
         auto ent = cmds.create();
 
@@ -31,9 +28,9 @@ void StartupSystem(
         auto ent = cmds.create();
         nickel::GLTFBundle bundle;
         bundle.transform.scale.Set(10, 10);
-        bundle.gltf =
-            modelMgr->Load("external/glTF-Sample-Models/2.0/CesiumMilkTruck/"
-                           "glTF/CesiumMilkTruck.gltf");
+        bundle.gltf = mgr.Load<nickel::GLTFModel>(
+            "external/glTF-Sample-Models/2.0/CesiumMilkTruck/glTF/"
+            "CesiumMilkTruck.gltf");
         cmds.emplace_bundle(ent, std::move(bundle));
     }
 
@@ -47,9 +44,9 @@ void StartupSystem(
         btn.hoverColor.Set(0, 1, 0, 1);
         btn.pressColor.Set(0, 0, 1, 1);
         nickel::cgmath::Vec2 uv0{16, 16}, uv1{32, 32};
-        uv0 /= tilesheet.Size();
-        uv1 /= tilesheet.Size();
-        btn.texture.handle = tilesheetHandle;
+        uv0 /= textureHandle.GetDataConst()->Size();
+        uv1 /= textureHandle.GetDataConst()->Size();
+        btn.texture.handle = textureHandle;
         btn.texture.uv0 = uv0;
         btn.texture.uv1 = uv1;
 

@@ -1,16 +1,16 @@
 #include "ui/context.hpp"
+#include "common/util.hpp"
 
 namespace nickel::ui {
 
-RenderUIContext::RenderUIContext(rhi::Adapter adapter, rhi::Device device,
-                                 RenderContext& ctx,
-                                 const cgmath::Vec2& windowSize)
-    : device_{device},
-      camera{Camera::CreateOrtho(0, windowSize.w, -windowSize.h, 0, 1, 0,
+RenderUIContext::RenderUIContext(const cgmath::Vec2& windowSize)
+    : camera{Camera::CreateOrtho(0, windowSize.w, -windowSize.h, 0, 1, 0,
                                  {0, 0, windowSize.w, windowSize.h})} {
-    auto api = adapter.RequestAdapterInfo().api;
+    RenderContext& ctx = RenderContext::Instance();
+
+    auto api = ctx.adapter.RequestAdapterInfo().api;
     bindGroupLayout =
-        createBindGroupLayout(ctx, adapter.Limits().supportSeparateSampler);
+        createBindGroupLayout(ctx, ctx.adapter.Limits().supportSeparateSampler);
     pipelineLayout = createPipelineLayout();
     initPipelineShader(api);
     initPipelines(api);
@@ -94,7 +94,7 @@ rhi::PipelineLayout RenderUIContext::createPipelineLayout() {
     range.size = sizeof(nickel::cgmath::Mat44) * 2;
     range.stage = rhi::ShaderStage::Vertex;
     layoutDesc.pushConstRanges.emplace_back(range);
-    return device_.CreatePipelineLayout(layoutDesc);
+    return RenderContext::Instance().device.CreatePipelineLayout(layoutDesc);
 }
 
 void RenderUIContext::initPipelineShader(rhi::APIPreference api) {
@@ -104,22 +104,22 @@ void RenderUIContext::initPipelineShader(rhi::APIPreference api) {
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>("nickel/shader/gl/ui.vert")
                 .value();
-        vertexShader = device_.CreateShaderModule(shaderDesc);
+        vertexShader = RenderContext::Instance().device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code =
             nickel::ReadWholeFile<std::vector<char>>("nickel/shader/gl/ui.frag")
                 .value();
-        fragmentShader = device_.CreateShaderModule(shaderDesc);
+        fragmentShader = RenderContext::Instance().device.CreateShaderModule(shaderDesc);
     } else if (api == rhi::APIPreference::Vulkan) {
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "nickel/shader/vk/ui_vert.spv", std::ios::binary)
                               .value();
-        vertexShader = device_.CreateShaderModule(shaderDesc);
+        vertexShader = RenderContext::Instance().device.CreateShaderModule(shaderDesc);
 
         shaderDesc.code = nickel::ReadWholeFile<std::vector<char>>(
                               "nickel/shader/vk/ui_frag.spv", std::ios::binary)
                               .value();
-        fragmentShader = device_.CreateShaderModule(shaderDesc);
+        fragmentShader = RenderContext::Instance().device.CreateShaderModule(shaderDesc);
     }
 }
 
@@ -165,7 +165,7 @@ rhi::BindGroupLayout RenderUIContext::createBindGroupLayout(
         }
     }
 
-    return device_.CreateBindGroupLayout(desc);
+    return RenderContext::Instance().device.CreateBindGroupLayout(desc);
 }
 
 void RenderUIContext::initPipelines(rhi::APIPreference api) {
@@ -201,10 +201,10 @@ void RenderUIContext::initPipelines(rhi::APIPreference api) {
     desc.primitive.topology = rhi::Topology::TriangleList;
     desc.primitive.cullMode = rhi::CullMode::None;
 
-    fillPipeline = device_.CreateRenderPipeline(desc);
+    fillPipeline = RenderContext::Instance().device.CreateRenderPipeline(desc);
 
     desc.primitive.topology = rhi::Topology::LineList;
-    linePipeline = device_.CreateRenderPipeline(desc);
+    linePipeline = RenderContext::Instance().device.CreateRenderPipeline(desc);
 }
 
 rhi::Buffer RenderUIContext::createIndexBuffer() {
@@ -213,7 +213,7 @@ rhi::Buffer RenderUIContext::createIndexBuffer() {
     desc.size = sizeof(uint32_t) * 6 * MaxRectSize;
     desc.usage = rhi::BufferUsage::Index;
 
-    auto buffer = device_.CreateBuffer(desc);
+    auto buffer = RenderContext::Instance().device.CreateBuffer(desc);
     auto ptr = (uint32_t*)buffer.GetMappedRange();
     uint32_t indices[] = {0, 1, 2, 1, 2, 3};
     for (int i = 0; i < MaxRectSize; i++) {
@@ -230,16 +230,15 @@ rhi::Buffer RenderUIContext::createVertexBuffer() {
     desc.size = sizeof(float) * 9 * MaxRectSize;
     desc.usage = rhi::BufferUsage::Vertex;
 
-    return device_.CreateBuffer(desc);
+    return RenderContext::Instance().device.CreateBuffer(desc);
 }
 
 rhi::BindGroup RenderUIContext::FindBindGroup(TextureHandle handle) {
     if (auto it = bindGroups.find(handle); it != bindGroups.end()) {
         return it->second;
     } else {
-        auto mgr = ECS::Instance().World().res<TextureManager>();
-        if (mgr->Has(handle)) {
-            auto& texture = mgr->Get(handle);
+        if (handle) {
+            auto& texture = *handle.GetDataConst();
             rhi::BindGroup::Descriptor desc;
             desc.layout = bindGroupLayout;
             rhi::BindingPoint binding;
@@ -249,7 +248,7 @@ rhi::BindGroup RenderUIContext::FindBindGroup(TextureHandle handle) {
             binding.entry = entry;
             desc.entries.push_back(binding);
 
-            return bindGroups.emplace(handle, device_.CreateBindGroup(desc))
+            return bindGroups.emplace(handle, RenderContext::Instance().device.CreateBindGroup(desc))
                 .first->second;
         } else {
             return defaultBindGroup;
@@ -259,26 +258,25 @@ rhi::BindGroup RenderUIContext::FindBindGroup(TextureHandle handle) {
 
 rhi::TextureView RenderUIContext::GetFontChar(FontHandle handle,
                                               uint32_t code) {
-    auto mgr = ECS::Instance().World().res<FontManager>();
-    if (!mgr->Has(handle)) {
+    if (!handle) {
         return {};
     }
 
-    auto& font = mgr->Get(handle);
+    auto& font = *handle.GetDataConst();
 
     constexpr int size = 20;  // TODO: use custom size to generate font
 
     auto glyph = font.GetGlyph(code, size);
+
+    // TODO: not finish
 }
 
 void RenderUIContext::initDefaultBindGroup() {
     rhi::BindGroup::Descriptor desc;
     desc.layout = bindGroupLayout;
-    defaultBindGroup = device_.CreateBindGroup(desc);
+    defaultBindGroup = RenderContext::Instance().device.CreateBindGroup(desc);
 }
 
-UIContext::UIContext(rhi::Adapter adapter, rhi::Device device,
-                     RenderContext& ctx, const cgmath::Vec2& windowSize)
-    : renderCtx(adapter, device, ctx, windowSize) {}
+UIContext::UIContext(const cgmath::Vec2& windowSize) : renderCtx(windowSize) {}
 
 }  // namespace nickel::ui

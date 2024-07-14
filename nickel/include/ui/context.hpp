@@ -58,8 +58,7 @@ struct RenderUIContext final {
 
     static constexpr uint32_t MaxRectSize = 4096;
 
-    RenderUIContext(rhi::Adapter, rhi::Device, RenderContext&,
-                    const cgmath::Vec2& windowSize);
+    RenderUIContext(const cgmath::Vec2& windowSize);
     ~RenderUIContext();
 
     void AddElement(const cgmath::Rect&, const cgmath::Color&,
@@ -71,8 +70,6 @@ struct RenderUIContext final {
     void RecreatePipeline(rhi::APIPreference api);
 
 private:
-    rhi::Device device_;
-
     rhi::PipelineLayout createPipelineLayout();
     void initPipelineShader(rhi::APIPreference);
     rhi::BindGroupLayout createBindGroupLayout(RenderContext& ctx,
@@ -83,12 +80,11 @@ private:
     void initDefaultBindGroup();
 };
 
-struct UIContext final {
+struct UIContext final : public Singlton<UIContext, true>{
     RenderUIContext renderCtx;
     EventRecorder eventRecorder;
 
-    UIContext(rhi::Adapter, rhi::Device device, RenderContext& ctx,
-              const cgmath::Vec2& windowSize);
+    UIContext(const cgmath::Vec2& windowSize);
     UIContext(const UIContext&) = delete;
     UIContext& operator=(const UIContext&) = delete;
 };

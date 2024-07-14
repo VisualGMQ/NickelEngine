@@ -1,5 +1,6 @@
 #include "graphics/font.hpp"
 #include "common/profile.hpp"
+#include "graphics/context.hpp"
 
 #include "ft2build.h"
 #include FT_FREETYPE_H
@@ -37,27 +38,51 @@ void FontSystemShutdown() {
 
 Font Font::Null;
 
-Font::Font(const std::filesystem::path& filename) : Asset(filename) {
-    if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &face_);
-        err) {
-        LOGE(log_tag::Asset, "load font ", filename,
-             " failed! error code: ", FT_Error_String(err));
-        err = FT_Select_Charmap(face_, FT_ENCODING_UNICODE);
-        if (err || !face_->charmap ||
-            face_->charmap->encoding != FT_ENCODING_UNICODE) {
-            LOGE(log_tag::Asset, "font ", filename,
-                 " don't support unicode charset! please change a font! ",
-                 FT_Error_String(err));
-        }
+bool Font::Load(const std::filesystem::path& filename) {
+    return loadFromFile(filename);
+}
+
+bool Font::Load(const toml::table& tbl) {
+    if (auto node = tbl.get("path"); node && node->is_string()) {
+        auto& filename = node->as_string()->get();
+        return loadFromFile(filename);
+    } else {
+        LOGE(log_tag::Asset, "load asset failed: meta file miss `path`");
+        return false;
     }
 }
 
-template <>
-std::unique_ptr<Font> LoadAssetFromMetaTable(const toml::table& tbl) {
-    if (auto path = tbl.get("path"); path && path->is_string()) {
-        return std::make_unique<Font>(path->as_string()->get());
+bool Font::loadFromFile(const std::filesystem::path& filename) {
+    FT_Face newFace{};
+
+    if (auto err = FT_New_Face(gFtLib, filename.string().c_str(), 0, &newFace);
+        err) {
+        LOGE(log_tag::Asset, "load font ", filename,
+            " failed! error code: ", FT_Error_String(err));
+        FT_Done_Face(newFace);
+        return false;
     }
-    return nullptr;
+
+    auto err = FT_Select_Charmap(face_, FT_ENCODING_UNICODE);
+    if (err || !face_->charmap ||
+        face_->charmap->encoding != FT_ENCODING_UNICODE) {
+        LOGE(log_tag::Asset, "font ", filename,
+            " don't support unicode charset! please change a font! ",
+            FT_Error_String(err));
+        FT_Done_Face(newFace);
+        return false;
+    }
+
+    ChangeRelativePath(filename);
+    FT_Done_Face(face_);
+    face_ = newFace;
+
+    return true;
+}
+
+bool Font::Save(toml::table& tbl) const {
+    NICKEL_TOML_EMPLACE_NODE(tbl, "path", GetRelativePath().string());
+    return true;
 }
 
 Character::Character(const FT_GlyphSlot& g)
@@ -66,10 +91,7 @@ Character::Character(const FT_GlyphSlot& g)
       advance{cgmath::Vec2(g->advance.x, g->advance.y)} {
     auto bitmap = g->bitmap;
 
-    auto mgr =
-        ECS::Instance().World().cur_registry()->res_mut<TextureManager>();
-    texture =
-        mgr->CreateSolitary(bitmap.buffer, bitmap.width, bitmap.rows);
+    texture.reset(new Texture(bitmap.buffer, bitmap.width, bitmap.rows));
 }
 
 FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
@@ -89,29 +111,8 @@ FT_GlyphSlot Font::GetGlyph(uint64_t c, int size) const {
     return face_->glyph;
 }
 
-toml::table Font::Save2Toml() const {
-    toml::table tbl;
-    tbl.emplace("path", RelativePath().string());
-    return tbl;
-}
-
 Font::~Font() {
     FT_Done_Face(face_);
-}
-
-FontHandle FontManager::Load(const std::filesystem::path& filename) {
-    if (Has(filename)) {
-        return GetHandle(filename);
-    }
-
-    auto handle = FontHandle::Create();
-    auto font = std::make_unique<Font>(filename);
-    if (font && *font) {
-        storeNewItem(handle, std::move(font));
-        return handle;
-    } else {
-        return FontHandle::Null();
-    }
 }
 
 }  // namespace nickel

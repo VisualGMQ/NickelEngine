@@ -12,11 +12,13 @@ class Material2D: public Asset {
 public:
     static Material2D Null;
 
-    Material2D();
-    Material2D(const toml::table& tbl);
-    explicit Material2D(TextureHandle handle, rhi::SamplerAddressMode u,
-                        rhi::SamplerAddressMode v, rhi::Filter min,
-                        rhi::Filter mag);
+    Material2D() = default;
+    Material2D(
+        TextureHandle handle,
+        rhi::SamplerAddressMode u = rhi::SamplerAddressMode::Repeat,
+        rhi::SamplerAddressMode v = rhi::SamplerAddressMode::Repeat,
+        rhi::Filter min = rhi::Filter::Linear,
+        rhi::Filter mag = rhi::Filter::Linear);
     Material2D(Material2D&&) = default;
     Material2D& operator=(Material2D&&) = default;
     Material2D(const Material2D&) = delete;
@@ -28,11 +30,12 @@ public:
     TextureHandle GetTexture() const;
     rhi::BindGroup GetBindGroup() const;
 
-    void ChangeTexture(TextureHandle handle);
-    void ChangeSampler(rhi::SamplerAddressMode u, rhi::SamplerAddressMode v,
+    bool ChangeTexture(TextureHandle handle);
+    bool ChangeSampler(rhi::SamplerAddressMode u, rhi::SamplerAddressMode v,
                        rhi::Filter min, rhi::Filter mag);
 
-    toml::table Save2Toml() const override;
+    bool Load(const toml::table&) override;
+    bool Save(toml::table&) const override;
 
     operator bool() const noexcept;
 
@@ -44,9 +47,6 @@ private:
     rhi::BindGroup createBindGroup(bool supportSeparateSampler,
                                    rhi::TextureView);
 };
-
-template <>
-std::unique_ptr<Material2D> LoadAssetFromMetaTable(const toml::table& tbl);
 
 struct BufferView {
     uint32_t offset{};
@@ -93,30 +93,6 @@ struct TextureBundle {
 };
 
 using Material2DHandle = Handle<Material2D>;
-
-class Material2DManager : public Manager<Material2D> {
-public:
-    Material2DHandle Create(
-        const std::filesystem::path& filename,
-        TextureHandle handle,
-        rhi::SamplerAddressMode u = rhi::SamplerAddressMode::Repeat,
-        rhi::SamplerAddressMode v = rhi::SamplerAddressMode::Repeat,
-        rhi::Filter min = rhi::Filter::Linear,
-        rhi::Filter mag = rhi::Filter::Linear);
-    Material2DHandle Create(const std::filesystem::path& filename);
-
-    Material2DHandle Load(const std::filesystem::path&);
-
-    static FileType GetFileType() { return FileType::Material2D; }
-};
-
 using Material3DHandle = Handle<Material3D>;
-
-// class Material3DManager : public Manager<Material3D> {
-// public:
-//     Material3DHandle Create(TextureHandle handle, rhi::SamplerAddressMode u,
-//                             rhi::SamplerAddressMode v, rhi::Filter min,
-//                             rhi::Filter mag);
-// };
 
 }  // namespace nickel

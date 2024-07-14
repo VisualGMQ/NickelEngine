@@ -4,14 +4,10 @@
 
 namespace nickel::ui {
 
-void InitSystem(gecs::commands cmds, gecs::resource<rhi::Adapter> adapter,
-                gecs::resource<gecs::mut<rhi::Device>> device,
-                gecs::resource<gecs::mut<RenderContext>> renderCtx,
-                gecs::resource<Window> window) {
+void InitSystem(gecs::commands cmds, gecs::resource<Window> window) {
     PROFILE_BEGIN();
 
-    cmds.emplace_resource<UIContext>(adapter.get(), device.get(),
-                                     renderCtx.get(), window->Size());
+    cmds.emplace_resource<UIContext>(window->Size());
 
     PROFILE_END();
 }
@@ -60,13 +56,14 @@ void UpdateGlobalPosition(
 }
 
 void collectRenderElem(gecs::entity ent, const Style& style, const Button* btn,
-                       const Label* label, UIContext& ctx,
-                       const RenderContext& renderCtx) {
+                       const Label* label) {
     auto rect = nickel::cgmath::Rect::FromCenter(
         style.GlobalCenter(), (style.size + style.padding) * 0.5);
 
     auto color = &style.backgroundColor;
     TextureClip texture;
+
+    auto& ctx = UIContext::Instance();
 
     if (btn) {
         texture = btn->texture;
@@ -125,33 +122,33 @@ void collectRenderElem(gecs::entity ent, const Style& style, const Button* btn,
 }
 
 void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
-              gecs::resource<gecs::mut<UIContext>> ctx,
-              gecs::resource<gecs::mut<RenderContext>> renderCtx,
               gecs::resource<gecs::mut<Camera>> camera,
-              gecs::resource<Material2DManager> mtl2dMgr, gecs::registry reg) {
+              gecs::registry reg) {
     PROFILE_BEGIN();
 
-    ctx->renderCtx.vertices.clear();
-    ctx->renderCtx.batchBreakInfos.clear();
+    auto& ctx = UIContext::Instance();
+    auto& renderCtx = RenderContext::Instance();
+
+    ctx.renderCtx.vertices.clear();
+    ctx.renderCtx.batchBreakInfos.clear();
 
     for (auto&& [entity, style] : querier) {
         auto contentRect =
             cgmath::Rect::FromCenter(style.GlobalCenter(), style.size * 0.5);
 
         collectRenderElem(entity, style, reg.try_get<Button>(entity),
-                          reg.try_get<Label>(entity), ctx.get(),
-                          renderCtx.get());
+                          reg.try_get<Label>(entity));
     }
 
-    Assert(ctx->renderCtx.vertices.size() < RenderUIContext::MaxRectSize * 4,
+    Assert(ctx.renderCtx.vertices.size() < RenderUIContext::MaxRectSize * 4,
            "ui vertex size out of range");
 
-    auto ptr = ctx->renderCtx.vertexBuffer.GetMappedRange();
-    memcpy(ptr, ctx->renderCtx.vertices.data(),
-           sizeof(UIVertex) * ctx->renderCtx.vertices.size());
+    auto ptr = ctx.renderCtx.vertexBuffer.GetMappedRange();
+    memcpy(ptr, ctx.renderCtx.vertices.data(),
+           sizeof(UIVertex) * ctx.renderCtx.vertices.size());
 
-    if (!ctx->renderCtx.vertexBuffer.IsMappingCoherence()) {
-        ctx->renderCtx.vertexBuffer.Flush();
+    if (!ctx.renderCtx.vertexBuffer.IsMappingCoherence()) {
+        ctx.renderCtx.vertexBuffer.Flush();
     }
 
     rhi::RenderPass::Descriptor desc;
@@ -159,32 +156,32 @@ void RenderUI(gecs::querier<Style, gecs::without<Parent>> querier,
     colorAtt.loadOp = rhi::AttachmentLoadOp::Load;
     colorAtt.storeOp = rhi::AttachmentStoreOp::Store;
 
-    auto target = ctx->renderCtx.camera.GetTarget();
+    auto target = ctx.renderCtx.camera.GetTarget();
 
     if (target) {
         colorAtt.view = target;
     } else {
-        colorAtt.view = renderCtx->presentTextureView;
+        colorAtt.view = renderCtx.presentTextureView;
     }
     desc.colorAttachments.emplace_back(colorAtt);
 
-    auto renderPass = renderCtx->encoder.BeginRenderPass(desc);
-    for (auto& batch : ctx->renderCtx.batchBreakInfos) {
+    auto renderPass = renderCtx.encoder.BeginRenderPass(desc);
+    for (auto& batch : ctx.renderCtx.batchBreakInfos) {
         renderPass.SetPipeline(batch.pipeline);
-        std::array<cgmath::Mat44, 2> mats{ctx->renderCtx.camera.Project(),
-                                          ctx->renderCtx.camera.View()};
+        std::array<cgmath::Mat44, 2> mats{ctx.renderCtx.camera.Project(),
+                                          ctx.renderCtx.camera.View()};
         renderPass.SetPushConstant(rhi::ShaderStage::Vertex, mats.data(), 0,
                                    sizeof(cgmath::Mat44) * 2);
         auto& viewport = camera->GetViewport();
         renderPass.SetViewport(viewport.position.x, viewport.position.y,
                                viewport.size.w, viewport.size.h);
-        renderPass.SetVertexBuffer(0, ctx->renderCtx.vertexBuffer, 0,
+        renderPass.SetVertexBuffer(0, ctx.renderCtx.vertexBuffer, 0,
                                    sizeof(UIVertex) * batch.count);
         renderPass.SetIndexBuffer(
-            ctx->renderCtx.indexBuffer, rhi::IndexType::Uint32, 0,
-            sizeof(uint32_t) * ctx->renderCtx.vertices.size());
+            ctx.renderCtx.indexBuffer, rhi::IndexType::Uint32, 0,
+            sizeof(uint32_t) * ctx.renderCtx.vertices.size());
 
-        auto bindGroup = ctx->renderCtx.FindBindGroup(batch.texture);
+        auto bindGroup = ctx.renderCtx.FindBindGroup(batch.texture);
         renderPass.SetBindGroup(bindGroup);
         renderPass.DrawIndexed(6 * batch.count, 1, batch.start * 4, 0, 0);
     }
@@ -215,13 +212,13 @@ void doDetermineEventEntity(EventRecorder& recorder, const Child& children,
     }
 }
 
-void HandleEventSystem(gecs::resource<gecs::mut<UIContext>> ctx,
-                       gecs::querier<Style, gecs::without<Parent>> querier,
+void HandleEventSystem(gecs::querier<Style, gecs::without<Parent>> querier,
                        gecs::querier<Style, Child, gecs::without<Parent>> roots,
                        gecs::resource<Mouse> mouse, gecs::registry reg) {
     PROFILE_BEGIN();
 
     EventRecorder recorder;
+    auto& ctx = UIContext::Instance();
 
     // check event trigger entity
     for (auto&& [entity, style] : querier) {
@@ -238,7 +235,7 @@ void HandleEventSystem(gecs::resource<gecs::mut<UIContext>> ctx,
     }
 
     if (recorder.entity == gecs::null_entity) {
-        ctx->eventRecorder = std::move(recorder);
+        ctx.eventRecorder = std::move(recorder);
         return;
     }
 
@@ -265,7 +262,7 @@ void HandleEventSystem(gecs::resource<gecs::mut<UIContext>> ctx,
         }
     }
 
-    ctx->eventRecorder = std::move(recorder);
+    UIContext::Instance().eventRecorder = std::move(recorder);
 }
 
 }  // namespace nickel::ui

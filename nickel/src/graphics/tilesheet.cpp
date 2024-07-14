@@ -1,5 +1,5 @@
 #include "graphics/tilesheet.hpp"
-#include "misc/asset_manager.hpp"
+#include "common/asset_manager.hpp"
 
 #define RAPIDXML_NO_EXCEPTIONS
 #include "rapidxml.hpp"
@@ -10,19 +10,17 @@ namespace nickel {
 
 Tilesheet Tilesheet::Null;
 
-Tilesheet::Tilesheet(const TextureManager& manager, TextureHandle handle,
+Tilesheet::Tilesheet(TextureHandle handle,
                      uint32_t col, uint32_t row, const Margin& margin,
                      const Spacing& spacing)
-    : handle_(handle),
-      margin_(margin),
+    : margin_(margin),
       spacing_(spacing),
       row_(row),
       col_(col) {
-    if (manager.Has(handle)) {
-        auto& image = manager.Get(handle);
+    if (handle) {
+        auto& image = *handle.GetDataConst();
         recalcTile(image.Size());
-    } else {
-        handle_ = TextureHandle::Null();
+        handle_ = handle;
     }
 }
 
@@ -40,7 +38,21 @@ Tile Tilesheet::Get(uint32_t index) {
     return Get(index % col_, index / col_);
 }
 
-Tilesheet::Tilesheet(const toml::table& tbl) {
+Tilesheet::Tilesheet(const toml::table& tbl) {}
+
+Tilesheet::Tilesheet(const std::filesystem::path& filename) {
+    auto parse = toml::parse_file(filename.string());
+    if (!parse) {
+        LOGW(log_tag::Asset, "load tilesheet from ", filename,
+             " failed:", parse.error());
+    } else {
+        *this = Tilesheet{parse.table()};
+    }
+}
+
+void Tilesheet::parseFromToml(const toml::table& tbl) {}
+
+bool Tilesheet::Load(const toml::table& tbl) {
     auto ref = mirrow::drefl::any_make_ref(margin_);
     if (auto node = tbl.get(ref.type_info()->name());
         node && node->is_table()) {
@@ -61,33 +73,19 @@ Tilesheet::Tilesheet(const toml::table& tbl) {
         col_ = node->as_integer()->get();
     }
 
-    // auto assetMgr = gWorld->res_mut<AssetManager>();
-    // if (auto node = tbl.get("texture"); node && node->is_string()) {
-    //     std::filesystem::path texturePath = node->as_string()->get();
-    //     if (assetMgr->Has(texturePath)) {
-    //         handle_ = assetMgr->TextureMgr().GetHandle(texturePath);
-    //         AssociateFile(texturePath);
-    //     }
-    // }
-
-    // recalcTile(assetMgr->Get(handle_).Size());
-}
-
-Tilesheet::Tilesheet(const std::filesystem::path& filename) {
-    auto parse = toml::parse_file(filename.string());
-    if (!parse) {
-        LOGW(log_tag::Asset, "load tilesheet from ", filename,
-             " failed:", parse.error());
-    } else {
-        *this = Tilesheet{parse.table()};
+    auto& mgr = AssetManager::Instance();
+    if (auto node = tbl.get("texture"); node && node->is_string()) {
+        std::filesystem::path texturePath = node->as_string()->get();
+        if (auto handle = mgr.Find<Texture>(texturePath); handle) {
+            handle_ = handle;
+        }
     }
+
+    recalcTile(handle_.GetDataConst()->Size());
+    return true;
 }
 
-void Tilesheet::parseFromToml(const toml::table& tbl) {}
-
-toml::table Tilesheet::Save2Toml() const {
-    toml::table tbl;
-
+bool Tilesheet::Save(toml::table& tbl) const {
     auto ref = mirrow::drefl::any_make_constref(margin_);
     mirrow::serd::drefl::serialize(tbl, ref, ref.type_info()->name());
     ref = mirrow::drefl::any_make_constref(spacing_);
@@ -96,46 +94,11 @@ toml::table Tilesheet::Save2Toml() const {
     tbl.emplace("row", row_);
     tbl.emplace("col", col_);
 
-    auto assetMgr = ECS::Instance().World().res<TextureManager>();
-    if (assetMgr->Has(handle_)) {
-        tbl.emplace("texture", assetMgr->Get(handle_).RelativePath().string());
+    if (handle_) {
+        tbl.emplace("texture",
+                    handle_.GetDataConst()->GetRelativePath().string());
     }
-    return tbl;
-}
-
-template <>
-std::unique_ptr<Tilesheet> LoadAssetFromMetaTable(const toml::table& tbl) {
-    return std::make_unique<Tilesheet>(tbl);
-}
-
-TilesheetHandle TilesheetManager::Create(TextureHandle handle, uint32_t col,
-                                         uint32_t row, const Margin& margin,
-                                         const Spacing& spacing) {
-    auto elem = std::make_unique<Tilesheet>(
-        ECS::Instance().World().res<TextureManager>().get(), handle, col, row,
-        margin, spacing);
-    if (elem) {
-        auto handle = TilesheetHandle::Create();
-        storeNewItem(handle, std::move(elem));
-        return handle;
-    }
-
-    return TilesheetHandle::Null();
-}
-
-TilesheetHandle TilesheetManager::Load(const std::filesystem::path& filename) {
-    if (Has(filename)) {
-        return GetHandle(filename);
-    }
-
-    auto handle = TilesheetHandle::Create();
-    auto elem = std::make_unique<Tilesheet>(filename);
-    if (elem) {
-        storeNewItem(handle, std::move(elem));
-        return handle;
-    } else {
-        return {};
-    }
+    return true;
 }
 
 TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
@@ -182,12 +145,13 @@ TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
     }
 
     TextureHandle texture;
-    auto assetMgr = ECS::Instance().World().res_mut<TextureManager>();
     if (auto imageNode = node->first_node("image"); imageNode) {
         if (auto n = imageNode->first_attribute("source"); n) {
             std::filesystem::path path = filename.parent_path() / n->value();
-            if (assetMgr->Has(path)) {
-                texture = assetMgr->GetHandle(path);
+
+            if (auto handle = AssetManager::Instance().Find<Texture>(path);
+                handle) {
+                texture = handle;
             }
         }
     } else {
@@ -195,12 +159,9 @@ TilesheetHandle LoadTilesheetFromTMX(const rapidxml::xml_node<char>* node,
     }
 
     if (texture) {
-        auto mgr = ECS::Instance().World().res_mut<TilesheetManager>();
-        auto handle = mgr->Create(texture, columns, tileCount / columns,
+        Handle<Tilesheet> handle = Handle<Tilesheet>::Create(texture, columns, tileCount / columns,
                                   Margin{margin, margin, margin, margin},
                                   Spacing{spacing, spacing});
-        mgr->AssociateFile(handle,
-                           filename.parent_path() / (name + ".tilesheet"));
         return handle;
     }
 

@@ -24,6 +24,7 @@
 #include <optional>
 #include <set>
 #include <cassert>
+#include <stack>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>

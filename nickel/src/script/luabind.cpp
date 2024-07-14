@@ -21,14 +21,6 @@ struct Stack<gecs::entity>
     : luabridge::Enum<gecs::entity, gecs::null_entity> {};
 
 template <>
-struct Stack<nickel::FileType>
-    : luabridge::Enum<nickel::FileType, nickel::FileType::Animation,
-                      nickel::FileType::Audio, nickel::FileType::Font,
-                      nickel::FileType::Image, nickel::FileType::Meta,
-                      nickel::FileType::Script, nickel::FileType::Tilesheet,
-                      nickel::FileType::Timer, nickel::FileType::Unknown> {};
-
-template <>
 struct Stack<nickel::Key>
     : luabridge::Enum<
           nickel::Key, nickel::Key::A, nickel::Key::B, nickel::Key::C,
@@ -125,19 +117,6 @@ struct Stack<nickel::Key>
 namespace nickel {
 
 // clang-format off
-
-void bindCommon(luabridge::Namespace& scope) {
-    scope = scope.beginNamespace("FileType")
-        .addProperty("Audio", +[](){ return FileType::Audio; })
-        .addProperty("Animation", +[](){ return FileType::Animation; })
-        .addProperty("Font", +[](){ return FileType::Font; })
-        .addProperty("Image", +[](){ return FileType::Image; })
-        .addProperty("Meta", +[](){ return FileType::Meta; })
-        .addProperty("Script", +[](){ return FileType::Script; })
-        .addProperty("Tilesheet", +[](){ return FileType::Tilesheet; })
-        .addProperty("Timer", +[](){ return FileType::Timer; })
-    .endNamespace();
-}
 
 void bindMath(luabridge::Namespace& scope) {
     // scope = scope.beginNamespace("cgmath")

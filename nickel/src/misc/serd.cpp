@@ -1,9 +1,12 @@
 #include "misc/serd.hpp"
 #include "anim/anim.hpp"
 #include "audio/audio.hpp"
+#include "graphics/font.hpp"
+#include "graphics/gltf.hpp"
 #include "graphics/sprite.hpp"
 #include "graphics/texture.hpp"
-#include "misc/asset_manager.hpp"
+#include "common/asset_manager.hpp"
+#include "graphics/tilesheet.hpp"
 
 namespace nickel {
 
@@ -12,11 +15,10 @@ void SerializeSoundPlayer(toml::node& node, const mirrow::drefl::any& payload) {
     Assert(payload.type_info() == mirrow::drefl::typeinfo<SoundPlayer>(),
            "payload type must be SoundPlayer");
 
-    auto mgr = ECS::Instance().World().res<AudioManager>();
     auto tbl = node.as_table();
 
     auto player = mirrow::drefl::try_cast_const<SoundPlayer>(payload);
-    if (mgr->Has(player->Handle())) {
+    if (player->Handle()) {
         auto handleTbl = mirrow::serd::drefl::serialize_class(
             mirrow::drefl::any_make_copy(player->Handle()));
         tbl->emplace("sound", handleTbl);
@@ -46,12 +48,10 @@ void SerializeAnimationPlayer(toml::node& node, const mirrow::drefl::any& payloa
     Assert(payload.type_info() == mirrow::drefl::typeinfo<SoundPlayer>(),
            "payload type must be AnimationPlayer");
 
-    auto mgr = ECS::Instance().World().res<AnimationManager>();
     auto tbl = node.as_table();
 
     auto player = mirrow::drefl::try_cast_const<AnimationPlayer>(payload);
-    if (mgr->Has(player->Anim())) {
-
+    if (player->Anim()) {
         auto handleTbl = mirrow::serd::drefl::serialize_class(
             mirrow::drefl::any_make_copy(player->Anim()));
         tbl->emplace("animation", handleTbl);
@@ -81,15 +81,14 @@ void SerializeHandle(toml::node& node, const mirrow::drefl::any& payload) {
            "payload type must be Handle<>");
     Assert(node.is_table(), "Handle<> must serialize to table");
 
-    auto mgr = ECS::Instance().World().res<AssetManager>();
     auto handle = *mirrow::drefl::try_cast_const<HandleT>(payload);
 
     auto tbl = node.as_table();
 
-    if (mgr->Has(handle)) {
-        auto& elem = mgr->Get(handle);
+    if (handle) {
+        auto& elem = *handle.GetDataConst();
 
-        tbl->emplace("path", elem.RelativePath().string());
+        tbl->emplace("path", elem.GetRelativePath().string());
     }
 }
 
@@ -102,11 +101,10 @@ void DeserializeHandle(const toml::node& node, mirrow::drefl::any& payload) {
            "payload type must be Handle<>");
 
     auto& tbl = *node.as_table();
-    auto mgr = ECS::Instance().World().res<AssetManager>();
 
-    if (auto anim = tbl.get("path"); anim && anim->is_string()) {
+    if (auto node = tbl.get("path"); node && node->is_string()) {
         auto handle =
-            mgr->SwitchManager<T>().GetHandle(anim->as_string()->get());
+            AssetManager::Instance().Find<T>(node->as_string()->get());
         payload.steal_assign(mirrow::drefl::any_make_copy(handle));
     }
 }

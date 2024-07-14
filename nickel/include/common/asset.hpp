@@ -1,89 +1,106 @@
 #pragma once
 
+#include "common/data_pool.hpp"
+#include "common/sparse_set.hpp"
+#include "stdpch.hpp"
 #include "common/handle.hpp"
-#include <filesystem>
+#include "toml++/toml.hpp"
 
 namespace nickel {
 
-/**
- * @brief parent class of all resource classes
- */
 class Asset {
 public:
     virtual ~Asset() = default;
 
-    template <typename, typename>
-    friend class Manager;
+    const std::filesystem::path& GetRelativePath() const {
+        return relativePath_;
+    }
 
-    Asset(const std::filesystem::path& relativePath)
-        : relativePath_(relativePath) {}
-
-    Asset() = default;
-
-    Asset(Asset&& o) { swap(o, *this); }
-
-    Asset& operator=(Asset&& o) {
-        if (&o != this) {
-            swap(o, *this);
-        }
-        return *this;
+    void ChangeRelativePath(const std::filesystem::path& filename) {
+        relativePath_ = filename;
     }
 
     /**
-     * @brief save asset content to toml
+     * @brief load from asset file
+     * @note load from meta file default. Override this if you load from raw
+     * asset file
+     * @param relativePath
      */
-    virtual toml::table Save2Toml() const = 0;
+    virtual bool Load(const std::filesystem::path& relativePath) {
+        auto parse = toml::parse_file(relativePath.string());
+        if (!parse) {
+            LOGE(log_tag::Asset, "load asset ", relativePath,
+                 " failed: ", parse.error());
+            return false;
+        }
+
+        bool success = Load(parse.table());
+        ChangeRelativePath(relativePath);
+        return success;
+    }
 
     /**
-     * @brief save asset content to file
+     * @brief load asset from meta file
+     *
+     * @param relativePath
+     * @return true
+     * @return false
      */
-    void Save2File(const std::filesystem::path& filename) const {
-        std::ofstream file(filename);
-        if (file) {
-            file << toml::toml_formatter{Save2Toml()};
+    bool LoadFromMeta(const std::filesystem::path& relativePath) {
+        auto tbl = toml::parse(relativePath.string());
+        if (!tbl) {
+            LOGE(log_tag::Asset, "load asset ", relativePath,
+                 " failed: ", tbl.error());
+            relativePath_.clear();
+            return false;
+        } else {
+            relativePath_ = relativePath;
+            if (Load(tbl.table())) {
+                return true;
+            }
+            relativePath_.clear();
+            LOGE(log_tag::Asset, "load asset ", relativePath, " failed");
+            return false;
         }
     }
 
-    void Save2AssociateFile() const {
-        std::ofstream file(relativePath_);
-        if (file) {
-            file << toml::toml_formatter{Save2Toml()};
+    bool SaveToMeta() const {
+        if (!relativePath_.empty()) {
+            LOGE(log_tag::Asset, "trying save invalid asset");
+            return true;
+        } else {
+            return SaveAs(relativePath_);
         }
     }
 
-    auto& RelativePath() const { return relativePath_; }
-
-    bool HasAssociatedFile() const { return !relativePath_.empty(); }
-
-    void AssociateFile(const std::filesystem::path& path) {
-        relativePath_ = path;
+    bool SaveAs(const std::filesystem::path& filename) const {
+        toml::table tbl;
+        if (Save(tbl)) {
+            std::ofstream file(filename);
+            if (!file) {
+                LOGE(log_tag::Asset, "save asset to ", filename,
+                     " failed: open file failed");
+            } else {
+                file << toml::toml_formatter{tbl};
+            }
+            return true;
+        }
+        return false;
     }
 
-protected:
-    friend void swap(Asset& o1, Asset& o2) {
-        using std::swap;
-
-        swap(o1.relativePath_, o2.relativePath_);
-    }
+    virtual bool Load(const toml::table&) = 0;
+    virtual bool Save(toml::table&) const = 0;
 
 private:
     std::filesystem::path relativePath_;
 };
 
-template <typename T>
-std::unique_ptr<T> LoadAssetFromMetaTable(const toml::table&);
-
-template <typename T>
-std::unique_ptr<T> LoadAssetFromMeta(const std::filesystem::path& path) {
-    if (auto result = toml::parse_file(path.string()); result) {
-        auto elem = LoadAssetFromMetaTable<T>(result.table());
-        elem->AssociateFile(path);
-        return elem;
-    } else {
-        LOGW(log_tag::Asset, "load asset from ", path,
-             " failed: ", result.error());
-        return {};
-    }
-}
+#define NICKEL_TOML_EMPLACE_NODE(tbl, name, value)                          \
+    do {                                                                    \
+        if (!tbl.emplace(name, value).second) {                             \
+            LOGE(log_tag::Asset, "empalce node ", name, " to toml failed"); \
+            return false;                                                   \
+        }                                                                   \
+    } while (0)
 
 }  // namespace nickel

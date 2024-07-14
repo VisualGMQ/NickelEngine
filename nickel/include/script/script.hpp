@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/asset.hpp"
-#include "common/manager.hpp"
 
 struct lua_State;
 
@@ -40,7 +39,8 @@ public:
 
     bool IsInited() const { return isInited_; }
 
-    toml::table Save2Toml() const override;
+    bool Load(const toml::table&) override;
+    bool Save(toml::table&) const override;
 
     operator bool() const {
         return state_;
@@ -50,7 +50,7 @@ private:
     lua_State* state_{};
     bool isInited_ = false;
 
-    void load(const std::filesystem::path& path);
+    bool load(const std::filesystem::path& path);
 
     friend void swap(LuaScript& o1, LuaScript& o2) {
         using std::swap;
@@ -61,16 +61,6 @@ private:
 };
 
 using ScriptHandle = Handle<LuaScript>;
-
-template <>
-std::unique_ptr<LuaScript> LoadAssetFromMetaTable(const toml::table&);
-
-class ScriptManager: public Manager<LuaScript> {
-public:
-    ScriptHandle Load(const std::filesystem::path& path);
-
-    auto GetFileType() const { return FileType::Script; }
-};
 
 class Script final {
 public:

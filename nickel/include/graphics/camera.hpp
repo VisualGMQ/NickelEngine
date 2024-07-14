@@ -2,7 +2,9 @@
 
 #include "common/cgmath.hpp"
 #include "common/ecs.hpp"
+#include "graphics/context.hpp"
 #include "graphics/rhi/rhi.hpp"
+
 
 namespace nickel {
 
@@ -20,11 +22,7 @@ public:
     static Camera CreateOrtho(float left, float right, float top, float bottom,
                               float near, float far,
                               const nickel::cgmath::Rect& viewport) {
-        auto api = ECS::Instance()
-                       .World()
-                       .res<rhi::Adapter>()
-                       ->RequestAdapterInfo()
-                       .api;
+        auto api = RenderContext::Instance().adapter.RequestAdapterInfo().api;
         return {Type::Ortho,
                 cgmath::CreateOrtho(left, right, top, bottom, near, far,
                                     api == rhi::APIPreference::GL),

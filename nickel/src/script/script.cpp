@@ -1,6 +1,6 @@
 #include "script/script.hpp"
 #include "script/luabind.hpp"
-#include "nickel.hpp"
+#include "common/util.hpp"
 
 #include "lua.h"
 #include "luacode.h"
@@ -22,15 +22,7 @@ namespace nickel {
 
 LuaScript LuaScript::Null;
 
-template <>
-std::unique_ptr<LuaScript> LoadAssetFromMetaTable(const toml::table& path) {
-    if (auto node = path.get("path"); node && node->is_string()) {
-        return std::make_unique<LuaScript>(node->as_string()->get());
-    }
-    return nullptr;
-}
-
-LuaScript::LuaScript(const std::filesystem::path& libname) : Asset(libname) {
+LuaScript::LuaScript(const std::filesystem::path& libname) {
     state_ = luaL_newstate();
     luaL_openlibs(state_);
     load(libname);
@@ -73,49 +65,56 @@ void LuaScript::OnDestroy(gecs::entity) const {
     }
 }
 
-void LuaScript::load(const std::filesystem::path& path) {
+bool LuaScript::Load(const toml::table& tbl) {
+    if (auto node = tbl.get("path"); node && node->is_string()) {
+        auto& filename = node->as_string()->get();
+        return load(filename);
+    } else {
+        LOGE(log_tag::Asset, "load luau script failed: no asset path");
+        return false;
+    }
+}
+
+bool LuaScript::load(const std::filesystem::path& filename) {
+    auto codes = ReadWholeFile<std::string>(filename);
     size_t bytecodeSize = 0;
-    auto filename = path.string();
-    auto codes = ReadWholeFile<std::string>(path);
+    lua_State* newState{};
     if (codes) {
         char* bytecode =
             luau_compile(codes->c_str(), codes->size(), NULL, &bytecodeSize);
-        int result =
-            luau_load(state_, filename.c_str(), bytecode, bytecodeSize, 0);
+        int result = luau_load(newState, filename.string().c_str(), bytecode,
+                               bytecodeSize, 0);
         free(bytecode);
 
         if (result != LUA_OK) {
-            LOGE(log_tag::Script, "load script ", path, "failed");
+            LOGE(log_tag::Script, "load script ", filename, "failed");
+            return false;
         } else {
-            lua_pcall(state_, 0, 0, 0);
+            lua_pcall(newState, 0, 0, 0);
+            lua_close(state_);
+            state_ = newState;
+            isInited_ = false;
+            return true;
         }
+    } else {
+        LOGE(log_tag::Script, "load script failed: read file ", filename,
+             " failed");
+        return false;
     }
 }
 
-toml::table LuaScript::Save2Toml() const {
-    toml::table tbl;
-    tbl.emplace("path", RelativePath().string());
-    return tbl;
-}
-
-ScriptHandle ScriptManager::Load(const std::filesystem::path& path) {
-    auto data = std::make_unique<LuaScript>(path);
-    if (data) {
-        auto handle = ScriptHandle::Create();
-        storeNewItem(handle, std::move(data));
-        return handle;
-    }
-    return ScriptHandle::Null();
+bool LuaScript::Save(toml::table& tbl) const {
+    tbl.emplace("path", GetRelativePath().string());
 }
 
 void ScriptUpdateSystem(gecs::querier<gecs::mut<Script>> scripts,
                         gecs::resource<gecs::mut<ScriptManager>> mgr) {
     for (auto&& [entity, script] : scripts) {
-        if (!mgr->Has(script.handle)) {
+        if (script.handle) {
             continue;
         }
 
-        auto& luaScript = mgr->Get(script.handle);
+        auto& luaScript = *script.handle.GetData();
         if (!luaScript.isInited_) {
             luaScript.OnInit(entity);
             luaScript.isInited_ = true;

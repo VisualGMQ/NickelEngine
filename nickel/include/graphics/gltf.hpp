@@ -14,13 +14,14 @@ struct GLTFModel final: public Asset {
     static GLTFModel Null;
 
     GLTFModel() = default;
-    GLTFModel(const toml::table&);
     GLTFModel(std::vector<Scene>&& scenes, std::vector<rhi::Sampler>&& samplers,
               std::vector<std::unique_ptr<Material3D>>&& materials, rhi::Buffer buffers);
     GLTFModel(GLTFModel&&) = default;
     GLTFModel& operator=(GLTFModel&&) = default;
 
-    toml::table Save2Toml() const override;
+    bool Load(const std::filesystem::path&) override;
+    bool Load(const toml::table&) override;
+    bool Save(toml::table&) const override;
 
     ~GLTFModel();
 
@@ -30,18 +31,7 @@ private:
     bool valid_ = false;
 };
 
-template <>
-std::unique_ptr<GLTFModel> LoadAssetFromMetaTable(const toml::table&);
-
 using GLTFHandle = Handle<GLTFModel>;
-
-class GLTFManager : public Manager<GLTFModel> {
-public:
-    static FileType GetFileType() { return FileType::GLTF; }
-
-    GLTFHandle Load(const std::filesystem::path& filename);
-};
-
 struct GLTFBundle {
     Transform transform;
     GLTFHandle gltf; 

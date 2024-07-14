@@ -145,19 +145,19 @@ target_compile_features(Nickel.UI PUBLIC cxx_std_17)
 target_link_libraries(Nickel.UI PUBLIC Nickel.Common Nickel.Graphics)
 
 # Nickel.Script
-aux_source_directory(src/script nickel_script_src)
-file(GLOB_RECURSE nickel_script_headers ./include/script/*.hpp)
-
-add_library(Nickel.Script STATIC)
-target_sources(Nickel.Script PRIVATE ${nickel_script_src})
-target_sources(Nickel.Script PUBLIC ${nickel_script_headers})
-target_include_directories(Nickel.Script PUBLIC ./include)
-set_target_properties(Nickel.Script
-    PROPERTIES
-    PUBLIC_HEADER "${nickel_scripg_headers}")
-target_compile_features(Nickel.Script PUBLIC cxx_std_17)
-target_link_libraries(Nickel.Script PUBLIC Nickel.Common Nickel.Graphics Nickel.Geometry Nickel.UI Nickel.Animation)
-target_link_libraries(Nickel.Script PRIVATE Luau.Compiler Luau.VM LuaBridge)
+# aux_source_directory(src/script nickel_script_src)
+# file(GLOB_RECURSE nickel_script_headers ./include/script/*.hpp)
+# 
+# add_library(Nickel.Script STATIC)
+# target_sources(Nickel.Script PRIVATE ${nickel_script_src})
+# target_sources(Nickel.Script PUBLIC ${nickel_script_headers})
+# target_include_directories(Nickel.Script PUBLIC ./include)
+# set_target_properties(Nickel.Script
+#     PROPERTIES
+#     PUBLIC_HEADER "${nickel_scripg_headers}")
+# target_compile_features(Nickel.Script PUBLIC cxx_std_17)
+# target_link_libraries(Nickel.Script PUBLIC Nickel.Common Nickel.Graphics Nickel.Geometry Nickel.UI Nickel.Animation)
+# target_link_libraries(Nickel.Script PRIVATE Luau.Compiler Luau.VM LuaBridge)
 
 # Nickel.Refl
 aux_source_directory(src/refl nickel_refl_src)
@@ -178,7 +178,7 @@ target_link_libraries(Nickel.Refl PUBLIC
     Nickel.Audio
     Nickel.Physics
     Nickel.UI
-    Nickel.Script
+    # Nickel.Script
 )
 
 # Nickel.Misc
@@ -200,7 +200,7 @@ target_link_libraries(Nickel.Misc PUBLIC
     Nickel.Physics
     Nickel.Animation
     Nickel.Audio
-    Nickel.Script
+    # Nickel.Script
     Nickel.Refl)
 
 # Nickel.Nickel
@@ -213,7 +213,7 @@ target_link_libraries(Nickel.Nickel INTERFACE
     Nickel.Audio
     Nickel.Misc
     Nickel.Video
-    Nickel.Script
+    # Nickel.Script
     Nickel.Refl)
 
 # Nickel.Runtime
@@ -282,13 +282,13 @@ install(TARGETS Nickel.Video
     PUBLIC_HEADER DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/include/video
     COMPONENT Nickel.Video)
 
-install(TARGETS Nickel.Script
-    EXPORT Nickel.Script
-    LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/lib
-    RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/bin
-    ARCHIVE DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/archive
-    PUBLIC_HEADER DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/include/script
-    COMPONENT Nickel.Script)
+# install(TARGETS Nickel.Script
+#     EXPORT Nickel.Script
+#     LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/lib
+#     RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/bin
+#     ARCHIVE DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/archive
+#     PUBLIC_HEADER DESTINATION ${CMAKE_SOURCE_DIR}/install/nickel/include/script
+#     COMPONENT Nickel.Script)
 
 install(TARGETS Nickel.Refl
     EXPORT Nickel.Refl

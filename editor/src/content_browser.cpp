@@ -175,7 +175,7 @@ void ContentBrowserWindow::showOneIcon(
                     case nickel::FileType::Timer:
                     case nickel::FileType::FileTypeCount:
                     case nickel::FileType::Unknown:
-                    case nickel::FileType::Meta:
+                    case nickel::FileType::Import:
                         break;
                 }
             }

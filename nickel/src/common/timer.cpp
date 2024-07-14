@@ -12,17 +12,6 @@ Time::Time() : elapse_(1) {
 
 Timer Timer::Null;
 
-Timer::Timer(const std::filesystem::path& filename) : Asset(filename) {
-    auto parse = toml::parse_file(filename.string());
-    if (!parse) {
-        LOGW(log_tag::Asset, "load timer from ", filename,
-             " failed:", parse.error());
-    } else {
-        auto ptr = LoadAssetFromMetaTable<Timer>(parse.table());
-        *this = std::move(*ptr);
-    }
-}
-
 void Time::Update(gecs::resource<gecs::mut<Time>> t) {
     PROFILE_BEGIN();
 
@@ -35,59 +24,53 @@ void Time::Update(gecs::resource<gecs::mut<Time>> t) {
     }
 }
 
-void Timer::Save(const std::filesystem::path& path) {
-    toml::table tbl;
-    tbl.emplace("id", id_.value());
-    tbl.emplace("time", dstTime_);
-    tbl.emplace("loop", loop_);
+void Timer::Update(const Time& t) {
+    if (!isTicking_) return;
 
-    std::ofstream file(path);
-    if (file) {
-        file << tbl;
+    curTime_ += t.Elapse();
+    if (curTime_ > dstTime_) {
+        curTime_ = 0;
+        if (loop_ > 0) {
+            loop_--;
+        }
+        if (shouldSendEvent && id_) {
+            // gWorld->cur_registry()->event_dispatcher<TimerEvent>().enqueue(
+            //     TimerEvent{id_.value()});
+        }
+        if (loop_ == 0) {
+            Stop();
+        }
     }
 }
 
-template <>
-std::unique_ptr<Timer> LoadAssetFromMetaTable(const toml::table& tbl) {
-    TimerID id;
-    TimeType time;
-    int loop = 0;
-
-    if (auto path = tbl.get("path"); path && path->is_string()) {
-        if (auto node = tbl.get("id"); node && node->is_integer()) {
-            id = node->as_integer()->get();
-        }
-
-        if (auto node = tbl.get("time"); node && node->is_integer()) {
-            time = node->as_integer()->get();
-        }
-
-        if (auto node = tbl.get("loop"); node && node->is_integer()) {
-            loop = node->as_integer()->get();
-        }
+bool Timer::Load(const toml::table& tbl) {
+    if (auto node = tbl.get("id"); node && node->is_integer()) {
+        id_ = node->as_integer()->get();
+    } else {
+        return false;
     }
 
-    return std::make_unique<Timer>(id, time, loop);
-}
-
-TimerHandle TimerManager::Create(const std::filesystem::path& path, TimerID id,
-                                 TimeType time, int loop) {
-    auto handle = TimerHandle::Create();
-    auto timer = std::make_unique<Timer>(id, time, loop);
-    timer->AssociateFile(path);
-    storeNewItem(handle, std::move(timer));
-    return handle;
-}
-
-TimerHandle TimerManager::Load(const std::filesystem::path& filename) {
-    auto timer = std::make_unique<Timer>(filename);
-    if (timer && *timer) {
-        auto handle = TimerHandle::Create();
-        storeNewItem(handle, std::move(timer));
-        return handle;
+    if (auto node = tbl.get("time"); node && node->is_integer()) {
+        dstTime_ = node->as_integer()->get();
+    } else {
+        return false;
     }
 
-    return TimerHandle::Null();
+    if (auto node = tbl.get("loop"); node && node->is_integer()) {
+        loop_ = node->as_integer()->get();
+    } else {
+        return false;
+    }
+
+    dstTime_ = 0;
+    return true;
+}
+
+bool Timer::Save(toml::table& tbl) const {
+    NICKEL_TOML_EMPLACE_NODE(tbl, "id", id_.value());
+    NICKEL_TOML_EMPLACE_NODE(tbl, "time", dstTime_);
+    NICKEL_TOML_EMPLACE_NODE(tbl, "loop", loop_);
+    return true;
 }
 
 }  // namespace nickel

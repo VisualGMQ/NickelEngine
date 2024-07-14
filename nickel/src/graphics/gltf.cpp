@@ -1,4 +1,5 @@
 #include "graphics/gltf.hpp"
+#include "common/asset_manager.hpp"
 
 #include "graphics/rhi/rhi.hpp"
 #include "stb_image.h"
@@ -131,10 +132,8 @@ inline std::filesystem::path ParseURI2Path(std::string_view str) {
 }
 
 struct GLTFLoader {
-    GLTFModel Load(const std::filesystem::path& filename, rhi::Adapter adapter,
-                   rhi::Device device, RenderContext& ctx) {
-        auto textureMgr = ECS::Instance().World().res_mut<TextureManager>();
-        return loadGLTF(filename, adapter, device, textureMgr.get(), ctx);
+    GLTFModel Load(const std::filesystem::path& filename) {
+        return loadGLTF(filename);
     }
 
 private:
@@ -146,11 +145,10 @@ private:
         std::vector<unsigned char> tangents;
     };
 
-    GLTFModel loadGLTF(const std::filesystem::path& filename,
-                       rhi::Adapter adapter, rhi::Device device,
-                       TextureManager& mgr, RenderContext& ctx) {
+    GLTFModel loadGLTF(const std::filesystem::path& filename) {
         tinygltf::TinyGLTF loader;
         std::string err, warn;
+        auto& ctx = RenderContext::Instance();
         if (!loader.LoadASCIIFromFile(&model_, &err, &warn,
                                       filename.string())) {
             LOGW(nickel::log_tag::Asset, "load model from ", filename,
@@ -166,22 +164,24 @@ private:
 
         for (int i = 0; i < model_.images.size(); i++) {
             auto& image = model_.images[i];
-            imageHandles[i] = mgr.Load(rootDir / ParseURI2Path(image.uri));
+            imageHandles[i] = AssetManager::Instance().Load<Texture>(
+                rootDir / ParseURI2Path(image.uri));
         }
 
-        bool supportSeparateSampler = adapter.Limits().supportSeparateSampler;
+        bool supportSeparateSampler =
+            ctx.adapter.Limits().supportSeparateSampler;
 
         std::vector<rhi::Sampler> samplers;
         if (supportSeparateSampler) {
             for (auto& sampler : model_.samplers) {
-                samplers.emplace_back(createSampler(device, sampler));
+                samplers.emplace_back(createSampler(ctx.device, sampler));
             }
         }
 
         std::vector<unsigned char> pbrParams;
         for (auto& mtl : model_.materials) {
             Material3D material;
-            auto align = adapter.Limits().minUniformBufferOffsetAlignment;
+            auto align = ctx.adapter.Limits().minUniformBufferOffsetAlignment;
             material.pbrParameters.count = 6;
             material.pbrParameters.offset =
                 std::ceil(pbrParams.size() / (float)align) * align;
@@ -219,19 +219,19 @@ private:
                     mtl.pbrMetallicRoughness.metallicRoughnessTexture.index;
                 idx != -1) {
                 material.metalicRoughnessTexture =
-                    parseTextureInfo(device, idx, imageHandles, samplers,
+                    parseTextureInfo(ctx.device, idx, imageHandles, samplers,
                                      supportSeparateSampler);
             }
 
             if (auto idx = mtl.normalTexture.index; idx != -1) {
                 material.normalTexture =
-                    parseTextureInfo(device, idx, imageHandles, samplers,
+                    parseTextureInfo(ctx.device, idx, imageHandles, samplers,
                                      supportSeparateSampler);
             }
 
             if (auto idx = mtl.occlusionTexture.index; idx != -1) {
                 material.occlusionTexture =
-                    parseTextureInfo(device, idx, imageHandles, samplers,
+                    parseTextureInfo(ctx.device, idx, imageHandles, samplers,
                                      supportSeparateSampler);
             }
 
@@ -240,11 +240,11 @@ private:
         }
 
         pbrParamsBuffer =
-            copyBuffer2GPU(device, pbrParams, rhi::BufferUsage::Uniform);
+            copyBuffer2GPU(ctx.device, pbrParams, rhi::BufferUsage::Uniform);
 
         for (auto& material : materials) {
             material->bindGroup =
-                createBindGroup(device, ctx, pbrParamsBuffer, mgr,
+                createBindGroup(ctx.device, ctx, pbrParamsBuffer,
                                 supportSeparateSampler, samplers, *material);
         }
 
@@ -252,8 +252,8 @@ private:
         for (auto& scene : model_.scenes) {
             for (auto& n : scene.nodes) {
                 auto node = std::make_unique<Node>();
-                preorderNodes(adapter, device, ctx, model_.nodes[n], model_,
-                              *node);
+                preorderNodes(ctx.adapter, ctx.device, ctx, model_.nodes[n],
+                              model_, *node);
                 Scene scene{std::move(node)};
                 scenes.emplace_back(std::move(scene));
             }
@@ -325,7 +325,6 @@ private:
 
     rhi::BindGroup createBindGroup(rhi::Device device, RenderContext& ctx,
                                    rhi::Buffer pbrParamsBuffer,
-                                   TextureManager& mgr,
                                    bool supportSeparateSampler,
                                    const std::vector<rhi::Sampler> samplers,
                                    const Material3D& material) {
@@ -348,13 +347,12 @@ private:
         // color texture
         if (material.basicTexture) {
             if (supportSeparateSampler) {
-                pushTextureBindingPoint(desc, mgr,
-                                        material.basicTexture.value(), 2,
+                pushTextureBindingPoint(desc, material.basicTexture.value(), 2,
                                         "baseColorTexture");
             }
             if (material.basicTexture->sampler) {
                 pushSamplerBindingPoint(desc, supportSeparateSampler, samplers,
-                                        mgr, material.basicTexture.value(), 6,
+                                        material.basicTexture.value(), 6,
                                         "baseColorSampler");
             }
         }
@@ -362,13 +360,12 @@ private:
         // normal texture
         if (material.normalTexture) {
             if (supportSeparateSampler) {
-                pushTextureBindingPoint(desc, mgr,
-                                        material.normalTexture.value(), 3,
+                pushTextureBindingPoint(desc, material.normalTexture.value(), 3,
                                         "normalMapTexture");
             }
             if (material.normalTexture->sampler) {
                 pushSamplerBindingPoint(desc, supportSeparateSampler, samplers,
-                                        mgr, material.normalTexture.value(), 7,
+                                        material.normalTexture.value(), 7,
                                         "normalMapSampler");
             }
         }
@@ -377,12 +374,12 @@ private:
         if (material.metalicRoughnessTexture) {
             if (supportSeparateSampler) {
                 pushTextureBindingPoint(
-                    desc, mgr, material.metalicRoughnessTexture.value(), 4,
+                    desc, material.metalicRoughnessTexture.value(), 4,
                     "metalicRoughnessTexture");
             }
             if (material.metalicRoughnessTexture->sampler) {
                 pushSamplerBindingPoint(
-                    desc, supportSeparateSampler, samplers, mgr,
+                    desc, supportSeparateSampler, samplers,
                     material.metalicRoughnessTexture.value(), 8,
                     "metalicRoughnessSampler");
             }
@@ -391,14 +388,13 @@ private:
         // occlusion texture
         if (material.occlusionTexture) {
             if (supportSeparateSampler) {
-                pushTextureBindingPoint(desc, mgr,
-                                        material.occlusionTexture.value(), 5,
-                                        "occlusionTexture");
+                pushTextureBindingPoint(desc, material.occlusionTexture.value(),
+                                        5, "occlusionTexture");
             }
             if (material.occlusionTexture->sampler) {
                 pushSamplerBindingPoint(desc, supportSeparateSampler, samplers,
-                                        mgr, material.occlusionTexture.value(),
-                                        9, "occlusionSampler");
+                                        material.occlusionTexture.value(), 9,
+                                        "occlusionSampler");
             }
         }
 
@@ -406,14 +402,13 @@ private:
     }
 
     void pushTextureBindingPoint(rhi::BindGroup::Descriptor& desc,
-                                 const TextureManager& mgr,
                                  const Material3D::TextureInfo& info,
                                  uint32_t slot, const std::string& name) {
         rhi::BindingPoint bindingPoint;
         bindingPoint.binding = slot;
         rhi::TextureBinding binding;
         binding.name = name;
-        binding.view = mgr.Get(info.texture).View();
+        binding.view = info.texture.GetData()->View();
         bindingPoint.entry = binding;
         desc.entries.push_back(bindingPoint);
     }
@@ -421,7 +416,6 @@ private:
     void pushSamplerBindingPoint(rhi::BindGroup::Descriptor& desc,
                                  bool supportSeparateSampler,
                                  const std::vector<rhi::Sampler>& samplers,
-                                 const TextureManager& mgr,
                                  const Material3D::TextureInfo& info,
                                  uint32_t slot, const std::string& name) {
         rhi::BindingPoint bindingPoint;
@@ -430,7 +424,7 @@ private:
         binding.name = name;
         binding.sampler = samplers[info.sampler.value()];
         if (!supportSeparateSampler) {
-            binding.view = mgr.Get(info.texture).View();
+            binding.view = info.texture.GetData()->View();
         }
         bindingPoint.entry = binding;
         desc.entries.push_back(bindingPoint);
@@ -692,40 +686,41 @@ GLTFModel::~GLTFModel() {
 
 GLTFModel GLTFModel::Null;
 
-toml::table GLTFModel::Save2Toml() const {
-    toml::table tbl;
-    tbl.emplace("path", RelativePath().string());
-    return tbl;
-}
-
 GLTFModel::operator bool() const {
     return valid_;
 }
 
-template <>
-std::unique_ptr<GLTFModel> LoadAssetFromMetaTable(const toml::table& tbl) {
-    if (auto node = tbl.get("path"); node && node->is_string()) {
-        GLTFLoader loader;
-        auto& world = ECS::Instance().World();
-        auto model = loader.Load(node->as_string()->get(),
-                                 world.res<rhi::Adapter>().get(),
-                                 world.res<rhi::Device>().get(),
-                                 world.res_mut<RenderContext>().get());
-        return std::make_unique<GLTFModel>(std::move(model));
+bool GLTFModel::Load(const std::filesystem::path& filename) {
+    GLTFLoader loader;
+    auto model = loader.Load(filename);
+    if (model) {
+        *this = std::move(model);
+        return true;
     } else {
-        return {};
+        LOGE(log_tag::Asset, "load gltf model failed");
+        return false;
     }
 }
 
-GLTFHandle GLTFManager::Load(const std::filesystem::path& filename) {
-    GLTFLoader loader;
-    auto& world = ECS::Instance().World();
-    auto node = loader.Load(filename, world.res<rhi::Adapter>().get(),
-                            world.res<rhi::Device>().get(),
-                            world.res_mut<RenderContext>().get());
-    auto handle = GLTFHandle::Create();
-    storeNewItem(handle, std::make_unique<GLTFModel>(std::move(node)));
-    return handle;
+bool GLTFModel::Load(const toml::table& tbl) {
+    if (auto node = tbl.get("path"); node && node->is_string()) {
+        GLTFLoader loader;
+        auto& renderCtx = RenderContext::Instance();
+        auto newModel = loader.Load(node->as_string()->get());
+        if (newModel) {
+            *this = std::move(newModel);
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+bool GLTFModel::Save(toml::table& tbl) const {
+    NICKEL_TOML_EMPLACE_NODE(tbl, "path", GetRelativePath().string());
+    return true;
 }
 
 }  // namespace nickel

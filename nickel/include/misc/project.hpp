@@ -1,7 +1,6 @@
 #pragma once
 
 #include "anim/anim.hpp"
-#include "common/filetype.hpp"
 #include "misc/prefab.hpp"
 #include "common/timer.hpp"
 #include "graphics/camera.hpp"
@@ -9,7 +8,6 @@
 #include "graphics/texture.hpp"
 #include "video/event.hpp"
 #include "video/window.hpp"
-#include "misc/asset_manager.hpp"
 
 namespace nickel {
 
@@ -26,11 +24,9 @@ struct ChangeSceneEvent {
     std::filesystem::path newScene;
 };
 
-void SaveProjectByConfig(const ProjectInitInfo& info,
-                         const AssetManager& assetMgr);
+void SaveProjectByConfig(const ProjectInitInfo& info);
 
-ProjectInitInfo CreateNewProject(const std::filesystem::path& dir,
-                                 AssetManager& assetMgr);
+ProjectInitInfo CreateNewProject(const std::filesystem::path& dir);
 
 /**
  * @brief save basic project information to file
@@ -41,7 +37,7 @@ void SaveBasicProjectConfig(const std::filesystem::path& rootPath,
 /**
  * @brief save all assets information to file
  */
-void SaveAssets(const std::filesystem::path& rootPath, const AssetManager&);
+void SaveAssets(const std::filesystem::path& rootPath);
 
 /**
  * @brief save registry scene
@@ -57,7 +53,7 @@ toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg);
 /**
  * @brief load all assets from `rootPath/assets.toml`
  */
-void LoadAssetsWithPath(AssetManager&, const std::filesystem::path& rootPath);
+void LoadAssetsWithPath(const std::filesystem::path& rootPath);
 
 bool LoadScene(gecs::registry reg, const std::filesystem::path& filename);
 
@@ -74,12 +70,12 @@ ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath);
  * @note require exists `rootPath/project.toml` and `rootPath/assets.toml
  * @param rootPath project root directory path
  */
-void LoadProject(const std::string& rootPath, Window& window, AssetManager&);
+void LoadProject(const std::string& rootPath, Window& window);
 
 /**
  * @brief init project from ProjectInitInfo
  */
-void InitProjectByConfig(const ProjectInitInfo&, Window& window, AssetManager&);
+void InitProjectByConfig(const ProjectInitInfo&, Window& window);
 
 /**
  * @brief init all inner ECS systems

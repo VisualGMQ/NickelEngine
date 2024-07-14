@@ -36,6 +36,7 @@ public:
         uint32_t vendorID;
     };
 
+    Adapter() = default;
     Adapter(void* window, Option option = {APIPreference::Undefine});
 
     Adapter(Adapter&& o) { swap(*this, o); }

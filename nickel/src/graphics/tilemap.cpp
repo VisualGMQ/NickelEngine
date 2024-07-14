@@ -61,6 +61,7 @@ std::unique_ptr<TileLayer> parseLayer(const rapidxml::xml_node<char>* node) {
     return layer;
 }
 
+/*
 std::unique_ptr<TileMap> LoadTileMapFromTMX(
     const std::filesystem::path& filename) {
     auto content = ReadWholeFile(filename);
@@ -127,5 +128,6 @@ std::unique_ptr<TileMap> LoadTileMapFromTMX(
 
     return tilemap;
 }
+*/
 
 }  // namespace nickel

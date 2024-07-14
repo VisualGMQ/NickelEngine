@@ -1,4 +1,6 @@
 #include "misc/argv.hpp"
+#include "common/asset_manager.hpp"
+#include "audio/audio.hpp"
 #include "nickel.hpp"
 #include "SDL.h"
 
@@ -8,6 +10,20 @@ void BootstrapSystem(gecs::world& world, typename gecs::world::registry_type& re
 
 void BootstrapCallSystem() {
     BootstrapSystem(ECS::Instance().World(), *ECS::Instance().World().cur_registry());
+}
+
+void registInnerAssetType() {
+    auto& mgr = AssetManager::Instance();
+    mgr.RegistAssetType<Texture>(".texture.import", {".png", ".jpg", ".bmp"});
+    mgr.RegistAssetType<Sound>(".audio.import",
+                               {".wav", ".ogg", ".mp3", ".flac"});
+    mgr.RegistAssetType<Font>(".font.import", {".ttf"});
+    // mgr.RegistAssetType<LuaScript>(".lua.import", {".luau"});
+    mgr.RegistAssetType<GLTFModel>(".gltf.import", {".gltf"});
+    mgr.RegistAssetType<Timer>(".timer");
+    mgr.RegistAssetType<Animation>(".anim");
+    mgr.RegistAssetType<Material2D>(".mtl2d");
+    mgr.RegistAssetType<Tilesheet>(".tilesheet");
 }
 
 int initRuntime(int argc, char** argv) {

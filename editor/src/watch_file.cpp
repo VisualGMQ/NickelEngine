@@ -77,7 +77,7 @@ void FileChangeEventHandler(
                                    }
                                }
                            });
-        if (nickel::HasMetaFile(filetype)) {
+        if (nickel::IsImportAsset(filetype)) {
             auto metaFilename = oldPath;
             metaFilename += nickel::GetMetaFileExtension(filetype);
             std::error_code err;
@@ -98,7 +98,7 @@ void FileChangeEventHandler(
                     }
                 }
             });
-        if (nickel::HasMetaFile(filetype)) {
+        if (nickel::IsImportAsset(filetype)) {
             auto metaFilename = path;
             metaFilename += nickel::GetMetaFileExtension(filetype);
             std::error_code err;

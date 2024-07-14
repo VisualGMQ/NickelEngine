@@ -3,60 +3,18 @@
 #include "common/assert.hpp"
 #include "common/ecs.hpp"
 #include "common/singlton.hpp"
+#include "common/typeid_generator.hpp"
+#include "common/data_id.hpp"
+#include "common/data_pool.hpp"
 
 namespace nickel {
 
-using HandleInnerIDType = uint32_t;
-
-template <typename Tag>
-class HandleIDGenerator final {
-public:
-    HandleInnerIDType Generate() {
-        auto id = curID_;
-        assert(id != 0);
-        curID_++;
-        return id;
-    }
-
-private:
-    HandleInnerIDType curID_ = 1;
-};
-
-template <typename HandleIDGeneratorType>
-class HandleIDManagerBase final
-    : public Singlton<HandleIDManagerBase<HandleIDGeneratorType>, false> {
-public:
-    auto Generate() {
-        auto id = generator_.Generate();
-        sparseSet_.insert(id);
-        return id;
-    }
-
-    bool Has(HandleInnerIDType id) const { return sparseSet_.contain(id); }
-
-    void Remove(HandleInnerIDType id) { sparseSet_.remove(id); }
-
-private:
-    gecs::basic_sparse_set<HandleInnerIDType, gecs::config::PageSize> sparseSet_;
-    HandleIDGeneratorType generator_;
-};
-
 template <typename T>
-using HandleIDManager = HandleIDManagerBase<HandleIDGenerator<T>>;
-
-template <typename Tag>
-class Handle {
+struct Handle {
 public:
-    template <typename T>
-    friend std::ostream& operator<<(std::ostream&, Handle<T>);
-
-    using ValueType = Tag;
-
-    Handle() = default;
-
     struct Hash final {
         size_t operator()(const Handle& k) const {
-            return std::hash<HandleInnerIDType>{}(k.handle_);
+            return std::hash<uint32_t>{}(DataID2Num(k.id_));
         }
     };
 
@@ -66,46 +24,112 @@ public:
         }
     };
 
-    static Handle Null() { return Handle{0}; }
-
-    static Handle Create() {
-        return Handle{HandleIDManager<Tag>::Instance().Generate()};
-    }
-
-    static void Destroy(Handle handle) {
-        HandleIDManager<Tag>::Instance().Remove(handle.handle_);
-    }
-
-    bool IsValid() const {
-        return HandleIDManager<Tag>::Instance().Has(handle_);
-    }
-
-    explicit operator HandleInnerIDType() const {
-        return handle_;
-    }
-
-    explicit operator bool() const { return IsValid(); }
-
-    bool operator==(const Handle& o) const { return handle_ == o.handle_; }
-
-    bool operator!=(const Handle& o) const { return !(o == *this); }
-
-    Handle& operator=(const Handle& o) = default;
-
-    static Handle ForceCastFromIntegral(HandleInnerIDType id) {
+    template <typename... Args>
+    static Handle Create(Args&&... args) {
+        DataID id =
+            DataPool::Instance().Emplace<T>(std::forward<Args>(args)...);
         return Handle{id};
     }
 
-private:
-    HandleInnerIDType handle_ = 0;
+    Handle() : id_{InvalidDataID} {}
 
-    explicit Handle(HandleInnerIDType handle) : handle_(handle) {}
+    /**
+     * @brief Construct a new Ref object by id, don't inc refcount
+     *
+     * @param id
+     */
+    explicit Handle(DataID id) : id_{id} {
+        DataPool::Instance().IncRefCount<T>(id_);
+    }
+
+    Handle(const Handle& ref);
+    Handle(Handle&& ref);
+    Handle& operator=(const Handle<T>& ref);
+    Handle& operator=(Handle<T>&& ref);
+    ~Handle();
+
+    T* GetData();
+    T* GetData() const;
+    const T* GetDataConst() const;
+    bool Valid() const;
+
+    operator bool() const { return Valid(); }
+
+    operator DataID() const { return id_; }
+
+    /**
+     * @brief release payload without dec refcount
+     *
+     * @return DataID
+     */
+    DataID Release() const { return id_; }
+
+    bool operator==(const Handle& o) const {
+        return id_ == o.id_;
+    }
+
+    bool operator!=(const Handle& o) const {
+        return !(*this == o);
+    }
+
+private:
+    DataID id_;
 };
 
 template <typename T>
-std::ostream& operator<<(std::ostream& o, Handle<T> handle) {
-    o << "Handle(" << handle.handle_ << ")";
-    return o;
+bool Handle<T>::Valid() const {
+    return id_ != InvalidDataID && DataPool::Instance().Exists<T>(id_);
+}
+
+template <typename T>
+T* Handle<T>::GetData() {
+    return DataPool::Instance().Get<T>(id_);
+}
+
+template <typename T>
+const T* Handle<T>::GetDataConst() const {
+    return DataPool::Instance().Get<T>(id_);
+}
+
+template <typename T>
+T* Handle<T>::GetData() const {
+    return DataPool::Instance().Get<T>(id_);
+}
+
+template <typename T>
+Handle<T>::Handle(const Handle& o) : id_{o.id_} {
+    id_ = o.id_;
+    DataPool::Instance().IncRefCount<T>(id_);
+}
+
+template <typename T>
+Handle<T>::Handle(Handle&& o) : id_{o.id_} {
+    o.id_ = InvalidDataID;
+}
+
+template <typename T>
+Handle<T>& Handle<T>::operator=(const Handle<T>& o) {
+    if (&o != this) {
+        id_ = o.id_;
+        DataPool::Instance().IncRefCount<T>(id_);
+    }
+    return *this;
+}
+
+template <typename T>
+Handle<T>& Handle<T>::operator=(Handle<T>&& o) {
+    if (&o != this) {
+        id_ = o.id_;
+        o.id_ = InvalidDataID;
+    }
+    return *this;
+}
+
+template <typename T>
+Handle<T>::~Handle() {
+    if (DataPool::HasInstance()) {
+        DataPool::Instance().DecRefCount<T>(id_);
+    }
 }
 
 }  // namespace nickel

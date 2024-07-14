@@ -1,4 +1,6 @@
 #include "graphics/context.hpp"
+#include "common/util.hpp"
+#include "graphics/material.hpp"
 
 namespace nickel {
 
@@ -590,10 +592,10 @@ rhi::RenderPipeline Render3DContext::createPipeline(rhi::APIPreference api,
     return device_.CreateRenderPipeline(desc);
 }
 
-RenderContext::RenderContext(rhi::Adapter adapter, rhi::Device device,
-                             const cgmath::Vec2& windowSize) {
+RenderContext::RenderContext(const Window& window, rhi::Adapter::Option option) {
+    initRenderDevice(window, option);
     initMVPBuffer(device);
-    initDepthTexture(device, windowSize);
+    initDepthTexture(device, window.Size());
     cameraBuffer = createCameraBuffer(device);
     whiteTexture = createSingleValueTexture(device, 0xFFFFFFFF);
     whiteTextureView = whiteTexture.CreateView();
@@ -603,7 +605,7 @@ RenderContext::RenderContext(rhi::Adapter adapter, rhi::Device device,
     defaultNormalTextureView = defaultNormalTexture.CreateView();
     defaultSampler = createDefaultSampler(device);
     ctx2D = std::make_unique<Render2DContext>(
-        adapter, device, cgmath::Rect{0, 0, windowSize.w, windowSize.h}, *this);
+        adapter, device, cgmath::Rect{0, 0, window.Size().w, window.Size().h}, *this);
     ctx3D = std::make_unique<Render3DContext>(adapter, device, *this);
 }
 
@@ -621,18 +623,24 @@ RenderContext::~RenderContext() {
     mvpBuffer.Destroy();
     ctx2D.reset();
     ctx3D.reset();
+
+    device.Destroy();
+    adapter.Destroy();
+}
+
+void RenderContext::initRenderDevice(const Window& window, rhi::Adapter::Option option) {
+    adapter = rhi::Adapter{window.Raw(), option};
+    device = adapter.RequestDevice();
 }
 
 void RenderContext::RecreatePipeline(const cgmath::Vec2& size) {
-    auto api =
-        ECS::Instance().World().res<rhi::Adapter>()->RequestAdapterInfo().api;
+    auto api = adapter.RequestAdapterInfo().api;
     ctx2D->RecreatePipeline(api, *this);
     ctx3D->RecreatePipeline(api, *this);
 
     depthTextureView.Destroy();
     depthTexture.Destroy();
 
-    auto device = ECS::Instance().World().res<rhi::Device>().get();
     initDepthTexture(device, size);
 }
 

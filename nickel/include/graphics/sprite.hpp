@@ -5,6 +5,7 @@
 #include "common/transform.hpp"
 #include "graphics/camera.hpp"
 #include "graphics/context.hpp"
+#include "graphics/material.hpp"
 #include "graphics/texture.hpp"
 
 namespace nickel {

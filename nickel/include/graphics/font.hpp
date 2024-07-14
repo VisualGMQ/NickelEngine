@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/handle.hpp"
-#include "common/manager.hpp"
 #include "graphics/texture.hpp"
 #include "common/asset.hpp"
 
@@ -18,12 +17,10 @@ using FontHandle = Handle<Font>;
 
 class Font final : public Asset {
 public:
-    friend class FontManager;
-
     static Font Null;
 
-    explicit Font(const std::filesystem::path& filename);
     Font() = default;
+    explicit Font(const std::filesystem::path& filename);
 
     ~Font();
 
@@ -39,20 +36,14 @@ public:
         return face_ != nullptr;
     }
 
-    toml::table Save2Toml() const override;
+    bool Load(const std::filesystem::path&) override;
+    bool Load(const toml::table&) override;
+    bool Save(toml::table&) const override;
 
 private:
     FT_Face face_{};
-};
 
-template <>
-std::unique_ptr<Font> LoadAssetFromMetaTable(const toml::table&);
-
-class FontManager final : public Manager<Font> {
-public:
-    static FileType GetFileType() { return FileType::Font; }
-
-    FontHandle Load(const std::filesystem::path& filename);
+    bool loadFromFile(const std::filesystem::path& filename);
 };
 
 struct Character {

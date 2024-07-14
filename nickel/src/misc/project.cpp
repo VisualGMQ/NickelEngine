@@ -5,17 +5,19 @@
 #include "mirrow/drefl/make_any.hpp"
 #include "misc/serd.hpp"
 #include "nickel.hpp"
+#include "audio/audio.hpp"
 #include "refl/drefl.hpp"
 #include "system/graphics.hpp"
 #include "system/physics.hpp"
 #include "system/video.hpp"
+#include "ui/context.hpp"
+#include "common/asset_manager.hpp"
 
 namespace nickel {
 
-void SaveAssets(const std::filesystem::path& rootPath,
-                const AssetManager& assetMgr) {
-    assetMgr.Save2TomlFile(rootPath, rootPath / AssetFilename);
-    assetMgr.SaveAssets2File();
+void SaveAssets(const std::filesystem::path& rootPath) {
+    // TODO: change root path
+    AssetManager::Instance().SaveAllAssets();
 }
 
 toml::table SaveRegistryToToml(std::string_view name, gecs::registry reg) {
@@ -51,31 +53,21 @@ void SaveRegistry(bool isMainScene, const std::filesystem::path& rootPath,
     file << tbl;
 }
 
-ProjectInitInfo CreateNewProject(const std::filesystem::path& dir,
-                                 AssetManager& assetMgr) {
+ProjectInitInfo CreateNewProject(const std::filesystem::path& dir) {
     std::filesystem::create_directories(GenAssetsDefaultStoreDir(dir));
     ProjectInitInfo initInfo;
     initInfo.projectPath = dir;
     initInfo.windowData.title = "new project";
     initInfo.windowData.size.Set(720, 680);
-    SaveProjectByConfig(initInfo, assetMgr);
+    SaveProjectByConfig(initInfo);
 
     LOGI(log_tag::Nickel, "Create new project to ", dir);
 
     return initInfo;
 }
 
-void LoadAssetsWithPath(AssetManager& assetMgr,
-                        const std::filesystem::path& configDir) {
-    auto path = GenAssetsConfigFilePath(configDir);
-    auto result = toml::parse_file(path.string());
-    if (!result) {
-        LOGE(log_tag::Asset, "load saved textures from ", path,
-             " failed: ", result.error());
-        return;
-    }
-
-    assetMgr.LoadFromToml(result.table());
+void LoadAssetsWithPath(const std::filesystem::path& configDir) {
+    // TODO: not finish
 }
 
 bool LoadScene(gecs::registry reg, const std::filesystem::path& filename) {
@@ -125,10 +117,9 @@ void SaveBasicProjectConfig(const ProjectInitInfo& initInfo) {
     file << toml::toml_formatter{tbl} << std::endl;
 }
 
-void SaveProjectByConfig(const ProjectInitInfo& info,
-                         const AssetManager& assetMgr) {
+void SaveProjectByConfig(const ProjectInitInfo& info) {
     SaveBasicProjectConfig(info);
-    SaveAssets(info.projectPath, assetMgr);
+    SaveAssets(info.projectPath);
     SaveRegistry(true, info.projectPath, "MainScene.scene",
                  *ECS::Instance().World().cur_registry());
 }
@@ -163,18 +154,16 @@ ProjectInitInfo LoadProjectInfoFromFile(const std::filesystem::path& rootPath) {
     return initInfo;
 }
 
-void LoadProject(const std::string& rootPath, Window& window,
-                 AssetManager& assetMgr) {
+void LoadProject(const std::string& rootPath, Window& window) {
     ProjectInitInfo initInfo = LoadProjectInfoFromFile(rootPath);
 
-    InitProjectByConfig(initInfo, window, assetMgr);
+    InitProjectByConfig(initInfo, window);
 }
 
-void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window,
-                         AssetManager& assetMgr) {
+void InitProjectByConfig(const ProjectInitInfo& initInfo, Window& window) {
     window.Resize(initInfo.windowData.size.w, initInfo.windowData.size.h);
     window.SetTitle(initInfo.windowData.title);
-    LoadAssetsWithPath(assetMgr, initInfo.projectPath);
+    LoadAssetsWithPath(initInfo.projectPath);
     LoadScene(*ECS::Instance().World().cur_registry(),
               initInfo.projectPath / initInfo.startupScene);
 }
@@ -203,31 +192,19 @@ void InitSystem(gecs::world& world, const ProjectInitInfo& info,
     RegistSerializeMethods();
     RegistComponents();
 
+    AssetManager::Init();
+
     auto renderAPI = rhi::GetSupportRenderAPI(rhi::APIPreference::Vulkan);
     Window& window =
         cmds.emplace_resource<Window>(WindowBuilder{info.windowData}.Build(
             renderAPI == rhi::APIPreference::Vulkan));
     window.SetResizable(true);
 
-    auto& adapter = cmds.emplace_resource<rhi::Adapter>(
-        window.Raw(), rhi::Adapter::Option{renderAPI});
-    auto& device = cmds.emplace_resource<rhi::Device>(adapter.RequestDevice());
+    RenderContext::Init(window, rhi::Adapter::Option{renderAPI});
+    ui::UIContext::Init(window.Size());
+    DataPool::Init();
 
     cmds.emplace_resource<Time>();
-    auto& textureMgr = cmds.emplace_resource<TextureManager>();
-    auto& mtl2dMgr = cmds.emplace_resource<Material2DManager>();
-    auto& fontMgr = cmds.emplace_resource<FontManager>();
-    auto& timerMgr = cmds.emplace_resource<TimerManager>();
-    auto& tilesheetMgr = cmds.emplace_resource<TilesheetManager>();
-    auto& animMgr = cmds.emplace_resource<AnimationManager>();
-    auto& audioMgr = cmds.emplace_resource<AudioManager>();
-    auto& gltfMgr = cmds.emplace_resource<GLTFManager>();
-    auto& scriptMgr = cmds.emplace_resource<ScriptManager>();
-    cmds.emplace_resource<AssetManager>(textureMgr, mtl2dMgr, fontMgr, timerMgr,
-                                        tilesheetMgr, animMgr, audioMgr,
-                                        gltfMgr,
-                                        scriptMgr);
-    cmds.emplace_resource<RenderContext>(adapter, device, window.Size());
 
     auto windowSize = window.Size();
 
@@ -251,19 +228,12 @@ void EngineShutdown() {
     auto& world = ECS::Instance().World();
 
     world.destroy_all_entities();
-    ECS::Instance().World().remove_res<ScriptManager>();
-    world.remove_res<TilesheetManager>();
-    world.remove_res<TextureManager>();
-    world.remove_res<Material2DManager>();
-    world.remove_res<FontManager>();
-    world.remove_res<TimerManager>();
-    world.remove_res<AnimationManager>();
-    world.remove_res<AudioManager>();
-    world.remove_res<GLTFManager>();
     FontSystemShutdown();
     world.remove_res<RenderContext>();
-    world.res_mut<rhi::Device>()->Destroy();
-    world.res_mut<rhi::Adapter>()->Destroy();
+    DataPool::Delete();
+    ui::UIContext::Delete();
+    RenderContext::Delete();
+    AssetManager::Delete();
 }
 
 void RegistEngineSystem(typename gecs::world::registry_type& reg) {
@@ -278,7 +248,7 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_startup_system<InitAudioSystem>()
         // shutdown systems
         .regist_shutdown_system<ui::ShutdownSystem>()
-        .regist_shutdown_system<ScriptShutdownSystem>()
+        // .regist_shutdown_system<ScriptShutdownSystem>()
         .regist_shutdown_system<EngineShutdown>()
         // update systems
         .regist_update_system<VideoSystemUpdate>()
@@ -300,8 +270,8 @@ void RegistEngineSystem(typename gecs::world::registry_type& reg) {
         .regist_update_system<EndRender>()
         .regist_update_system<EndFrame>()
         // time update
-        .regist_update_system<Time::Update>()
-        .regist_update_system<ScriptUpdateSystem>();
+        .regist_update_system<Time::Update>();
+        // regist_update_system<ScriptUpdateSystem>();
 
     reg.event_dispatcher<ChangeSceneEvent>().sink().add<doChangeScene>();
 }

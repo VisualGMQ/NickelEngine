@@ -2,9 +2,7 @@
 
 #include "common/asset.hpp"
 #include "common/cgmath.hpp"
-#include "common/filetype.hpp"
 #include "common/handle.hpp"
-#include "common/manager.hpp"
 #include "rhi/rhi.hpp"
 
 /**
@@ -20,17 +18,9 @@ using TextureHandle = Handle<Texture>;
 
 class Texture final : public Asset {
 public:
-    friend class TextureManager;
-
     static Texture Null;
 
-    explicit Texture(rhi::Device, const toml::table&);
-    Texture(rhi::Device, const std::filesystem::path& filename,
-            rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
-            rhi::Flags<rhi::TextureUsage> usage =
-                rhi::Flags(rhi::TextureUsage::TextureBinding) |
-                rhi::TextureUsage::CopyDst);
-    Texture(rhi::Device, void*, int w, int h,
+    Texture(void*, int w, int h,
             rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
             rhi::Flags<rhi::TextureUsage> usage =
                 rhi::Flags(rhi::TextureUsage::TextureBinding) |
@@ -58,7 +48,9 @@ public:
 
     rhi::TextureView View() const { return view_; }
 
-    toml::table Save2Toml() const override;
+    bool Load(const std::filesystem::path&) override;
+    bool Load(const toml::table&) override;
+    bool Save(toml::table&) const override;
 
 private:
     rhi::Texture texture_;
@@ -69,46 +61,6 @@ private:
     rhi::Texture createTexture(rhi::Device, void* data, uint32_t w, uint32_t h,
                                rhi::TextureFormat gpuFmt,
                                rhi::Flags<rhi::TextureUsage> usage);
-};
-
-template <>
-std::unique_ptr<Texture> LoadAssetFromMetaTable(const toml::table&);
-
-class TextureManager final : public Manager<Texture> {
-public:
-    static FileType GetFileType() { return FileType::Image; }
-
-    TextureHandle Load(
-        const std::filesystem::path& filename,
-        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
-        rhi::Flags<rhi::TextureUsage> usage =
-            rhi::Flags(rhi::TextureUsage::TextureBinding) |
-            rhi::TextureUsage::CopyDst);
-    std::tuple<TextureHandle, Texture&> LoadAndGet(
-        const std::filesystem::path& filename,
-        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
-        rhi::Flags<rhi::TextureUsage> usage =
-            rhi::Flags(rhi::TextureUsage::TextureBinding) |
-            rhi::TextureUsage::CopyDst);
-    TextureHandle Create(
-        const std::filesystem::path& name, void* data, uint32_t w, uint32_t h,
-        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
-        rhi::Flags<rhi::TextureUsage> usage =
-            rhi::Flags(rhi::TextureUsage::TextureBinding) |
-            rhi::TextureUsage::CopyDst);
-    TextureHandle LoadSVG(const std::filesystem::path& filename,
-                          std::optional<cgmath::Vec2> size = std::nullopt);
-    bool Replace(TextureHandle, const std::filesystem::path& filename,
-                 rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
-                 rhi::Flags<rhi::TextureUsage> usage =
-                     rhi::Flags(rhi::TextureUsage::TextureBinding) |
-                     rhi::TextureUsage::CopyDst);
-    std::unique_ptr<Texture> CreateSolitary(
-        void* data, int w, int h,
-        rhi::TextureFormat gpuFmt = rhi::TextureFormat::RGBA8_UNORM,
-        rhi::Flags<rhi::TextureUsage> usage =
-            rhi::Flags(rhi::TextureUsage::TextureBinding) |
-            rhi::TextureUsage::CopyDst);
 };
 
 }  // namespace nickel

@@ -11,30 +11,32 @@ cgmath::Mat44 calcMatFromRenderInfo(Flip flip, const cgmath::Vec2& customSize,
            cgmath::CreateTranslation({-anchor.x, -anchor.y, 0});
 }
 
-void UpdateCamera2GPU(gecs::resource<Camera> camera,
-                      gecs::resource<gecs::mut<RenderContext>> ctx) {
+void UpdateCamera2GPU(gecs::resource<Camera> camera) {
     PROFILE_BEGIN();
 
-    auto map = (cgmath::Mat44*)ctx->mvpBuffer.GetMappedRange();
+    auto& ctx = RenderContext::Instance();
+
+    auto map = (cgmath::Mat44*)ctx.mvpBuffer.GetMappedRange();
     memcpy(map, camera->View().data, sizeof(cgmath::Mat44));
     memcpy(map + 1, camera->Project().data, sizeof(cgmath::Mat44));
-    if (!ctx->mvpBuffer.IsMappingCoherence()) {
-        ctx->mvpBuffer.Flush(0, sizeof(cgmath::Mat44) * 2);
+    if (!ctx.mvpBuffer.IsMappingCoherence()) {
+        ctx.mvpBuffer.Flush(0, sizeof(cgmath::Mat44) * 2);
     }
 
     PROFILE_END();
 }
 
-void BeginRender(gecs::resource<gecs::mut<rhi::Device>> device,
-                 gecs::resource<gecs::mut<RenderContext>> ctx) {
+void BeginRender() {
     PROFILE_BEGIN();
+
+    auto& ctx = RenderContext::Instance();
 
     rhi::Texture::Descriptor textureDesc;
     textureDesc.format = rhi::TextureFormat::Presentation;
-    auto [texture, view] = device->GetPresentationTexture();
-    ctx->presentTexture = texture;
-    ctx->presentTextureView = view;
-    ctx->encoder = device->CreateCommandEncoder();
+    auto [texture, view] = ctx.device.GetPresentationTexture();
+    ctx.presentTexture = texture;
+    ctx.presentTextureView = view;
+    ctx.encoder = ctx.device.CreateCommandEncoder();
 
     PROFILE_END();
 }
@@ -69,7 +71,7 @@ void drawMesh2D(RenderContext& ctx, rhi::RenderPassEncoder renderPass,
 }
 
 void drawTexture(RenderContext& ctx, uint32_t slot,
-                 rhi::RenderPassEncoder renderPass, const TextureManager& mgr,
+                 rhi::RenderPassEncoder renderPass,
                  const Material2D& material,
                  const std::optional<cgmath::Rect>& region,
                  const cgmath::Color& color, const cgmath::Mat44& model,
@@ -96,7 +98,7 @@ void drawTexture(RenderContext& ctx, uint32_t slot,
     };
 
     if (material) {
-        auto size = mgr.Get(material.GetTexture()).Size();
+        auto size = material.GetTexture().GetDataConst()->Size();
         cgmath::Rect rect = region.value_or(cgmath::Rect{
             {0, 0},
             size
@@ -128,11 +130,7 @@ void drawTexture(RenderContext& ctx, uint32_t slot,
 }
 
 void RenderSprite2D(
-    gecs::resource<gecs::mut<rhi::Device>> device,
-    gecs::resource<gecs::mut<RenderContext>> ctx,
     gecs::resource<gecs::mut<Camera>> camera,
-    gecs::resource<TextureManager> mgr,
-    gecs::resource<Material2DManager> mtl2dMgr,
     gecs::querier<Transform, gecs::mut<Sprite>, SpriteMaterial> querier) {
     PROFILE_BEGIN();
 
@@ -143,39 +141,41 @@ void RenderSprite2D(
 
     auto target = camera->GetTarget();
 
+    auto& ctx = RenderContext::Instance();
+
     if (target) {
         colorAtt.view = target;
     } else {
-        colorAtt.view = ctx->presentTextureView;
+        colorAtt.view = ctx.presentTextureView;
     }
     desc.colorAttachments.emplace_back(colorAtt);
 
-    auto renderPass = ctx->encoder.BeginRenderPass(desc);
-    renderPass.SetPipeline(ctx->ctx2D->pipeline);
+    auto renderPass = ctx.encoder.BeginRenderPass(desc);
+    renderPass.SetPipeline(ctx.ctx2D->pipeline);
 
     querier.sort_by<Sprite>([](const Sprite& sprite1, const Sprite& sprite2) {
         return sprite1.orderInLayer < sprite2.orderInLayer;
     });
 
     for (auto&& [_, transform, sprite, material] : querier) {
-        if (!mtl2dMgr->Has(material.material)) {
+        if (!material.material) {
             continue;
         }
 
-        auto& mtl = mtl2dMgr->Get(material.material);
+        auto& mtl = *material.material.GetData();
 
-        if (!mgr->Has(mtl.GetTexture())) {
+        if (!mtl.GetTexture()) {
             continue;
         }
 
         if (!sprite.slot) {
-            sprite.slot = ctx->ctx2D->GenVertexSlot();
+            sprite.slot = ctx.ctx2D->GenVertexSlot();
         }
 
-        auto& texture = mgr->Get(mtl.GetTexture());
+        auto& texture = *mtl.GetTexture().GetData();
 
         drawTexture(
-            ctx.get(), sprite.slot.value(), renderPass, mgr.get(), mtl,
+            ctx, sprite.slot.value(), renderPass, mtl,
             sprite.region, sprite.color,
             transform.ToMat() * calcMatFromRenderInfo(
                                     sprite.flip,
@@ -238,10 +238,7 @@ void renderScenes(const GLTFModel& model, RenderContext& ctx,
     }
 }
 
-void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
-                     gecs::resource<gecs::mut<Camera>> camera,
-                     gecs::resource<gecs::mut<rhi::Device>> device,
-                     gecs::resource<GLTFManager> mgr,
+void RenderGLTFModel(gecs::resource<gecs::mut<Camera>> camera,
                      gecs::querier<GLTFHandle, Transform> querier) {
     PROFILE_BEGIN();
 
@@ -254,31 +251,32 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
                            clearColor.a};
 
     auto target = camera->GetTarget();
+    auto& ctx = RenderContext::Instance();
 
     if (target) {
         colorAtt.view = target;
     } else {
-        colorAtt.view = ctx->presentTextureView;
+        colorAtt.view = ctx.presentTextureView;
     }
     desc.colorAttachments.emplace_back(colorAtt);
 
     desc.depthStencilAttachment =
         rhi::RenderPass::Descriptor::DepthStencilAttachment{};
-    desc.depthStencilAttachment->view = ctx->depthTextureView;
+    desc.depthStencilAttachment->view = ctx.depthTextureView;
     desc.depthStencilAttachment->depthLoadOp = rhi::AttachmentLoadOp::Clear;
     desc.depthStencilAttachment->depthStoreOp = rhi::AttachmentStoreOp::Discard;
     desc.depthStencilAttachment->depthReadOnly = false;
     desc.depthStencilAttachment->depthClearValue = 0.0;
 
-    auto renderPass = ctx->encoder.BeginRenderPass(desc);
+    auto renderPass = ctx.encoder.BeginRenderPass(desc);
     auto viewport = camera->GetViewport();
     renderPass.SetViewport(viewport.position.x, viewport.position.y,
                            viewport.size.w, viewport.size.h);
-    renderPass.SetPipeline(ctx->ctx3D->pipeline);
+    renderPass.SetPipeline(ctx.ctx3D->pipeline);
 
     for (auto&& [_, model, transform] : querier) {
-        if (mgr->Has(model)) {
-            renderScenes(mgr->Get(model), ctx.get(), renderPass);
+        if (model) {
+            renderScenes(*model.GetDataConst(), ctx, renderPass);
         }
     }
 
@@ -287,36 +285,35 @@ void RenderGLTFModel(gecs::resource<gecs::mut<RenderContext>> ctx,
     PROFILE_END();
 }
 
-void EndRender(gecs::resource<gecs::mut<rhi::Device>> device,
-               gecs::resource<gecs::mut<RenderContext>> ctx,
-               gecs::resource<Window> window) {
+void EndRender(gecs::resource<Window> window) {
     PROFILE_BEGIN();
+    auto& ctx = RenderContext::Instance();
 
     if (!window->IsMinimized()) {
-        rhi::Queue queue = device->GetQueue();
+        rhi::Queue queue = ctx.device.GetQueue();
 
-        ctx->cmd = ctx->encoder.Finish();
-        queue.Submit({ctx->cmd});
+        ctx.cmd = ctx.encoder.Finish();
+        queue.Submit({ctx.cmd});
     }
 
     PROFILE_END();
 }
 
-void BeginFrame(gecs::resource<gecs::mut<rhi::Device>> device) {
+void BeginFrame() {
     PROFILE_BEGIN();
 
-    device->BeginFrame();
+    RenderContext::Instance().device.BeginFrame();
 
     PROFILE_END();
 }
 
-void EndFrame(gecs::resource<gecs::mut<rhi::Device>> device,
-              gecs::resource<gecs::mut<RenderContext>> ctx) {
+void EndFrame() {
     PROFILE_BEGIN();
 
-    device->EndFrame();
+    auto& ctx = RenderContext::Instance();
+    ctx.device.EndFrame();
 
-    ctx->encoder.Destroy();
+    ctx.encoder.Destroy();
 
     PROFILE_END();
 }
@@ -331,14 +328,13 @@ void updateGLTFNodeTransformRecur(const cgmath::Mat44& parentMat, Node& node) {
 
 void UpdateGLTFModelTransform(
     gecs::querier<Transform, GLTFHandle, gecs::without<GlobalTransform>>
-        querier,
-    gecs::resource<gecs::mut<GLTFManager>> mgr) {
+        querier) {
     for (auto&& [_, transform, handle] : querier) {
-        if (!mgr->Has(handle)) {
+        if (!handle) {
             continue;
         }
 
-        auto& model = mgr->Get(handle);
+        auto& model = *handle.GetData();
         for (auto& scene : model.scenes) {
             scene.node->localModelMat = transform.ToMat();
             updateGLTFNodeTransformRecur(transform.ToMat(), *scene.node);

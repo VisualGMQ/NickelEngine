@@ -17,10 +17,7 @@ Sprite Sprite::FromCustomSize(const cgmath::Vec2& size) {
 
 Sprite::~Sprite() {
     if (slot) {
-        ECS::Instance()
-            .World()
-            .res_mut<RenderContext>()
-            ->ctx2D->ReuseVertexSlot(slot.value());
+        RenderContext::Instance().ctx2D->ReuseVertexSlot(slot.value());
     }
 }
 

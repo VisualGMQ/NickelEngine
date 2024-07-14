@@ -11,6 +11,7 @@
 #include "common/transform.hpp"
 #include "common/utf8string.hpp"
 #include "common/util.hpp"
+#include "common/asset_manager.hpp"
 #include "geom/basic_geom.hpp"
 #include "geom/geom2d.hpp"
 #include "geom/geom3d.hpp"
@@ -31,4 +32,4 @@
 #include "video/event.hpp"
 #include "video/input.hpp"
 #include "video/window.hpp"
-#include "script/script.hpp"
+// #include "script/script.hpp"

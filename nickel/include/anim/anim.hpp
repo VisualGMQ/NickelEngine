@@ -2,9 +2,7 @@
 
 #include "anim/keyframe.hpp"
 #include "common/handle.hpp"
-#include "common/manager.hpp"
 #include "common/singlton.hpp"
-#include "common/filetype.hpp"
 #include "common/timer.hpp"
 
 namespace nickel {
@@ -258,10 +256,7 @@ public:
 
     Animation() = default;
 
-    Animation(container_type&& tracks) : tracks_(std::move(tracks)) {}
-
-    explicit Animation(const toml::table&);
-    explicit Animation(const std::filesystem::path&);
+    explicit Animation(container_type&& tracks) : tracks_(std::move(tracks)) {}
 
     auto& Tracks() const { return tracks_; }
 
@@ -279,34 +274,14 @@ public:
         return time;
     }
 
-    toml::table Save2Toml() const override {
-        toml::table tbl;
-        tbl.emplace("path", RelativePath().string());
-        toml::array arr;
-        for (auto& track : tracks_) {
-            arr.push_back(track->Save2Toml());
-        }
-        tbl.emplace("tracks", arr);
-        return tbl;
-    }
+    bool Load(const toml::table& tbl) override;
+    bool Save(toml::table& tbl) const override;
 
 private:
     container_type tracks_;
 };
 
-template <>
-std::unique_ptr<Animation> LoadAssetFromMetaTable(const toml::table& tbl);
-
 using AnimationHandle = Handle<Animation>;
-
-class AnimationManager final : public Manager<Animation> {
-public:
-    static FileType GetFileType() { return FileType::Animation; }
-
-    std::shared_ptr<Animation> CreateSolitaryFromTracks(
-        typename Animation::container_type&& tracks);
-    AnimationHandle Load(const std::filesystem::path&);
-};
 
 class AnimationPlayer final {
 public:
@@ -317,8 +292,7 @@ public:
 
     using animation_type = Animation;
 
-    AnimationPlayer()
-        : mgr_{&ECS::Instance().World().res_mut<AnimationManager>().get()} {}
+    AnimationPlayer() = default;
 
     AnimationPlayer(const AnimationPlayer&) = delete;
 
@@ -372,11 +346,11 @@ public:
         }
     }
 
-    bool IsValid() const { return mgr_->Has(handle_); }
+    bool IsValid() const { return handle_; }
 
     TimeType Duration() const {
-        if (mgr_->Has(handle_)) {
-            auto& anim = mgr_->Get(handle_);
+        if (handle_) {
+            auto& anim = *handle_.GetDataConst();
             return anim.Duration();
         }
         return 0;
@@ -385,7 +359,6 @@ public:
     void Sync(gecs::entity, gecs::registry);
 
 private:
-    AnimationManager* mgr_{};
     Direction dir_ = Direction::Forward;
     int curTime_ = 0;
     AnimationHandle handle_;
@@ -398,7 +371,6 @@ private:
     friend void swap(AnimationPlayer& o1, AnimationPlayer& o2) {
         using std::swap;
 
-        swap(o1.mgr_, o2.mgr_);
         swap(o1.dir_, o2.dir_);
         swap(o1.curTime_, o2.curTime_);
         swap(o1.handle_, o2.handle_);

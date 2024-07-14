@@ -1,8 +1,6 @@
 #pragma once
 
 #include "common/asset.hpp"
-#include "common/manager.hpp"
-#include "common/filetype.hpp"
 
 
 namespace nickel {
@@ -82,10 +80,9 @@ public:
 
     static Timer Null;
 
+    Timer() {}
     Timer(TimerID id, TimeType time, int loop = 0)
         : id_(id), dstTime_(time), loop_(loop), shouldSendEvent(true) {}
-
-    explicit Timer(const std::filesystem::path&);
 
     Timer(const Timer&) = delete;
     Timer& operator=(const Timer&) = delete;
@@ -96,24 +93,7 @@ public:
 
     auto ID() const { return id_; }
 
-    void Update(const Time& t) {
-        if (!isTicking_) return;
-
-        curTime_ += t.Elapse();
-        if (curTime_ > dstTime_) {
-            curTime_ = 0;
-            if (loop_ > 0) {
-                loop_--;
-            }
-            if (shouldSendEvent && id_) {
-                // gWorld->cur_registry()->event_dispatcher<TimerEvent>().enqueue(
-                //     TimerEvent{id_.value()});
-            }
-            if (loop_ == 0) {
-                Stop();
-            }
-        }
-    }
+    void Update(const Time& t);
 
     void Start() { isTicking_ = true; }
 
@@ -124,21 +104,15 @@ public:
 
     void Stop() { isTicking_ = false; }
 
-    void Save(const std::filesystem::path& path);
+    bool Load(const toml::table& tbl) override;
 
-    toml::table Save2Toml() const override {
-        toml::table tbl;
-        tbl.emplace("path", RelativePath().string());
-        return tbl;
-    }
+    bool Save(toml::table& tbl) const override;
 
     bool operator==(const Timer& o) const {
         return o.id_ == id_ && o.loop_ == id_ && o.dstTime_ == dstTime_;
     }
 
-    bool operator!=(const Timer& o) const {
-        return !(*this == o);
-    }
+    bool operator!=(const Timer& o) const { return !(*this == o); }
 
 private:
     std::optional<TimerID> id_;
@@ -146,19 +120,6 @@ private:
     bool isTicking_ = false;
     TimeType curTime_{};
     TimeType dstTime_;
-
-    Timer() {}
-};
-
-template <>
-std::unique_ptr<Timer> LoadAssetFromMetaTable(const toml::table& tbl);
-
-class TimerManager : public Manager<Timer> {
-public:
-    static FileType GetFileType() { return FileType::Timer; }
-
-    TimerHandle Create(const std::filesystem::path& path, TimerID, TimeType, int loop = 0);
-    TimerHandle Load(const std::filesystem::path& path);
 };
 
 }  // namespace nickel
