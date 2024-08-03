@@ -69,6 +69,10 @@ public:
         instance_ = nullptr;
     }
 
+    bool HasInstance() const noexcept {
+        return instance_;
+    }
+
 private:
     inline static std::unique_ptr<T> instance_;
 };

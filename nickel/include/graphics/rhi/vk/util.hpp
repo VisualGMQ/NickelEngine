@@ -1,11 +1,10 @@
 #pragma once
 
-#include "graphics/rhi/common.hpp"
-#include "graphics/rhi/vk/pch.hpp"
 #include "common/log.hpp"
 #include "common/log_tag.hpp"
+#include "graphics/rhi/common.hpp"
+#include "graphics/rhi/vk/pch.hpp"
 #include "stdpch.hpp"
-
 
 namespace nickel::rhi::vulkan {
 
@@ -129,14 +128,12 @@ inline std::string_view VkError2String(vk::Result err) {
 }
 
 template <typename T, typename U>
-void RemoveUnexistsElems(std::vector<T>& requires,
+void RemoveUnexistsElems(std::vector<T>& requireElems,
                          const std::vector<U>& supports,
                          std::function<bool(const T&, const U&)> isEqual) {
-    for (int i = requires.size() - 1; i >= 0; i--) {
+    for (int i = requireElems.size() - 1; i >= 0; i--) {
         bool found = false;
-        auto& require =
-        requires[
-            i];
+        auto& require = requireElems[i];
         for (auto& support : supports) {
             if (isEqual(require, support)) {
                 found = true;
@@ -144,7 +141,7 @@ void RemoveUnexistsElems(std::vector<T>& requires,
         }
 
         if (!found) {
-            requires.erase(requires.begin() + i);
+            requireElems.erase(requireElems.begin() + i);
         }
     }
 }

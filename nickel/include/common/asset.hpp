@@ -86,4 +86,12 @@ std::unique_ptr<T> LoadAssetFromMeta(const std::filesystem::path& path) {
     }
 }
 
+#define NICKEL_TOML_EMPLACE_NODE(tbl, name, value)                          \
+    do {                                                                    \
+        if (!tbl.emplace(name, value).second) {                             \
+            LOGE(log_tag::Asset, "empalce node ", name, " to toml failed"); \
+            return false;                                                   \
+        }                                                                   \
+    } while (0)
+
 }  // namespace nickel

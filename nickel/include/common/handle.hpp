@@ -1,8 +1,9 @@
 #pragma once
 
 #include "common/assert.hpp"
-#include "common/ecs.hpp"
 #include "common/singlton.hpp"
+#include "common/ecs.hpp"
+#include "stdpch.hpp"
 
 namespace nickel {
 
