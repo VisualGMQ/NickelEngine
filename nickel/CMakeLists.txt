@@ -1,6 +1,7 @@
 # Nickel.Common
 aux_source_directory(src/common nickel_common_src)
-file(GLOB_RECURSE nickel_common_headers ./include/common/*.hpp)
+# aux_source_directory(src/common/math nickel_common_src)
+file(GLOB_RECURSE nickel_common_headers ./include/common/*.hpp, ./include/common/math/*.hpp)
 
 add_library(Nickel.Common STATIC)
 target_sources(Nickel.Common PRIVATE ${nickel_common_src})
@@ -9,7 +10,7 @@ target_include_directories(Nickel.Common PUBLIC ./include)
 set_target_properties(Nickel.Common
     PROPERTIES
     PUBLIC_HEADER "${nickel_common_headers}")
-target_compile_features(Nickel.Common PUBLIC cxx_std_17)
+target_compile_features(Nickel.Common PUBLIC cxx_std_20)
 target_link_libraries(Nickel.Common PUBLIC mirrow gecs)
 target_link_libraries(Nickel.Common PRIVATE debugbreak "$<$<CONFIG:Debug>:easy_profiler>")
 target_compile_definitions(Nickel.Common PUBLIC "$<$<CONFIG:Debug>:NICKEL_ENABLE_PROFILE>" _CRT_SECURE_NO_WARNINGS)
