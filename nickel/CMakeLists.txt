@@ -1,6 +1,6 @@
 # Nickel.Common
 aux_source_directory(src/common nickel_common_src)
-# aux_source_directory(src/common/math nickel_common_src)
+aux_source_directory(src/common/math nickel_common_src)
 file(GLOB_RECURSE nickel_common_headers ./include/common/*.hpp, ./include/common/math/*.hpp)
 
 add_library(Nickel.Common STATIC)

@@ -127,6 +127,16 @@ public:
         assert(colBeg + colLen <= m.ColNum() && rowBeg + rowLen <= m.RowNum());
     }
 
+    template <size_t Len>
+    MatrixView(SVector<T, Len>& v, size_t beg, size_t len)
+        : datas_{v.Ptr()},
+          colBeg_{beg},
+          colLen_{len},
+          rowBeg_{0},
+          rowLen_{1} {
+        assert(colBeg_ + colLen_ <= Len);
+    }
+
     MatrixView(const MatrixView&) = default;
     MatrixView(MatrixView&&) = default;
 

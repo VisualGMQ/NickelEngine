@@ -2,69 +2,272 @@
 
 #include <array>
 #include <cmath>
+#include <iostream>
 #include <type_traits>
 
 namespace nickel {
 
-template <typename T, size_t Len, bool IsConst = true>
-class SColumn {
+// vectors
+
+// operation fwd declare
+
+template <typename T, size_t Len>
+class SVector;
+
+template <typename T, size_t Len>
+auto operator+(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept;
+
+template <typename T, size_t Len>
+auto operator-(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept;
+
+template <typename T, size_t Len>
+auto operator*(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept;
+
+template <typename T, size_t Len>
+auto operator/(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept;
+
+template <typename Derive, typename ElemType, size_t Len>
+class SVectorBase {
 public:
-    using ElemType = T;
+    constexpr size_t ElemCount() const noexcept { return Len; }
 
-    SColumn(ElemType& datas)
-    requires(!IsConst)
-        : datas_{&datas} {}
-
-    SColumn(const ElemType& datas, size_t len)
-    requires(IsConst)
-        : datas_{&datas} {}
-
-    auto operator[](size_t idx) const noexcept {
+    ElemType operator[](size_t idx) const noexcept {
         assert(idx < Len);
-        return datas_[idx];
+        const Derive* derive = static_cast<const Derive*>(this);
+        return derive->datas[idx];
     }
 
-    auto& operator[](size_t idx) noexcept
-    requires(!IsConst)
-    {
+    ElemType& operator[](size_t idx) noexcept {
         assert(idx < Len);
-        return datas_[idx];
+        Derive* derive = static_cast<Derive*>(this);
+        return derive->datas[idx];
+    }
+
+    ElemType* Ptr() noexcept { return static_cast<Derive*>(this)->datas; }
+
+    const ElemType* Ptr() const noexcept {
+        return static_cast<Derive*>(this)->datas;
+    }
+
+    Derive operator-() const noexcept {
+        Derive result;
+        Derive* derive = static_cast<Derive*>(this);
+        for (size_t i = 0; i < Len; ++i) {
+            result[i] = -derive->datas[i];
+        }
+        return result;
+    }
+};
+
+template <typename T, size_t Len>
+class SVector : public SVectorBase<SVector<T, Len>, T, Len> {
+public:
+    using ElemType = T;
+    static constexpr size_t ElemCount = Len;
+
+    SVector() { memset(datas, 0, sizeof(ElemType) * ElemCount); }
+
+    template <typename U>
+    requires(std::convertible_to<U, ElemType>)
+    explicit SVector(U elem) {
+        auto value = static_cast<ElemType>(elem);
+        memset(datas, value, sizeof(ElemType) * ElemCount);
+    }
+
+    template <typename... Us>
+    requires(std::convertible_to<Us, ElemType> && ...)
+    explicit SVector(Us... elems) {
+        auto datas[] = {static_cast<ElemType>(elems)...};
+        memset(datas, 0, sizeof(ElemType) * ElemCount);
+        memcpy(datas, &datas, sizeof(datas));
     }
 
 private:
-    std::conditional_t<IsConst, const ElemType*, ElemType*> datas_{};
+    ElemType datas[ElemCount];
 };
+
+template <typename T>
+class SVector<T, 2> : public SVectorBase<SVector<T, 2>, T, 2> {
+public:
+    using ElemType = T;
+    static constexpr size_t ElemCount = 2;
+
+    union {
+        struct {
+            ElemType x, y;
+        };
+
+        struct {
+            ElemType s, r;
+        };
+
+        struct {
+            ElemType w, h;
+        };
+
+        ElemType datas[ElemCount];
+    };
+
+    SVector(T x, T y) : x{x}, y{y} {}
+
+    SVector() : datas{ElemType{}} {}
+
+    explicit SVector(T value) : x{value}, y{value} {}
+};
+
+template <typename T>
+class SVector<T, 3> : public SVectorBase<SVector<T, 3>, T, 3> {
+public:
+    using ElemType = T;
+    static constexpr size_t ElemCount = 3;
+
+    union {
+        struct {
+            ElemType x, y, z;
+        };
+
+        struct {
+            ElemType s, r, t;
+        };
+
+        struct {
+            ElemType w, h, l;
+        };
+
+        ElemType datas[ElemCount];
+    };
+
+    SVector(T x, T y, T z) : x{x}, y{y}, z{z} {}
+
+    SVector() : datas{ElemType{}} {}
+
+    explicit SVector(T value) : x{value}, y{value}, z{value} {}
+};
+
+template <typename T>
+class SVector<T, 4> : public SVectorBase<SVector<T, 4>, T, 4> {
+public:
+    using ElemType = T;
+    static constexpr size_t ElemCount = 4;
+
+    union {
+        struct {
+            ElemType x, y, z, w;
+        };
+
+        ElemType datas[ElemCount];
+    };
+
+    SVector() : datas{ElemType{}} {}
+
+    SVector(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+
+    explicit SVector(T value) : x{value}, y{value}, z{value}, w{value} {}
+};
+
+// operations
+
+template <typename T, size_t Len>
+auto operator+(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept {
+    SVector<T, Len> v;
+    for (int i = 0; i < Len; i++) {
+        v[i] = v1[i] + v2[i];
+    }
+    return v;
+}
+
+template <typename T, size_t Len>
+auto operator-(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept {
+    SVector<T, Len> v;
+    for (int i = 0; i < Len; i++) {
+        v[i] = v1[i] - v2[i];
+    }
+    return v;
+}
+
+template <typename T, size_t Len>
+auto operator*(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept {
+    SVector<T, Len> v;
+    for (int i = 0; i < Len; i++) {
+        v[i] = v1[i] * v2[i];
+    }
+    return v;
+}
+
+template <typename T, typename U, size_t Len>
+auto operator*(const SVector<T, Len>& v1, U value) noexcept {
+    SVector<T, Len> v;
+    for (int i = 0; i < Len; i++) {
+        v[i] = v1[i] * value;
+    }
+    return v;
+}
+
+template <typename T, typename U, size_t Len>
+auto operator*(U value, const SVector<T, Len>& v) noexcept {
+    return v * value;
+}
+
+template <typename T, size_t Len>
+auto operator/(const SVector<T, Len>& v1, const SVector<T, Len>& v2) noexcept {
+    SVector<T, Len> v;
+    for (int i = 0; i < Len; i++) {
+        v[i] = v1[i] / v2[i];
+    }
+    return v;
+}
+
+template <typename T, typename U, size_t Len>
+auto operator/(const SVector<T, Len>& v1, U value) noexcept {
+    SVector<T, Len> v;
+    for (int i = 0; i < Len; i++) {
+        v[i] = v1[i] / value;
+    }
+    return v;
+}
+
+template <typename T, size_t Len>
+std::ostream& operator<<(std::ostream& o, const SVector<T, Len>& view) {
+    o << "[" << std::endl;
+    for (int i = 0; i < Len; i++) {
+        o << view[i] << std::endl;
+    }
+    o << "]";
+    return o;
+}
+
+// matrix
 
 template <typename T, size_t Col, size_t Row>
 class SMatrix {
 public:
     using ElemType = T;
 
-    static SMatrix Zeros(size_t col, size_t row) { return {}; }
+    static SMatrix Zeros() { return {}; }
 
-    static SMatrix Identity(size_t col, size_t row) {
-        SMatrix m{col, row};
+    static SMatrix Identity() {
+        SMatrix m;
         m.Diagonal(1);
         return m;
     }
 
-    static SMatrix Ones(size_t col, size_t row) {
-        SMatrix m{col, row};
+    static SMatrix Ones() {
+        SMatrix m;
         m.Fill(1);
         return m;
     }
 
     template <typename U>
     requires std::convertible_to<U, ElemType>
-    static SMatrix Fill(size_t col, size_t row, U elem) {
-        SMatrix m(col, row);
+    static SMatrix Fill(U elem) {
+        SMatrix m;
         m.Fill(elem);
         return m;
     }
 
     template <typename... Ts>
-    static SMatrix FromRow(size_t col, size_t row, Ts... elems) {
-        SMatrix m(col, row);
+    static SMatrix FromRow(Ts... elems) {
+        SMatrix m;
         m.SetValuesFromRow(elems...);
         return m;
     }
@@ -84,17 +287,23 @@ public:
         return m;
     }
 
+    SMatrix() = default;
+
     SMatrix(const SMatrix& o) : data_{o.data_} {}
 
-    SMatrix(SMatrix&& o) : SMatrix() { swap(o, *this); }
+    SMatrix(SMatrix&& o) : data_{o.data_} {}
 
     SMatrix& operator=(SMatrix&& o) {
-        swap(o, *this);
+        if (&o != this) {
+            data_ = std::move(o.data_);
+        }
         return *this;
     }
 
-    SMatrix& operator=(SMatrix o) {
-        swap(o, *this);
+    SMatrix& operator=(const SMatrix& o) {
+        if (&o != this) {
+            data_ = o.data_;
+        }
         return *this;
     }
 
@@ -104,7 +313,7 @@ public:
         ElemType datas[] = {static_cast<ElemType>(elems)...};
         for (int i = 0; i < std::min(sizeof...(elems), ElemCount()); i++) {
             size_t row = i / Col;
-            size_t col = i % Row;
+            size_t col = i % Col;
             operator[](col)[row] = datas[i];
         }
     }
@@ -140,13 +349,9 @@ public:
         memset(Ptr(), elem, sizeof(ElemType) * elemCount);
     }
 
-    auto operator[](size_t i) const noexcept {
-        return SColumn<ElemType, Row, true>{*(Ptr() + i * Row)};
-    }
+    auto operator[](size_t i) const noexcept { return data_[i]; }
 
-    auto operator[](size_t i) noexcept {
-        return SColumn<ElemType, Row, false>{*(Ptr() + i * Row)};
-    }
+    auto& operator[](size_t i) noexcept { return data_[i]; }
 
     bool operator==(const SMatrix& o) const noexcept {
         for (int r = 0; r < Row; r++) {
@@ -163,146 +368,127 @@ public:
 
     constexpr size_t ElemCount() const noexcept { return Col * Row; }
 
-    ElemType* Ptr() { return data_.data(); }
+    ElemType* Ptr() { return data_[0].Ptr(); }
 
-    const ElemType* Ptr() const { return data_; }
+    const ElemType* Ptr() const { return data_[0].Ptr(); }
 
     constexpr auto ColNum() const noexcept { return Col; }
 
     constexpr auto RowNum() const noexcept { return Row; }
 
 private:
-    std::array<ElemType, Row * Col> data_;
+    std::array<SVector<ElemType, Row>, Col> data_;
+};
 
-    SMatrix() { data_.fill(ElemType{}); }
+// matrix operations
 
-    friend void swap(SMatrix& m1, SMatrix& m2) noexcept {
-        using std::swap;
-        swap(m1.data_, m2.data_);
+template <typename T, size_t Col, size_t Row>
+SMatrix<T, Col, Row> operator+(const SMatrix<T, Col, Row>& m1,
+                               const SMatrix<T, Col, Row>& m2) {
+    SMatrix<T, Col, Row> m;
+    for (int c = 0; c < Col; c++) {
+        for (int r = 0; r < Row; r++) {
+            m[c][r] = m1[c][r] + m2[c][r];
+        }
     }
-};
-
-namespace internal {
-
-template <typename Vector>
-concept is_svector = requires {
-    typename Vector::ElemType;
-    requires Vector::ElemCount != 0;
-    Vector::datas;
-};
-
+    return m;
 }
 
-template <typename Derive>
-requires internal::is_svector<Derive>
+template <typename T, size_t Col, size_t Row>
+SMatrix<T, Col, Row> operator-(const SMatrix<T, Col, Row>& m1,
+                               const SMatrix<T, Col, Row>& m2) {
+    SMatrix<T, Col, Row> m;
+    for (int c = 0; c < Col; c++) {
+        for (int r = 0; r < Row; r++) {
+            m[c][r] = m1[c][r] - m2[c][r];
+        }
+    }
+    return m;
+}
 
-class SVectorBase {
-private:
-    using elem_type = typename Derive::ElemType;
-    static constexpr auto elem_count = Derive::ElemCount;
+template <typename T, typename U, size_t Col, size_t Row>
+SMatrix<T, Col, Row> operator*(const SMatrix<T, Col, Row>& m1, U value) {
+    SMatrix<T, Col, Row> m;
+    for (int c = 0; c < Col; c++) {
+        for (int r = 0; r < Row; r++) {
+            m[c][r] = m1[c][r] * value;
+        }
+    }
+    return m;
+}
 
-public:
-    template <typename U>
-    requires(std::convertible_to<U, elem_type>)
-    SVectorBase(U elem) {
-        Derive* derive = static_cast<Derive*>(this);
-        elem_type data = static_cast<elem_type>(elem);
-        memcpy(derive->datas, &data, sizeof(elem_type) * elem_count);
+template <typename T, typename U, size_t Col, size_t Row>
+SMatrix<T, Col, Row> operator*(U value, const SMatrix<T, Col, Row>& m1) {
+    return m1 * value;
+}
+
+template <typename T, typename U, size_t Col, size_t Row>
+SMatrix<T, Col, Row> operator/(const SMatrix<T, Col, Row>& m1, U value) {
+    SMatrix<T, Col, Row> m;
+    for (int c = 0; c < Col; c++) {
+        for (int r = 0; r < Row; r++) {
+            m[c][r] = m1[c][r] / value;
+        }
+    }
+    return m;
+}
+
+template <typename T, size_t Len, size_t Row, size_t Col>
+SMatrix<T, Col, Row> operator*(const SMatrix<T, Len, Row>& m1,
+                               const SMatrix<T, Col, Len>& m2) {
+    SMatrix<T, Col, Row> mat;
+
+    for (int m = 0; m < Row; m++) {
+        for (int r = 0; r < Col; r++) {
+            double sum = 0;
+            for (int n = 0; n < Len; n++) {
+                sum += m1[n][m] * m2[r][n];
+            }
+            mat[r][m] = sum;
+        }
+    }
+    return mat;
+}
+
+template <typename T, size_t Col, size_t Row>
+SMatrix<T, Col, Row> MulEach(const SMatrix<T, Col, Row>& m1,
+                             const SMatrix<T, Col, Row>& m2) {
+    SMatrix<T, Col, Row> m;
+    for (int c = 0; c < Col; c++) {
+        for (int r = 0; r < Row; r++) {
+            m[c][r] = m1[c][r] * m2[c][r];
+        }
+    }
+    return m;
+}
+
+template <typename T, size_t Col, size_t Row>
+SMatrix<T, Col, Row> DivEach(const SMatrix<T, Col, Row>& m1,
+                             const SMatrix<T, Col, Row>& m2) {
+    SMatrix<T, Col, Row> m;
+    for (int c = 0; c < Col; c++) {
+        for (int r = 0; r < Row; r++) {
+            m[c][r] = m1[c][r] / m2[c][r];
+        }
+    }
+    return m;
+}
+
+template <typename T, size_t Col, size_t Row>
+SVector<T, Row> operator*(const SMatrix<T, Col, Row>& m,
+                               const SVector<T, Col>& v) {
+    SVector<T, Row> result;
+
+    for (int r = 0; r < Row; r++) {
+        result[r] = 0;
+        for (int c = 0; c < Col; c++) {
+            result[r] += m[c][r] * v[c];
+        }
     }
 
-    template <typename... Us>
-    requires(std::convertible_to<Us, elem_type> && ...)
-    SVectorBase(Us... elems) {
-        elem_type datas[] = {static_cast<elem_type>(elems)...};
-        Derive* derive = static_cast<Derive*>(this);
-        memset(derive->datas, 0, sizeof(elem_type) * elem_count);
-        memcpy(derive->datas, &datas, sizeof(datas));
-    }
+    return result;
+}
 
-    constexpr size_t ElemCount() const noexcept { return ElemCount; }
 
-    elem_type operator[](size_t idx) const noexcept {
-        assert(idx < elem_count);
-        Derive* derive = static_cast<Derive*>(this);
-        return derive->datas[idx];
-    }
-
-    elem_type& operator[](size_t idx) noexcept {
-        assert(idx < elem_count);
-        Derive* derive = static_cast<Derive*>(this);
-        return derive->datas[idx];
-    }
-};
-
-template <typename T, size_t Len>
-class SVector: public SVectorBase<SVector<T, Len>> {
-public:
-    using ElemType = T;
-    static constexpr size_t ElemCount = Len;
-
-private:
-    ElemType datas[ElemCount];
-};
-
-template <typename T>
-class SVector<T, 2> : public SVectorBase<SVector<T, 2>> {
-public:
-    using ElemType = T;
-    static constexpr size_t ElemCount = 2;
-
-    union {
-        struct {
-            ElemType x, y;
-        };
-
-        struct {
-            ElemType s, r;
-        };
-
-        struct {
-            ElemType w, h;
-        };
-
-        ElemType datas[ElemCount];
-    };
-};
-
-template <typename T>
-class SVector<T, 3> : public SVectorBase<SVector<T, 3>> {
-public:
-    using ElemType = T;
-    static constexpr size_t ElemCount = 3;
-
-    union {
-        struct {
-            ElemType x, y, z;
-        };
-
-        struct {
-            ElemType s, r, t;
-        };
-
-        struct {
-            ElemType w, h, l;
-        };
-
-        ElemType datas[ElemCount];
-    };
-};
-
-template <typename T>
-class SVector<T, 4> : public SVectorBase<SVector<T, 4>> {
-public:
-    using ElemType = T;
-    static constexpr size_t ElemCount = 4;
-
-    union {
-        struct {
-            ElemType x, y, z, w;
-        };
-
-        ElemType datas[ElemCount];
-    };
-};
 
 }  // namespace nickel
