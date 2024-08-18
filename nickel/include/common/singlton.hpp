@@ -69,8 +69,8 @@ public:
         instance_ = nullptr;
     }
 
-    bool HasInstance() const noexcept {
-        return instance_;
+    static bool HasInstance() {
+        return instance_ != nullptr;
     }
 
 private:

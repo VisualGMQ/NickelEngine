@@ -11,45 +11,101 @@
 
 namespace nickel {
 
-class LoadStoreStrategy {
+template <typename T>
+struct LoadStoreStrategy;
+
+template <typename T>
+concept IsLoadStoreStrategy = requires(T obj, const T cobj) {
+    requires std::is_default_constructible_v<T>;
+    typename T::AssetType;
+    { obj.Load(std::filesystem::path{}, nullptr) } -> std::same_as<bool>;
+    { obj.Save(typename T::AssetType{}) } -> std::same_as<bool>;
+    { cobj.GetRelativePath() } -> std::same_as<const std::filesystem::path&>;
+    obj.ChangeRelativePath(std::filesystem::path{});
+    { T::GetMetaExtension() } -> std::same_as<std::string_view>;
+    { T::IsExternal() } -> std::same_as<bool>;
+};
+
+struct LoadStoreStrategyHelper {
 public:
-    virtual ~LoadStoreStrategy() = default;
+    auto& GetRelativePath() const noexcept { return filename_; }
 
-    virtual void* Load(const std::filesystem::path&) = 0;
-    virtual bool Save() const = 0;
-
-    auto& GetRelativePath() const noexcept { return relativePath_; }
-
-    void ChangeRelativePath(const std::filesystem::path& relPath) {
-        relativePath_ = relPath;
+    void ChangeRelativePath(const std::filesystem::path& path) {
+        filename_ = path;
     }
 
 private:
-    std::filesystem::path relativePath_;
+    std::filesystem::path filename_;
 };
 
 template <typename T>
-concept IsLoadStoreStrategy = requires {
-    { T::GetMetaExtension() } -> std::same_as<const std::filesystem::path>;
-    { T::IsImportable() } -> std::same_as<bool>;
-};
-
-template <typename T>
-struct AssetData {
-    T* asset{};
-    LoadStoreStrategy* strategy;
-};
-
-using CreateStrategyFn =
-    std::function<std::unique_ptr<LoadStoreStrategy>(void)>;
-
-template <typename T>
-class AssetManagerT final : public DataStorage<AssetData<T>> {
+requires IsLoadStoreStrategy<LoadStoreStrategy<T>>
+class AssetStorage final : public Storage<T, uint32_t, LoadStoreStrategy<T>> {
 public:
-    using Base = DataStorage<T>;
-    using DataType = AssetData<T>;
+    using Base = Storage<T, uint32_t, LoadStoreStrategy<T>>;
+    using Strategy = LoadStoreStrategy<T>;
 
-    explicit AssetManagerT(const CreateStrategyFn& fn) : createFn_{fn} {}
+    struct Data {
+        T* asset{};
+        uint32_t* refcount{};
+        LoadStoreStrategy<T>* strategy{};
+        DataID id = InvalidDataID;
+    };
+
+    using Base::Exists;
+
+    AssetStorage() = default;
+    AssetStorage(const AssetStorage&) = delete;
+    AssetStorage& operator=(const AssetStorage&) = delete;
+
+    Data Allocate() {
+        auto [data, id] = Base::Allocate();
+        auto [asset, refcount, strategy] = data;
+        *refcount = 0;
+
+        return {asset, refcount, strategy, id};
+    }
+
+    void IncRefcount(DataID id) {
+        if (!Base::Exists(id)) {
+            return;
+        }
+
+        (*getRefcount(id)) ++;
+    }
+
+    void DecRefcount(DataID id) {
+        if (!Base::Exists(id)) {
+            return;
+        }
+
+        auto& refcount = *getRefcount(id);
+
+        if (refcount == 0) {
+            LOGE(log_tag::Nickel,
+                 "trying decrease refcount when refcount == 0");
+        } else {
+            refcount--;
+        }
+    }
+
+    uint32_t GetRefCount(DataID id) const {
+        if (!Base::Exists(id)) {
+            return 0;
+        }
+
+        return getRefcount(id);
+    }
+
+    T* GetWithRef(DataID id) {
+        if (!Base::Exists(id)) {
+            return nullptr;
+        }
+
+        auto [data, refcount, _] = Get(id);
+        *refcount ++;
+        return data;
+    }
 
     DataID Find(const std::filesystem::path& relativePath) {
         if (auto it = filenameDataMap_.find(relativePath);
@@ -60,57 +116,74 @@ public:
 
     template <typename... Args>
     DataID Create(Args&&... args) {
-        auto&& [data, id] = Allocate();
-        new (data.data.asset) T(std::forward<Args>(args)...);
+        auto&& [asset, refcount, strategy, id] = Allocate();
+        new (asset) T(std::forward<Args>(args)...);
+        new (strategy) LoadStoreStrategy<T>();
         return id;
     }
 
     DataID LoadFromMeta(const std::filesystem::path& relativePath) {
-        auto strategy = createFn_();
-        T* asset = (T*)strategy->Load(relativePath);
-        if (!asset) {
+        auto [asset, refcount, strategy, id] = Allocate();
+
+        new (strategy) Strategy{};
+
+        if (!strategy->Load(relativePath, asset)) {
+            // TODO: destroy data
             return InvalidDataID;
         }
 
-        auto&& [data, id] = Allocate();
-        *data.data = DataType{asset, std::move(strategy)};
+        *refcount = 0;
+
         filenameDataMap_[relativePath] = id;
         return id;
     }
 
     DataID Load(const std::filesystem::path& relativePath) {
-        auto strategy = createFn_();
-        T* asset = strategy->Load(relativePath);
-        if (!asset) {
+        auto [asset, refcount, strategy, id] = Allocate();
+
+        new (strategy) Strategy{};
+
+        if (!strategy->Load(relativePath, asset)) {
+            // TODO: destroy id
             return InvalidDataID;
         }
-
-        auto&& [data, id] = Allocate();
-        *data.data = DataType{asset, std::move(strategy)};
+        
+        *refcount = 0;
         filenameDataMap_[relativePath] = id;
         return id;
     }
 
-    bool Exists(DataID id) const { return Get(id); }
-
-    bool SaveAs(DataID id, const std::filesystem::path& relativePath) {
-        if (!Exists(id)) return false;
-
-        DataType* data = Get(id);
-        return data->strategy.SaveAs(*data->asset, relativePath);
+    Data Get(DataID id) {
+        auto [asset, refcount, strategy] = Base::Get(id);
+        return {asset, refcount, strategy, id};
     }
 
     bool Save(DataID id) {
         if (!Exists(id)) return false;
 
-        DataType* data = Get(id);
-        return data->strategy.SaveAs(*data->asset,
-                                     data->strategy.GetRelativePath());
+        auto [asset, refcount, strategy] = Get(id);
+
+        return strategy->Save(*asset);
     }
 
 private:
     std::unordered_map<std::filesystem::path, DataID> filenameDataMap_;
-    const CreateStrategyFn& createFn_;
+
+    T* getAsset(DataID id) { return std::get<0>(Base::Get(id)); }
+
+    const T* getAsset(DataID id) const { return std::get<0>(Base::Get(id)); }
+
+    uint32_t* getRefcount(DataID id) { return std::get<1>(Base::Get(id)); }
+
+    const uint32_t* getRefcount(DataID id) const {
+        return std::get<1>(Base::Get(id));
+    }
+
+    Strategy* getStrategy(DataID id) { return std::get<2>(Base::Get(id)); }
+
+    const Strategy* getStrategy(DataID id) const {
+        return std::get<2>(Base::Get(id));
+    }
 };
 
 class AssetManager;
@@ -120,6 +193,11 @@ using AssetHandle = Ref<T, AssetManager>;
 
 class AssetManager final : public Singlton<AssetManager, true> {
 public:
+    using TypeID = uint32_t;
+
+    template <typename, typename>
+    friend class Ref;
+
     AssetManager() {
         std::error_code err;
         rootPath_ = std::filesystem::current_path(err);
@@ -134,14 +212,48 @@ public:
      *
      * @tparam T
      */
-    template <typename T, typename Strategy>
-    requires(IsLoadStoreStrategy<Strategy>)
-    void RegisterAssetType() {
+    template <typename T>
+    requires IsLoadStoreStrategy<LoadStoreStrategy<T>>
+    void RegisterExternalAssetType(const std::vector<std::string>& extensions) {
         auto id = TypeIDGenerator::GetID<T>();
-        if (createStrategyFnMap_.contains(id)) {
-            LOGW(log_tag::Asset,
-                 "register asset type failed: asset already exists");
+
+        if (storages_.contains(id)) {
+            LOGE(log_tag::Asset, "asset already registered");
+            return;
         }
+
+        for (auto& ext : extensions) {
+            importFileExtensions_[ext] = id;
+        }
+        if (LoadStoreStrategy<T>::IsExternal()) {
+            importFileExtensions_[LoadStoreStrategy<T>::GetMetaExtension()] =
+                id;
+        }
+
+        storages_[id] = std::make_unique<AssetStorage<T>>();
+    }
+
+    /**
+     * @brief register a type as asset, associate it with it's meta file
+     *
+     * @tparam T
+     */
+    template <typename T>
+    requires IsLoadStoreStrategy<LoadStoreStrategy<T>>
+    void RegisterInternalAssetType() {
+        auto id = TypeIDGenerator::GetID<T>();
+
+        if (storages_.contains(id)) {
+            LOGE(log_tag::Asset, "asset already registered");
+            return;
+        }
+
+        if (!LoadStoreStrategy<T>::IsExternal()) {
+            importFileExtensions_[std::string(
+                LoadStoreStrategy<T>::GetMetaExtension())] = id;
+        }
+
+        storages_.emplace(id, std::make_unique<AssetStorage<T>>());
     }
 
     void ChangeRootPath(const std::filesystem::path& path) { rootPath_ = path; }
@@ -182,7 +294,7 @@ public:
     AssetHandle<T> Load(const std::filesystem::path& filename) {
         auto relPath = cvtPath2Relative(filename);
         if (auto mgr = get<T>(); mgr) {
-            return mgr->Load(filename);
+            return AssetHandle<T>{mgr->Load(filename)};
         }
         return {};
     }
@@ -196,38 +308,54 @@ public:
     template <typename T>
     AssetHandle<T> LoadFromMeta(const std::filesystem::path& filename) {
         auto relPath = cvtPath2Relative(filename);
-        if (auto& mgr = assure<T>(); !relPath.empty()) {
+        if (auto mgr = get<T>(); mgr && !relPath.empty()) {
             return mgr.LoadFromMeta(filename);
         }
         return {};
     }
 
     template <typename T>
-    bool Save(const AssetHandle<T>& ref) {
+    bool Exists(AssetHandle<T> handle) {
+        if (auto mgr = get<T>(); mgr) {
+            return mgr->Exists(static_cast<DataID>(handle));
+        }
         return false;
     }
 
     template <typename T>
-    bool IsRegisteredAsset(uint32_t typeID) const {
+    T* Get(AssetHandle<T> handle) {
+        if (auto mgr = get<T>(); mgr) {
+            return mgr->Get(static_cast<DataID>(handle)).asset;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    bool Save(AssetHandle<T> ref) {
+        return false;
+    }
+
+    template <typename T>
+    bool IsRegisteredAsset(TypeID typeID) const {
         auto id = TypeIDGenerator::GetID<T>();
-        return createStrategyFnMap_.contains(id);
+        return storages_.contains(id);
     }
 
 private:
-    std::unordered_map<uint32_t, std::unique_ptr<StorageBase>> storages_;
-    std::unordered_map<uint32_t, CreateStrategyFn> createStrategyFnMap_;
+    std::unordered_map<TypeID, std::unique_ptr<StorageBase>> storages_;
+    std::unordered_map<std::string, TypeID> importFileExtensions_;
     std::filesystem::path rootPath_;
 
     template <typename T>
-    AssetManagerT<T>* get() {
-        return const_cast<AssetManagerT<T>*>(std::as_const(*this).get<T>());
+    AssetStorage<T>* get() {
+        return const_cast<AssetStorage<T>*>(std::as_const(*this).get<T>());
     }
 
     template <typename T>
-    AssetManagerT<T>* const get() const {
+    AssetStorage<T>* const get() const {
         auto typeID = TypeIDGenerator::GetID<T>();
         if (auto it = storages_.find(typeID); it != storages_.end()) {
-            return static_cast<AssetManagerT<T>* const>(it->second.get());
+            return static_cast<AssetStorage<T>* const>(it->second.get());
         } else {
             LOGE(log_tag::Asset, "asset don't registered");
             return nullptr;
@@ -246,6 +374,20 @@ private:
                 return "";
             }
             return relPath;
+        }
+    }
+
+    template <typename T>
+    void decRefcount(DataID id) {
+        if (auto mgr = get<T>(); mgr) {
+            mgr->DecRefcount(id);
+        }
+    }
+
+    template <typename T>
+    void incRefcount(DataID id) {
+        if (auto mgr = get<T>(); mgr) {
+            mgr->IncRefcount(id);
         }
     }
 };

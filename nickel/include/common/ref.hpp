@@ -5,7 +5,6 @@
 #include "common/singlton.hpp"
 #include "common/typeid_generator.hpp"
 #include "common/data_id.hpp"
-#include "common/data_pool.hpp"
 
 namespace nickel {
 
@@ -27,7 +26,7 @@ public:
     template <typename... Args>
     static Ref Create(Args&&... args) {
         DataID id =
-            DataPool::Instance().Emplace<T>(std::forward<Args>(args)...);
+            Storage::Instance().template Emplace<T>(std::forward<Args>(args)...);
         return Ref{id};
     }
 
@@ -39,7 +38,9 @@ public:
      * @param id
      */
     explicit Ref(DataID id) : id_{id} {
-        DataPool::Instance().IncRefCount<T>(id_);
+        if (id_ != InvalidDataID) {
+            Storage::Instance().template incRefcount<T>(id_);
+        }
     }
 
     Ref(const Ref& ref);
@@ -78,7 +79,7 @@ private:
 
 template <typename T, typename Storage>
 bool Ref<T, Storage>::Valid() const {
-    return id_ != InvalidDataID && DataPool::Instance().Exists<T>(id_);
+    return id_ != InvalidDataID && Storage::Instance().template Exists<T>(*this);
 }
 
 template <typename T, typename Storage>
@@ -94,7 +95,7 @@ const T* Ref<T, Storage>::GetDataConst() const {
     if (!Storage::HasInstance()) {
         return nullptr;
     }
-    return DataPool::Instance().template Get<T>(id_);
+    return Storage::Instance().template Get<T>(id_);
 }
 
 template <typename T, typename Storage>
@@ -102,13 +103,13 @@ T* Ref<T, Storage>::GetData() const {
     if (!Storage::HasInstance()) {
         return nullptr;
     }
-    return DataPool::Instance().template Get<T>(id_);
+    return Storage::Instance().template Get<T>(id_);
 }
 
 template <typename T, typename Storage>
 Ref<T, Storage>::Ref(const Ref& o) : id_{o.id_} {
     id_ = o.id_;
-    DataPool::Instance().template IncRefCount<T>(id_);
+    Storage::Instance().template incRefcount<T>(id_);
 }
 
 template <typename T, typename Storage>
@@ -120,7 +121,7 @@ template <typename T, typename Storage>
 Ref<T, Storage>& Ref<T, Storage>::operator=(const Ref& o) {
     if (&o != this) {
         id_ = o.id_;
-        Storage::Instance().template IncRefCount<T>(id_);
+        Storage::Instance().template incRefcount<T>(id_);
     }
     return *this;
 }
@@ -137,7 +138,7 @@ Ref<T, Storage>& Ref<T, Storage>::operator=(Ref&& o) {
 template <typename T, typename Storage>
 Ref<T, Storage>::~Ref() {
     if (Storage::HasInstance()) {
-        Storage::Instance().template DecRefCount<T>(id_);
+        Storage::Instance().template decRefcount<T>(id_);
     }
 }
 

@@ -28,3 +28,4 @@ AddConsoleTest(data_pool)
 
 add_subdirectory(testbed)
 add_subdirectory(graphics)
+add_subdirectory(asset_manager)

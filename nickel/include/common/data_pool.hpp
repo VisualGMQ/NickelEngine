@@ -1,82 +1,74 @@
 #pragma once
 
+#include "common/data_storage.hpp"
 #include "common/log.hpp"
 #include "common/log_tag.hpp"
+#include "common/ref.hpp"
 #include "common/singlton.hpp"
-#include "common/data_storage.hpp"
 #include "common/typeid_generator.hpp"
 #include "stdpch.hpp"
 
-
 namespace nickel {
+
+class DataPool;
+
+template <typename T>
+using DataHandle = Ref<T, DataPool>;
 
 class DataPool final : public Singlton<DataPool, true> {
 public:
+    template <typename, typename>
+    friend class Ref;
+
     template <typename T, typename... Args>
-    DataID Emplace(Args&&... args) {
+    DataHandle<T> Emplace(Args&&... args) {
         auto& storage = assure<T>();
 
-        auto [value, id] = storage.Allocate();
-        new (value.data) T(std::forward<Args>(args)...);
-        return id;
+        auto [data, refcount, id] = storage.Allocate();
+        new (data) T(std::forward<Args>(args)...);
+        *refcount = 0;
+        return DataHandle<T>{id};
     }
 
     template <typename T>
-    std::tuple<DataID, void*> Allocate() {
+    std::tuple<DataID, T*> Allocate() {
         auto& storage = assure<T>();
 
-        auto [value, id] = storage.Allocate();
-        return {id, value.data};
+        auto [data, refcount, id] = storage.Allocate();
+        return {id, data};
     }
 
     template <typename T>
-    bool Exists(DataID id) const {
+    bool Exists(DataHandle<T> handle) const {
         if (auto storage = get<T>(); storage) {
-            return storage->Exists(id);
+            return storage->Exists(static_cast<DataID>(handle));
         } else {
             return false;
         }
     }
 
     template <typename T>
-    T* const Get(DataID id) const {
+    const T* Get(DataHandle<T> handle) const {
         if (auto storage = get<T>(); storage) {
-            return storage->Get(id);
+            return storage->Get(static_cast<DataID>(handle)).value;
         } else {
             return nullptr;
         }
     }
 
-    const void* GetData(uint32_t typeID, DataID id) const {
-        if (auto it = storages_.find(typeID); it != storages_.end()) {
-            return it->second->GetData(id);
-        }
-        return nullptr;
-    }
-
     template <typename T>
-    T* Get(DataID id) {
-        return const_cast<T*>(std::as_const(*this).Get<T>(id));
-    }
-
-    template <typename T>
-    void IncRefCount(DataID id) {
-        if (auto storage = get<T>(); storage && storage->Exists(id)) {
-            storage->IncRefCount(id);
-        }
-    }
-
-    template <typename T>
-    void DecRefCount(DataID id) {
-        if (auto storage = get<T>(); storage && storage->Exists(id)) {
-            storage->DecRefCount(id);
-        }
-    }
-
-    template <typename T>
-    void Destroy(DataID id) {
+    T* Get(DataHandle<T> handle) {
         if (auto storage = get<T>(); storage) {
-            storage->Destroy(id);
+            return storage->Get(static_cast<DataID>(handle)).value;
+        } else {
+            return nullptr;
+        }
+    }
+
+    template <typename T>
+    void Destroy(DataHandle<T> handle) {
+        if (auto storage = get<T>(); storage) {
+            storage->Destroy(static_cast<DataID>(handle));
         }
     }
 
@@ -117,6 +109,20 @@ private:
             return static_cast<DataStorage<T>* const>(it->second.get());
         } else {
             return nullptr;
+        }
+    }
+
+    template <typename T>
+    void incRefcount(DataID id) {
+        if (auto storage = get<T>(); storage && storage->Exists(id)) {
+            storage->IncRefcount(id);
+        }
+    }
+
+    template <typename T>
+    void decRefcount(DataID id) {
+        if (auto storage = get<T>(); storage && storage->Exists(id)) {
+            storage->DecRefcount(id);
         }
     }
 };

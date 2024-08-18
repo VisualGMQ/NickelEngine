@@ -1,28 +1,29 @@
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
 #include "common/data_pool.hpp"
+#include "catch.hpp"
+
 
 TEST_CASE("data storage") {
     nickel::DataStorage<int> storage;
 
     SECTION("allocate") {
-        auto [value1, id1] = storage.Allocate();
+        auto [value1, refcount1, id1] = storage.Allocate();
         REQUIRE(id1 == nickel::Num2DataID(0));
-        auto [value2, id2] = storage.Allocate();
+        auto [value2, refcount2, id2] = storage.Allocate();
         REQUIRE(id2 == nickel::Num2DataID(1));
     }
 
-    auto [value1, id1] = storage.Allocate();
-    auto [value2, id2] = storage.Allocate();
-    auto [value3, id3] = storage.Allocate();
-    *(int*)value1.data = 1;
-    *(int*)value2.data = 2;
-    *(int*)value3.data = 3;
+    auto [valueBundle1, refcount1, id1] = storage.Allocate();
+    auto [valueBundle2, refcount2, id2] = storage.Allocate();
+    auto [valueBundle3, refcount3, id3] = storage.Allocate();
+    *valueBundle1 = 1;
+    *valueBundle2 = 2;
+    *valueBundle3 = 3;
 
     SECTION("get") {
-        REQUIRE(*storage.Get(id1) == 1);
-        REQUIRE(*storage.Get(id2) == 2);
-        REQUIRE(*storage.Get(id3) == 3);
+        REQUIRE(*(storage.Get(id1).value) == 1);
+        REQUIRE(*(storage.Get(id2).value) == 2);
+        REQUIRE(*(storage.Get(id3).value) == 3);
     }
 
     SECTION("get with ref") {
@@ -40,11 +41,11 @@ TEST_CASE("data storage") {
 int gDestructCount = 0;
 
 struct Data1 final {
-    Data1(int value): value{value} {}
-    ~Data1() { gDestructCount ++; }
+    Data1(int value) : value{value} {}
+
+    ~Data1() { gDestructCount++; }
 
     int value;
-
 };
 
 TEST_CASE("data pool") {
