@@ -15,7 +15,7 @@ public:
 
     static std::string_view GetMetaExtension() { return ".person"; }
 
-    static bool IsExternal() { return false; }
+    static bool IsImportable() { return false; }
 
     bool Load(const std::filesystem::path& filename, Person* mem) {
         std::ifstream file(filename);
@@ -45,20 +45,61 @@ public:
     }
 };
 
+struct AlwaysFailedData { };
+
+template <>
+class nickel::LoadStoreStrategy<AlwaysFailedData>: public LoadStoreStrategyHelper {
+public:
+    using AssetType = AlwaysFailedData;
+
+    static std::string_view GetMetaExtension() { return ".alwaysFailed"; }
+
+    static bool IsImportable() { return false; }
+
+    bool Load(const std::filesystem::path& filename, AlwaysFailedData* mem) {
+        return false;
+    }
+
+    bool Save(const AlwaysFailedData& person) const {
+        return false;
+    }
+};
+
 TEST_CASE("asset manager") {
     nickel::AssetManager::Init();
 
     auto& mgr = nickel::AssetManager::Instance();
     mgr.RegisterInternalAssetType<Person>();
+    mgr.RegisterInternalAssetType<AlwaysFailedData>();
 
     SECTION("save and load") {
-        Person person{"VisualGMQ", 188.0f};
+        std::filesystem::path path = "./test/asset_manager/nickel_test_person.person";
         auto handle =
-            mgr.Load<Person>("./test/asset_manager/nickel_test_person.person");
-        auto p = mgr.Get(handle);
+            mgr.Load<Person>(path);
+        REQUIRE(handle);
 
+        auto p = mgr.Get(handle);
+        REQUIRE(p);
         REQUIRE(p->name == "VisualGMQ");
         REQUIRE(p->height == 188);
+        REQUIRE(mgr.GetRelativePath(handle) == path);
+    }
+
+    SECTION("create") {
+        Person person{"VisualGMQ", 188.0f};
+        auto handle = mgr.Create<Person>(std::move(person));
+        REQUIRE(handle);
+
+        auto p = mgr.Get(handle);
+        REQUIRE(p->name == "VisualGMQ");
+        REQUIRE(p->height == 188);
+        REQUIRE(mgr.GetRelativePath(handle).empty());
+    }
+
+    SECTION("load on failed") {
+        auto handle = mgr.Load<AlwaysFailedData>("invalid_path");
+
+        REQUIRE_FALSE(handle);
     }
 
     nickel::AssetManager::Delete();

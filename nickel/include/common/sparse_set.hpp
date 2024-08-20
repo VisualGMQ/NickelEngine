@@ -29,6 +29,23 @@ public:
     }
 
     /**
+     * @brief prefetch next DataID. This will return next ID or create one if
+     * don't exists
+     *
+     * @return DataID
+     */
+    DataID PrefetchNextID() {
+        if (elemCount_ >= dense_.size()) {
+            auto newElem = dense_.size();
+            dense_.push_back(newElem);
+            Index(Num2DataID(newElem)) = dense_.size() - 1;
+            return Num2DataID(newElem);
+        } else {
+            return Num2DataID(dense_[elemCount_]);
+        }
+    }
+
+    /**
      * @brief Get id index in dense
      * 
      * @param id 

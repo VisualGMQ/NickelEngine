@@ -7,7 +7,6 @@
 #include "common/storage.hpp"
 #include "common/typeid_generator.hpp"
 #include "stdpch.hpp"
-#include "toml++/toml.hpp"
 
 namespace nickel {
 
@@ -23,7 +22,7 @@ concept IsLoadStoreStrategy = requires(T obj, const T cobj) {
     { cobj.GetRelativePath() } -> std::same_as<const std::filesystem::path&>;
     obj.ChangeRelativePath(std::filesystem::path{});
     { T::GetMetaExtension() } -> std::same_as<std::string_view>;
-    { T::IsExternal() } -> std::same_as<bool>;
+    { T::IsImportable() } -> std::same_as<bool>;
 };
 
 struct LoadStoreStrategyHelper {
@@ -52,6 +51,28 @@ public:
         DataID id = InvalidDataID;
     };
 
+    struct PreallocateData {
+        explicit PreallocateData(Base::PreallocateResult result)
+            : result_{result} {}
+
+        DataID ID() const { return result_.id; }
+
+        T* AssetMem() { return std::get<0>(result_.data); }
+
+        uint32_t* Refcount() { return std::get<1>(result_.data); }
+
+        LoadStoreStrategy<T>* StrategyMem() {
+            return std::get<2>(result_.data);
+        }
+
+        void MakeAvailable() { result_.MakeAvailable(); }
+
+        operator bool() const noexcept { return result_; }
+
+    private:
+        typename Base::PreallocateResult result_;
+    };
+
     using Base::Exists;
 
     AssetStorage() = default;
@@ -71,7 +92,7 @@ public:
             return;
         }
 
-        (*getRefcount(id)) ++;
+        (*getRefcount(id))++;
     }
 
     void DecRefcount(DataID id) {
@@ -103,7 +124,7 @@ public:
         }
 
         auto [data, refcount, _] = Get(id);
-        *refcount ++;
+        *refcount++;
         return data;
     }
 
@@ -122,35 +143,47 @@ public:
         return id;
     }
 
-    DataID LoadFromMeta(const std::filesystem::path& relativePath) {
-        auto [asset, refcount, strategy, id] = Allocate();
-
-        new (strategy) Strategy{};
-
-        if (!strategy->Load(relativePath, asset)) {
-            // TODO: destroy data
-            return InvalidDataID;
-        }
-
-        *refcount = 0;
-
-        filenameDataMap_[relativePath] = id;
-        return id;
+    PreallocateData Preallocate() {
+        return PreallocateData{Base::Preallocate()};
     }
 
     DataID Load(const std::filesystem::path& relativePath) {
-        auto [asset, refcount, strategy, id] = Allocate();
+        auto mems = Preallocate();
 
-        new (strategy) Strategy{};
+        new (mems.StrategyMem()) Strategy{};
 
-        if (!strategy->Load(relativePath, asset)) {
-            // TODO: destroy id
+        if (!mems.StrategyMem()->Load(relativePath, mems.AssetMem())) {
+            mems.StrategyMem()->~LoadStoreStrategy<T>();
             return InvalidDataID;
         }
-        
-        *refcount = 0;
-        filenameDataMap_[relativePath] = id;
-        return id;
+
+        *mems.Refcount() = 0;
+
+        filenameDataMap_[relativePath] = mems.ID();
+
+        mems.MakeAvailable();
+        return mems.ID();
+    }
+
+    DataID Import(const std::filesystem::path& relativePath) {
+        Assert(LoadStoreStrategy<T>::IsImportable(),
+               "asset type must be importable");
+
+        auto mems = Preallocate();
+
+        new (mems.StrategyMem()) Strategy{};
+
+        if (!mems.StrategyMem()->Import(relativePath, mems.AssetMem())) {
+            mems.StrategyMem()->~LoadStoreStrategy<T>();
+            return InvalidDataID;
+        }
+
+        *mems.Refcount() = 0;
+
+        filenameDataMap_[relativePath] = mems.ID();
+
+        mems.MakeAvailable();
+        return mems.ID();
     }
 
     Data Get(DataID id) {
@@ -248,7 +281,7 @@ public:
             return;
         }
 
-        if (!LoadStoreStrategy<T>::IsExternal()) {
+        if (!LoadStoreStrategy<T>::IsImportable()) {
             importFileExtensions_[std::string(
                 LoadStoreStrategy<T>::GetMetaExtension())] = id;
         }
@@ -278,23 +311,23 @@ public:
     template <typename T, typename... Args>
     AssetHandle<T> Create(Args&&... args) {
         if (auto mgr = get<T>(); mgr) {
-            return mgr->template Create<T>(std::forward<Args>(args)...);
+            return AssetHandle<T>{mgr->template Create(std::forward<Args>(args)...)};
         } else {
             return {};
         }
     }
 
     /**
-     * @brief load asset from raw file
+     * @brief import asset from raw file
      *
      * @param relativePath
      * @return Ref<T>
      */
     template <typename T>
-    AssetHandle<T> Load(const std::filesystem::path& filename) {
+    AssetHandle<T> Import(const std::filesystem::path& filename) {
         auto relPath = cvtPath2Relative(filename);
         if (auto mgr = get<T>(); mgr) {
-            return AssetHandle<T>{mgr->Load(filename)};
+            return AssetHandle<T>{mgr->Import(filename)};
         }
         return {};
     }
@@ -306,10 +339,10 @@ public:
      * @return Ref<T>
      */
     template <typename T>
-    AssetHandle<T> LoadFromMeta(const std::filesystem::path& filename) {
+    AssetHandle<T> Load(const std::filesystem::path& filename) {
         auto relPath = cvtPath2Relative(filename);
         if (auto mgr = get<T>(); mgr && !relPath.empty()) {
-            return mgr.LoadFromMeta(filename);
+            return AssetHandle<T>{mgr->Load(filename)};
         }
         return {};
     }
@@ -328,6 +361,30 @@ public:
             return mgr->Get(static_cast<DataID>(handle)).asset;
         }
         return nullptr;
+    }
+
+    template <typename T>
+    const LoadStoreStrategy<T>* GetStrategy(AssetHandle<T> handle) const {
+        if (auto mgr = get<T>(); mgr) {
+            return mgr->Get(static_cast<DataID>(handle)).strategy;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    LoadStoreStrategy<T>* GetStrategy(AssetHandle<T> handle) {
+        if (auto mgr = get<T>(); mgr) {
+            return mgr->Get(static_cast<DataID>(handle)).strategy;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    std::filesystem::path GetRelativePath(AssetHandle<T> handle) const {
+        if (auto mgr = get<T>(); mgr) {
+            return mgr->Get(static_cast<DataID>(handle)).strategy->GetRelativePath();
+        }
+        return {};
     }
 
     template <typename T>

@@ -37,6 +37,26 @@ public:
         DataID id = InvalidDataID;
     };
 
+    struct PreallocateResult {
+        DataBundle data;
+        DataID id;
+
+        PreallocateResult(DataBundle data, DataID id, Storage* owner)
+            : data{data}, id{id}, owner_{owner} {}
+
+        void MakeAvailable() {
+            if (operator bool()) {
+                Assert(owner_->sparseSet_.Create() == id,
+                       "internal error! prefetched id is not valid");
+            }
+        }
+
+        operator bool() const noexcept { return id != InvalidDataID && owner_; }
+
+    private:
+        Storage* owner_{};
+    };
+
     using Base::Exists;
     using Base::GetSparseSet;
 
@@ -95,8 +115,10 @@ public:
         auto index = value % SparseSetPageSize;
 
         auto allocDatum = [=]<typename T>(StoragePage<T>& page) -> T* {
-            std::allocator<T> alloc;
-            page[index] = alloc.allocate(1);
+            if (!page[index]) {
+                std::allocator<T> alloc;
+                page[index] = alloc.allocate(1);
+            }
             return page[index];
         };
 
@@ -107,6 +129,59 @@ public:
         };
 
         return {allocData(std::make_index_sequence<sizeof...(Types)>()), id};
+    }
+
+    /**
+     * @brief emplace data. Storage will manage data lifetime
+     *
+     * @param mems
+     * @return DataID
+     */
+    DataID EmplaceData(Types*... mems) {
+        auto id = sparseSet_.Create();
+        auto value = GetDataID_ID(id);
+        auto index = value % SparseSetPageSize;
+
+        auto emplaceDatum = [=]<typename T>(StoragePage<T>& page, T* mem) {
+            page[index] = mem;
+        };
+
+        auto pageBundle = assure(value);
+        auto emplaceData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
+            return std::make_tuple<Types*...>(
+                emplaceDatum(*std::get<Idx>(pageBundle), mems)...);
+        };
+
+        return id;
+    }
+
+    /**
+     * @brief pre-allocate memory and an ID. you can construct data on memories
+     * you can call PreallocateResult::MakeAvailable() to make ID & memories
+     * available. Or if not, no need to free memory or destroy id
+     *
+     * @return AllocResult
+     */
+    PreallocateResult Preallocate() {
+        DataID id = sparseSet_.PrefetchNextID();
+        auto value = GetDataID_ID(id);
+        auto index = value % SparseSetPageSize;
+
+        auto allocMem = [=]<typename T>(StoragePage<T>& page) {
+            if (!page[index]) {
+                std::allocator<T> allocator;
+                page[index] = allocator.allocate(1);
+            }
+            return page[index];
+        };
+
+        auto pageBundle = assure(value);
+        auto allocMems = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
+            return std::make_tuple<Types*...>(
+                allocMem(*std::get<Idx>(pageBundle))...);
+        };
+
+        return {allocMems(std::make_index_sequence<sizeof...(Types)>()), id, this};
     }
 
     /**
@@ -158,11 +233,12 @@ private:
     auto assure(size_t idx) {
         idx = idx / SparseSetPageSize;
         if (idx >= std::get<0>(pages_).size()) {
-            auto resizePage = [idx]<typename T>(std::vector<StoragePage<T>>& pages) {
-                pages.resize(idx + 1);
-            };
+            auto resizePage =
+                [idx]<typename T>(std::vector<StoragePage<T>>& pages) {
+                    pages.resize(idx + 1);
+                };
 
-            auto resizePages = [&]<size_t...Idx>(std::index_sequence<Idx...>) {
+            auto resizePages = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
                 (resizePage(std::get<Idx>(pages_)), ...);
             };
 
@@ -170,7 +246,8 @@ private:
         }
 
         auto fetchData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple<StoragePage<Types>*...>(&std::get<Idx>(pages_)[idx]...);
+            return std::make_tuple<StoragePage<Types>*...>(
+                &std::get<Idx>(pages_)[idx]...);
         };
 
         return fetchData(std::make_index_sequence<sizeof...(Types)>());
