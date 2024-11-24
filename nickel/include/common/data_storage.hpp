@@ -17,7 +17,7 @@ public:
     template <bool IsConst>
     struct Data {
         std::conditional_t<IsConst, const T*, T*> value;
-        uint32_t* refcount;
+        std::conditional_t<IsConst, const uint32_t*, uint32_t*> refcount;
     };
 
     struct AllocResult {

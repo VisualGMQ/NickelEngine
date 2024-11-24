@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/assert.hpp"
 #include "common/log_tag.hpp"
 #include "common/sparse_set.hpp"
 
@@ -19,18 +20,97 @@ protected:
     SparseSetType sparseSet_;
 };
 
+template <typename T, uint32_t PageSize>
+struct StoragePageList {
+    using Page = std::array<unsigned char[sizeof(T)], PageSize>;
+
+    Page* pages_ = nullptr;
+
+    StoragePageList() = default;
+
+    ~StoragePageList() { delete[] pages_; }
+
+    StoragePageList(StoragePageList&& other) : pages_{other.pages_} {
+        other.pages_ = nullptr;
+    }
+
+    StoragePageList& operator=(StoragePageList&& other) {
+        if (&other != this) {
+            pages_ = other.pages_;
+            other.pages_ = nullptr;
+        }
+        return *this;
+    }
+
+    void Resize(size_t size, size_t newSize) {
+        Assert(size <= newSize);
+        if (newSize == 0) {
+            return;
+        }
+        Page* newPages = new Page[newSize];
+        memset(newPages, 0, sizeof(Page) * newSize);
+        memcpy(pages_, newPages, sizeof(Page) * size);
+        delete[] pages_;
+        pages_ = newPages;
+    }
+
+    T* Get(size_t majorIdx, size_t minorIdx) {
+        return (T*)&pages_[majorIdx][minorIdx];
+    }
+
+    const T* Get(size_t majorIdx, size_t minorIdx) const {
+        return (T*)&pages_[majorIdx][minorIdx];
+    }
+
+    void Destruct(size_t majorIdx, size_t minorIdx) {
+        T* data = Get(majorIdx, minorIdx);
+        data->~T();
+
+        // for debug:
+        memset(data, 0, sizeof(T));
+    }
+
+    // for debug
+    void ResetMem(size_t majorIdx, size_t minorIdx) {
+        T* data = Get(majorIdx, minorIdx);
+        memset(data, 0, sizeof(T));
+    }
+
+    void Swap(size_t majorIdx1, size_t minorIdx1, size_t majorIdx2,
+              size_t minorIdx2) {
+        std::swap(pages_[majorIdx1][minorIdx1], pages_[majorIdx2][minorIdx2]);
+    }
+};
+
+template <typename T, uint32_t PageSize>
+requires(std::is_empty_v<T>)
+struct StoragePageList<T, PageSize> {
+    void Resize(size_t size, size_t newSize) {}
+
+    T* Get(size_t majorIdx, size_t minorIdx) { return (T*)this; }
+
+    const T* Get(size_t majorIdx, size_t minorIdx) const { return (T*)this; }
+
+    void Swap(size_t majorIdx1, size_t minorIdx1, size_t majorIdx2,
+              size_t minorIdx2) {}
+
+    void ResetMem(size_t majorIdx, size_t minorIdx) {}
+
+    void Destruct(size_t majorIdx, size_t minorIdx) {}
+};
+
 template <typename... Types>
-class Storage : public StorageBase {
+class Storage : private StoragePageList<Types, SparseSetPageSize>...,
+                public StorageBase {
 public:
     using Base = StorageBase;
     using SparseSetType = typename Base::SparseSetType;
 
     template <typename T>
-    using StoragePage = std::array<T*, SparseSetType::PageSize>;
-    using StorageList = std::tuple<std::vector<StoragePage<Types>>...>;
+    using PageList = StoragePageList<T, SparseSetPageSize>;
 
     using DataBundle = std::tuple<Types*...>;
-    using ConstDataBundle = std::tuple<Types* const...>;
+    using ConstDataBundle = std::tuple<const Types*...>;
 
     struct AllocResult {
         DataBundle data;
@@ -73,17 +153,7 @@ public:
         auto pageIndex = value / SparseSetPageSize;
         auto elemIndex = value % SparseSetPageSize;
 
-        auto getDatum = [&, pageIndex]<typename T>(StoragePage<T>& page) {
-            return page[pageIndex];
-        };
-
-        auto getData = [&,
-                        pageIndex]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple(
-                std::get<Idx>(pages_)[pageIndex][elemIndex]...);
-        };
-
-        return getData(std::make_index_sequence<sizeof...(Types)>());
+        return std::make_tuple(PageList<Types>::Get(pageIndex, elemIndex)...);
     }
 
     DataBundle Get(DataID id) {
@@ -95,13 +165,7 @@ public:
         auto pageIndex = value / SparseSetPageSize;
         auto elemIndex = value % SparseSetPageSize;
 
-        auto getData = [&,
-                        pageIndex]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple(
-                std::get<Idx>(pages_)[pageIndex][elemIndex]...);
-        };
-
-        return getData(std::make_index_sequence<sizeof...(Types)>());
+        return std::make_tuple(PageList<Types>::Get(pageIndex, elemIndex)...);
     }
 
     /**
@@ -112,23 +176,13 @@ public:
     AllocResult Allocate() {
         auto id = sparseSet_.Create();
         auto value = GetDataID_ID(id);
-        auto index = value % SparseSetPageSize;
+        auto pageIndex = value / SparseSetPageSize;
+        auto elemIndex = value % SparseSetPageSize;
 
-        auto allocDatum = [=]<typename T>(StoragePage<T>& page) -> T* {
-            if (!page[index]) {
-                std::allocator<T> alloc;
-                page[index] = alloc.allocate(1);
-            }
-            return page[index];
-        };
+        assure(value);
 
-        auto pageBundle = assure(value);
-        auto allocData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple<Types*...>(
-                allocDatum(*std::get<Idx>(pageBundle))...);
-        };
-
-        return {allocData(std::make_index_sequence<sizeof...(Types)>()), id};
+        return {std::make_tuple(PageList<Types>::Get(pageIndex, elemIndex)...),
+                id};
     }
 
     /**
@@ -140,17 +194,14 @@ public:
     DataID EmplaceData(Types*... mems) {
         auto id = sparseSet_.Create();
         auto value = GetDataID_ID(id);
-        auto index = value % SparseSetPageSize;
+        auto pageIndex = value / SparseSetPageSize;
+        auto elemIndex = value % SparseSetPageSize;
 
-        auto emplaceDatum = [=]<typename T>(StoragePage<T>& page, T* mem) {
-            page[index] = mem;
-        };
+        assure(value);
 
-        auto pageBundle = assure(value);
-        auto emplaceData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple<Types*...>(
-                emplaceDatum(*std::get<Idx>(pageBundle), mems)...);
-        };
+        (memcpy(PageList<Types>::Get(pageIndex, elemIndex), mems,
+                sizeof(Types)),
+         ...);
 
         return id;
     }
@@ -165,23 +216,13 @@ public:
     PreallocateResult Preallocate() {
         DataID id = sparseSet_.PrefetchNextID();
         auto value = GetDataID_ID(id);
-        auto index = value % SparseSetPageSize;
+        auto pageIndex = value / SparseSetPageSize;
+        auto elemIndex = value % SparseSetPageSize;
 
-        auto allocMem = [=]<typename T>(StoragePage<T>& page) {
-            if (!page[index]) {
-                std::allocator<T> allocator;
-                page[index] = allocator.allocate(1);
-            }
-            return page[index];
-        };
+        assure(value);
 
-        auto pageBundle = assure(value);
-        auto allocMems = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple<Types*...>(
-                allocMem(*std::get<Idx>(pageBundle))...);
-        };
-
-        return {allocMems(std::make_index_sequence<sizeof...(Types)>()), id, this};
+        return {std::make_tuple(PageList<Types>::Get(pageIndex, elemIndex)...),
+                id, this};
     }
 
     /**
@@ -190,31 +231,21 @@ public:
      * @param id
      */
     void Destroy(DataID id) {
-        if (!Exists(id)) {
+        if (!StorageBase::Exists(id)) {
             return;
         }
 
         auto value = GetDataID_ID(id);
-        auto pageBundle = assure(value);
-        auto dataIndex = value % SparseSetPageSize;
+        auto pageIndex = value / SparseSetPageSize;
+        auto elemIndex = value % SparseSetPageSize;
         auto swapElem = sparseSet_.Destroy(id);
+        auto oldPageIndex = swapElem / SparseSetPageSize;
+        auto oldElemIndex = swapElem % SparseSetPageSize;
 
-        auto destructDatum = [=]<typename T>(StoragePage<T>& page) {
-            auto& data = page[dataIndex];
-            if (!data) {
-                return;
-            }
-
-            data->~T();
-
-            std::swap(page[swapElem % SparseSetPageSize], data);
-        };
-
-        auto destructData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            (destructDatum(*std::get<Idx>(pageBundle)), ...);
-        };
-
-        destructData(std::make_index_sequence<sizeof...(Types)>());
+        (PageList<Types>::Destruct(pageIndex, elemIndex), ...);
+        (PageList<Types>::Swap(pageIndex, elemIndex, oldPageIndex,
+                               oldElemIndex),
+         ...);
     }
 
     ~Storage() {
@@ -230,27 +261,16 @@ public:
     }
 
 private:
-    auto assure(size_t idx) {
-        idx = idx / SparseSetPageSize;
-        if (idx >= std::get<0>(pages_).size()) {
-            auto resizePage =
-                [idx]<typename T>(std::vector<StoragePage<T>>& pages) {
-                    pages.resize(idx + 1);
-                };
+    size_t count_ = 0;  // page count
 
-            auto resizePages = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-                (resizePage(std::get<Idx>(pages_)), ...);
-            };
-
-            resizePages(std::make_index_sequence<sizeof...(Types)>());
+    void assure(size_t idx) {
+        if (idx < count_ * SparseSetPageSize) {
+            return;
         }
 
-        auto fetchData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            return std::make_tuple<StoragePage<Types>*...>(
-                &std::get<Idx>(pages_)[idx]...);
-        };
-
-        return fetchData(std::make_index_sequence<sizeof...(Types)>());
+        size_t newSize = count_ + (idx == 0 ? 1 : (idx / SparseSetPageSize));
+        (PageList<Types>::Resize(count_, newSize), ...);
+        count_ = newSize;
     }
 
     /**
@@ -261,24 +281,12 @@ private:
     void deallocate(DataID id) {
         auto value = GetDataID_ID(id);
         auto pageIndex = value / SparseSetPageSize;
-        if (pageIndex >= std::get<0>(pages_).size()) return;
+        if (pageIndex >= count_) return;
 
         auto elemIndex = value % SparseSetPageSize;
 
-        auto deallocateDatum = []<typename T>(T* data) {
-            if (!data) {
-                return;
-            }
-
-            std::allocator<T> alloc;
-            alloc.deallocate(data, 1);
-        };
-
-        auto deallocateData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            (deallocateDatum(std::get<Idx>(pages_)[pageIndex][elemIndex]), ...);
-        };
-
-        deallocateData(std::make_index_sequence<sizeof...(Types)>());
+        // not necessary, for debug
+        (PageList<Types>::ResetMem(pageIndex, elemIndex), ...);
     }
 
     /**
@@ -289,29 +297,12 @@ private:
     void destroyComplete(DataID id) {
         auto value = GetDataID_ID(id);
         auto pageIndex = value / SparseSetPageSize;
-        if (pageIndex >= std::get<0>(pages_).size()) return;
+        if (pageIndex >= count_) return;
 
         auto elemIndex = value % SparseSetPageSize;
 
-        auto destroyDatum = []<typename T>(T* data) {
-            if (!data) {
-                return;
-            }
-
-            std::allocator<T> alloc;
-            data->~T();
-            alloc.deallocate(data, 1);
-        };
-
-        auto destroyData = [&]<size_t... Idx>(std::index_sequence<Idx...>) {
-            (destroyDatum(std::get<Idx>(pages_)[pageIndex][elemIndex]), ...);
-        };
-
-        destroyData(std::make_index_sequence<sizeof...(Types)>());
+        (PageList<Types>::Destruct(pageIndex, elemIndex), ...);
     }
-
-private:
-    StorageList pages_;
 };
 
 }  // namespace nickel
