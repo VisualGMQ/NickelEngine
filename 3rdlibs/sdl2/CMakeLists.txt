@@ -89,7 +89,7 @@ if (WIN32 AND NOT SDL2_FOUND)
         set(sdl_include_dir ${sdl_dir}/include/SDL2)
         set(sdl_static_lib_dir ${sdl_dir}/lib)
         set(sdlmain_lib ${sdl_static_lib_dir}/libSDL2main.a)
-        set(sdl_lib ${sdl_static_lib_dir}/libSDL2main.a)
+        set(sdl_lib ${sdl_static_lib_dir}/libSDL2.dll.a)
         set(sdl_dll ${sdl_dir}/bin/SDL2.dll)
         set(sdl_otherlibs "-lmingw32 -lSDL2main -lSDL2")
     else() # for MSVC compiler
