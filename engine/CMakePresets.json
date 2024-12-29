@@ -1,0 +1,29 @@
+{
+    "version": 4,
+    "configurePresets": [
+        {
+            "name": "default",
+            "binaryDir": "${sourceDir}/cmake-build",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "NICKEL_TESTS" : "ON"
+            }
+        },
+        {
+            "name": "CI-Linux",
+            "binaryDir": "${sourceDir}/cmake-build",
+            "generator": "Ninja",
+            "cacheVariables": { 
+                "NICKEL_TESTS" : "ON"
+            }
+        },
+        {
+            "name": "CI-Windows",
+            "binaryDir": "${sourceDir}/cmake-build",
+            "cacheVariables": {
+                "NICKEL_TESTS" : "ON",
+                "CMAKE_SYSTEM_VERSION" : "10.0.26100.0"
+            }
+        }
+    ]
+}
