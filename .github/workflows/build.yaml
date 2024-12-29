@@ -1,0 +1,84 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build-cmake:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+            - name: Windows
+              os: windows-latest
+              android: none
+            - name: Ubuntu
+              os: ubuntu-latest
+              android: none
+            - name: MacOS
+              os: macOS-latest
+              android: none
+            - name: Android
+              os: ubuntu-latest
+              android: arm64
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Prepare cmake
+      uses: lukka/get-cmake@latest
+
+    - name: Prepare Ubuntu
+      if: contains(matrix.os, 'ubuntu') && matrix.android == 'none'
+      run: |
+        sudo apt update -y
+        sudo apt install ninja-build -y
+
+    - name: Prepare MacOS
+      if: contains(matrix.os, 'macOS')
+      run: |
+        brew install ninja
+
+    - name: Config cmake(Ubuntu&MacOS)
+      if: ${{ !contains(matrix.os, 'windows') && matrix.android == 'none' }}
+      working-directory: ./engine
+      run: |
+        ${{ matrix.cmake-path }}cmake --preset=CI-Linux
+
+    - name: Config cmake(Windows)
+      if: contains(matrix.os, 'windows')
+      working-directory: ./engine
+      run: |
+        ${{ matrix.cmake-path}}cmake --preset=CI-Windows
+
+    - name: Build under PC
+      if: matrix.android == 'none'
+      working-directory: ./engine
+      run: ${{ matrix.cmake-path }}cmake --build cmake-build
+
+    - name: Prepare Android JDK
+      if: runner.os == 'Linux' && matrix.android != 'none'
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+
+    - name: Setup Android SDK
+      if: runner.os == 'Linux' && matrix.android != 'none'
+      uses: android-actions/setup-android@v3
+
+    - name: Prepare Android Project
+      if: runner.os == 'Linux' && matrix.android != 'none'
+      run: |
+        sudo apt update -y
+        sudo apt install cmake ninja-build -y
+        yes | sdkmanager --licenses
+        cp -r ./engine ./android/app/jni/
+        chmod +x ./android/gradlew
+
+    - name: Build under Android
+      if: runner.os == 'Linux' && matrix.android != 'none'
+      working-directory: ./android
+      run: |
+        ninja --version
+        ./gradlew build

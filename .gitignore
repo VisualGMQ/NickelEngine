@@ -1,0 +1,11 @@
+CMakeUserPresets.json
+android/app/build/*
+android/app/jni/engine/*
+android/.gradle
+android/.idea
+android/app/src/main/assets/*
+android/app/.cxx/
+cmake-build/
+.cache
+imgui.ini
+local.properties
