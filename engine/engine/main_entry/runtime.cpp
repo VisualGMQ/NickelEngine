@@ -1,16 +1,30 @@
-﻿#include "nickel/runtime.hpp"
-#include "nickel/common/log.hpp"
-#include "nickel/internal/pch.hpp"
-
+﻿#define SDL_MAIN_USE_CALLBACKS
 #include "SDL3/SDL_main.h"
+#include "nickel/common/log.hpp"
+#include "nickel/graphics/adapter.hpp"
+#include "nickel/video/window.hpp"
 
 namespace nickel {
+
+class Runtime : public Singlton<Runtime, true> {
+public:
+    Runtime();
+    ~Runtime();
+    void Run();
+    void HandleEvent(const SDL_Event &);
+    bool ShouldExit() const;
+
+private:
+    bool m_should_exit = false;
+    std::unique_ptr<video::Window> m_window;
+    std::unique_ptr<graphics::Adapter> m_graphics_context;
+};
 
 Runtime::Runtime() {
     LOGI("init SDL");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_SENSOR |
                   SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK)) {
-        std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
+        LOGC("SDL init failed: {}", SDL_GetError());
     }
 
     LOGI("init video system");

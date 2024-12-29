@@ -7,5 +7,5 @@ else()
     add_executable(sandbox ${SANDBOX_SRC})
     target_link_libraries(sandbox PRIVATE NickelEngine)
 
-    mark_as_test(sandbox)
+    mark_as_gui_test(sandbox)
 endif()
