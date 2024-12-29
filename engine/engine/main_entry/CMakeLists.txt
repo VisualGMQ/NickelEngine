@@ -1,0 +1,18 @@
+aux_source_directory(. MAIN_ENTRY_SRC)
+
+macro(attach_common_config_on_entry target_name)
+    target_sources(${target_name} PRIVATE ${MAIN_ENTRY_SRC})
+    target_link_libraries(${target_name} PUBLIC ${NICKEL_ENGINE_NAME})
+    target_link_libraries(${target_name} PRIVATE SDL3::SDL3)
+    add_library(${NICKEL_MAIN_ENTRY_NAME} ALIAS ${target_name})
+endmacro()
+
+if (NICKEL_BUILD_SHARED)
+    set(ENTRY_NAME NickelEntry-shared)
+    add_library(${ENTRY_NAME} SHARED)
+    attach_common_config_on_entry(${ENTRY_NAME})
+else()
+    set(ENTRY_NAME NickelEntry-static)
+    add_library(${ENTRY_NAME} STATIC)
+    attach_common_config_on_entry(${ENTRY_NAME})
+endif()

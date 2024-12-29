@@ -1,6 +1,6 @@
 ﻿#include "nickel/common/log.hpp"
 
-#include "nickel/common/sdl_call.hpp"
+#include "nickel/common/internal/sdl_call.hpp"
 #include "nickel/internal/pch.hpp"
 
 namespace nickel {

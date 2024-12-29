@@ -27,12 +27,6 @@ add_subdirectory(volk)
 set(SPDLOG_ENABLE_PCH ON)
 add_subdirectory(spdlog)
 
-macro(mark_as_3rdlib target_name)
-    if (TARGET ${target_name})
-        set_target_properties(${target_name} PROPERTIES FOLDER 3rdlibs)
-    endif()
-endmacro()
-
 mark_as_3rdlib(SDL3-static)
 mark_as_3rdlib(SDL3-shared)
 mark_as_3rdlib(SDL_uclibc)
