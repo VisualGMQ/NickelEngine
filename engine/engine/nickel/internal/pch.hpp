@@ -17,6 +17,8 @@
 #include <array>
 #include <span>
 #include <future>
+#include <vector>
+#include <unordered_map>
 
 #include "volk.h"
 

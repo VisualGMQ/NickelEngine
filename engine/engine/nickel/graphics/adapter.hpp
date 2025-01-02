@@ -5,17 +5,17 @@
 
 namespace nickel::graphics {
 
+class AdapterImpl;
+
 class Adapter {
 public:
-    class Impl;
-
     Adapter(const video::Window::Impl& window);
     ~Adapter();
 
-    const Impl& GetImpl() const;
+    const AdapterImpl& GetImpl() const;
     
 private:
-    std::unique_ptr<Impl> m_impl;
+    std::unique_ptr<AdapterImpl> m_impl;
 };
 
 }
