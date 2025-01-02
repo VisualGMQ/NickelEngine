@@ -628,4 +628,9 @@ SVector<T, 3> GetNormalMapTangent(SVector<T, 3> p1, SVector<T, 3> p2,
            denoInv;
 }
 
+template <typename T>
+T Clamp(T value, T min, T max) {
+    return value < min ? min : value > max ? max : value;
+}
+
 }  // namespace nickel

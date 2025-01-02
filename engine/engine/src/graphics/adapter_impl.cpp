@@ -8,31 +8,31 @@
 
 namespace nickel::graphics {
 
-Adapter::Impl::Impl(const video::Window::Impl& window) {
+AdapterImpl::AdapterImpl(const video::Window::Impl& window) {
     if (volkInitialize() != VK_SUCCESS) {
         LOGE("volk init failed");
     }
 
     LOGI("creating vulkan instance");
     createInstance();
-    
+
     LOGI("picking up physics device");
     pickupPhysicalDevice();
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(m_phyDevice, &props);
     LOGI("pick {}", props.deviceName);
-    
+
     LOGI("creating surface");
     createSurface(window);
-    
+
     LOGI("creating render device");
-    createDevice();
+    createDevice(window.GetSize());
 }
 
-void Adapter::Impl::createInstance() {
+void AdapterImpl::createInstance() {
     VkInstanceCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    
+
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.apiVersion = VK_API_VERSION_1_3;
@@ -49,8 +49,9 @@ void Adapter::Impl::createInstance() {
     uint32_t layerCount;
     VK_CALL(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
     supportLayers.resize(layerCount);
-    VK_CALL(vkEnumerateInstanceLayerProperties(&layerCount, supportLayers.data()));
-    
+    VK_CALL(
+        vkEnumerateInstanceLayerProperties(&layerCount, supportLayers.data()));
+
     std::vector<const char*> requireLayers;
 #ifdef NICKEL_DEBUG
     requireLayers.push_back("VK_LAYER_KHRONOS_validation");
@@ -70,20 +71,21 @@ void Adapter::Impl::createInstance() {
     volkLoadInstance(m_instance);
 }
 
-void Adapter::Impl::pickupPhysicalDevice() {
+void AdapterImpl::pickupPhysicalDevice() {
     NICKEL_ASSERT(m_instance, "vulkan instance not create");
 
     std::vector<VkPhysicalDevice> physicalDevices;
     uint32_t count;
     VK_CALL(vkEnumeratePhysicalDevices(m_instance, &count, nullptr));
     physicalDevices.resize(count);
-    VK_CALL(vkEnumeratePhysicalDevices(m_instance, &count, physicalDevices.data()));
+    VK_CALL(
+        vkEnumeratePhysicalDevices(m_instance, &count, physicalDevices.data()));
 
     NICKEL_ASSERT(!physicalDevices.empty(), "no vulkan physics device");
     m_phyDevice = physicalDevices[0];
 }
 
-void Adapter::Impl::createSurface(const video::Window::Impl& impl) {
+void AdapterImpl::createSurface(const video::Window::Impl& impl) {
     SDL_Vulkan_CreateSurface(impl.m_window, m_instance, nullptr, &m_surface);
 
     if (!m_surface) {
@@ -91,11 +93,11 @@ void Adapter::Impl::createSurface(const video::Window::Impl& impl) {
     }
 }
 
-void Adapter::Impl::createDevice() {
-    m_device = new Device{*this};
+void AdapterImpl::createDevice(const SVector<uint32_t, 2>& window_size) {
+    m_device = new Device{*this, window_size};
 }
 
-Adapter::Impl::~Impl() {
+AdapterImpl::~AdapterImpl() {
     delete m_device;
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyInstance(m_instance, nullptr);
