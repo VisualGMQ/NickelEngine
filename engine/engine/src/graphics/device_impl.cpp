@@ -121,8 +121,8 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phyDev, surface,
                                                       &capacities));
 
-    m_imageInfo = queryImageInfo(phyDev, window_size, surface);
-    auto [extent, imageCount, format] = m_imageInfo;
+    m_image_info = queryImageInfo(phyDev, window_size, surface);
+    auto [extent, imageCount, format] = m_image_info;
     auto presentMode = queryPresentMode(phyDev, surface);
 
     auto& queueIndices = m_queue_indices;
@@ -172,7 +172,7 @@ DeviceImpl::ImageInfo DeviceImpl::queryImageInfo(
     VK_CALL(
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev, surface, &capacities));
 
-    VkExtent2D extent(win_size.x, win_size.y);
+    VkExtent2D extent{win_size.x, win_size.y};
     extent.width = Clamp(extent.width, capacities.minImageExtent.width,
                          capacities.maxImageExtent.width);
     extent.height = Clamp(extent.height, capacities.minImageExtent.height,
@@ -246,7 +246,7 @@ void DeviceImpl::getAndCreateImageViews() {
         ci.components.b = VK_COMPONENT_SWIZZLE_B;
         ci.components.a = VK_COMPONENT_SWIZZLE_A;
         ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ci.format = m_imageInfo.format.format;
+        ci.format = m_image_info.format.format;
         ci.subresourceRange = range;
 
         VkImageView view;
@@ -265,6 +265,11 @@ DeviceImpl::~DeviceImpl() {
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
+}
+
+const DeviceImpl::ImageInfo& DeviceImpl::GetSwapchainImageInfo()
+    const noexcept {
+    return m_image_info;
 }
 
 }

@@ -34,4 +34,12 @@ ImageView::~ImageView() {
     m_impl->DecRefcount();
 }
 
+const ImageViewImpl& ImageView::Impl() const noexcept {
+    return *m_impl;
+}
+
+ImageViewImpl& ImageView::Impl() noexcept {
+    return *m_impl;
+}
+
 }  // namespace nickel::graphics

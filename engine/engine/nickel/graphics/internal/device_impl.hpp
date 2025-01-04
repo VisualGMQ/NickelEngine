@@ -27,7 +27,7 @@ public:
             if (!m_graphics_index.has_value() || !m_present_index.has_value()) {
                 return {};
             }
-            
+
             if (m_graphics_index.has_value() == m_present_index.has_value()) {
                 indices.push_back(m_graphics_index.value());
             } else {
@@ -38,8 +38,16 @@ public:
         }
     };
 
+    struct ImageInfo {
+        SVector<uint32_t, 2> extent;
+        uint32_t imagCount;
+        VkSurfaceFormatKHR format;
+    };
+
     DeviceImpl(const AdapterImpl&, const SVector<uint32_t, 2>& window_size);
     ~DeviceImpl();
+
+    const ImageInfo& GetSwapchainImageInfo() const noexcept;
 
     VkDevice m_device;
     VkQueue m_present_queue;
@@ -49,11 +57,7 @@ public:
     QueueFamilyIndices m_queue_indices;
 
 private:
-    struct ImageInfo {
-        SVector<uint32_t, 2> extent;
-        uint32_t imagCount;
-        VkSurfaceFormatKHR format;
-    } m_imageInfo;
+    ImageInfo m_image_info;
 
     QueueFamilyIndices chooseQueue(VkPhysicalDevice phyDevice,
                                    VkSurfaceKHR surface);

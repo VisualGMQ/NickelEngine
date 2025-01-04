@@ -13,6 +13,9 @@ public:
     Sampler& operator=(Sampler&&) noexcept;
     ~Sampler();
 
+    const SamplerImpl& Impl() const noexcept;
+    SamplerImpl& Impl() noexcept;
+
 private:
     SamplerImpl* m_impl;
 };
