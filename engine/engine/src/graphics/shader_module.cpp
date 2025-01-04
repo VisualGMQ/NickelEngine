@@ -34,4 +34,12 @@ ShaderModule::~ShaderModule() {
     m_impl->DecRefcount();
 }
 
+const ShaderModuleImpl& ShaderModule::Impl() const noexcept {
+    return *m_impl;
 }
+
+ShaderModuleImpl& ShaderModule::Impl() noexcept {
+    return *m_impl;
+}
+
+}  // namespace nickel::graphics

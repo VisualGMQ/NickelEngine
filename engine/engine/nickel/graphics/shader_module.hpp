@@ -13,6 +13,9 @@ public:
     ShaderModule& operator=(ShaderModule&& o) noexcept;
     ~ShaderModule();
 
+    const ShaderModuleImpl& Impl() const noexcept;
+    ShaderModuleImpl& Impl() noexcept;
+
 private:
     ShaderModuleImpl* m_impl;
 };

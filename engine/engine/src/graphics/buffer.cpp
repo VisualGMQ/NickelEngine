@@ -34,6 +34,14 @@ Buffer::~Buffer() {
     m_impl->DecRefcount();
 }
 
+const BufferImpl& Buffer::Impl() const noexcept {
+    return *m_impl;
+}
+
+BufferImpl& Buffer::Impl() noexcept {
+    return *m_impl;
+}
+
 enum Buffer::MapState Buffer::MapState() const {
     return m_impl->MapState();
 }

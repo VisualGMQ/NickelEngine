@@ -20,9 +20,12 @@ public:
     ImageView& operator=(const ImageView&) noexcept;
     ImageView& operator=(ImageView&&) noexcept;
     ~ImageView();
-    
+
+    const ImageViewImpl& Impl() const noexcept;
+    ImageViewImpl& Impl() noexcept;
+
 private:
-    ImageViewImpl* m_impl; 
+    ImageViewImpl* m_impl;
 };
 
-}
+}  // namespace nickel::graphics

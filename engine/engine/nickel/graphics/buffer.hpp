@@ -24,6 +24,9 @@ public:
     Buffer& operator=(Buffer&&) noexcept;
     ~Buffer();
 
+    const BufferImpl& Impl() const noexcept;
+    BufferImpl& Impl() noexcept;
+
     MapState MapState() const;
     uint64_t Size() const;
     void Unmap();

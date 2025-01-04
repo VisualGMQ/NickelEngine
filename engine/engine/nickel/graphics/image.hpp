@@ -18,7 +18,7 @@ public:
         VkSharingMode sharingMode;
         VkImageLayout initialLayout;
     };
-    
+
     explicit Image(ImageImpl*);
     Image(const Image&);
     Image(Image&&) noexcept;
@@ -26,8 +26,11 @@ public:
     Image& operator=(Image&&) noexcept;
     ~Image();
 
+    const ImageImpl& Impl() const noexcept;
+    ImageImpl& Impl() noexcept;
+
 private:
     ImageImpl* m_impl;
 };
 
-}
+}  // namespace nickel::graphics

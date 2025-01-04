@@ -35,5 +35,12 @@ Image::~Image() {
     m_impl->DecRefcount();
 }
 
-
+const ImageImpl& Image::Impl() const noexcept {
+    return *m_impl;
 }
+
+ImageImpl& Image::Impl() noexcept {
+    return *m_impl;
+}
+
+}  // namespace nickel::graphics

@@ -13,6 +13,14 @@ Sampler::Sampler(Sampler&& o) noexcept : m_impl{o.m_impl} {
     o.m_impl = nullptr;
 }
 
+const SamplerImpl& Sampler::Impl() const noexcept {
+    return *m_impl;
+}
+
+SamplerImpl& Sampler::Impl() noexcept {
+    return *m_impl;
+}
+
 Sampler& Sampler::operator=(const Sampler& o) noexcept {
     if (&o != this) {
         m_impl->DecRefcount();
