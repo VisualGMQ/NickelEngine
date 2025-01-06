@@ -102,14 +102,30 @@ void CommandEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
 
     vkCmdCopyBuffer(m_cmd.Impl().m_cmd, src.Impl().m_buffer,
                     dst.Impl().m_buffer, 1, &region);
+
+    m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
 }
 
-void CommandEncoder::CopyBufferToTexture(const Buffer& src, const Image& dst,
+void CommandEncoder::CopyBufferToTexture(const Buffer& src, Image& dst,
                                          const VkBufferImageCopy& copy) {
     vkCmdCopyBufferToImage(m_cmd.Impl().m_cmd, src.Impl().m_buffer,
                            dst.Impl().m_image,
-                           // TODO: layout maybe not correct
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &copy);
+
+    m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
+}
+
+void CommandEncoder::PipelineBarrier(
+    VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+    VkDependencyFlags dependencyFlags,
+    std::vector<VkMemoryBarrier> memory_barriers,
+    std::vector<VkBufferMemoryBarrier> buffer_memory_barriers,
+    std::vector<VkImageMemoryBarrier> image_memory_barriers) {
+    vkCmdPipelineBarrier(
+        m_cmd.Impl().m_cmd, srcStageMask, dstStageMask, dependencyFlags,
+        memory_barriers.size(), memory_barriers.data(),
+        buffer_memory_barriers.size(), buffer_memory_barriers.data(),
+        image_memory_barriers.size(), image_memory_barriers.data());
 }
 
 RenderPassEncoder CommandEncoder::BeginRenderPass(
@@ -124,6 +140,8 @@ RenderPassEncoder CommandEncoder::BeginRenderPass(
 
     vkCmdBeginRenderPass(m_cmd.Impl().m_cmd, &render_pass_info,
                          VK_SUBPASS_CONTENTS_INLINE);
+
+    m_cmd.Impl().m_flags |= CommandImpl::Flag::Render;
 
     return RenderPassEncoder{m_cmd};
 }

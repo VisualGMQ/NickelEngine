@@ -1,6 +1,7 @@
 ﻿#include "nickel/graphics/internal/device_impl.hpp"
 #include "nickel/common/log.hpp"
 #include "nickel/graphics/internal/adapter_impl.hpp"
+#include "nickel/graphics/internal/cmd_impl.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
 namespace nickel::graphics {
@@ -350,6 +351,45 @@ Semaphore DeviceImpl::CreateSemaphore() {
 
 Fence DeviceImpl::CreateFence(bool signaled) {
     return Fence{m_fences.Allocate(*this, signaled)};
+}
+
+void DeviceImpl::Submit(const Command& cmd) {
+    std::vector<VkCommandBuffer> bufs;
+    bufs.push_back(cmd.Impl().m_cmd);
+
+    if (cmd.Impl().m_flags & CommandImpl::Flag::Render) {
+        VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
+
+        VkSubmitInfo info;
+        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.commandBufferCount = 1;
+        info.pCommandBuffers = bufs.data();
+
+        VkPipelineStageFlags waitDstStage =
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+        info.pWaitDstStageMask = &waitDstStage;
+        info.signalSemaphoreCount = 1;
+        info.pSignalSemaphores =
+            &m_render_finish_sems[m_cur_frame].Impl().m_semaphore;
+        info.pWaitSemaphores =
+            &m_image_avaliable_sems[m_cur_frame].Impl().m_semaphore;
+        info.waitSemaphoreCount = 1;
+
+        VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, fence));
+    } else {
+        VkSubmitInfo info;
+        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.commandBufferCount = 1;
+        info.pCommandBuffers = bufs.data();
+
+        VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, VK_NULL_HANDLE));
+        WaitIdle();
+    }
+}
+
+void DeviceImpl::WaitIdle() {
+    VK_CALL(vkDeviceWaitIdle(m_device));
 }
 
 void DeviceImpl::AcquireSwapchainImageAndWait(video::Window& window) {

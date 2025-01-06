@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/graphics/cmd.hpp"
 #include "nickel/graphics/cmd_pool.hpp"
 #include "nickel/graphics/device.hpp"
 #include "nickel/graphics/fence.hpp"
@@ -132,6 +133,8 @@ public:
     CommandPool CreateCommandPool(VkCommandPoolCreateFlags flags);
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
+    void Submit(const Command&);
+    void WaitIdle();
     
     void AcquireSwapchainImageAndWait(video::Window& window);
 

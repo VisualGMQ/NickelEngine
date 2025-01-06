@@ -14,6 +14,10 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
     createImage(desc, dev);
     allocMem(adapter.m_phyDevice);
 
+    for (int i = 0; i < desc.extent.depth; i++) {
+        m_layouts.push_back(desc.initialLayout);
+    }
+
     VK_CALL(vkBindImageMemory(m_device, m_image, m_memory->m_memory, 0));
 }
 

@@ -25,6 +25,4 @@ private:
     CommandImpl* m_impl;
 };
 
-
-
 }  // namespace nickel::graphics
