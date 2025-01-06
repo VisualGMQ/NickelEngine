@@ -16,6 +16,7 @@ Context::~Context() {
     if (m_application) {
         m_application->OnQuit();
     }
+    m_application.reset();
     
     LOGI("shutdown graphics system");
     m_graphics_context.reset();

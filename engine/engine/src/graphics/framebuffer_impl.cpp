@@ -1,6 +1,6 @@
 ﻿#include "nickel/graphics/internal/framebuffer_impl.hpp"
 
-#include "nickel/graphics/image_view.hpp"
+#include "nickel/graphics/image.hpp"
 #include "nickel/graphics/internal/device_impl.hpp"
 #include "nickel/graphics/internal/image_view_impl.hpp"
 #include "nickel/graphics/internal/render_pass_impl.hpp"

@@ -5,16 +5,19 @@
 
 namespace nickel::graphics {
 
-ImageViewImpl::ImageViewImpl(DeviceImpl& dev, const ImageView::Descriptor& desc)
+ImageViewImpl::ImageViewImpl(DeviceImpl& dev, const Image& image,
+                             const ImageView::Descriptor& desc)
     : m_device{dev.m_device} {
     VkImageViewCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     ci.format = desc.format;
-    ci.image = desc.image;
+    ci.image = image.Impl().m_image;
     ci.viewType = desc.viewType;
     ci.subresourceRange = desc.subresourceRange;
 
     VK_CALL(vkCreateImageView(dev.m_device, &ci, nullptr, &m_view));
+
+    m_image = image;
 }
 
 ImageViewImpl::ImageViewImpl(VkDevice device, VkImageView view)
@@ -22,6 +25,10 @@ ImageViewImpl::ImageViewImpl(VkDevice device, VkImageView view)
 
 ImageViewImpl::~ImageViewImpl() {
     vkDestroyImageView(m_device, m_view, nullptr);
+}
+
+Image ImageViewImpl::GetImage() const {
+    return Image{m_image};
 }
 
 }  // namespace nickel::graphics

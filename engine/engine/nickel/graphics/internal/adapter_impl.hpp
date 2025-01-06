@@ -1,12 +1,13 @@
 ﻿#pragma once
+#include "nickel/common/math/smatrix.hpp"
 #include "nickel/graphics/adapter.hpp"
 #include "nickel/video/window.hpp"
-#include "nickel/common/math/smatrix.hpp"
 
 namespace nickel::graphics {
 
 class Device;
 class AdapterImpl;
+class DeviceImpl;
 
 class AdapterImpl {
 public:
@@ -14,11 +15,12 @@ public:
     AdapterImpl(const AdapterImpl&) = delete;
     AdapterImpl& operator=(const AdapterImpl&) = delete;
     ~AdapterImpl();
+    Device GetDevice() const;
 
     VkInstance m_instance;
     VkPhysicalDevice m_phyDevice;
     VkSurfaceKHR m_surface;
-    Device* m_device{};
+    DeviceImpl* m_device{};
 
 private:
     void createInstance();

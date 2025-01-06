@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "nickel/common/math/math.hpp"
-#include "render_pass.hpp"
+#include "nickel/graphics/render_pass.hpp"
 
 namespace nickel::graphics {
 class ImageView;

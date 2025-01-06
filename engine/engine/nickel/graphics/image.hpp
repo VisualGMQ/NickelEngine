@@ -1,6 +1,37 @@
 #pragma once
+#include "volk.h"
 
 namespace nickel::graphics {
+
+class ImageViewImpl;
+class Image;
+
+class ImageView {
+public:
+    struct Descriptor {
+        VkImageViewType viewType;
+        VkFormat format;
+        VkComponentMapping components;
+        VkImageSubresourceRange subresourceRange;
+    };
+
+    ImageView() = default;
+    explicit ImageView(ImageViewImpl*);
+    ImageView(const ImageView&);
+    ImageView(ImageView&&) noexcept;
+    ImageView& operator=(const ImageView&) noexcept;
+    ImageView& operator=(ImageView&&) noexcept;
+    ~ImageView();
+    Image GetImage() const;
+
+    const ImageViewImpl& Impl() const noexcept;
+    ImageViewImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
+
+private:
+    ImageViewImpl* m_impl;
+};
 
 class ImageImpl;
 
@@ -25,6 +56,7 @@ public:
     Image(Image&&) noexcept;
     Image& operator=(const Image&) noexcept;
     Image& operator=(Image&&) noexcept;
+    ImageView CreateView(const ImageView::Descriptor&);
     ~Image();
 
     const ImageImpl& Impl() const noexcept;

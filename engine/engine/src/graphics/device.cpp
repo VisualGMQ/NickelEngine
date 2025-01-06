@@ -5,9 +5,7 @@
 
 namespace nickel::graphics {
 
-Device::Device(const AdapterImpl& adapter_impl,
-               const SVector<uint32_t, 2>& window_size)
-    : m_impl{std::make_unique<DeviceImpl>(adapter_impl, window_size)} {}
+Device::Device(DeviceImpl* impl) : m_impl{impl} {}
 
 Device::~Device() {}
 
@@ -64,6 +62,10 @@ Semaphore Device::CreateSemaphore() {
 
 Fence Device::CreateFence(bool signaled) {
     return m_impl->CreateFence(signaled);
+}
+
+const SwapchainImageInfo& Device::GetSwapchainImageInfo() const {
+    return m_impl->GetSwapchainImageInfo();
 }
 
 void Device::AcquireSwapchainImageAndWait(video::Window& window) {

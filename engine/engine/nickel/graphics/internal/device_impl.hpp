@@ -103,16 +103,10 @@ public:
         }
     };
 
-    struct ImageInfo {
-        SVector<uint32_t, 2> extent;
-        uint32_t imagCount;
-        VkSurfaceFormatKHR format;
-    };
-
     DeviceImpl(const AdapterImpl&, const SVector<uint32_t, 2>& window_size);
     ~DeviceImpl();
 
-    const ImageInfo& GetSwapchainImageInfo() const noexcept;
+    const SwapchainImageInfo& GetSwapchainImageInfo() const noexcept;
 
     VkDevice m_device;
     VkQueue m_present_queue;
@@ -123,6 +117,7 @@ public:
 
     Buffer CreateBuffer(const Buffer::Descriptor&);
     Image CreateImage(const Image::Descriptor&);
+    ImageView CreateImageView(const Image& image, const ImageView::Descriptor&);
     BindGroupLayout CreateBindGroupLayout(const BindGroupLayout::Descriptor&);
     PipelineLayout CreatePipelineLayout(const PipelineLayout::Descriptor&);
     Framebuffer CreateFramebuffer(const Framebuffer::Descriptor&);
@@ -140,6 +135,7 @@ public:
 
     ResourceManager<BufferImpl> m_buffers;
     ResourceManager<ImageImpl> m_images;
+    ResourceManager<ImageViewImpl> m_image_views;
     ResourceManager<BindGroupLayoutImpl> m_bind_group_layouts;
     ResourceManager<CommandPoolImpl> m_pools;
     ResourceManager<FramebufferImpl> m_fbos;
@@ -152,7 +148,7 @@ public:
     ResourceManager<FenceImpl> m_fences;
 
 private:
-    ImageInfo m_image_info;
+    SwapchainImageInfo m_image_info;
     const AdapterImpl& m_adapter;
     uint32_t m_cur_swapchain_image_index = 0;
     uint32_t m_cur_frame = 0;
@@ -166,7 +162,7 @@ private:
 
     void createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
                          const SVector<uint32_t, 2>& window_size);
-    ImageInfo queryImageInfo(VkPhysicalDevice, const SVector<uint32_t, 2>&,
+    SwapchainImageInfo queryImageInfo(VkPhysicalDevice, const SVector<uint32_t, 2>&,
                              VkSurfaceKHR);
     VkPresentModeKHR queryPresentMode(VkPhysicalDevice, VkSurfaceKHR);
 
