@@ -70,4 +70,8 @@ void Device::AcquireSwapchainImageAndWait(video::Window& window) {
     return m_impl->AcquireSwapchainImageAndWait(window);
 }
 
+void Device::Submit(Command& cmd) {
+    return m_impl->Submit(cmd);
+}
+
 }  // namespace nickel::graphics

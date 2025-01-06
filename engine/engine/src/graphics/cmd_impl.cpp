@@ -15,4 +15,24 @@ CommandImpl::~CommandImpl() {
     }
 }
 
+void CommandImpl::AddLayoutTransition(ImageImpl* img, VkImageLayout layout,
+                                      size_t idx) {
+    if (auto it = m_layout_transitions.find(img);
+        it != m_layout_transitions.end) {
+        it->second[idx] = layout;
+    } else {
+        m_layout_transitions[img][idx] = layout;
+    }
+}
+
+void CommandImpl::ApplyLayoutTransitions() {
+    for (auto [image, transition] : m_layout_transitions) {
+        for (auto [idx, layout] : transition) {
+            image->m_layouts[idx] = layout;
+        }
+    }
+
+    m_layout_transitions.clear();
+}
+
 }  // namespace nickel::graphics
