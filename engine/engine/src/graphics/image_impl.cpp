@@ -8,7 +8,7 @@
 
 namespace nickel::graphics {
 
-ImageImpl::ImageImpl(AdapterImpl& adapter, DeviceImpl& dev,
+ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
                      const Image::Descriptor& desc)
     : m_device{dev.m_device} {
     createImage(desc, dev);
@@ -52,7 +52,8 @@ void ImageImpl::allocMem(VkPhysicalDevice phyDevice) {
         LOGE("allocate image memory failed: no satisfied memory type "
              "(DeviceLocal)");
     } else {
-        m_memory = new MemoryImpl{m_device, requirements.size, index.value()};
+        m_memory = new MemoryImpl{
+            m_device, static_cast<size_t>(requirements.size), index.value()};
     }
 }
 
