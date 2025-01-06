@@ -1,8 +1,4 @@
 ﻿#pragma once
-#include "image.hpp"
-#include "nickel/common/math/smatrix.hpp"
-#include "nickel/graphics/buffer.hpp"
-#include "render_pass.hpp"
 
 namespace nickel::graphics {
 

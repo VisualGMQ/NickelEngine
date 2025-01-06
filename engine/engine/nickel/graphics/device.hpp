@@ -18,10 +18,16 @@ namespace nickel::graphics {
 class DeviceImpl;
 class AdapterImpl;
 
+
+struct SwapchainImageInfo {
+    SVector<uint32_t, 2> extent;
+    uint32_t imagCount;
+    VkSurfaceFormatKHR format;
+};
+
 class Device {
 public:
-    explicit Device(const AdapterImpl& adapter_impl,
-                    const SVector<uint32_t, 2>& window_size);
+    explicit Device(DeviceImpl* impl);
     ~Device();
 
     DeviceImpl& Impl();
@@ -38,12 +44,13 @@ public:
     ShaderModule CreateShaderModule(const uint32_t* data, size_t size);
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
+    const SwapchainImageInfo& GetSwapchainImageInfo() const;
     
     void AcquireSwapchainImageAndWait(video::Window& window);
     void Submit(Command& cmd);
 
 private:
-    std::unique_ptr<DeviceImpl> m_impl;
+    DeviceImpl* m_impl;
 };
 
 }  // namespace nickel::graphics

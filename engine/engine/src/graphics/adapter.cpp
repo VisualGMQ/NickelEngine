@@ -8,6 +8,10 @@ Adapter::Adapter(const video::Window::Impl& window) : m_impl{std::make_unique<Ad
 
 Adapter::~Adapter() {}
 
+Device Adapter::GetDevice() const {
+    return m_impl->GetDevice();
+}
+
 const AdapterImpl& Adapter::GetImpl() const {
     return *m_impl;
 }

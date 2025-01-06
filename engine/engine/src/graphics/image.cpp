@@ -37,6 +37,10 @@ Image& Image::operator=(Image&& o) noexcept {
     return *this;
 }
 
+ImageView Image::CreateView(const ImageView::Descriptor& desc) {
+    return m_impl->CreateView(*this, desc);
+}
+
 Image::~Image() {
     if (m_impl) {
         m_impl->DecRefcount();

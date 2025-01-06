@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "nickel/common/flags.hpp"
-#include "nickel/internal/pch.hpp"
+#include "volk.h"
 
 namespace nickel::graphics {
 

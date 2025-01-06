@@ -1,6 +1,6 @@
 #pragma once
-#include "nickel/graphics/image_view.hpp"
-#include "refcountable.hpp"
+#include "nickel/graphics/image.hpp"
+#include "nickel/graphics/internal/refcountable.hpp"
 
 namespace nickel::graphics {
 
@@ -9,14 +9,17 @@ class ImageImpl;
 
 class ImageViewImpl : public RefCountable {
 public:
-    ImageViewImpl(DeviceImpl&, const ImageView::Descriptor&);
+    ImageViewImpl(DeviceImpl&, const Image& image, const ImageView::Descriptor&);
 
     // only for swapchain image view hack
     ImageViewImpl(VkDevice, VkImageView);
 
     ~ImageViewImpl();
 
+    Image GetImage() const;
+
     VkImageView m_view;
+    Image m_image;
 
 private:
     VkDevice m_device;

@@ -23,14 +23,14 @@ public:
     uint32_t MipLevelCount() const;
     VkSampleCountFlags SampleCount() const;
     Flags<VkImageUsageFlagBits> Usage() const;
-    // TextureView CreateView(const TextureView::Descriptor& = {});
+    ImageView CreateView(const Image& image, const ImageView::Descriptor&);
 
     VkImage m_image;
     MemoryImpl* m_memory{};
     std::vector<VkImageLayout> m_layouts;
 
 private:
-    VkDevice m_device;
+    DeviceImpl& m_device;
     VkImageCreateInfo m_create_info;
 
     void createImage(const Image::Descriptor&, DeviceImpl&);

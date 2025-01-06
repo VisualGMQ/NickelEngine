@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "nickel/graphics/buffer.hpp"
-#include "nickel/graphics/image_view.hpp"
+#include "nickel/graphics/image.hpp"
 #include "nickel/graphics/sampler.hpp"
 
 #include <map>

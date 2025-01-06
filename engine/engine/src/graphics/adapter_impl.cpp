@@ -1,7 +1,7 @@
 ﻿#include "nickel/graphics/internal/adapter_impl.hpp"
 #include "nickel/common/assert.hpp"
 #include "nickel/common/log.hpp"
-#include "nickel/graphics/device.hpp"
+#include "nickel/graphics/internal/device_impl.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 #include "nickel/internal/pch.hpp"
 #include "nickel/video/internal/window_impl.hpp"
@@ -94,13 +94,17 @@ void AdapterImpl::createSurface(const video::Window::Impl& impl) {
 }
 
 void AdapterImpl::createDevice(const SVector<uint32_t, 2>& window_size) {
-    m_device = new Device{*this, window_size};
+    m_device = new DeviceImpl{*this, window_size};
 }
 
 AdapterImpl::~AdapterImpl() {
     delete m_device;
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyInstance(m_instance, nullptr);
+}
+
+Device AdapterImpl::GetDevice() const {
+    return Device{m_device};
 }
 
 }  // namespace nickel::graphics

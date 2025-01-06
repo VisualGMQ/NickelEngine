@@ -14,9 +14,9 @@ public:
     ~FramebufferImpl();
 
     VkFramebuffer m_fbo;
-
+    std::vector<ImageView> m_views;
+    
 private:
     DeviceImpl& m_device;
-    std::vector<ImageView> m_views;
 };
 }  // namespace nickel::graphics

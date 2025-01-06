@@ -1,4 +1,4 @@
-#include "nickel/graphics/image_view.hpp"
+#include "nickel/graphics/image.hpp"
 #include "nickel/graphics/internal/image_view_impl.hpp"
 
 namespace nickel::graphics {
@@ -13,6 +13,10 @@ ImageView::ImageView(const ImageView& o) : m_impl{o.m_impl} {
 
 ImageView::ImageView(ImageView&& o) noexcept : m_impl{o.m_impl} {
     o.m_impl = nullptr;
+}
+
+Image ImageView::GetImage() const {
+    return m_impl->GetImage();
 }
 
 ImageView& ImageView::operator=(const ImageView& o) noexcept {
@@ -53,6 +57,5 @@ const ImageViewImpl& ImageView::Impl() const noexcept {
 ImageViewImpl& ImageView::Impl() noexcept {
     return *m_impl;
 }
-
 
 }  // namespace nickel::graphics

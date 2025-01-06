@@ -18,7 +18,7 @@ CommandImpl::~CommandImpl() {
 void CommandImpl::AddLayoutTransition(ImageImpl* img, VkImageLayout layout,
                                       size_t idx) {
     if (auto it = m_layout_transitions.find(img);
-        it != m_layout_transitions.end) {
+        it != m_layout_transitions.end()) {
         it->second[idx] = layout;
     } else {
         m_layout_transitions[img][idx] = layout;

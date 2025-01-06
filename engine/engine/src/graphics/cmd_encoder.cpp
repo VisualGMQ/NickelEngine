@@ -7,6 +7,7 @@
 #include "nickel/graphics/internal/framebuffer_impl.hpp"
 #include "nickel/graphics/internal/graphics_pipeline_impl.hpp"
 #include "nickel/graphics/internal/image_impl.hpp"
+#include "nickel/graphics/internal/image_view_impl.hpp"
 #include "nickel/graphics/internal/pipeline_layout_impl.hpp"
 #include "nickel/graphics/internal/render_pass_impl.hpp"
 
@@ -116,6 +117,11 @@ void CommandEncoder::CopyBufferToTexture(const Buffer& src, Image& dst,
         barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_NONE;
+        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.baseMipLevel = 0;
         vkCmdPipelineBarrier(m_cmd.Impl().m_cmd,
                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                              VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
@@ -140,6 +146,29 @@ RenderPassEncoder CommandEncoder::BeginRenderPass(
     render_pass_info.pClearValues = clear_values.data();
     render_pass_info.clearValueCount = clear_values.size();
     render_pass_info.framebuffer = fbo.Impl().m_fbo;
+
+    for (auto& view : fbo.Impl().m_views) {
+        auto& layouts = view.GetImage().Impl().m_layouts;
+        for (int i = 0; i < layouts.size(); i++) {
+            VkImageLayout layout = view.GetImage().Impl().m_layouts[i];
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.image = view.GetImage().Impl().m_image;
+            barrier.oldLayout = layout;
+            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.baseMipLevel = 0;
+            vkCmdPipelineBarrier(m_cmd.Impl().m_cmd,
+                                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &barrier);
+            m_cmd.Impl().AddLayoutTransition(&view.GetImage().Impl(), layout,
+                                             i);
+        }
+    }
 
     vkCmdBeginRenderPass(m_cmd.Impl().m_cmd, &render_pass_info,
                          VK_SUBPASS_CONTENTS_INLINE);

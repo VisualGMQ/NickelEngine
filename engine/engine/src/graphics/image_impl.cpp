@@ -10,7 +10,7 @@ namespace nickel::graphics {
 
 ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
                      const Image::Descriptor& desc)
-    : m_device{dev.m_device} {
+    : m_device{dev} {
     createImage(desc, dev);
     allocMem(adapter.m_phyDevice);
 
@@ -18,7 +18,8 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
         m_layouts.push_back(desc.initialLayout);
     }
 
-    VK_CALL(vkBindImageMemory(m_device, m_image, m_memory->m_memory, 0));
+    VK_CALL(
+        vkBindImageMemory(m_device.m_device, m_image, m_memory->m_memory, 0));
 }
 
 void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
@@ -49,20 +50,21 @@ void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
 
 void ImageImpl::allocMem(VkPhysicalDevice phyDevice) {
     VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(m_device, m_image, &requirements);
+    vkGetImageMemoryRequirements(m_device.m_device, m_image, &requirements);
     auto index = FindMemoryType(phyDevice, requirements,
                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (!index) {
         LOGE("allocate image memory failed: no satisfied memory type "
              "(DeviceLocal)");
     } else {
-        m_memory = new MemoryImpl{
-            m_device, static_cast<size_t>(requirements.size), index.value()};
+        m_memory = new MemoryImpl{m_device.m_device,
+                                  static_cast<size_t>(requirements.size),
+                                  index.value()};
     }
 }
 
 ImageImpl::~ImageImpl() {
-    vkDestroyImage(m_device, m_image, nullptr);
+    vkDestroyImage(m_device.m_device, m_image, nullptr);
     delete m_memory;
 }
 
@@ -93,8 +95,9 @@ Flags<VkImageUsageFlagBits> ImageImpl::Usage() const {
     return m_create_info.usage;
 }
 
-// ImageView ImageImpl::CreateView(const ImageView::Descriptor& desc) {
-//     return ImageView(APIPreference::Vulkan, dev_, *this, desc);
-// }
+ImageView ImageImpl::CreateView(const Image& image,
+                                const ImageView::Descriptor& desc) {
+    return m_device.CreateImageView(image, desc);
+}
 
 }  // namespace nickel::graphics

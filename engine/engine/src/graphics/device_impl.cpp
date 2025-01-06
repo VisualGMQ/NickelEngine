@@ -169,7 +169,7 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     }
 }
 
-DeviceImpl::ImageInfo DeviceImpl::queryImageInfo(
+SwapchainImageInfo DeviceImpl::queryImageInfo(
     VkPhysicalDevice dev, const SVector<uint32_t, 2>& win_size,
     VkSurfaceKHR surface) {
     VkSurfaceCapabilitiesKHR capacities;
@@ -283,6 +283,7 @@ DeviceImpl::~DeviceImpl() {
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     m_samplers.Clear();
+    m_image_views.Clear();
     m_images.Clear();
     m_render_passes.Clear();
     m_buffers.Clear();
@@ -296,7 +297,7 @@ DeviceImpl::~DeviceImpl() {
     vkDestroyDevice(m_device, nullptr);
 }
 
-const DeviceImpl::ImageInfo& DeviceImpl::GetSwapchainImageInfo()
+const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo()
     const noexcept {
     return m_image_info;
 }
@@ -308,6 +309,11 @@ Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
 
 Image DeviceImpl::CreateImage(const Image::Descriptor& desc) {
     return Image{m_images.Allocate(m_adapter, *this, desc)};
+}
+
+ImageView DeviceImpl::CreateImageView(const Image& image,
+                                      const ImageView::Descriptor& desc) {
+    return ImageView{m_image_views.Allocate(*this, image, desc)};
 }
 
 BindGroupLayout DeviceImpl::CreateBindGroupLayout(
