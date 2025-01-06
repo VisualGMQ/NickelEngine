@@ -6,7 +6,9 @@ namespace nickel::graphics {
 Framebuffer::Framebuffer(FramebufferImpl* impl) : m_impl{impl} {}
 
 Framebuffer::Framebuffer(const Framebuffer& o) : m_impl{o.m_impl} {
-    m_impl->IncRefcount();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
 }
 
 Framebuffer::Framebuffer(Framebuffer&& o) noexcept : m_impl{o.m_impl} {
@@ -15,9 +17,13 @@ Framebuffer::Framebuffer(Framebuffer&& o) noexcept : m_impl{o.m_impl} {
 
 Framebuffer& Framebuffer::operator=(const Framebuffer& o) noexcept {
     if (&o != this) {
-        m_impl->DecRefcount();
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
         m_impl = o.m_impl;
-        m_impl->IncRefcount();
+        if (m_impl) {
+            m_impl->IncRefcount();
+        }
     }
     return *this;
 }
@@ -31,7 +37,13 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& o) noexcept {
 }
 
 Framebuffer::~Framebuffer() {
-    m_impl->DecRefcount();
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
+Framebuffer::operator bool() const noexcept {
+    return m_impl;
 }
 
 const FramebufferImpl& Framebuffer::Impl() const noexcept {

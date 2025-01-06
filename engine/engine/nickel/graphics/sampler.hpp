@@ -23,7 +23,8 @@ public:
         VkBorderColor borderColor;
         VkBool32 unnormalizedCoordinates;
     };
-    
+
+    Sampler() = default;
     explicit Sampler(SamplerImpl*);
     Sampler(const Sampler&);
     Sampler(Sampler&&) noexcept;
@@ -33,6 +34,8 @@ public:
 
     const SamplerImpl& Impl() const noexcept;
     SamplerImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
 
 private:
     SamplerImpl* m_impl;

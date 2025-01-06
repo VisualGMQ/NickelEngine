@@ -14,14 +14,13 @@ public:
 
     bool ShouldExit() const noexcept;
 
-    template <typename T>
-    void RegisterApplication() {
-        m_application = std::make_unique<T>();
-    }
-    
+    void RegisterCustomApplication(std::unique_ptr<Application>&& app);
+
     void Exit() noexcept;
     video::Window& GetWindow();
     graphics::Adapter& GetGPUAdapter();
+    Application* GetApplication();
+    const Application* GetApplication() const noexcept;
 
 private:
     bool m_should_exit = false;
@@ -43,4 +42,3 @@ public:
 
 }  // namespace nickel
 
-void RegisterCustomApplication(nickel::Context&);

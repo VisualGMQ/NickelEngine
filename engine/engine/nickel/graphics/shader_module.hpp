@@ -6,6 +6,7 @@ class ShaderModuleImpl;
 
 class ShaderModule {
 public:
+    ShaderModule() = default;
     explicit ShaderModule(ShaderModuleImpl*);
     ShaderModule(const ShaderModule& o);
     ShaderModule(ShaderModule&& o) noexcept;
@@ -15,6 +16,8 @@ public:
 
     const ShaderModuleImpl& Impl() const noexcept;
     ShaderModuleImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
 
 private:
     ShaderModuleImpl* m_impl;

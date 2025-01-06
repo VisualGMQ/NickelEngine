@@ -1,7 +1,7 @@
 ﻿#pragma once
+#include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/render_pass.hpp"
 #include "nickel/graphics/shader_module.hpp"
-#include "nickel/graphics/pipeline_layout.hpp"
 
 namespace nickel::graphics {
 
@@ -31,6 +31,7 @@ public:
         uint32_t m_subpass;
     };
 
+    GraphicsPipeline() = default;
     explicit GraphicsPipeline(GraphicsPipelineImpl*);
     GraphicsPipeline(const GraphicsPipeline&);
     GraphicsPipeline(GraphicsPipeline&&) noexcept;
@@ -40,6 +41,8 @@ public:
 
     const GraphicsPipelineImpl& Impl() const noexcept;
     GraphicsPipelineImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
 
 private:
     GraphicsPipelineImpl* m_impl;

@@ -19,6 +19,10 @@ SVector<uint32_t, 2> Window::GetSize() const noexcept {
     return m_impl->GetSize();
 }
 
+bool Window::IsMinimize() const noexcept {
+    return m_impl->IsMinimize(); 
+}
+
 Window::~Window() {}
 
 }  // namespace nickel::video

@@ -15,6 +15,7 @@ public:
         RenderPass m_render_pass;
     };
 
+    Framebuffer() = default;
     explicit Framebuffer(FramebufferImpl*);
     Framebuffer(const Framebuffer&);
     Framebuffer(Framebuffer&&) noexcept;
@@ -24,6 +25,8 @@ public:
 
     const FramebufferImpl& Impl() const noexcept;
     FramebufferImpl& Impl() noexcept;
+    
+    operator bool() const noexcept;
 
 private:
     FramebufferImpl* m_impl;

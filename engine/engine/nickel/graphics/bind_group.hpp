@@ -60,12 +60,15 @@ public:
         std::map<uint32_t, Entry> entries;
     };
 
+    BindGroup() = default;
     explicit BindGroup(BindGroupImpl*);
     BindGroup(const BindGroup&);
     BindGroup(BindGroup&&) noexcept;
     BindGroup& operator=(const BindGroup&) noexcept;
     BindGroup& operator=(BindGroup&&) noexcept;
     ~BindGroup();
+    
+    operator bool() const noexcept;
 
     const BindGroupImpl& Impl() const noexcept;
     BindGroupImpl& Impl() noexcept;

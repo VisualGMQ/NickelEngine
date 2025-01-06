@@ -25,4 +25,8 @@ SVector<uint32_t, 2> Window::Impl::GetSize() const noexcept {
     return SVector<uint32_t, 2>(w, h);
 }
 
+bool Window::Impl::IsMinimize() const noexcept {
+    return SDL_GetWindowFlags(m_window) & SDL_WINDOW_MINIMIZED;
 }
+
+}  // namespace nickel::video

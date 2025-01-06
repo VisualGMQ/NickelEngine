@@ -6,7 +6,9 @@ namespace nickel::graphics {
 PipelineLayout::PipelineLayout(PipelineLayoutImpl* impl) : m_impl{impl} {}
 
 PipelineLayout::PipelineLayout(const PipelineLayout& o) : m_impl{o.m_impl} {
-    m_impl->IncRefcount();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
 }
 
 PipelineLayout::PipelineLayout(PipelineLayout&& o) noexcept : m_impl{o.m_impl} {
@@ -15,9 +17,13 @@ PipelineLayout::PipelineLayout(PipelineLayout&& o) noexcept : m_impl{o.m_impl} {
 
 PipelineLayout& PipelineLayout::operator=(const PipelineLayout& o) noexcept {
     if (&o != this) {
-        m_impl->DecRefcount();
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
         m_impl = o.m_impl;
-        m_impl->IncRefcount();
+        if (m_impl) {
+            m_impl->IncRefcount();
+        }
     }
     return *this;
 }
@@ -31,7 +37,13 @@ PipelineLayout& PipelineLayout::operator=(PipelineLayout&& o) noexcept {
 }
 
 PipelineLayout::~PipelineLayout() {
-    m_impl->DecRefcount();
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
+PipelineLayout::operator bool() const noexcept {
+    return m_impl;
 }
 
 const PipelineLayoutImpl& PipelineLayout::Impl() const noexcept {

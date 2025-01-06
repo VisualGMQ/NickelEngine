@@ -3,6 +3,7 @@
 #include "nickel/common/log.hpp"
 #include "nickel/graphics/adapter.hpp"
 #include "nickel/nickel.hpp"
+#include "nickel/main_entry/runtime.hpp"
 
 namespace nickel {
 
@@ -23,6 +24,17 @@ Runtime::Runtime() {
 
     Context::Init();
 
+    auto &ctx = Context::GetInst();
+    ctx.RegisterCustomApplication(
+        ::CreateCustomApplication(Context::GetInst()));
+    auto app = ctx.GetApplication();
+    if (app) {
+        app->OnInit();
+    } else {
+        LOGI("no custom application");
+    }
+   
+
     LOGI("running engine...");
 }
 
@@ -30,7 +42,12 @@ Runtime::~Runtime() {
     Context::Delete();
 }
 
-void Runtime::Run() {}
+void Runtime::Run() {
+    auto app = Context::GetInst().GetApplication();
+    if (app) {
+        app->OnUpdate();
+    }
+}
 
 void Runtime::HandleEvent(const SDL_Event &event) {
     if (event.type == SDL_EVENT_QUIT) {

@@ -17,6 +17,7 @@ public:
         Mapped,
     };
 
+    Buffer() = default;
     explicit Buffer(BufferImpl*);
     Buffer(const Buffer&);
     Buffer(Buffer&&) noexcept;
@@ -35,6 +36,8 @@ public:
     void* GetMappedRange(uint64_t offset);
     void Flush();
     void Flush(uint64_t offset, uint64_t size);
+    
+    operator bool() const noexcept;
 
 private:
     BufferImpl* m_impl;

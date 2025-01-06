@@ -12,6 +12,7 @@ public:
         std::vector<VkSubpassDependency> dependencies;
     };
 
+    RenderPass() = default;
     explicit RenderPass(RenderPassImpl*);
     RenderPass(const RenderPass&);
     RenderPass(RenderPass&&) noexcept;
@@ -21,6 +22,8 @@ public:
 
     const RenderPassImpl& Impl() const noexcept;
     RenderPassImpl& Impl() noexcept;
+    
+    operator bool() const noexcept;
 
 private:
     RenderPassImpl* m_impl;

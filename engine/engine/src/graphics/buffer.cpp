@@ -6,7 +6,9 @@ namespace nickel::graphics {
 Buffer::Buffer(BufferImpl* impl) : m_impl{impl} {}
 
 Buffer::Buffer(const Buffer& o) : m_impl{o.m_impl} {
-    m_impl->IncRefcount();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
 }
 
 Buffer::Buffer(Buffer&& o) noexcept : m_impl{o.m_impl} {
@@ -15,9 +17,13 @@ Buffer::Buffer(Buffer&& o) noexcept : m_impl{o.m_impl} {
 
 Buffer& Buffer::operator=(const Buffer& o) noexcept {
     if (&o != this) {
-        m_impl->DecRefcount();
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
         m_impl = o.m_impl;
-        m_impl->IncRefcount();
+        if (m_impl) {
+            m_impl->IncRefcount();
+        }
     }
     return *this;
 }
@@ -31,7 +37,13 @@ Buffer& Buffer::operator=(Buffer&& o) noexcept {
 }
 
 Buffer::~Buffer() {
-    m_impl->DecRefcount();
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
+Buffer::operator bool() const noexcept {
+    return m_impl;
 }
 
 const BufferImpl& Buffer::Impl() const noexcept {
@@ -40,38 +52,6 @@ const BufferImpl& Buffer::Impl() const noexcept {
 
 BufferImpl& Buffer::Impl() noexcept {
     return *m_impl;
-}
-
-enum Buffer::MapState Buffer::MapState() const {
-    return m_impl->MapState();
-}
-
-uint64_t Buffer::Size() const {
-    return m_impl->Size();
-}
-
-void Buffer::Unmap() {
-    return m_impl->Unmap();
-}
-
-void Buffer::MapAsync(uint64_t offset, uint64_t size) {
-    return m_impl->MapAsync(offset, size);
-}
-
-void* Buffer::GetMappedRange() {
-    return m_impl->GetMappedRange();
-}
-
-void* Buffer::GetMappedRange(uint64_t offset) {
-    return m_impl->GetMappedRange(offset);
-}
-
-void Buffer::Flush() {
-    return m_impl->Flush();
-}
-
-void Buffer::Flush(uint64_t offset, uint64_t size) {
-    return m_impl->Flush(offset, size);
 }
 
 }  // namespace nickel::graphics
