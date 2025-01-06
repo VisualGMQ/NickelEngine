@@ -108,24 +108,27 @@ void CommandEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
 
 void CommandEncoder::CopyBufferToTexture(const Buffer& src, Image& dst,
                                          const VkBufferImageCopy& copy) {
+    for (size_t i = 0; i < dst.Impl().Extent().l; i++) {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.image = dst.Impl().m_image;
+        barrier.oldLayout = dst.Impl().m_layouts[i];
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier(m_cmd.Impl().m_cmd,
+                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
+                             nullptr, 1, &barrier);
+        m_cmd.Impl().AddLayoutTransition(
+            &dst.Impl(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i);
+    }
+
     vkCmdCopyBufferToImage(m_cmd.Impl().m_cmd, src.Impl().m_buffer,
                            dst.Impl().m_image,
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &copy);
 
     m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
-}
-
-void CommandEncoder::PipelineBarrier(
-    VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-    VkDependencyFlags dependencyFlags,
-    std::vector<VkMemoryBarrier> memory_barriers,
-    std::vector<VkBufferMemoryBarrier> buffer_memory_barriers,
-    std::vector<VkImageMemoryBarrier> image_memory_barriers) {
-    vkCmdPipelineBarrier(
-        m_cmd.Impl().m_cmd, srcStageMask, dstStageMask, dependencyFlags,
-        memory_barriers.size(), memory_barriers.data(),
-        buffer_memory_barriers.size(), buffer_memory_barriers.data(),
-        image_memory_barriers.size(), image_memory_barriers.data());
 }
 
 RenderPassEncoder CommandEncoder::BeginRenderPass(

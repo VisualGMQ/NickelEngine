@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "nickel/graphics/cmd.hpp"
 #include "nickel/common/math/smatrix.hpp"
 #include "nickel/graphics/bind_group_layout.hpp"
 #include "nickel/graphics/buffer.hpp"
@@ -39,6 +40,7 @@ public:
     Fence CreateFence(bool signaled);
     
     void AcquireSwapchainImageAndWait(video::Window& window);
+    void Submit(Command& cmd);
 
 private:
     std::unique_ptr<DeviceImpl> m_impl;

@@ -133,7 +133,7 @@ public:
     CommandPool CreateCommandPool(VkCommandPoolCreateFlags flags);
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
-    void Submit(const Command&);
+    void Submit(Command&);
     void WaitIdle();
     
     void AcquireSwapchainImageAndWait(video::Window& window);

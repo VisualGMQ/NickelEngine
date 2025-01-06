@@ -353,7 +353,7 @@ Fence DeviceImpl::CreateFence(bool signaled) {
     return Fence{m_fences.Allocate(*this, signaled)};
 }
 
-void DeviceImpl::Submit(const Command& cmd) {
+void DeviceImpl::Submit(Command& cmd) {
     std::vector<VkCommandBuffer> bufs;
     bufs.push_back(cmd.Impl().m_cmd);
 
@@ -386,6 +386,7 @@ void DeviceImpl::Submit(const Command& cmd) {
         VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, VK_NULL_HANDLE));
         WaitIdle();
     }
+    cmd.Impl().ApplyLayoutTransitions();
 }
 
 void DeviceImpl::WaitIdle() {

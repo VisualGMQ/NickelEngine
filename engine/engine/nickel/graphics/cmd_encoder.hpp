@@ -59,12 +59,6 @@ public:
                             uint64_t size);
     void CopyBufferToTexture(const Buffer& src, Image& dst,
                              const VkBufferImageCopy&);
-    void PipelineBarrier(
-        VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-        VkDependencyFlags dependencyFlags,
-        std::vector<VkMemoryBarrier> memory_barriers,
-        std::vector<VkBufferMemoryBarrier> buffer_memory_barriers,
-        std::vector<VkImageMemoryBarrier> image_memory_barriers);
     RenderPassEncoder BeginRenderPass(
         const RenderPass&, const Framebuffer& fbo,
         const std::vector<VkClearValue>& clear_values);
