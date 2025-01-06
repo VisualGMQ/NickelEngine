@@ -6,7 +6,8 @@
 namespace nickel::graphics {
 
 DeviceImpl::DeviceImpl(const AdapterImpl& impl,
-                       const SVector<uint32_t, 2>& window_size) {
+                       const SVector<uint32_t, 2>& window_size)
+    : m_adapter{impl} {
     m_queue_indices = chooseQueue(impl.m_phyDevice, impl.m_surface);
 
     if (!m_queue_indices) {
@@ -252,7 +253,8 @@ void DeviceImpl::getAndCreateImageViews() {
         VkImageView view;
         VK_CALL(vkCreateImageView(m_device, &ci, nullptr, &view));
         if (view) {
-            m_image_views.push_back(view);
+            m_swapchain_image_views.push_back(
+                new ImageViewImpl{m_device, view});
         } else {
             LOGC("create image view from swapchain image failed");
         }
@@ -260,10 +262,21 @@ void DeviceImpl::getAndCreateImageViews() {
 }
 
 DeviceImpl::~DeviceImpl() {
-    for (auto view : m_image_views) {
-        vkDestroyImageView(m_device, view, nullptr);
+    for (auto view : m_swapchain_image_views) {
+        delete view;
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+    m_samplers.Clear();
+    m_images.Clear();
+    m_render_passes.Clear();
+    m_buffers.Clear();
+    m_pipeline_layout.Clear();
+    m_bind_group_layouts.Clear();
+    m_fbos.Clear();
+    m_graphic_pipelines.Clear();
+    m_pools.Clear();
+    m_semaphores.Clear();
+    m_fences.Clear();
     vkDestroyDevice(m_device, nullptr);
 }
 
@@ -272,5 +285,52 @@ const DeviceImpl::ImageInfo& DeviceImpl::GetSwapchainImageInfo()
     return m_image_info;
 }
 
+Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
+    BufferImpl* impl = m_buffers.Allocate(*this, m_adapter.m_phyDevice, desc);
+    return Buffer{impl};
 }
 
+Image DeviceImpl::CreateImage(const Image::Descriptor& desc) {
+    return Image{m_images.Allocate(m_adapter, *this, desc)};
+}
+
+BindGroupLayout DeviceImpl::CreateBindGroupLayout(
+    const BindGroupLayout::Descriptor& desc) {
+    return BindGroupLayout{m_bind_group_layouts.Allocate(*this, desc)};
+}
+
+PipelineLayout DeviceImpl::CreatePipelineLayout(
+    const PipelineLayout::Descriptor& desc) {
+    return PipelineLayout{m_pipeline_layout.Allocate(*this, desc)};
+}
+
+Framebuffer DeviceImpl::CreateFramebuffer(const Framebuffer::Descriptor& desc) {
+    return Framebuffer{m_fbos.Allocate(*this, desc)};
+}
+
+RenderPass DeviceImpl::CreateRenderPass(const RenderPass::Descriptor& desc) {
+    return RenderPass{m_render_passes.Allocate(*this, desc)};
+}
+
+GraphicsPipeline DeviceImpl::CreateGraphicPipeline(
+    const GraphicsPipeline::Descriptor& desc) {
+    return GraphicsPipeline{m_graphic_pipelines.Allocate(*this, desc)};
+}
+
+Sampler DeviceImpl::CreateSampler(const Sampler::Descriptor& desc) {
+    return Sampler{m_samplers.Allocate(*this, desc)};
+}
+
+ShaderModule DeviceImpl::CreateShaderModule(const uint32_t* data, size_t size) {
+    return ShaderModule{m_shader_modules.Allocate(m_device, data, size)};
+}
+
+Semaphore DeviceImpl::CreateSemaphore() {
+    return Semaphore{m_semaphores.Allocate(*this)};
+}
+
+Fence DeviceImpl::CreateSemaphore(bool signaled) {
+    return Fence{m_fences.Allocate(*this, signaled)};
+}
+
+}  // namespace nickel::graphics

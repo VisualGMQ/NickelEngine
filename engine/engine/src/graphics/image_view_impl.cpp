@@ -17,6 +17,9 @@ ImageViewImpl::ImageViewImpl(DeviceImpl& dev, const ImageView::Descriptor& desc)
     VK_CALL(vkCreateImageView(dev.m_device, &ci, nullptr, &m_view));
 }
 
+ImageViewImpl::ImageViewImpl(VkDevice device, VkImageView view)
+    : m_device{device}, m_view{view} {}
+
 ImageViewImpl::~ImageViewImpl() {
     vkDestroyImageView(m_device, m_view, nullptr);
 }

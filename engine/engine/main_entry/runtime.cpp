@@ -4,7 +4,7 @@
 #include "nickel/fs/dialog.hpp"
 #include "nickel/fs/storage.hpp"
 #include "nickel/graphics/adapter.hpp"
-#include "nickel/video/window.hpp"
+#include "nickel/nickel.hpp"
 
 namespace nickel {
 
@@ -14,13 +14,6 @@ public:
     ~Runtime();
     void Run();
     void HandleEvent(const SDL_Event &);
-    bool ShouldExit() const;
-
-private:
-    bool m_should_exit = false;
-    std::unique_ptr<video::Window> m_window;
-    std::unique_ptr<graphics::Adapter> m_graphics_context;
-    std::unique_ptr<StorageManager> m_storage_manager;
 };
 
 Runtime::Runtime() {
@@ -30,48 +23,28 @@ Runtime::Runtime() {
         LOGC("SDL init failed: {}", SDL_GetError());
     }
 
-    LOGI("init video system");
-    m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
-
-    LOGI("init graphics system");
-    m_graphics_context =
-        std::make_unique<graphics::Adapter>(m_window->GetImpl());
-
-    LOGI("init storage system");
-    m_storage_manager =
-        std::make_unique<StorageManager>("visualgmq", "nickelengine");
+    Context::Init();
 
     LOGI("running engine...");
 }
 
 Runtime::~Runtime() {
-    LOGI("shutdown storage manager");
-    m_storage_manager.reset();
-    
-    LOGI("shutdown graphics system");
-    m_graphics_context.reset();
-
-    LOGI("shutdown window system");
-    m_window.reset();
+    Context::Delete();
 }
 
 void Runtime::Run() {}
 
 void Runtime::HandleEvent(const SDL_Event &event) {
     if (event.type == SDL_EVENT_QUIT) {
-        m_should_exit = true;
+        Context::GetInst().Exit();
     }
-}
-
-bool Runtime::ShouldExit() const {
-    return m_should_exit;
 }
 
 }  // namespace nickel
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     nickel::Runtime::Init();
-    if (nickel::Runtime::GetInst().ShouldExit()) {
+    if (nickel::Context::GetInst().ShouldExit()) {
         return SDL_APP_FAILURE;
     }
     return SDL_APP_CONTINUE;
@@ -80,7 +53,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 SDL_AppResult SDL_AppIterate(void *appstate) {
     auto &runtime = nickel::Runtime::GetInst();
     runtime.Run();
-    if (runtime.ShouldExit()) {
+    if (nickel::Context::GetInst().ShouldExit()) {
         return SDL_APP_SUCCESS;
     }
     return SDL_APP_CONTINUE;

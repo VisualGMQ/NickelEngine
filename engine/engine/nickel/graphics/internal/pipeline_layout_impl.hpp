@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "nickel/graphics/internal/refcountable.hpp"
+#include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/internal/pch.hpp"
 
 namespace nickel::graphics {
@@ -9,9 +10,7 @@ class BindGroupLayout;
 
 class PipelineLayoutImpl final : public RefCountable {
 public:
-    PipelineLayoutImpl(
-        DeviceImpl&, const std::vector<BindGroupLayout>&,
-        const std::vector<VkPushConstantRange>&);
+    PipelineLayoutImpl(DeviceImpl&, const PipelineLayout::Descriptor&);
     ~PipelineLayoutImpl();
 
     VkPipelineLayout m_pipeline_layout;

@@ -6,7 +6,7 @@ namespace nickel::graphics {
 
 class ShaderModuleImpl: public RefCountable  {
 public:
-    ShaderModuleImpl(VkDevice, const std::vector<char>& code);
+    ShaderModuleImpl(VkDevice, const uint32_t* data, size_t size);
     ~ShaderModuleImpl();
 
     VkShaderModule m_module;

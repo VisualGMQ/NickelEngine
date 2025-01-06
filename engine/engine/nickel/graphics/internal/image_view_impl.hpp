@@ -10,6 +10,10 @@ class ImageImpl;
 class ImageViewImpl : public RefCountable {
 public:
     ImageViewImpl(DeviceImpl&, const ImageView::Descriptor&);
+
+    // only for swapchain image view hack
+    ImageViewImpl(VkDevice, VkImageView);
+
     ~ImageViewImpl();
 
     VkImageView m_view;

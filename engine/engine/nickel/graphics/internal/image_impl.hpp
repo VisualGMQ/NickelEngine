@@ -14,7 +14,7 @@ class MemoryImpl;
 
 class ImageImpl : public RefCountable {
 public:
-    ImageImpl(AdapterImpl&, DeviceImpl&, const Image::Descriptor&);
+    ImageImpl(const AdapterImpl&, DeviceImpl&, const Image::Descriptor&);
     ~ImageImpl();
 
     VkImageType Type() const;
