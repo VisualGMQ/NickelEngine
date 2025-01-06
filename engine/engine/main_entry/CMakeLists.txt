@@ -1,9 +1,11 @@
 aux_source_directory(. MAIN_ENTRY_SRC)
+file(GLOB_RECURSE ENTRY_HEADERS ./*.hpp)
 
 macro(attach_common_config_on_entry target_name)
-    target_sources(${target_name} PRIVATE ${MAIN_ENTRY_SRC})
+    target_sources(${target_name} PRIVATE ${MAIN_ENTRY_SRC} ${ENTRY_HEADERS})
     target_link_libraries(${target_name} PUBLIC ${NICKEL_ENGINE_NAME})
     target_link_libraries(${target_name} PRIVATE SDL3::SDL3)
+    target_include_directories(${target_name} PUBLIC ../)
     add_library(${NICKEL_MAIN_ENTRY_NAME} ALIAS ${target_name})
 endmacro()
 

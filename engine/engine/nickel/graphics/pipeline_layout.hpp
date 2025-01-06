@@ -11,7 +11,8 @@ public:
         std::vector<BindGroupLayout> layouts;
         std::vector<VkPushConstantRange> push_contants;
     };
-    
+
+    PipelineLayout() = default;
     explicit PipelineLayout(PipelineLayoutImpl*);
     PipelineLayout(const PipelineLayout&);
     PipelineLayout(PipelineLayout&&) noexcept;
@@ -21,9 +22,11 @@ public:
 
     const PipelineLayoutImpl& Impl() const noexcept;
     PipelineLayoutImpl& Impl() noexcept;
-    
+
+    operator bool() const noexcept;
+
 private:
     PipelineLayoutImpl* m_impl;
 };
 
-}
+}  // namespace nickel::graphics

@@ -6,6 +6,7 @@ class FenceImpl;
 
 class Fence {
 public:
+    Fence() = default;
     explicit Fence(FenceImpl*);
     Fence(const Fence&);
     Fence(Fence&&) noexcept;
@@ -15,6 +16,8 @@ public:
 
     const FenceImpl& Impl() const noexcept;
     FenceImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
 
 private:
     FenceImpl* m_impl;

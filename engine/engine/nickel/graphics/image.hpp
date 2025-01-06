@@ -19,6 +19,7 @@ public:
         VkImageLayout initialLayout;
     };
 
+    Image() = default;
     explicit Image(ImageImpl*);
     Image(const Image&);
     Image(Image&&) noexcept;
@@ -28,6 +29,8 @@ public:
 
     const ImageImpl& Impl() const noexcept;
     ImageImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
 
 private:
     ImageImpl* m_impl;

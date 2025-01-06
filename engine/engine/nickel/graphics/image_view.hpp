@@ -14,6 +14,7 @@ public:
         VkImageSubresourceRange subresourceRange;
     };
 
+    ImageView() = default;
     explicit ImageView(ImageViewImpl*);
     ImageView(const ImageView&);
     ImageView(ImageView&&) noexcept;
@@ -23,6 +24,8 @@ public:
 
     const ImageViewImpl& Impl() const noexcept;
     ImageViewImpl& Impl() noexcept;
+
+    operator bool() const noexcept;
 
 private:
     ImageViewImpl* m_impl;

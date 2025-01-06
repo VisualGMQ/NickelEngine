@@ -6,7 +6,8 @@
 namespace nickel::graphics {
 
 CommandPoolImpl::CommandPoolImpl(DeviceImpl& device,
-                                 VkCommandPoolCreateFlags flag) {
+                                 VkCommandPoolCreateFlags flag)
+    : m_device{device.m_device} {
     VkCommandPoolCreateInfo ci = {};
     ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     ci.flags = flag;
@@ -25,6 +26,10 @@ CommandPoolImpl::~CommandPoolImpl() {
 
 bool CommandPoolImpl::CanResetSingleCmd() const noexcept {
     return m_can_reset_single_cmd;
+}
+
+void CommandPoolImpl::Reset() {
+    VK_CALL(vkResetCommandPool(m_device, m_pool, 0));
 }
 
 }  // namespace nickel::graphics

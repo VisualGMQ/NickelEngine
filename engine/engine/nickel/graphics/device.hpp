@@ -10,6 +10,7 @@
 #include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/sampler.hpp"
 #include "nickel/graphics/semaphore.hpp"
+#include "nickel/video/window.hpp"
 
 namespace nickel::graphics {
 
@@ -35,7 +36,9 @@ public:
     Sampler CreateSampler(const Sampler::Descriptor&);
     ShaderModule CreateShaderModule(const uint32_t* data, size_t size);
     Semaphore CreateSemaphore();
-    Fence CreateSemaphore(bool signaled);
+    Fence CreateFence(bool signaled);
+    
+    void AcquireSwapchainImageAndWait(video::Window& window);
 
 private:
     std::unique_ptr<DeviceImpl> m_impl;

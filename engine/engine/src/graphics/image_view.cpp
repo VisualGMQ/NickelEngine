@@ -6,7 +6,9 @@ namespace nickel::graphics {
 ImageView::ImageView(ImageViewImpl* impl) : m_impl{impl} {}
 
 ImageView::ImageView(const ImageView& o) : m_impl{o.m_impl} {
-    m_impl->IncRefcount();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
 }
 
 ImageView::ImageView(ImageView&& o) noexcept : m_impl{o.m_impl} {
@@ -15,9 +17,13 @@ ImageView::ImageView(ImageView&& o) noexcept : m_impl{o.m_impl} {
 
 ImageView& ImageView::operator=(const ImageView& o) noexcept {
     if (&o != this) {
-        m_impl->DecRefcount();
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
         m_impl = o.m_impl;
-        m_impl->IncRefcount();
+        if (m_impl) {
+            m_impl->IncRefcount();
+        }
     }
     return *this;
 }
@@ -31,7 +37,13 @@ ImageView& ImageView::operator=(ImageView&& o) noexcept {
 }
 
 ImageView::~ImageView() {
-    m_impl->DecRefcount();
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
+ImageView::operator bool() const noexcept {
+    return m_impl;
 }
 
 const ImageViewImpl& ImageView::Impl() const noexcept {
@@ -41,5 +53,6 @@ const ImageViewImpl& ImageView::Impl() const noexcept {
 ImageViewImpl& ImageView::Impl() noexcept {
     return *m_impl;
 }
+
 
 }  // namespace nickel::graphics

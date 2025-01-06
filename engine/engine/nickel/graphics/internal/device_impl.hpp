@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/graphics/cmd_pool.hpp"
 #include "nickel/graphics/device.hpp"
 #include "nickel/graphics/fence.hpp"
 #include "nickel/graphics/internal/bind_group_layout_impl.hpp"
@@ -15,6 +16,7 @@
 #include "nickel/graphics/sampler.hpp"
 #include "nickel/graphics/semaphore.hpp"
 #include "nickel/internal/pch.hpp"
+#include "nickel/video/window.hpp"
 #include "sampler_impl.hpp"
 #include "semaphore_impl.hpp"
 
@@ -57,9 +59,9 @@ public:
         }
 
         m_unused_index = 0;
+        m_resources.clear();
+        m_resources.shrink_to_fit();
     }
-
-    ~ResourceManager() { Clear(); }
 
 private:
     std::vector<T*> m_resources;
@@ -127,8 +129,11 @@ public:
     GraphicsPipeline CreateGraphicPipeline(const GraphicsPipeline::Descriptor&);
     Sampler CreateSampler(const Sampler::Descriptor&);
     ShaderModule CreateShaderModule(const uint32_t* data, size_t size);
+    CommandPool CreateCommandPool(VkCommandPoolCreateFlags flags);
     Semaphore CreateSemaphore();
-    Fence CreateSemaphore(bool signaled);
+    Fence CreateFence(bool signaled);
+    
+    void AcquireSwapchainImageAndWait(video::Window& window);
 
     ResourceManager<BufferImpl> m_buffers;
     ResourceManager<ImageImpl> m_images;
@@ -146,6 +151,12 @@ public:
 private:
     ImageInfo m_image_info;
     const AdapterImpl& m_adapter;
+    uint32_t m_cur_swapchain_image_index = 0;
+    uint32_t m_cur_frame = 0;
+    std::vector<Fence> m_render_fences;
+    std::vector<Semaphore> m_image_avaliable_sems;
+    std::vector<Semaphore> m_render_finish_sems;
+    CommandPool m_cmdpool;
 
     QueueFamilyIndices chooseQueue(VkPhysicalDevice phyDevice,
                                    VkSurfaceKHR surface);
@@ -157,6 +168,8 @@ private:
     VkPresentModeKHR queryPresentMode(VkPhysicalDevice, VkSurfaceKHR);
 
     void getAndCreateImageViews();
+    void createRenderRelateSyncObjs();
+    void createDefaultCmdPool();
 };
 
 }  // namespace nickel::graphics

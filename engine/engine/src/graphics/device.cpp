@@ -62,8 +62,12 @@ Semaphore Device::CreateSemaphore() {
     return m_impl->CreateSemaphore();
 }
 
-Fence Device::CreateSemaphore(bool signaled) {
-    return m_impl->CreateSemaphore(signaled);
+Fence Device::CreateFence(bool signaled) {
+    return m_impl->CreateFence(signaled);
+}
+
+void Device::AcquireSwapchainImageAndWait(video::Window& window) {
+    return m_impl->AcquireSwapchainImageAndWait(window);
 }
 
 }  // namespace nickel::graphics

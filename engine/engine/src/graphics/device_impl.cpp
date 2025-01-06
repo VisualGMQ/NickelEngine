@@ -83,6 +83,8 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
                      &m_present_queue);
 
     createSwapchain(impl.m_phyDevice, impl.m_surface, window_size);
+    createRenderRelateSyncObjs();
+    createDefaultCmdPool();
 }
 
 DeviceImpl::QueueFamilyIndices DeviceImpl::chooseQueue(
@@ -261,6 +263,19 @@ void DeviceImpl::getAndCreateImageViews() {
     }
 }
 
+void DeviceImpl::createRenderRelateSyncObjs() {
+    for (uint32_t i = 0; i < m_image_info.imagCount; i++) {
+        m_render_fences.push_back(CreateFence(false));
+        m_image_avaliable_sems.push_back(CreateSemaphore());
+        m_render_finish_sems.push_back(CreateSemaphore());
+    }
+}
+
+void DeviceImpl::createDefaultCmdPool() {
+    m_cmdpool =
+        CreateCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+}
+
 DeviceImpl::~DeviceImpl() {
     for (auto view : m_swapchain_image_views) {
         delete view;
@@ -325,12 +340,46 @@ ShaderModule DeviceImpl::CreateShaderModule(const uint32_t* data, size_t size) {
     return ShaderModule{m_shader_modules.Allocate(m_device, data, size)};
 }
 
+CommandPool DeviceImpl::CreateCommandPool(VkCommandPoolCreateFlags flags) {
+    return CommandPool{m_pools.Allocate(*this, flags)};
+}
+
 Semaphore DeviceImpl::CreateSemaphore() {
     return Semaphore{m_semaphores.Allocate(*this)};
 }
 
-Fence DeviceImpl::CreateSemaphore(bool signaled) {
+Fence DeviceImpl::CreateFence(bool signaled) {
     return Fence{m_fences.Allocate(*this, signaled)};
+}
+
+void DeviceImpl::AcquireSwapchainImageAndWait(video::Window& window) {
+    if (window.IsMinimize()) {
+        return;
+    }
+
+    VK_CALL(vkAcquireNextImageKHR(
+        m_device, m_swapchain, UINT64_MAX,
+        m_image_avaliable_sems[m_cur_frame].Impl().m_semaphore, VK_NULL_HANDLE,
+        &m_cur_swapchain_image_index));
+
+    VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
+    VK_CALL(vkWaitForFences(m_device, 1, &fence, true, UINT64_MAX));
+    VK_CALL(vkResetFences(m_device, 1, &fence));
+
+    m_cmdpool.Reset();
+
+    VkPresentInfoKHR info;
+    info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.pImageIndices = &m_cur_swapchain_image_index;
+    info.waitSemaphoreCount = 1;
+    info.pWaitSemaphores =
+        &m_render_finish_sems[m_cur_frame].Impl().m_semaphore;
+    info.swapchainCount = 1;
+    info.pSwapchains = &m_swapchain;
+
+    VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
+
+    m_cur_frame = (m_cur_frame + 1) % m_image_info.imagCount;
 }
 
 }  // namespace nickel::graphics

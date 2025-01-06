@@ -6,7 +6,9 @@ namespace nickel::graphics {
 RenderPass::RenderPass(RenderPassImpl* impl) : m_impl{impl} {}
 
 RenderPass::RenderPass(const RenderPass& o) : m_impl{o.m_impl} {
-    m_impl->IncRefcount();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
 }
 
 RenderPass::RenderPass(RenderPass&& o) noexcept : m_impl{o.m_impl} {
@@ -15,9 +17,13 @@ RenderPass::RenderPass(RenderPass&& o) noexcept : m_impl{o.m_impl} {
 
 RenderPass& RenderPass::operator=(const RenderPass& o) noexcept {
     if (&o != this) {
-        m_impl->DecRefcount();
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
         m_impl = o.m_impl;
-        m_impl->IncRefcount();
+        if (m_impl) {
+            m_impl->IncRefcount();
+        }
     }
     return *this;
 }
@@ -31,7 +37,13 @@ RenderPass& RenderPass::operator=(RenderPass&& o) noexcept {
 }
 
 RenderPass::~RenderPass() {
-    m_impl->DecRefcount();
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
+RenderPass::operator bool() const noexcept {
+    return m_impl;
 }
 
 const RenderPassImpl& RenderPass::Impl() const noexcept {
@@ -41,5 +53,6 @@ const RenderPassImpl& RenderPass::Impl() const noexcept {
 RenderPassImpl& RenderPass::Impl() noexcept {
     return *m_impl;
 }
+
 
 }  // namespace nickel::graphics

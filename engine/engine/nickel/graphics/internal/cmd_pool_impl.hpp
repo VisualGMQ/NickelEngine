@@ -11,6 +11,8 @@ public:
     ~CommandPoolImpl();
     bool CanResetSingleCmd() const noexcept;
 
+    void Reset();
+
     VkCommandPool m_pool;
 
 private:
