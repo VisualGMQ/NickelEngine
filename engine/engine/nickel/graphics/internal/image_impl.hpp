@@ -27,6 +27,7 @@ public:
 
     VkImage m_image;
     MemoryImpl* m_memory{};
+    std::vector<VkImageLayout> m_layouts;
 
 private:
     VkDevice m_device;
