@@ -19,38 +19,38 @@ public:
 
 #define LOGE(fmt, ...)                                                    \
     do {                                                                  \
-        LogSystem::GetInst().m_console_logger->error(fmt, ##__VA_ARGS__); \
-        LogSystem::GetInst().m_file_logger->error(fmt, ##__VA_ARGS__);    \
+        ::nickel::LogSystem::GetInst().m_console_logger->error(fmt, ##__VA_ARGS__); \
+        ::nickel::LogSystem::GetInst().m_file_logger->error(fmt, ##__VA_ARGS__);    \
     } while (0)
 
 #define LOGW(fmt, ...)                                                   \
     do {                                                                 \
-        LogSystem::GetInst().m_console_logger->warn(fmt, ##__VA_ARGS__); \
-        LogSystem::GetInst().m_file_logger->warn(fmt, ##__VA_ARGS__);    \
+        ::nickel::LogSystem::GetInst().m_console_logger->warn(fmt, ##__VA_ARGS__); \
+        ::nickel::LogSystem::GetInst().m_file_logger->warn(fmt, ##__VA_ARGS__);    \
     } while (0)
 
 #define LOGD(fmt, ...)                                                    \
     do {                                                                  \
-        LogSystem::GetInst().m_console_logger->debug(fmt, ##__VA_ARGS__); \
-        LogSystem::GetInst().m_file_logger->debug(fmt, ##__VA_ARGS__);    \
+        ::nickel::LogSystem::GetInst().m_console_logger->debug(fmt, ##__VA_ARGS__); \
+        ::nickel::LogSystem::GetInst().m_file_logger->debug(fmt, ##__VA_ARGS__);    \
     } while (0)
 
 #define LOGI(fmt, ...)                                                   \
     do {                                                                 \
-        LogSystem::GetInst().m_console_logger->info(fmt, ##__VA_ARGS__); \
-        LogSystem::GetInst().m_file_logger->info(fmt, ##__VA_ARGS__);    \
+        ::nickel::LogSystem::GetInst().m_console_logger->info(fmt, ##__VA_ARGS__); \
+        ::nickel::LogSystem::GetInst().m_file_logger->info(fmt, ##__VA_ARGS__);    \
     } while (0)
 
 #define LOGT(fmt, ...)                                                    \
     do {                                                                  \
-        LogSystem::GetInst().m_console_logger->trace(fmt, ##__VA_ARGS__); \
-        LogSystem::GetInst().m_file_logger->trace(fmt, ##__VA_ARGS__);    \
+        ::nickel::LogSystem::GetInst().m_console_logger->trace(fmt, ##__VA_ARGS__); \
+        ::nickel::LogSystem::GetInst().m_file_logger->trace(fmt, ##__VA_ARGS__);    \
     } while (0)
 
 #define LOGC(fmt, ...)                                                       \
     do {                                                                     \
-        LogSystem::GetInst().m_console_logger->critical(fmt, ##__VA_ARGS__); \
-        LogSystem::GetInst().m_file_logger->critical(fmt, ##__VA_ARGS__);    \
+        ::nickel::LogSystem::GetInst().m_console_logger->critical(fmt, ##__VA_ARGS__); \
+        ::nickel::LogSystem::GetInst().m_file_logger->critical(fmt, ##__VA_ARGS__);    \
         assert(false);                                                       \
     } while (0)
 
