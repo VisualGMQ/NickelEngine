@@ -2,12 +2,13 @@
 #include "nickel/common/singleton.hpp"
 #include "nickel/graphics/adapter.hpp"
 #include "nickel/video/window.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel {
 
 class Application;
 
-class Context : public Singlton<Context, true> {
+class NICKEL_API Context : public Singlton<Context, true> {
 public:
     Context();
     ~Context();
@@ -29,7 +30,7 @@ private:
     std::unique_ptr<Application> m_application;
 };
 
-class Application {
+class NICKEL_API Application {
 public:
     virtual void OnInit() {}
 

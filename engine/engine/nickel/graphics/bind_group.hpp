@@ -1,7 +1,9 @@
 ﻿#pragma once
+#include "nickel/graphics/enums.hpp"
 #include "nickel/graphics/buffer.hpp"
 #include "nickel/graphics/image.hpp"
 #include "nickel/graphics/sampler.hpp"
+#include "nickel/common/dllexport.hpp"
 
 #include <map>
 #include <variant>
@@ -10,7 +12,7 @@ namespace nickel::graphics {
 
 class BindGroupImpl;
 
-class BindGroup final {
+class NICKEL_API BindGroup final {
 public:
     struct BufferBinding final {
         enum class Type {
@@ -67,11 +69,12 @@ public:
     BindGroup& operator=(const BindGroup&) noexcept;
     BindGroup& operator=(BindGroup&&) noexcept;
     ~BindGroup();
-    
-    operator bool() const noexcept;
 
     const BindGroupImpl& Impl() const noexcept;
     BindGroupImpl& Impl() noexcept;
+    
+    void Release();
+    operator bool() const noexcept;
 
 private:
     BindGroupImpl* m_impl{};

@@ -98,10 +98,10 @@ struct WriteDescriptorHelper final {
     }
 
     void operator()(const BindGroup::ImageBinding& binding) const {
-        VkWriteDescriptorSet write_info;
+        VkWriteDescriptorSet write_info{};
         write_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-        VkDescriptorImageInfo image_info;
+        VkDescriptorImageInfo image_info{};
         image_info.imageView = binding.view.Impl().m_view;
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -116,10 +116,10 @@ struct WriteDescriptorHelper final {
     }
 
     void operator()(const BindGroup::CombinedSamplerBinding& binding) const {
-        VkWriteDescriptorSet write_info;
+        VkWriteDescriptorSet write_info{};
         write_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-        VkDescriptorImageInfo image_info;
+        VkDescriptorImageInfo image_info{};
         image_info.imageView = binding.view.Impl().m_view;
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         image_info.sampler = binding.sampler.Impl().m_sampler;

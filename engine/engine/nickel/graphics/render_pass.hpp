@@ -1,10 +1,11 @@
 ﻿#pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class RenderPassImpl;
 
-class RenderPass final {
+class NICKEL_API RenderPass final {
 public:
     struct Descriptor {
         std::vector<VkAttachmentDescription> attachments;
@@ -24,9 +25,10 @@ public:
     RenderPassImpl& Impl() noexcept;
     
     operator bool() const noexcept;
+    void Release();
 
 private:
-    RenderPassImpl* m_impl;
+    RenderPassImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

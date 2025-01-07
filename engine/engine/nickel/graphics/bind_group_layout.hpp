@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include "nickel/common/flags.hpp"
 #include "volk.h"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class BindGroupLayoutImpl;
 
-class BindGroupLayout final {
+class NICKEL_API BindGroupLayout final {
 public:
     struct Entry final {
         VkDescriptorType type;
@@ -27,6 +28,8 @@ public:
 
     const BindGroupLayoutImpl& Impl() const noexcept;
     BindGroupLayoutImpl& Impl() noexcept;
+
+    void Release();
 
 private:
     BindGroupLayoutImpl* m_impl{};

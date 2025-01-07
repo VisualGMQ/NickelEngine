@@ -1,6 +1,7 @@
 ﻿#pragma once
-#include "device.hpp"
+#include "nickel/graphics/device.hpp"
 #include "nickel/video/window.hpp"
+#include "nickel/common/dllexport.hpp"
 
 #include <memory>
 
@@ -8,7 +9,7 @@ namespace nickel::graphics {
 
 class AdapterImpl;
 
-class Adapter {
+class NICKEL_API Adapter {
 public:
     Adapter(const video::Window::Impl& window);
     ~Adapter();

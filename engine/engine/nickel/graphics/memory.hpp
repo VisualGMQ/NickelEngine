@@ -1,11 +1,12 @@
 #pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class Device;
 class MemoryImpl;
 
-class Memory {
+class NICKEL_API Memory {
 public:
     explicit Memory(MemoryImpl*);
     Memory(const Memory&) noexcept;
@@ -21,8 +22,10 @@ public:
 
     size_t Size() const noexcept;
 
+    void Release();
+
 private:
-    MemoryImpl* m_impl;
+    MemoryImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

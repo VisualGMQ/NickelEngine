@@ -54,4 +54,11 @@ MemoryImpl& Memory::Impl() noexcept {
     return *m_impl;
 }
 
+void Memory::Release() {
+    if (m_impl) {
+        m_impl->DecRefcount();
+        m_impl = nullptr;
+    }
+}
+
 }  // namespace nickel::graphics

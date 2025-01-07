@@ -1,13 +1,14 @@
 ﻿#pragma once
 #include "nickel/common/math/math.hpp"
 #include "nickel/graphics/render_pass.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 class ImageView;
 
 class FramebufferImpl;
 
-class Framebuffer {
+class NICKEL_API Framebuffer {
 public:
     struct Descriptor {
         std::vector<ImageView> m_views;
@@ -27,9 +28,10 @@ public:
     FramebufferImpl& Impl() noexcept;
     
     operator bool() const noexcept;
+    void Release();
 
 private:
-    FramebufferImpl* m_impl;
+    FramebufferImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

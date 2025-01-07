@@ -1,4 +1,5 @@
-﻿#define SDL_MAIN_USE_CALLBACKS
+﻿#pragma comment(lib, "NickelEngine-shared.lib" )
+#define SDL_MAIN_USE_CALLBACKS
 #include "SDL3/SDL_main.h"
 #include "nickel/common/log.hpp"
 #include "nickel/fs/dialog.hpp"
@@ -35,7 +36,6 @@ Runtime::Runtime() {
     } else {
         LOGI("no custom application");
     }
-   
 
     LOGI("running engine...");
 }

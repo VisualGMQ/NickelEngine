@@ -1,10 +1,11 @@
 #pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class SamplerImpl;
 
-class Sampler {
+class NICKEL_API Sampler {
 public:
     struct Descriptor {
         VkFilter magFilter;
@@ -36,9 +37,10 @@ public:
     SamplerImpl& Impl() noexcept;
 
     operator bool() const noexcept;
-
+    void Release();
+    
 private:
-    SamplerImpl* m_impl;
+    SamplerImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

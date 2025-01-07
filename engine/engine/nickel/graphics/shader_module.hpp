@@ -1,10 +1,11 @@
 #pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class ShaderModuleImpl;
 
-class ShaderModule {
+class NICKEL_API ShaderModule {
 public:
     ShaderModule() = default;
     explicit ShaderModule(ShaderModuleImpl*);
@@ -18,9 +19,10 @@ public:
     ShaderModuleImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
 private:
-    ShaderModuleImpl* m_impl;
+    ShaderModuleImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

@@ -1,11 +1,12 @@
 #pragma once
 #include "nickel/common/flags.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class BufferImpl;
 
-class Buffer {
+class NICKEL_API Buffer {
 public:
     struct Descriptor {
         size_t m_size;
@@ -38,9 +39,10 @@ public:
     void Flush(uint64_t offset, uint64_t size);
     
     operator bool() const noexcept;
+    void Release();
 
 private:
-    BufferImpl* m_impl;
+    BufferImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

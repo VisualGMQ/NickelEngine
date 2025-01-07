@@ -42,5 +42,15 @@ CommandImpl& Command::Impl() noexcept {
     return *m_impl;
 }
 
+void Command::Release() {
+    if (m_impl) {
+        m_impl->DecRefcount();
+        m_impl = nullptr;
+    }
+}
+
+Command::operator bool() const noexcept {
+    return m_impl;
+}
 
 }  // namespace nickel::graphics

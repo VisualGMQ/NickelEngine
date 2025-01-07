@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "nickel/graphics/bind_group_layout.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class PipelineLayoutImpl;
 
-class PipelineLayout {
+class NICKEL_API PipelineLayout {
 public:
     struct Descriptor {
         std::vector<BindGroupLayout> layouts;
@@ -24,9 +25,10 @@ public:
     PipelineLayoutImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
 private:
-    PipelineLayoutImpl* m_impl;
+    PipelineLayoutImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

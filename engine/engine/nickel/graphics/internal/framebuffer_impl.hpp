@@ -10,8 +10,8 @@ class RenderPass;
 class FramebufferImpl : public RefCountable {
 public:
     FramebufferImpl(DeviceImpl& dev, const Framebuffer::Descriptor&);
-
     ~FramebufferImpl();
+    void Release();
 
     VkFramebuffer m_fbo;
     std::vector<ImageView> m_views;

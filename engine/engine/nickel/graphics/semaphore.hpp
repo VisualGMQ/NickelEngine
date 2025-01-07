@@ -1,10 +1,11 @@
 ﻿#pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class SemaphoreImpl;
 
-class Semaphore {
+class NICKEL_API Semaphore {
 public:
     Semaphore() = default;
     explicit Semaphore(SemaphoreImpl*);
@@ -18,6 +19,7 @@ public:
 
     const SemaphoreImpl& Impl() const noexcept;
     SemaphoreImpl& Impl() noexcept;
+    void Release();
     
 private:
     SemaphoreImpl* m_impl{};

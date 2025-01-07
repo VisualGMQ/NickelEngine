@@ -7,18 +7,91 @@
 #include "nickel/graphics/internal/framebuffer_impl.hpp"
 #include "nickel/graphics/internal/graphics_pipeline_impl.hpp"
 #include "nickel/graphics/internal/image_impl.hpp"
-#include "nickel/graphics/internal/image_view_impl.hpp"
 #include "nickel/graphics/internal/pipeline_layout_impl.hpp"
 #include "nickel/graphics/internal/render_pass_impl.hpp"
 
 namespace nickel::graphics {
 
+struct RenderPassEncoder::ApplyRenderCmd {
+    explicit ApplyRenderCmd(Command& cmd): m_cmd{cmd} {}
+
+    void operator()(const BindGraphicsPipelineCmd& cmd) {
+        vkCmdBindPipeline(m_cmd.Impl().m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          cmd.pipeline.Impl().m_pipeline);
+        m_pipeline = &cmd.pipeline;
+    }
+
+    void operator()(const BindVertexBufferCmd& cmd) {
+        VkDeviceSize device_size = cmd.offset;
+        vkCmdBindVertexBuffers(m_cmd.Impl().m_cmd, cmd.slot, 1,
+                               &cmd.buffer.Impl().m_buffer, &device_size);
+    }
+
+    void operator()(const BindIndexBufferCmd& cmd) {
+        vkCmdBindIndexBuffer(m_cmd.Impl().m_cmd, cmd.buffer.Impl().m_buffer,
+                             cmd.offset, cmd.index_type);
+    }
+
+    void operator()(const SetPushConstantCmd& cmd) {
+        vkCmdPushConstants(m_cmd.Impl().m_cmd,
+                           m_pipeline->Impl().m_layout.Impl().m_pipeline_layout,
+                           cmd.stage, cmd.offset, cmd.size, cmd.data);
+    }
+
+    void operator()(const DrawCmd& cmd) {
+        switch (cmd.m_type) {
+            case DrawCmd::Type::Unknown:
+                LOGE("unknown draw call tyep");
+                break;
+            case DrawCmd::Type::Vertices:
+                vkCmdDrawIndexed(m_cmd.Impl().m_cmd, cmd.elem_count,
+                                 cmd.instance_count, cmd.first_elem,
+                                 cmd.vertex_offset, cmd.first_instance);
+                break;
+            case DrawCmd::Type::Indexed:
+                vkCmdDraw(m_cmd.Impl().m_cmd, cmd.elem_count,
+                          cmd.instance_count, cmd.first_elem,
+                          cmd.first_instance);
+                break;
+        }
+    }
+
+    void operator()(const SetViewportCmd& cmd) {
+        VkViewport viewport;
+        viewport.x = cmd.viewport.x;
+        viewport.y = cmd.viewport.y;
+        viewport.width = cmd.viewport.width;
+        viewport.height = cmd.viewport.height;
+        viewport.minDepth = cmd.viewport.min_depth;
+        viewport.maxDepth = cmd.viewport.max_depth;
+        vkCmdSetViewport(m_cmd.Impl().m_cmd, 0, 1, &viewport);
+    }
+
+    void operator()(const SetBindGroupCmd& cmd) {
+        auto& descriptor_sets = cmd.bind_group.Impl().m_set_lists;
+        vkCmdBindDescriptorSets(
+            m_cmd.Impl().m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, 0,
+            descriptor_sets.size(), descriptor_sets.data(),
+            cmd.dynamic_offsets.size(), cmd.dynamic_offsets.data());
+    }
+
+private:
+    Command& m_cmd;
+    const GraphicsPipeline* m_pipeline{};
+};
+
 RenderPassEncoder::RenderPassEncoder(Command& cmd) : m_cmd{cmd} {}
 
 void RenderPassEncoder::Draw(uint32_t vertex_count, uint32_t instance_count,
                              uint32_t first_vertex, uint32_t first_instance) {
-    vkCmdDraw(m_cmd.Impl().m_cmd, vertex_count, instance_count, first_vertex,
-              first_instance);
+    DrawCmd cmd;
+    cmd.m_type = DrawCmd::Type::Vertices;
+    cmd.elem_count = vertex_count;
+    cmd.instance_count = instance_count;
+    cmd.first_elem = first_vertex;
+    cmd.first_instance = first_instance;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::DrawIndexed(uint32_t index_count,
@@ -26,115 +99,211 @@ void RenderPassEncoder::DrawIndexed(uint32_t index_count,
                                     uint32_t first_index,
                                     uint32_t vertex_offset,
                                     uint32_t first_instance) {
-    vkCmdDrawIndexed(m_cmd.Impl().m_cmd, index_count, instance_count,
-                     first_index, vertex_offset, first_instance);
+    DrawCmd cmd;
+    cmd.m_type = DrawCmd::Type::Vertices;
+    cmd.elem_count = index_count;
+    cmd.instance_count = instance_count;
+    cmd.first_elem = first_index;
+    cmd.first_instance = first_instance;
+    cmd.vertex_offset = vertex_offset;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::BindVertexBuffer(uint32_t slot, Buffer buffer,
                                          uint64_t offset) {
-    VkDeviceSize device_size = offset;
-    vkCmdBindVertexBuffers(m_cmd.Impl().m_cmd, slot, 1, &buffer.Impl().m_buffer,
-                           &device_size);
+    BindVertexBufferCmd cmd;
+    cmd.slot = slot;
+    cmd.buffer = buffer;
+    cmd.offset = offset;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::BindIndexBuffer(Buffer buffer, VkIndexType type,
                                         uint64_t offset) {
-    vkCmdBindIndexBuffer(m_cmd.Impl().m_cmd, buffer.Impl().m_buffer, offset,
-                         type);
+    BindIndexBufferCmd cmd;
+    cmd.index_type = type;
+    cmd.buffer = buffer;
+    cmd.offset = offset;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::SetBindGroup(const BindGroup& bind_group) {
-    auto& descriptor_sets = bind_group.Impl().m_set_lists;
-    vkCmdBindDescriptorSets(
-        m_cmd.Impl().m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, 0,
-        descriptor_sets.size(), descriptor_sets.data(), 0, nullptr);
+    SetBindGroupCmd cmd;
+    cmd.bind_group = bind_group;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::SetBindGroup(
     const BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
-    auto& descriptor_sets = bind_group.Impl().m_set_lists;
-    vkCmdBindDescriptorSets(
-        m_cmd.Impl().m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, 0,
-        descriptor_sets.size(), descriptor_sets.data(), dynamicOffset.size(),
-        dynamicOffset.data());
+    SetBindGroupCmd cmd;
+    cmd.bind_group = bind_group;
+    cmd.dynamic_offsets = dynamicOffset;
+    m_record_cmds.push_back(cmd);
+
+    auto& desc = cmd.bind_group.Impl().GetDescriptor();
+    for (auto& [_, entry] : desc.entries) {
+        auto& bind_entry = entry.binding.entry;
+        ImageImpl* image_impl{};
+        if (auto binding = std::get_if<BindGroup::ImageBinding>(&bind_entry)) {
+            image_impl = &binding->view.GetImage().Impl();
+        }
+        if (auto binding = std::get_if<BindGroup::CombinedSamplerBinding>(&bind_entry)) {
+            image_impl = &binding->view.GetImage().Impl();
+        }
+
+        if (!image_impl) {
+            continue;
+        }
+
+        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        auto format = image_impl->Format();
+        if (format == VK_FORMAT_D16_UNORM || format == VK_FORMAT_D32_SFLOAT) {
+            aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+        if (format == VK_FORMAT_S8_UINT) {
+            aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        if (format == VK_FORMAT_D16_UNORM_S8_UINT ||
+            format == VK_FORMAT_D24_UNORM_S8_UINT ||
+            format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+            aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+        
+        for (size_t i = 0; i < image_impl->m_layouts.size(); i++) {
+            auto& layout = image_impl->m_layouts[i];
+            if (layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.image = image_impl->m_image;
+                barrier.oldLayout = layout;
+                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.subresourceRange.aspectMask = aspect;
+                barrier.subresourceRange.layerCount = 1;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.baseMipLevel = 0;
+                vkCmdPipelineBarrier(m_cmd.Impl().m_cmd,
+                                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                     VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
+                                     nullptr, 0, nullptr, 1, &barrier);
+                m_cmd.Impl().AddLayoutTransition(
+                    image_impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i);
+            }
+        }
+    }
 }
 
 void RenderPassEncoder::SetPipeline(const GraphicsPipeline& pipeline) {
-    m_pipeline = &pipeline;
-    vkCmdBindPipeline(m_cmd.Impl().m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      pipeline.Impl().m_pipeline);
+    BindGraphicsPipelineCmd cmd;
+    cmd.pipeline = pipeline;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::SetPushConstant(VkShaderStageFlags stage,
                                         const void* value, uint32_t offset,
                                         uint32_t size) {
-    vkCmdPushConstants(m_cmd.Impl().m_cmd,
-                       m_pipeline->Impl().m_layout.Impl().m_pipeline_layout,
-                       stage, offset, size, value);
+    SetPushConstantCmd cmd;
+    cmd.stage = stage;
+    cmd.data = value;
+    cmd.offset = offset;
+    cmd.size = size;
+    m_record_cmds.push_back(cmd);
 }
 
-void RenderPassEncoder::SetViewport(float x, float y, float width, float height,
-                                    float min_depth, float max_depth) {
-    VkViewport viewport;
-    viewport.x = x;
-    viewport.y = y;
-    viewport.width = width;
-    viewport.height = height;
-    viewport.minDepth = min_depth;
-    viewport.maxDepth = max_depth;
-    vkCmdSetViewport(m_cmd.Impl().m_cmd, 0, 1, &viewport);
+void RenderPassEncoder::SetViewport(const Viewport& viewport) {
+    SetViewportCmd cmd;
+    cmd.viewport = viewport;
+    m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::End() {
+    ApplyRenderCmd applier(m_cmd);
+    for (auto& cmd : m_record_cmds) {
+        std::visit(applier, cmd);
+    }
+    m_record_cmds.clear();
     vkCmdEndRenderPass(m_cmd.Impl().m_cmd);
 }
 
+CopyEncoder::CopyEncoder(Command& cmd) : m_cmd{cmd} {}
+
 CommandEncoder::CommandEncoder(Command& cmd) : m_cmd{cmd} {}
 
-void CommandEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
-                                        const Buffer& dst, uint64_t dstOffset,
-                                        uint64_t size) {
-    VkBufferCopy region;
-    region.size = size;
-    region.srcOffset = srcOffset;
-    region.dstOffset = dstOffset;
-
-    vkCmdCopyBuffer(m_cmd.Impl().m_cmd, src.Impl().m_buffer,
-                    dst.Impl().m_buffer, 1, &region);
-
-    m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
+CopyEncoder CommandEncoder::BeginCopy() {
+    return CopyEncoder{m_cmd};
 }
 
-void CommandEncoder::CopyBufferToTexture(const Buffer& src, Image& dst,
-                                         const VkBufferImageCopy& copy) {
-    for (size_t i = 0; i < dst.Impl().Extent().l; i++) {
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.image = dst.Impl().m_image;
-        barrier.oldLayout = dst.Impl().m_layouts[i];
-        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_NONE;
-        barrier.subresourceRange.layerCount = 1;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.baseMipLevel = 0;
-        vkCmdPipelineBarrier(m_cmd.Impl().m_cmd,
-                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
-                             nullptr, 1, &barrier);
-        m_cmd.Impl().AddLayoutTransition(
-            &dst.Impl(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i);
+void CopyEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
+                                     const Buffer& dst, uint64_t dstOffset,
+                                     uint64_t size) {
+    BufCopyBuf copy_cmd{src, dst, srcOffset, dstOffset, size};
+    m_buffer_copies.emplace_back(std::move(copy_cmd));
+}
+
+void CopyEncoder::CopyBufferToTexture(const Buffer& src, Image& dst,
+                                      const BufferImageCopy& copy) {
+    BufCopyImage copy_cmd{src, dst, copy};
+    m_image_copies.emplace_back(std::move(copy_cmd));
+}
+
+void CopyEncoder::End() {
+    for (auto& copy_cmd : m_buffer_copies) {
+        VkBufferCopy region;
+        region.size = copy_cmd.size;
+        region.srcOffset = copy_cmd.src_offset;
+        region.dstOffset = copy_cmd.dst_offset;
+
+        vkCmdCopyBuffer(m_cmd.Impl().m_cmd, copy_cmd.src.Impl().m_buffer,
+                        copy_cmd.dst.Impl().m_buffer, 1, &region);
+
+        m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
     }
 
-    vkCmdCopyBufferToImage(m_cmd.Impl().m_cmd, src.Impl().m_buffer,
-                           dst.Impl().m_image,
-                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &copy);
+    for (auto& copy_cmd : m_image_copies) {
+        for (size_t i = 0; i < copy_cmd.copy.imageExtent.depth; i++) {
+            // TODO: more precious range
+            size_t idx = i + copy_cmd.copy.imageOffset.z;
 
-    m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.image = copy_cmd.dst.Impl().m_image;
+            barrier.oldLayout = copy_cmd.dst.Impl().m_layouts[idx];
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_NONE;
+            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.baseMipLevel = 0;
+            vkCmdPipelineBarrier(m_cmd.Impl().m_cmd,
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr,
+                                 0, nullptr, 1, &barrier);
+            m_cmd.Impl().AddLayoutTransition(
+                &copy_cmd.dst.Impl(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i);
+        }
+
+        VkBufferImageCopy copy;
+        copy.bufferRowLength = copy_cmd.copy.bufferRowLength;
+        copy.bufferOffset = copy_cmd.copy.bufferOffset;
+        copy.bufferImageHeight = copy_cmd.copy.bufferImageHeight;
+        copy.imageSubresource = copy_cmd.copy.imageSubresource;
+        copy.imageOffset = copy_cmd.copy.imageOffset;
+        copy.imageExtent = copy_cmd.copy.imageExtent;
+
+        vkCmdCopyBufferToImage(m_cmd.Impl().m_cmd, copy_cmd.src.Impl().m_buffer,
+                               copy_cmd.dst.Impl().m_image,
+                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1,
+                               &copy);
+
+        m_cmd.Impl().m_flags |= CommandImpl::Flag::Transfer;
+    }
+
+    m_buffer_copies.clear();
+    m_image_copies.clear();
 }
 
 RenderPassEncoder CommandEncoder::BeginRenderPass(
@@ -179,7 +348,6 @@ RenderPassEncoder CommandEncoder::BeginRenderPass(
 }
 
 Command& CommandEncoder::Finish() {
-    vkCmdEndRendering(m_cmd.Impl().m_cmd);
     return m_cmd;
 }
 

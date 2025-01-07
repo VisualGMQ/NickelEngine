@@ -281,6 +281,12 @@ DeviceImpl::~DeviceImpl() {
     for (auto view : m_swapchain_image_views) {
         delete view;
     }
+
+    m_render_fences.clear();
+    m_image_avaliable_sems.clear();
+    m_render_finish_sems.clear();
+    m_cmdpool.Release();
+    
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     m_samplers.Clear();
     m_image_views.Clear();
