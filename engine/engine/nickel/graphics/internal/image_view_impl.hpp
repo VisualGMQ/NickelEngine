@@ -13,8 +13,9 @@ public:
 
     // only for swapchain image view hack
     ImageViewImpl(VkDevice, VkImageView);
-
     ~ImageViewImpl();
+
+    void Release();
 
     Image GetImage() const;
 

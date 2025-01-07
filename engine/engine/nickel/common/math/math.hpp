@@ -4,6 +4,7 @@
 #include "nickel/common/math/quaternion.hpp"
 #include "nickel/common/math/units.hpp"
 #include "nickel/common/math/view.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel {
 
@@ -28,9 +29,9 @@ using Quat = Quaternion<MathElemType>;
 
 constexpr auto PI = GenericPI<MathElemType>;
 
-Radians operator"" _rad(long double);
-Degrees operator"" _deg(long double);
-Radians operator"" _rad(unsigned long long);
-Degrees operator"" _deg(unsigned long long);
+Radians NICKEL_API operator"" _rad(long double);
+Degrees NICKEL_API operator"" _deg(long double);
+Radians NICKEL_API operator"" _rad(unsigned long long);
+Degrees NICKEL_API operator"" _deg(unsigned long long);
 
 }  // namespace nickel

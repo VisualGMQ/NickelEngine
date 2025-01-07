@@ -36,6 +36,13 @@ BindGroup& BindGroup::operator=(BindGroup&& o) noexcept {
     return *this;
 }
 
+void BindGroup::Release() {
+    if (m_impl) {
+        m_impl->DecRefcount();
+        m_impl = nullptr;
+    }
+}
+
 BindGroup::~BindGroup() {
     if (m_impl) {
         m_impl->DecRefcount();

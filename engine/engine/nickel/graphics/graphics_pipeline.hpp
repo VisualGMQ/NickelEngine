@@ -2,12 +2,13 @@
 #include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/render_pass.hpp"
 #include "nickel/graphics/shader_module.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class GraphicsPipelineImpl;
 
-class GraphicsPipeline {
+class NICKEL_API GraphicsPipeline {
 public:
     struct ShaderStage {
         ShaderModule module;
@@ -43,9 +44,10 @@ public:
     GraphicsPipelineImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
 private:
-    GraphicsPipelineImpl* m_impl;
+    GraphicsPipelineImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

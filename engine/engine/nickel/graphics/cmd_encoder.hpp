@@ -5,15 +5,20 @@
 #include "nickel/graphics/cmd.hpp"
 #include "nickel/graphics/graphics_pipeline.hpp"
 #include "nickel/graphics/image.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class Framebuffer;
 
-class RenderPassEncoder final {
+struct NICKEL_API Viewport {
+    float x, y, width, height, min_depth, max_depth;
+};
+
+class NICKEL_API RenderPassEncoder final {
 public:
     explicit RenderPassEncoder(Command& cmd);
-
+    
     void Draw(uint32_t vertex_count, uint32_t instance_count,
               uint32_t first_vertex, uint32_t first_instance);
     void DrawIndexed(uint32_t index_count, uint32_t instance_count,
@@ -27,38 +32,119 @@ public:
     void SetPipeline(const GraphicsPipeline&);
     void SetPushConstant(VkShaderStageFlags stage, const void* value,
                          uint32_t offset, uint32_t size);
-    void SetViewport(float x, float y, float width, float height,
-                     float min_depth, float max_depth);
+    void SetViewport(const Viewport&);
 
     void End();
 
 private:
-    Command& m_cmd;
-    const GraphicsPipeline* m_pipeline{};
-};
+    struct SetBindGroupCmd {
+        BindGroup bind_group;
+        std::vector<uint32_t> dynamic_offsets;
+    };
 
-class CommandEncoder {
-public:
-    struct BufTexCopySrc final {
+    struct SetPushConstantCmd {
+        VkShaderStageFlags stage;
+        const void* data;
+        uint32_t offset;
+        uint32_t size;
+
+        operator bool() const noexcept { return data != nullptr; }
+    };
+
+    struct BindVertexBufferCmd {
+        uint32_t slot;
         Buffer buffer;
         uint64_t offset;
-        uint64_t rowLength = 0;     // 0 means whole buffer, in texel
-        uint64_t rowsPerImage = 0;  // 0 means whole buffer
+
+        operator bool() const noexcept { return buffer; }
     };
 
-    struct BufTexCopyDst final {
-        uint32_t miplevel = 0;
-        SVector<uint32_t, 3> origin;
-        Image image;
+    struct BindIndexBufferCmd {
+        Buffer buffer;
+        VkIndexType index_type;
+        uint64_t offset;
+
+        operator bool() const noexcept { return buffer; }
     };
 
-    explicit CommandEncoder(Command& cmd);
+    struct BindGraphicsPipelineCmd {
+        GraphicsPipeline pipeline;
+    };
 
+    struct DrawCmd {
+        enum class Type {
+            Unknown,
+            Vertices,
+            Indexed,
+
+            // Indirect
+        } m_type = Type::Unknown;
+
+        uint32_t elem_count;
+        uint32_t instance_count;
+        uint32_t first_elem;
+        uint32_t vertex_offset;
+        uint32_t first_instance;
+    };
+
+    struct SetViewportCmd {
+        Viewport viewport;
+    };
+
+    using Cmd = std::variant<BindGraphicsPipelineCmd, BindIndexBufferCmd,
+                             BindVertexBufferCmd, SetPushConstantCmd,
+                             SetBindGroupCmd, DrawCmd, SetViewportCmd>;
+    struct ApplyRenderCmd;
+
+    Command& m_cmd;
+    std::vector<Cmd> m_record_cmds;
+};
+
+class NICKEL_API CopyEncoder final {
+public:
+    struct BufferImageCopy {
+        VkDeviceSize bufferOffset;
+        uint32_t bufferRowLength;
+        uint32_t bufferImageHeight;
+        VkImageSubresourceLayers imageSubresource;
+        VkOffset3D imageOffset;
+        VkExtent3D imageExtent;
+    };
+
+    explicit CopyEncoder(Command& cmd);
     void CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                             const Buffer& dst, uint64_t dstOffset,
                             uint64_t size);
     void CopyBufferToTexture(const Buffer& src, Image& dst,
-                             const VkBufferImageCopy&);
+                             const BufferImageCopy&);
+
+    void End();
+
+private:
+    struct BufCopyBuf {
+        const Buffer& src;
+        const Buffer& dst;
+        uint64_t src_offset{};
+        uint64_t dst_offset{};
+        uint64_t size{};
+    };
+
+    struct BufCopyImage {
+        const Buffer& src;
+        Image& dst;
+        BufferImageCopy copy;
+    };
+
+    Command& m_cmd;
+    std::vector<BufCopyBuf> m_buffer_copies;
+    std::vector<BufCopyImage> m_image_copies;
+};
+
+class NICKEL_API CommandEncoder {
+public:
+    explicit CommandEncoder(Command& cmd);
+
+    CopyEncoder BeginCopy();
     RenderPassEncoder BeginRenderPass(
         const RenderPass&, const Framebuffer& fbo,
         const std::vector<VkClearValue>& clear_values);

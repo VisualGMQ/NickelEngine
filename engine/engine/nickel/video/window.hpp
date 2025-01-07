@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include "nickel/common/math/smatrix.hpp"
+#include "nickel/common/dllexport.hpp"
 
 #include <memory>
 #include <string>
 
 namespace nickel::video {
 
-class Window {
+class NICKEL_API Window {
 public:
     class Impl;
     

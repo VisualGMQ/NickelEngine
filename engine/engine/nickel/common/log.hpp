@@ -6,9 +6,10 @@
 #include "spdlog/sinks/android_sink.h"
 #endif
 #include "spdlog/spdlog.h"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel {
-class LogSystem : public Singlton<LogSystem, false> {
+class NICKEL_API LogSystem : public Singlton<LogSystem, false> {
 public:
     LogSystem();
 

@@ -1,10 +1,11 @@
 ﻿#pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class FenceImpl;
 
-class Fence {
+class NICKEL_API Fence {
 public:
     Fence() = default;
     explicit Fence(FenceImpl*);
@@ -18,9 +19,10 @@ public:
     FenceImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
 private:
-    FenceImpl* m_impl;
+    FenceImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

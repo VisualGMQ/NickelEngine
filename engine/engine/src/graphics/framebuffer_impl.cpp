@@ -36,4 +36,8 @@ FramebufferImpl::~FramebufferImpl() {
     vkDestroyFramebuffer(m_device.m_device, m_fbo, nullptr);
 }
 
+void FramebufferImpl::Release() {
+    m_views.clear();
+}
+
 }  // namespace nickel::graphics

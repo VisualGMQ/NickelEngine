@@ -54,5 +54,12 @@ RenderPassImpl& RenderPass::Impl() noexcept {
     return *m_impl;
 }
 
+void RenderPass::Release() {
+    if (m_impl) {
+        m_impl->DecRefcount();
+        m_impl = nullptr;
+    }
+}
+
 
 }  // namespace nickel::graphics

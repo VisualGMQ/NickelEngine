@@ -12,6 +12,7 @@
 #include "nickel/graphics/sampler.hpp"
 #include "nickel/graphics/semaphore.hpp"
 #include "nickel/video/window.hpp"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
@@ -25,7 +26,7 @@ struct SwapchainImageInfo {
     VkSurfaceFormatKHR format;
 };
 
-class Device {
+class NICKEL_API Device {
 public:
     explicit Device(DeviceImpl* impl);
     ~Device();
@@ -50,7 +51,7 @@ public:
     void Submit(Command& cmd);
 
 private:
-    DeviceImpl* m_impl;
+    DeviceImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

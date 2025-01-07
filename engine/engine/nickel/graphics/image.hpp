@@ -1,12 +1,13 @@
 #pragma once
 #include "volk.h"
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class ImageViewImpl;
 class Image;
 
-class ImageView {
+class NICKEL_API ImageView {
 public:
     struct Descriptor {
         VkImageViewType viewType;
@@ -28,6 +29,7 @@ public:
     ImageViewImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
 private:
     ImageViewImpl* m_impl;
@@ -35,7 +37,7 @@ private:
 
 class ImageImpl;
 
-class Image {
+class NICKEL_API Image {
 public:
     struct Descriptor {
         VkImageType imageType;
@@ -63,9 +65,10 @@ public:
     ImageImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
 private:
-    ImageImpl* m_impl;
+    ImageImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

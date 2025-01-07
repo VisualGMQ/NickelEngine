@@ -49,3 +49,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
 nickel::graphics::GraphicsPipelineImpl::~GraphicsPipelineImpl() {
     vkDestroyPipeline(m_device.m_device, m_pipeline, nullptr);
 }
+
+void nickel::graphics::GraphicsPipelineImpl::Release() {
+    m_layout.Release();
+}

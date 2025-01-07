@@ -27,6 +27,10 @@ ImageViewImpl::~ImageViewImpl() {
     vkDestroyImageView(m_device, m_view, nullptr);
 }
 
+void ImageViewImpl::Release() {
+    m_image.Release();
+}
+
 Image ImageViewImpl::GetImage() const {
     return Image{m_image};
 }

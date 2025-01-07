@@ -1,10 +1,11 @@
 ﻿#pragma once
+#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class CommandPoolImpl;
 
-class CommandPool {
+class NICKEL_API CommandPool {
 public:
     CommandPool() = default;
     explicit CommandPool(CommandPoolImpl*);
@@ -18,11 +19,12 @@ public:
     CommandPoolImpl& Impl() noexcept;
 
     operator bool() const noexcept;
+    void Release();
 
     void Reset();
 
 private:
-    CommandPoolImpl* m_impl;
+    CommandPoolImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

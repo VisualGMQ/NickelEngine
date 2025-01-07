@@ -12,6 +12,8 @@ public:
     GraphicsPipelineImpl(DeviceImpl&, const GraphicsPipeline::Descriptor&);
     ~GraphicsPipelineImpl();
 
+    void Release();
+
     VkPipeline m_pipeline;
     PipelineLayout m_layout;
 
