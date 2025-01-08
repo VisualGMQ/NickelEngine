@@ -75,7 +75,7 @@ void BufferImpl::allocateMem(DeviceImpl& device, VkPhysicalDevice phyDevice,
 Flags<VkMemoryPropertyFlagBits> BufferImpl::getMemoryProperty(
     VkPhysicalDevice phyDevice, const Buffer::Descriptor& desc) {
     Flags<VkMemoryPropertyFlagBits> mem_props;
-    auto usageBits = desc.m_usage;
+    auto usageBits = static_cast<VkBufferUsageFlags>(desc.m_usage);
     if (usageBits == VK_BUFFER_USAGE_TRANSFER_SRC_BIT) {
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(phyDevice, &props);

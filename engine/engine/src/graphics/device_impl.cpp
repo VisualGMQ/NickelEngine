@@ -2,6 +2,7 @@
 #include "nickel/common/log.hpp"
 #include "nickel/graphics/internal/adapter_impl.hpp"
 #include "nickel/graphics/internal/cmd_impl.hpp"
+#include "nickel/graphics/internal/enum_convert.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
 namespace nickel::graphics {
@@ -125,8 +126,7 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phyDev, surface,
                                                       &capacities));
 
-    m_image_info = queryImageInfo(phyDev, window_size, surface);
-    auto [extent, imageCount, format] = m_image_info;
+    auto [extent, count, format] = queryImageInfo(phyDev, window_size, surface);
     auto presentMode = queryPresentMode(phyDev, surface);
 
     auto& queueIndices = m_queue_indices;
@@ -144,13 +144,13 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     createInfo.surface = surface;
     createInfo.clipped = true;
     createInfo.presentMode = presentMode;
-    createInfo.minImageCount = imageCount;
+    createInfo.minImageCount = count;
     createInfo.imageUsage =
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     createInfo.imageExtent.width = extent.w;
     createInfo.imageExtent.height = extent.h;
-    createInfo.imageFormat = format.format;
-    createInfo.imageColorSpace = format.colorSpace;
+    createInfo.imageFormat = Format2Vk(format.format);
+    createInfo.imageColorSpace = ImageColorSpace2Vk(format.colorSpace);
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.imageArrayLayers = 1;
     createInfo.preTransform = capacities.currentTransform;
@@ -202,8 +202,11 @@ SwapchainImageInfo DeviceImpl::queryImageInfo(
     }
 
     return {
-        {extent.width, extent.height},
-        imageCount, *chooseFormat
+        {                extent.width,extent.height                                      },
+        imageCount,
+        SurfaceFormatKHR{
+         VkFormat2Format(chooseFormat->format),
+         VkColorSpace2ImageColorSpace(chooseFormat->colorSpace)}
     };
 }
 
@@ -250,7 +253,7 @@ void DeviceImpl::getAndCreateImageViews() {
         ci.components.b = VK_COMPONENT_SWIZZLE_B;
         ci.components.a = VK_COMPONENT_SWIZZLE_A;
         ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ci.format = m_image_info.format.format;
+        ci.format = Format2Vk(m_image_info.m_surface_format.format);
         ci.subresourceRange = range;
 
         VkImageView view;
@@ -265,7 +268,7 @@ void DeviceImpl::getAndCreateImageViews() {
 }
 
 void DeviceImpl::createRenderRelateSyncObjs() {
-    for (uint32_t i = 0; i < m_image_info.imagCount; i++) {
+    for (uint32_t i = 0; i < m_image_info.m_image_count; i++) {
         m_render_fences.push_back(CreateFence(false));
         m_image_avaliable_sems.push_back(CreateSemaphore());
         m_render_finish_sems.push_back(CreateSemaphore());
@@ -286,7 +289,7 @@ DeviceImpl::~DeviceImpl() {
     m_image_avaliable_sems.clear();
     m_render_finish_sems.clear();
     m_cmdpool.Release();
-    
+
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     m_samplers.Clear();
     m_image_views.Clear();
@@ -303,8 +306,7 @@ DeviceImpl::~DeviceImpl() {
     vkDestroyDevice(m_device, nullptr);
 }
 
-const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo()
-    const noexcept {
+const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo() const noexcept {
     return m_image_info;
 }
 
@@ -432,7 +434,7 @@ void DeviceImpl::AcquireSwapchainImageAndWait(video::Window& window) {
 
     VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
 
-    m_cur_frame = (m_cur_frame + 1) % m_image_info.imagCount;
+    m_cur_frame = (m_cur_frame + 1) % m_image_info.m_image_count;
 }
 
 }  // namespace nickel::graphics

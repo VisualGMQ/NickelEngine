@@ -1,6 +1,7 @@
 ﻿#pragma once
-#include "nickel/graphics/enums.hpp"
 #include "nickel/common/dllexport.hpp"
+#include "nickel/common/flags.hpp"
+#include "nickel/graphics/enums.hpp"
 
 namespace nickel::graphics {
 
@@ -10,7 +11,7 @@ class NICKEL_API BindGroupLayout final {
 public:
     struct Entry final {
         BindGroupEntryType type;
-        ShaderStageType shader_stage;
+        Flags<ShaderStage> shader_stage;
         uint32_t arraySize = 1;
     };
 

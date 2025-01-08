@@ -20,6 +20,9 @@ struct getDescriptorTypeHelper {
             case BindGroup::BufferBinding::Type::DynamicUniform:
                 return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         }
+
+        NICKEL_CANT_REACH();
+        return {};
     }
 
     VkDescriptorType operator()(const BindGroup::SamplerBinding&) const {
@@ -33,6 +36,9 @@ struct getDescriptorTypeHelper {
             case BindGroup::ImageBinding::Type::StorageImage:
                 return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         }
+        
+        NICKEL_CANT_REACH();
+        return {};
     }
 
     VkDescriptorType operator()(
@@ -61,7 +67,7 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
     VK_CALL(vkCreateDescriptorSetLayout(m_device, &ci, nullptr, &m_layout));
 
     uint32_t count =
-        dev.GetSwapchainImageInfo().imagCount * MaxDrawCallPerCmdBuf;
+        dev.GetSwapchainImageInfo().m_image_count * MaxDrawCallPerCmdBuf;
     createPool(count, desc);
     allocSets(count);
 }
@@ -87,7 +93,7 @@ VkDescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
 
     binding.binding = slot;
     binding.descriptorCount = entry.arraySize;
-    binding.stageFlags = static_cast<VkShaderStageFlagBits>(entry.shader_stage);
+    binding.stageFlags = ShaderStage2Vk(entry.shader_stage);
     binding.descriptorType = BindGroupEntryType2Vk(entry.type);
     return binding;
 }

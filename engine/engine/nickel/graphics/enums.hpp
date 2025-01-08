@@ -75,7 +75,7 @@ enum class SampleCount {
 };
 
 // don't change value! copied from volk.hpp directly
-enum class ImageFormat {
+enum class Format {
     UNDEFINED = 0,
 
     R4G4_UNORM_PACK8 = 1,
@@ -326,13 +326,6 @@ enum class ImageFormat {
     PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
 };
 
-enum class ShaderStage {
-    Vertex = 0x01,
-    Compute = 0x02,
-    Fragment = 0x04,
-    Geometry = 0x08,
-};
-
 enum class DepthCompare {
     DecrementClamp,
     DecrementWrap,
@@ -423,6 +416,7 @@ enum class PolygonMode {
 enum class AttachmentLoadOp {
     Clear,
     Load,
+    DontCare,
 };
 
 enum class AttachmentStoreOp {
@@ -476,15 +470,15 @@ enum class VertexFormat {
     Sint32x4,
 };
 
-enum class ShaderStageType {
-    Vertex,
-    TessellationControl,
-    TessellationEvaluation,
-    Geometry,
-    Fragment,
-    Compute,
-    AllGraphics,
-    All,
+enum class ShaderStage {
+    Vertex = 0x01,
+    TessellationControl = 0x02,
+    TessellationEvaluation = 0x04,
+    Geometry = 0x08,
+    Fragment = 0x10,
+    Compute = 0x20,
+    AllGraphics = 0x1F,
+    All = 0x7FFFFFFF,
 };
 
 enum class BorderColor {
@@ -514,6 +508,116 @@ enum class BindGroupEntryType {
     StoragesBufferDynamic,
     InputAttachment,
     InlineUniformBlock,
+};
+
+enum class PipelineStage {
+    None = 0,
+    TopOfPipe = 0x00000001,
+    DrawIndirect = 0x00000002,
+    VertexInput = 0x00000004,
+    VertexShader = 0x00000008,
+    TessellationControlShader = 0x00000010,
+    TessellationEvaluationShader = 0x00000020,
+    GeometryShader = 0x00000040,
+    FragmentShader = 0x00000080,
+    EarlyFragmentTests = 0x00000100,
+    LateFragmentTests = 0x00000200,
+    ColorAttachmentOutput = 0x00000400,
+    ComputeShader = 0x00000800,
+    Transfer = 0x00001000,
+    BottomOfPipe = 0x00002000,
+    Host = 0x00004000,
+    AllGraphics = 0x00008000,
+    AllCommands = 0x00010000,
+};
+
+enum class Access {
+    IndirectCommandRead = 0x00000001,
+    IndexRead = 0x00000002,
+    VertexAttributeRead = 0x00000004,
+    UniformRead = 0x00000008,
+    InputAttachmentRead = 0x00000010,
+    ShaderRead = 0x00000020,
+    ShaderWrite = 0x00000040,
+    ColorAttachmentRead = 0x00000080,
+    ColorAttachmentWrite = 0x00000100,
+    DepthStencilAttachmentRead = 0x00000200,
+    DepthStencilAttachmentWrite = 0x00000400,
+    TransferRead = 0x00000800,
+    TransferWrite = 0x00001000,
+    HostRead = 0x00002000,
+    HostWrite = 0x00004000,
+    MemoryRead = 0x00008000,
+    MemoryWrite = 0x00010000,
+    None = 0,
+};
+
+enum class Dependency {
+    ByRegionBit = 0x00000001,
+    DeviceGroupBit = 0x00000004,
+    ViewLocalBit = 0x00000002,
+};
+
+enum class ImageLayout {
+    Undefined = 0,
+    General,
+    ColorAttachmentOptimal,
+    DepthStencilAttachmentOptimal,
+    DepthStencilReadOnlyOptimal,
+    ShaderReadOnlyOptimal,
+    TransferSrcOptimal,
+    TransferDstOptimal,
+    Preinitialized,
+    DepthReadOnlyStencilAttachmentOptimal,
+    DepthAttachmentStencilReadOnlyOptimal,
+    DepthAttachmentOptimal,
+    DepthReadOnlyOptimal,
+    StencilAttachmentOptimal,
+    StencilReadOnlyOptimal,
+    ReadOnly_optimal,
+    AttachmentOptimal,
+};
+
+enum class PipelineBindPoint { Graphics = 0, Compute };
+
+enum class ImageTiling { Optimal = 0, Linear };
+
+enum class SharingMode { Exclusive = 0, Concurrent };
+
+enum class ComponentMapping {
+    SwizzleIdentity = 0,
+    SwizzleZero,
+    SwizzleOne,
+    SwizzleR,
+    SwizzleG,
+    SwizzleB,
+    SwizzleA,
+};
+
+enum class ColorComponent {
+    R = 0x00000001,
+    G = 0x00000002,
+    B = 0x00000004,
+    A = 0x00000008,
+};
+
+enum class ImageColorSpace {
+    SrgbNonlinearKHR = 0,
+    DisplayP3NonlinearEXT,
+    ExtendedSrgbLinearEXT,
+    DisplayP3LinearEXT,
+    DciP3NonlinearEXT,
+    Bt709LinearEXT,
+    Bt709NonlinearEXT,
+    Bt2020LinearEXT,
+    Hdr10St2084EXT,
+    DolbyvisionEXT,
+    Hdr10HlgEXT,
+    AdobergbLinearEXT,
+    AdobergbNonlinearEXT,
+    PassThroughEXT,
+    ExtendedSrgbNonlinearEXT,
+    DisplayNativeAMD,
 };
 
 }  // namespace nickel::graphics

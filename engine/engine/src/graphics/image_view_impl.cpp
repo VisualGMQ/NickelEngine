@@ -11,10 +11,16 @@ ImageViewImpl::ImageViewImpl(DeviceImpl& dev, const Image& image,
     : m_device{dev.m_device} {
     VkImageViewCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    ci.format = ImageFormat2Vk(desc.format);
+    ci.format = Format2Vk(desc.format);
     ci.image = image.Impl().m_image;
     ci.viewType = ImageViewType2Vk(desc.viewType);
-    ci.subresourceRange = desc.subresourceRange;
+    VkImageSubresourceRange range{};
+    range.aspectMask = ImageAspect2Vk(desc.subresourceRange.aspectMask);
+    range.layerCount = desc.subresourceRange.layerCount;
+    range.levelCount = desc.subresourceRange.levelCount;
+    range.baseArrayLayer = desc.subresourceRange.baseArrayLayer;
+    range.baseMipLevel = desc.subresourceRange.baseMipLevel;
+    ci.subresourceRange = range;
 
     VK_CALL(vkCreateImageView(dev.m_device, &ci, nullptr, &m_view));
 

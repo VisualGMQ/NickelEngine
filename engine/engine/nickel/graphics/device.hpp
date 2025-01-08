@@ -1,9 +1,10 @@
 ﻿#pragma once
 
-#include "nickel/graphics/cmd.hpp"
+#include "nickel/common/dllexport.hpp"
 #include "nickel/common/math/smatrix.hpp"
 #include "nickel/graphics/bind_group_layout.hpp"
 #include "nickel/graphics/buffer.hpp"
+#include "nickel/graphics/cmd.hpp"
 #include "nickel/graphics/fence.hpp"
 #include "nickel/graphics/framebuffer.hpp"
 #include "nickel/graphics/graphics_pipeline.hpp"
@@ -12,18 +13,21 @@
 #include "nickel/graphics/sampler.hpp"
 #include "nickel/graphics/semaphore.hpp"
 #include "nickel/video/window.hpp"
-#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
 class DeviceImpl;
 class AdapterImpl;
 
+struct SurfaceFormatKHR {
+    Format format;
+    ImageColorSpace colorSpace;
+};
 
 struct SwapchainImageInfo {
-    SVector<uint32_t, 2> extent;
-    uint32_t imagCount;
-    VkSurfaceFormatKHR format;
+    SVector<uint32_t, 2> m_extent;
+    uint32_t m_image_count;
+    SurfaceFormatKHR m_surface_format;
 };
 
 class NICKEL_API Device {
@@ -46,7 +50,7 @@ public:
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
     const SwapchainImageInfo& GetSwapchainImageInfo() const;
-    
+
     void AcquireSwapchainImageAndWait(video::Window& window);
     void Submit(Command& cmd);
 

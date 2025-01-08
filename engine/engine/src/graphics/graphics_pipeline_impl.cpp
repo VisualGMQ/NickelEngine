@@ -20,7 +20,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
         for (auto&& [stage, module] : desc.m_shader_stages) {
             VkPipelineShaderStageCreateInfo ci{};
             ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            ci.stage = ShaderStageType2Vk(stage);
+            ci.stage = static_cast<VkShaderStageFlagBits>(ShaderStage2Vk(stage));
             ci.pName = module.entry_name.c_str();
             ci.module = module.module.Impl().m_module;
             stage_ci_list.push_back(ci);
@@ -107,7 +107,8 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisample.alphaToCoverageEnable = desc.multisample.alphaToCoverageEnabled;
     multisample.sampleShadingEnable = false;
-    multisample.rasterizationSamples = SampleCount2Vk(desc.multisample.count);
+    multisample.rasterizationSamples = static_cast<VkSampleCountFlagBits>(
+        SampleCount2Vk(desc.multisample.count));
     multisample.pSampleMask = &desc.multisample.mask;
 
      // color blend
@@ -122,7 +123,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
         colorState.srcAlphaBlendFactor = BlendFactor2Vk(state.alpha.srcFactor);
         colorState.dstAlphaBlendFactor = BlendFactor2Vk(state.alpha.dstFactor);
         colorState.blendEnable = true;
-        colorState.colorWriteMask = state.colorMask;
+        colorState.colorWriteMask = ColorComponent2Vk(state.colorMask);
         attachmentStates.emplace_back(colorState);
     }
 

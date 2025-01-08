@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "nickel/graphics/enums.hpp"
 #include "nickel/common/dllexport.hpp"
+#include "nickel/graphics/enums.hpp"
 #include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/render_pass.hpp"
 #include "nickel/graphics/shader_module.hpp"
@@ -32,7 +32,7 @@ public:
             float depthBiasSlopeScale = 0;
             CompareOp depthCompare = CompareOp::Greater;
             bool depthWriteEnabled = false;
-            ImageFormat depthFormat;
+            Format depthFormat;
             StencilOpState stencilBack;
             StencilOpState stencilFront;
         };
@@ -46,7 +46,7 @@ public:
         struct BlendState final {
             BlendComponentState alpha;
             BlendComponentState color;
-            VkColorComponentFlags colorMask;
+            Flags<ColorComponent> colorMask;
         };
 
         struct BufferState final {
@@ -91,7 +91,7 @@ public:
             std::vector<BufferState> buffers;
         };
 
-        std::unordered_map<ShaderStageType, ShaderStage> m_shader_stages;
+        std::unordered_map<graphics::ShaderStage, ShaderStage> m_shader_stages;
         VertexState vertex;
         std::optional<DepthStencilState> depthStencil;
         std::vector<BlendState> blend_state;
