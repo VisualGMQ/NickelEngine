@@ -1,6 +1,7 @@
 #pragma once
-#include "nickel/common/flags.hpp"
 #include "nickel/common/dllexport.hpp"
+#include "nickel/common/flags.hpp"
+#include "nickel/graphics/enums.hpp"
 
 namespace nickel::graphics {
 
@@ -10,7 +11,7 @@ class NICKEL_API Buffer {
 public:
     struct Descriptor {
         size_t m_size;
-        Flags<VkBufferUsageFlagBits> m_usage;
+        Flags<BufferUsage> m_usage;
     };
 
     enum class MapState {
@@ -37,7 +38,7 @@ public:
     void* GetMappedRange(uint64_t offset);
     void Flush();
     void Flush(uint64_t offset, uint64_t size);
-    
+
     operator bool() const noexcept;
     void Release();
 

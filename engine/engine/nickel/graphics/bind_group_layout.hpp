@@ -1,6 +1,5 @@
 ﻿#pragma once
-#include "nickel/common/flags.hpp"
-#include "volk.h"
+#include "nickel/graphics/enums.hpp"
 #include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
@@ -10,8 +9,8 @@ class BindGroupLayoutImpl;
 class NICKEL_API BindGroupLayout final {
 public:
     struct Entry final {
-        VkDescriptorType type;
-        Flags<VkShaderStageFlagBits> shader_stage;
+        BindGroupEntryType type;
+        ShaderStageType shader_stage;
         uint32_t arraySize = 1;
     };
 

@@ -2,6 +2,7 @@
 #include "nickel/graphics/buffer.hpp"
 #include "nickel/graphics/internal/common.hpp"
 #include "nickel/graphics/internal/device_impl.hpp"
+#include "nickel/graphics/internal/enum_convert.hpp"
 #include "nickel/graphics/internal/memory_impl.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
@@ -41,7 +42,7 @@ void BufferImpl::createBuffer(DeviceImpl& device,
     VkBufferCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     ci.size = desc.m_size;
-    ci.usage = static_cast<VkBufferUsageFlagBits>(desc.m_usage);
+    ci.usage = static_cast<VkBufferUsageFlagBits>(BufferUsage2Vk(desc.m_usage));
     ci.queueFamilyIndexCount = indices.size();
     ci.pQueueFamilyIndices = indices.data();
     if (indices.size() > 1) {

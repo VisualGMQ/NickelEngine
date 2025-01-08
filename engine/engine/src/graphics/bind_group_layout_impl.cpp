@@ -1,6 +1,7 @@
 ﻿#include "nickel/graphics/internal/bind_group_layout_impl.hpp"
 #include "nickel/graphics/bind_group.hpp"
 #include "nickel/graphics/internal/device_impl.hpp"
+#include "nickel/graphics/internal/enum_convert.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
 namespace nickel::graphics {
@@ -62,7 +63,7 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
     uint32_t count =
         dev.GetSwapchainImageInfo().imagCount * MaxDrawCallPerCmdBuf;
     createPool(count, desc);
-    allocSets(count, desc);
+    allocSets(count);
 }
 
 const DescriptorSetLists* BindGroupLayoutImpl::RequireSetList() {
@@ -87,7 +88,7 @@ VkDescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
     binding.binding = slot;
     binding.descriptorCount = entry.arraySize;
     binding.stageFlags = static_cast<VkShaderStageFlagBits>(entry.shader_stage);
-    binding.descriptorType = entry.type;
+    binding.descriptorType = BindGroupEntryType2Vk(entry.type);
     return binding;
 }
 
@@ -98,7 +99,7 @@ void BindGroupLayoutImpl::createPool(uint32_t count,
     uint32_t maxCount = 0;
     for (auto&& [slot, entry] : desc.entries) {
         VkDescriptorPoolSize size;
-        size.type = entry.type;
+        size.type = BindGroupEntryType2Vk(entry.type);
         size.descriptorCount = count;
         sizes.emplace_back(size);
         maxCount += count;
@@ -111,8 +112,7 @@ void BindGroupLayoutImpl::createPool(uint32_t count,
     VK_CALL(vkCreateDescriptorPool(m_device, &info, nullptr, &m_pool));
 }
 
-void BindGroupLayoutImpl::allocSets(uint32_t count,
-                                    const BindGroupLayout::Descriptor& desc) {
+void BindGroupLayoutImpl::allocSets(uint32_t count) {
     std::vector<VkDescriptorSetLayout> layouts{count, m_layout};
     VkDescriptorSetAllocateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
