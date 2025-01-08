@@ -1,6 +1,8 @@
 #pragma once
-#include "nickel/graphics/enums.hpp"
 #include "nickel/common/dllexport.hpp"
+#include "nickel/common/flags.hpp"
+#include "nickel/common/math/smatrix.hpp"
+#include "nickel/graphics/enums.hpp"
 
 namespace nickel::graphics {
 
@@ -10,10 +12,18 @@ class Image;
 class NICKEL_API ImageView {
 public:
     struct Descriptor {
+        struct ImageSubresourceRange {
+            Flags<ImageAspect> aspectMask;
+            uint32_t baseMipLevel;
+            uint32_t levelCount;
+            uint32_t baseArrayLayer;
+            uint32_t layerCount;
+        };
+
         ImageViewType viewType;
-        ImageFormat format;
-        VkComponentMapping components;
-        VkImageSubresourceRange subresourceRange;
+        Format format;
+        ComponentMapping components;
+        ImageSubresourceRange subresourceRange;
     };
 
     ImageView() = default;
@@ -40,16 +50,16 @@ class ImageImpl;
 class NICKEL_API Image {
 public:
     struct Descriptor {
-        VkImageType imageType;
-        VkFormat format;
-        VkExtent3D extent;
+        ImageType imageType;
+        Format format;
+        SVector<uint32_t, 3> extent;
         uint32_t mipLevels;
         uint32_t arrayLayers;
-        VkSampleCountFlagBits samples;
-        VkImageTiling tiling;
-        VkImageUsageFlags usage;
-        VkSharingMode sharingMode;
-        VkImageLayout initialLayout;
+        SampleCount samples;
+        ImageTiling tiling;
+        Flags<ImageUsage> usage;
+        SharingMode sharingMode;
+        ImageLayout initialLayout;
     };
 
     Image() = default;

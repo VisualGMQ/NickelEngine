@@ -54,7 +54,7 @@ public:
 
     struct Entry final {
         BindingPoint binding;
-        ShaderStageType shader_stage;
+        Flags<ShaderStage> shader_stage;
         uint32_t arraySize = 1;
     };
 

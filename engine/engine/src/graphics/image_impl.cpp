@@ -3,6 +3,7 @@
 #include "nickel/graphics/internal/adapter_impl.hpp"
 #include "nickel/graphics/internal/common.hpp"
 #include "nickel/graphics/internal/device_impl.hpp"
+#include "nickel/graphics/internal/enum_convert.hpp"
 #include "nickel/graphics/internal/memory_impl.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
@@ -14,9 +15,9 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
     createImage(desc, dev);
     allocMem(adapter.m_phyDevice);
 
-    for (int i = 0; i < desc.extent.depth; i++) {
-        m_layouts.push_back(desc.initialLayout);
-    }
+    // for (int i = 0; i < desc.extent.depth; i++) {
+    //     m_layouts.push_back(desc.initialLayout);
+    // }
 
     VK_CALL(
         vkBindImageMemory(m_device.m_device, m_image, m_memory->m_memory, 0));
@@ -25,16 +26,17 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
 void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
     VkImageCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    ci.imageType = desc.imageType;
-    ci.format = desc.format;
-    ci.extent = desc.extent;
+    ci.imageType = ImageType2Vk(desc.imageType);
+    ci.format = Format2Vk(desc.format);
+    ci.extent = VkExtent3D{desc.extent.w, desc.extent.h, desc.extent.l};
     ci.mipLevels = desc.mipLevels;
     ci.arrayLayers = desc.arrayLayers;
-    ci.samples = desc.samples;
-    ci.tiling = desc.tiling;
-    ci.usage = desc.usage;
-    ci.sharingMode = desc.sharingMode;
-    ci.initialLayout = desc.initialLayout;
+    ci.samples =
+        static_cast<VkSampleCountFlagBits>(SampleCount2Vk(desc.samples));
+    ci.tiling = ImageTiling2Vk(desc.tiling);
+    ci.usage = ImageUsage2Vk(desc.usage);
+    ci.sharingMode = SharingMode2Vk(desc.sharingMode);
+    ci.initialLayout = ImageLayout2Vk(desc.initialLayout);
     auto indices = dev.m_queue_indices.GetIndices();
     ci.pQueueFamilyIndices = indices.data();
     ci.queueFamilyIndexCount = indices.size();
@@ -57,9 +59,8 @@ void ImageImpl::allocMem(VkPhysicalDevice phyDevice) {
         LOGE("allocate image memory failed: no satisfied memory type "
              "(DeviceLocal)");
     } else {
-        m_memory = new MemoryImpl{m_device.m_device,
-                                  static_cast<size_t>(requirements.size),
-                                  index.value()};
+        m_memory =
+            new MemoryImpl{m_device.m_device, requirements.size, index.value()};
     }
 }
 

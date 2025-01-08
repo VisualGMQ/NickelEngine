@@ -9,8 +9,14 @@ class PipelineLayoutImpl;
 class NICKEL_API PipelineLayout {
 public:
     struct Descriptor {
+        struct PushConstantRange {
+            Flags<ShaderStage> shader_stage;
+            uint32_t offset;
+            uint32_t size;
+        };
+        
         std::vector<BindGroupLayout> layouts;
-        std::vector<VkPushConstantRange> push_contants;
+        std::vector<PushConstantRange> push_contants;
     };
 
     PipelineLayout() = default;

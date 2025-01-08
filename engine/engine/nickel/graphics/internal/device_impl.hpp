@@ -130,7 +130,7 @@ public:
     Fence CreateFence(bool signaled);
     void Submit(Command&);
     void WaitIdle();
-    
+
     void AcquireSwapchainImageAndWait(video::Window& window);
 
     ResourceManager<BufferImpl> m_buffers;
@@ -162,8 +162,9 @@ private:
 
     void createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
                          const SVector<uint32_t, 2>& window_size);
-    SwapchainImageInfo queryImageInfo(VkPhysicalDevice, const SVector<uint32_t, 2>&,
-                             VkSurfaceKHR);
+    SwapchainImageInfo queryImageInfo(VkPhysicalDevice,
+                                      const SVector<uint32_t, 2>&,
+                                      VkSurfaceKHR);
     VkPresentModeKHR queryPresentMode(VkPhysicalDevice, VkSurfaceKHR);
 
     void getAndCreateImageViews();

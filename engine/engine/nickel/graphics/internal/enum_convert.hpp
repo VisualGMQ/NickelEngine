@@ -3,54 +3,16 @@
 #include "nickel/common/flags.hpp"
 #include "nickel/graphics/enums.hpp"
 #include "nickel/internal/pch.hpp"
+#include <type_traits>
 
 namespace nickel::graphics {
-
-#define GET_BIT(flags, src, dst) (flags & src ? dst : 0)
-
-constexpr VkImageAspectFlagBits ImageAspect2Vk(Flags<ImageAspect> aspect) {
-    return static_cast<VkImageAspectFlagBits>(
-        GET_BIT(aspect, ImageAspect::Color, VK_IMAGE_ASPECT_COLOR_BIT) |
-        GET_BIT(aspect, ImageAspect::Depth, VK_IMAGE_ASPECT_DEPTH_BIT) |
-        GET_BIT(aspect, ImageAspect::Stencil, VK_IMAGE_ASPECT_STENCIL_BIT));
-}
 
 #define CASE(a, b) \
     case (a):      \
         return (b);
 
-inline Flags<VkBufferUsageFlagBits> BufferUsage2Vk(BufferUsage usage) {
-    uint32_t bits = 0;
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::CopySrc)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    }
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::CopyDst)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    }
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::Vertex)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    }
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::Index)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    }
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::Uniform)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    }
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::Index)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    }
-    if (static_cast<uint32_t>(usage) &
-        static_cast<uint32_t>(BufferUsage::Storage)) {
-        bits |= static_cast<uint32_t>(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    }
-    return bits;
-}
+#define TRY_SET_BIT(src, dst) \
+    if (flags & (src)) bits |= (dst);
 
 inline VkFilter Filter2Vk(Filter filter) {
     switch (filter) {
@@ -102,32 +64,7 @@ inline VkImageType ImageType2Vk(ImageType type) {
     return {};
 }
 
-inline Flags<VkImageUsageFlagBits> ImageUsage2Vk(Flags<ImageUsage> usage) {
-    uint32_t flags = 0;
-    if (usage & ImageUsage::Sampled) {
-        flags |= static_cast<uint32_t>(VK_IMAGE_USAGE_SAMPLED_BIT);
-    }
-    if (usage & ImageUsage::CopySrc) {
-        flags |= static_cast<uint32_t>(VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-    }
-    if (usage & ImageUsage::CopyDst) {
-        flags |= static_cast<uint32_t>(VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-    }
-    if (usage & ImageUsage::StorageBinding) {
-        flags |= static_cast<uint32_t>(VK_IMAGE_USAGE_STORAGE_BIT);
-    }
-    if (usage & ImageUsage::ColorAttachment) {
-        flags |= static_cast<uint32_t>(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-    }
-    if (usage & ImageUsage::DepthStencilAttachment) {
-        flags |=
-            static_cast<uint32_t>(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-    }
-
-    return flags;
-}
-
-inline VkSampleCountFlagBits SampleCount2Vk(SampleCount count) {
+inline VkSampleCountFlags SampleCount2Vk(SampleCount count) {
     switch (count) {
         CASE(SampleCount::Count1, VK_SAMPLE_COUNT_1_BIT);
         CASE(SampleCount::Count2, VK_SAMPLE_COUNT_2_BIT);
@@ -142,8 +79,12 @@ inline VkSampleCountFlagBits SampleCount2Vk(SampleCount count) {
     return {};
 }
 
-inline VkFormat ImageFormat2Vk(ImageFormat f) {
+inline VkFormat Format2Vk(Format f) {
     return static_cast<VkFormat>(f);
+}
+
+inline Format VkFormat2Format(VkFormat f) {
+    return static_cast<Format>(f);
 }
 
 inline VkImageViewType ImageViewType2Vk(ImageViewType type) {
@@ -160,23 +101,6 @@ inline VkImageViewType ImageViewType2Vk(ImageViewType type) {
     return {};
 }
 
-inline VkShaderStageFlags ShaderStage2Vk(Flags<ShaderStage> stage) {
-    uint32_t result = 0;
-    if (stage & ShaderStage::Vertex) {
-        result |= static_cast<uint32_t>(VK_SHADER_STAGE_VERTEX_BIT);
-    }
-    if (stage & ShaderStage::Fragment) {
-        result |= static_cast<uint32_t>(VK_SHADER_STAGE_FRAGMENT_BIT);
-    }
-    if (stage & ShaderStage::Compute) {
-        result |= static_cast<uint32_t>(VK_SHADER_STAGE_COMPUTE_BIT);
-    }
-    if (stage & ShaderStage::Geometry) {
-        result |= static_cast<uint32_t>(VK_SHADER_STAGE_GEOMETRY_BIT);
-    }
-    return result;
-}
-
 inline VkPrimitiveTopology Topology2Vk(Topology t) {
     switch (t) {
         CASE(Topology::LineList, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
@@ -185,25 +109,6 @@ inline VkPrimitiveTopology Topology2Vk(Topology t) {
         CASE(Topology::TriangleList, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
         CASE(Topology::TriangleStrip, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
         CASE(Topology::TriangleFan, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
-    }
-
-    NICKEL_CANT_REACH();
-    return {};
-}
-
-inline VkCullModeFlagBits CullMode2Vk(CullMode mode) {
-    if (mode == CullMode::None) {
-        return VK_CULL_MODE_NONE;
-    }
-    if (static_cast<uint32_t>(mode) & static_cast<uint32_t>(CullMode::Front)) {
-        return VK_CULL_MODE_FRONT_BIT;
-    }
-    if (static_cast<uint32_t>(mode) & static_cast<uint32_t>(CullMode::Back)) {
-        return VK_CULL_MODE_BACK_BIT;
-    }
-    if (static_cast<uint32_t>(mode) & static_cast<uint32_t>(CullMode::Back) &&
-        static_cast<uint32_t>(mode) & static_cast<uint32_t>(CullMode::Front)) {
-        return VK_CULL_MODE_FRONT_AND_BACK;
     }
 
     NICKEL_CANT_REACH();
@@ -293,6 +198,7 @@ inline VkAttachmentLoadOp AttachmentLoadOp2Vk(AttachmentLoadOp op) {
     switch (op) {
         CASE(AttachmentLoadOp::Clear, VK_ATTACHMENT_LOAD_OP_CLEAR);
         CASE(AttachmentLoadOp::Load, VK_ATTACHMENT_LOAD_OP_LOAD);
+        CASE(AttachmentLoadOp::DontCare, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
     }
 
     NICKEL_CANT_REACH();
@@ -357,48 +263,19 @@ inline VkFormat VertexFormat2Vk(VertexFormat fmt) {
     return {};
 }
 
-inline Flags<VkColorComponentFlagBits> ColorWriteMask2Vk(ColorWriteMask mask) {
-    if (mask == ColorWriteMask::All) {
-        return VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_B_BIT |
-               VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_R_BIT;
-    }
-
-    Flags<VkColorComponentFlagBits> flags;
-    if (static_cast<uint32_t>(mask) &
-        static_cast<uint32_t>(ColorWriteMask::Alpha)) {
-        flags |= VK_COLOR_COMPONENT_A_BIT;
-    }
-    if (static_cast<uint32_t>(mask) &
-        static_cast<uint32_t>(ColorWriteMask::Green)) {
-        flags |= VK_COLOR_COMPONENT_B_BIT;
-    }
-    if (static_cast<uint32_t>(mask) &
-        static_cast<uint32_t>(ColorWriteMask::Blue)) {
-        flags |= VK_COLOR_COMPONENT_G_BIT;
-    }
-    if (static_cast<uint32_t>(mask) &
-        static_cast<uint32_t>(ColorWriteMask::Red)) {
-        flags |= VK_COLOR_COMPONENT_R_BIT;
-    }
-    return flags;
-}
-
-inline Flags<VkShaderStageFlagBits> ShaderStageType2Vk(ShaderStageType type) {
-    switch (type) {
-        CASE(ShaderStageType::Vertex, VK_SHADER_STAGE_VERTEX_BIT)
-        CASE(ShaderStageType::TessellationControl,
-             VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT)
-        CASE(ShaderStageType::TessellationEvaluation,
-             VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
-        CASE(ShaderStageType::Geometry, VK_SHADER_STAGE_GEOMETRY_BIT)
-        CASE(ShaderStageType::Fragment, VK_SHADER_STAGE_FRAGMENT_BIT)
-        CASE(ShaderStageType::Compute, VK_SHADER_STAGE_COMPUTE_BIT)
-        CASE(ShaderStageType::AllGraphics, VK_SHADER_STAGE_ALL_GRAPHICS)
-        CASE(ShaderStageType::All, VK_SHADER_STAGE_ALL)
-    }
-
-    NICKEL_CANT_REACH();
-    return {};
+inline VkShaderStageFlags ShaderStage2Vk(Flags<ShaderStage> flags) {
+    VkShaderStageFlags bits = 0;
+    TRY_SET_BIT(ShaderStage::Vertex, VK_SHADER_STAGE_VERTEX_BIT)
+    TRY_SET_BIT(ShaderStage::TessellationControl,
+                VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT)
+    TRY_SET_BIT(ShaderStage::TessellationEvaluation,
+                VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
+    TRY_SET_BIT(ShaderStage::Geometry, VK_SHADER_STAGE_GEOMETRY_BIT)
+    TRY_SET_BIT(ShaderStage::Fragment, VK_SHADER_STAGE_FRAGMENT_BIT)
+    TRY_SET_BIT(ShaderStage::Compute, VK_SHADER_STAGE_COMPUTE_BIT)
+    TRY_SET_BIT(ShaderStage::AllGraphics, VK_SHADER_STAGE_ALL_GRAPHICS)
+    TRY_SET_BIT(ShaderStage::All, VK_SHADER_STAGE_ALL)
+    return bits;
 }
 
 inline VkBorderColor BorderColor2Vk(BorderColor color) {
@@ -458,7 +335,317 @@ inline VkDescriptorType BindGroupEntryType2Vk(BindGroupEntryType type) {
     return {};
 }
 
-#undef GET_BIT
+inline VkImageAspectFlags ImageAspect2Vk(Flags<ImageAspect> flags) {
+    VkImageAspectFlags bits = 0;
+    TRY_SET_BIT(ImageAspect::Color, VK_IMAGE_ASPECT_COLOR_BIT);
+    TRY_SET_BIT(ImageAspect::Depth, VK_IMAGE_ASPECT_DEPTH_BIT);
+    TRY_SET_BIT(ImageAspect::Stencil, VK_IMAGE_ASPECT_STENCIL_BIT);
+    return bits;
+}
+
+inline VkBufferUsageFlags BufferUsage2Vk(Flags<BufferUsage> flags) {
+    VkBufferUsageFlags bits = 0;
+    TRY_SET_BIT(BufferUsage::CopySrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+    TRY_SET_BIT(BufferUsage::CopyDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+    TRY_SET_BIT(BufferUsage::Vertex, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+    TRY_SET_BIT(BufferUsage::Index, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
+    TRY_SET_BIT(BufferUsage::Uniform, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+    TRY_SET_BIT(BufferUsage::Index, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
+    TRY_SET_BIT(BufferUsage::Storage, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+    return bits;
+}
+
+inline VkImageUsageFlags ImageUsage2Vk(Flags<ImageUsage> flags) {
+    VkImageUsageFlags bits = 0;
+    TRY_SET_BIT(ImageUsage::Sampled, VK_IMAGE_USAGE_SAMPLED_BIT)
+    TRY_SET_BIT(ImageUsage::CopySrc, VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+    TRY_SET_BIT(ImageUsage::CopyDst, VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+    TRY_SET_BIT(ImageUsage::StorageBinding, VK_IMAGE_USAGE_STORAGE_BIT)
+    TRY_SET_BIT(ImageUsage::ColorAttachment,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+    TRY_SET_BIT(ImageUsage::DepthStencilAttachment,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+
+    return bits;
+}
+
+inline VkColorComponentFlags ColorWriteMask2Vk(Flags<ColorWriteMask> flags) {
+    if (flags == ColorWriteMask::All) {
+        return VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_B_BIT |
+               VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_R_BIT;
+    }
+
+    VkColorComponentFlags bits{};
+    TRY_SET_BIT(ColorWriteMask::Alpha, VK_COLOR_COMPONENT_A_BIT)
+    TRY_SET_BIT(ColorWriteMask::Green, VK_COLOR_COMPONENT_B_BIT)
+    TRY_SET_BIT(ColorWriteMask::Blue, VK_COLOR_COMPONENT_G_BIT)
+    TRY_SET_BIT(ColorWriteMask::Red, VK_COLOR_COMPONENT_R_BIT)
+    return bits;
+}
+
+inline VkCullModeFlags CullMode2Vk(Flags<CullMode> mode) {
+    if (mode == CullMode::None) {
+        return VK_CULL_MODE_NONE;
+    }
+    if (mode & CullMode::Front) {
+        return VK_CULL_MODE_FRONT_BIT;
+    }
+    if (mode & CullMode::Back) {
+        return VK_CULL_MODE_BACK_BIT;
+    }
+    if (mode & CullMode::Back && mode & CullMode::Front) {
+        return VK_CULL_MODE_FRONT_AND_BACK;
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkPipelineStageFlags PipelineStage2Vk(Flags<PipelineStage> flags) {
+    VkPipelineStageFlags bits = 0;
+
+    if (flags == PipelineStage::None) {
+        return VK_PIPELINE_STAGE_NONE;
+    }
+
+    TRY_SET_BIT(PipelineStage::Host, VK_PIPELINE_STAGE_HOST_BIT)
+    TRY_SET_BIT(PipelineStage::Transfer, VK_PIPELINE_STAGE_TRANSFER_BIT)
+    TRY_SET_BIT(PipelineStage::AllCommands, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
+    TRY_SET_BIT(PipelineStage::AllGraphics, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT)
+    TRY_SET_BIT(PipelineStage::ComputeShader,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT)
+    TRY_SET_BIT(PipelineStage::DrawIndirect,
+                VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT)
+    TRY_SET_BIT(PipelineStage::FragmentShader,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+    TRY_SET_BIT(PipelineStage::VertexInput, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT)
+    TRY_SET_BIT(PipelineStage::VertexShader,
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
+    TRY_SET_BIT(PipelineStage::GeometryShader,
+                VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+    TRY_SET_BIT(PipelineStage::BottomOfPipe,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
+    TRY_SET_BIT(PipelineStage::ColorAttachmentOutput,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+    TRY_SET_BIT(PipelineStage::EarlyFragmentTests,
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
+    TRY_SET_BIT(PipelineStage::LateFragmentTests,
+                VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
+    TRY_SET_BIT(PipelineStage::TessellationControlShader,
+                VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
+    TRY_SET_BIT(PipelineStage::TessellationEvaluationShader,
+                VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
+    TRY_SET_BIT(PipelineStage::TopOfPipe, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
+
+    return bits;
+}
+
+inline VkAccessFlags Access2Vk(Flags<Access> flags) {
+    if (flags == Access::None) {
+        return VK_ACCESS_NONE;
+    }
+
+    VkAccessFlags bits = 0;
+
+    TRY_SET_BIT(Access::HostRead, VK_ACCESS_HOST_READ_BIT)
+    TRY_SET_BIT(Access::HostWrite, VK_ACCESS_HOST_WRITE_BIT)
+    TRY_SET_BIT(Access::IndexRead, VK_ACCESS_INDEX_READ_BIT)
+    TRY_SET_BIT(Access::MemoryRead, VK_ACCESS_MEMORY_READ_BIT)
+    TRY_SET_BIT(Access::MemoryWrite, VK_ACCESS_MEMORY_WRITE_BIT)
+    TRY_SET_BIT(Access::ShaderRead, VK_ACCESS_SHADER_READ_BIT)
+    TRY_SET_BIT(Access::ShaderWrite, VK_ACCESS_SHADER_WRITE_BIT)
+    TRY_SET_BIT(Access::TransferRead, VK_ACCESS_TRANSFER_READ_BIT)
+    TRY_SET_BIT(Access::TransferWrite, VK_ACCESS_TRANSFER_WRITE_BIT)
+    TRY_SET_BIT(Access::UniformRead, VK_ACCESS_UNIFORM_READ_BIT)
+    TRY_SET_BIT(Access::ColorAttachmentRead,
+                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
+    TRY_SET_BIT(Access::ColorAttachmentWrite,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+    TRY_SET_BIT(Access::IndirectCommandRead,
+                VK_ACCESS_INDIRECT_COMMAND_READ_BIT)
+    TRY_SET_BIT(Access::InputAttachmentRead,
+                VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
+    TRY_SET_BIT(Access::VertexAttributeRead,
+                VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
+    TRY_SET_BIT(Access::DepthStencilAttachmentRead,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
+    TRY_SET_BIT(Access::DepthStencilAttachmentWrite,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+
+    return bits;
+}
+
+inline VkDependencyFlags Dependency2Vk(Flags<Dependency> flags) {
+    VkDependencyFlags bits = 0;
+    TRY_SET_BIT(Dependency::ByRegionBit, VK_DEPENDENCY_BY_REGION_BIT)
+    TRY_SET_BIT(Dependency::DeviceGroupBit, VK_DEPENDENCY_DEVICE_GROUP_BIT)
+    TRY_SET_BIT(Dependency::ViewLocalBit, VK_DEPENDENCY_VIEW_LOCAL_BIT)
+    return bits;
+}
+
+inline VkImageLayout ImageLayout2Vk(ImageLayout layout) {
+    switch (layout) {
+        CASE(ImageLayout::Undefined, VK_IMAGE_LAYOUT_UNDEFINED)
+        CASE(ImageLayout::General, VK_IMAGE_LAYOUT_GENERAL)
+        CASE(ImageLayout::Preinitialized, VK_IMAGE_LAYOUT_PREINITIALIZED)
+        CASE(ImageLayout::AttachmentOptimal,
+             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::ReadOnly_optimal, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL)
+        CASE(ImageLayout::ColorAttachmentOptimal,
+             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::DepthAttachmentOptimal,
+             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::StencilAttachmentOptimal,
+             VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::TransferDstOptimal,
+             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        CASE(ImageLayout::TransferSrcOptimal,
+             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+        CASE(ImageLayout::DepthReadOnlyOptimal,
+             VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL)
+        CASE(ImageLayout::DepthStencilAttachmentOptimal,
+             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::DepthStencilReadOnlyOptimal,
+             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::ShaderReadOnlyOptimal,
+             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        CASE(ImageLayout::StencilReadOnlyOptimal,
+             VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL)
+        CASE(ImageLayout::DepthAttachmentStencilReadOnlyOptimal,
+             VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+        CASE(ImageLayout::DepthReadOnlyStencilAttachmentOptimal,
+             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkPipelineBindPoint PipelineBindPoint2Vk(PipelineBindPoint bind) {
+    switch (bind) {
+        CASE(PipelineBindPoint::Compute, VK_PIPELINE_BIND_POINT_GRAPHICS)
+        CASE(PipelineBindPoint::Graphics, VK_PIPELINE_BIND_POINT_GRAPHICS)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkImageTiling ImageTiling2Vk(ImageTiling tiling) {
+    switch (tiling) {
+        CASE(ImageTiling::Linear, VK_IMAGE_TILING_LINEAR)
+        CASE(ImageTiling::Optimal, VK_IMAGE_TILING_OPTIMAL)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkSharingMode SharingMode2Vk(SharingMode mode) {
+    switch (mode) {
+        CASE(SharingMode::Concurrent, VK_SHARING_MODE_CONCURRENT)
+        CASE(SharingMode::Exclusive, VK_SHARING_MODE_EXCLUSIVE)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkComponentSwizzle ComponentMapping2Vk(ComponentMapping swizzle) {
+    switch (swizzle) {
+        CASE(ComponentMapping::SwizzleZero, VK_COMPONENT_SWIZZLE_ZERO)
+        CASE(ComponentMapping::SwizzleOne, VK_COMPONENT_SWIZZLE_ONE)
+        CASE(ComponentMapping::SwizzleIdentity, VK_COMPONENT_SWIZZLE_IDENTITY)
+        CASE(ComponentMapping::SwizzleR, VK_COMPONENT_SWIZZLE_R)
+        CASE(ComponentMapping::SwizzleG, VK_COMPONENT_SWIZZLE_G)
+        CASE(ComponentMapping::SwizzleB, VK_COMPONENT_SWIZZLE_B)
+        CASE(ComponentMapping::SwizzleA, VK_COMPONENT_SWIZZLE_A)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkColorComponentFlags ColorComponent2Vk(Flags<ColorComponent> flags) {
+    VkColorComponentFlags bits = 0;
+    TRY_SET_BIT(ColorComponent::R, VK_COLOR_COMPONENT_R_BIT)
+    TRY_SET_BIT(ColorComponent::G, VK_COLOR_COMPONENT_G_BIT)
+    TRY_SET_BIT(ColorComponent::B, VK_COLOR_COMPONENT_B_BIT)
+    TRY_SET_BIT(ColorComponent::A, VK_COLOR_COMPONENT_A_BIT)
+    return bits;
+}
+
+inline VkColorSpaceKHR ImageColorSpace2Vk(ImageColorSpace colorSpace) {
+    switch (colorSpace) {
+        CASE(ImageColorSpace::DolbyvisionEXT, VK_COLOR_SPACE_DOLBYVISION_EXT)
+        CASE(ImageColorSpace::AdobergbLinearEXT,
+             VK_COLOR_SPACE_ADOBERGB_LINEAR_EXT)
+        CASE(ImageColorSpace::AdobergbNonlinearEXT,
+             VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT)
+        CASE(ImageColorSpace::Bt709LinearEXT, VK_COLOR_SPACE_BT709_LINEAR_EXT)
+        CASE(ImageColorSpace::Bt709NonlinearEXT,
+             VK_COLOR_SPACE_BT709_NONLINEAR_EXT)
+        CASE(ImageColorSpace::Bt2020LinearEXT, VK_COLOR_SPACE_BT2020_LINEAR_EXT)
+        CASE(ImageColorSpace::DisplayNativeAMD,
+             VK_COLOR_SPACE_DISPLAY_NATIVE_AMD)
+        CASE(ImageColorSpace::Hdr10HlgEXT, VK_COLOR_SPACE_HDR10_HLG_EXT)
+        CASE(ImageColorSpace::Hdr10St2084EXT, VK_COLOR_SPACE_HDR10_ST2084_EXT)
+        CASE(ImageColorSpace::PassThroughEXT, VK_COLOR_SPACE_PASS_THROUGH_EXT)
+        CASE(ImageColorSpace::SrgbNonlinearKHR,
+             VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        CASE(ImageColorSpace::DciP3NonlinearEXT,
+             VK_COLOR_SPACE_DCI_P3_NONLINEAR_EXT)
+        CASE(ImageColorSpace::DisplayP3LinearEXT,
+             VK_COLOR_SPACE_DISPLAY_P3_LINEAR_EXT)
+        CASE(ImageColorSpace::DisplayP3NonlinearEXT,
+             VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT)
+        CASE(ImageColorSpace::ExtendedSrgbLinearEXT,
+             VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT)
+        CASE(ImageColorSpace::ExtendedSrgbNonlinearEXT,
+             VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline ImageColorSpace VkColorSpace2ImageColorSpace(
+    VkColorSpaceKHR colorSpace) {
+    switch (colorSpace) {
+        CASE(VK_COLOR_SPACE_DOLBYVISION_EXT, ImageColorSpace::DolbyvisionEXT)
+        CASE(VK_COLOR_SPACE_ADOBERGB_LINEAR_EXT,
+             ImageColorSpace::AdobergbLinearEXT)
+        CASE(VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT,
+             ImageColorSpace::AdobergbNonlinearEXT)
+        CASE(VK_COLOR_SPACE_BT709_LINEAR_EXT, ImageColorSpace::Bt709LinearEXT)
+        CASE(VK_COLOR_SPACE_BT709_NONLINEAR_EXT,
+             ImageColorSpace::Bt709NonlinearEXT)
+        CASE(VK_COLOR_SPACE_BT2020_LINEAR_EXT, ImageColorSpace::Bt2020LinearEXT)
+        CASE(VK_COLOR_SPACE_DISPLAY_NATIVE_AMD,
+             ImageColorSpace::DisplayNativeAMD)
+        CASE(VK_COLOR_SPACE_HDR10_HLG_EXT, ImageColorSpace::Hdr10HlgEXT)
+        CASE(VK_COLOR_SPACE_HDR10_ST2084_EXT, ImageColorSpace::Hdr10St2084EXT)
+        CASE(VK_COLOR_SPACE_PASS_THROUGH_EXT, ImageColorSpace::PassThroughEXT)
+        CASE(VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+             ImageColorSpace::SrgbNonlinearKHR)
+        CASE(VK_COLOR_SPACE_DCI_P3_NONLINEAR_EXT,
+             ImageColorSpace::DciP3NonlinearEXT)
+        CASE(VK_COLOR_SPACE_DISPLAY_P3_LINEAR_EXT,
+             ImageColorSpace::DisplayP3LinearEXT)
+        CASE(VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT,
+             ImageColorSpace::DisplayP3NonlinearEXT)
+        CASE(VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT,
+             ImageColorSpace::ExtendedSrgbLinearEXT)
+        CASE(VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT,
+         ImageColorSpace::ExtendedSrgbNonlinearEXT)
+        default:
+            NICKEL_CANT_REACH();
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
 #undef CASE
 
 }  // namespace nickel::graphics
