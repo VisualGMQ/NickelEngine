@@ -28,7 +28,7 @@ private:
 
     VkDescriptorSetLayoutBinding getBinding(uint32_t slot,
                                             const BindGroupLayout::Entry&);
-    void allocSets(uint32_t count, const BindGroupLayout::Descriptor& desc);
+    void allocSets(uint32_t count);
     void createPool(uint32_t count, const BindGroupLayout::Descriptor& desc);
 };
 

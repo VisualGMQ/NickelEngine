@@ -1,8 +1,9 @@
 ﻿#pragma once
+#include "nickel/graphics/enums.hpp"
+#include "nickel/common/dllexport.hpp"
 #include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/render_pass.hpp"
 #include "nickel/graphics/shader_module.hpp"
-#include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
 
@@ -10,26 +11,94 @@ class GraphicsPipelineImpl;
 
 class NICKEL_API GraphicsPipeline {
 public:
-    struct ShaderStage {
-        ShaderModule module;
-        std::string entry_name;
-    };
-
     struct Descriptor {
-        RenderPass m_render_pass;
-        std::unordered_map<VkShaderStageFlagBits, ShaderStage> m_shader_stages;
+        struct ShaderStage {
+            ShaderModule module;
+            std::string entry_name;
+        };
 
-        VkPipelineVertexInputStateCreateInfo m_vertex_input_state;
-        VkPipelineInputAssemblyStateCreateInfo m_input_assembly_state;
-        VkPipelineTessellationStateCreateInfo m_tessellation_state;
-        VkPipelineViewportStateCreateInfo m_viewport_state;
-        VkPipelineRasterizationStateCreateInfo m_rasterization_state;
-        VkPipelineMultisampleStateCreateInfo m_multisample_state;
-        VkPipelineDepthStencilStateCreateInfo m_depth_stencil_state;
-        VkPipelineColorBlendStateCreateInfo m_color_blend_state;
-        VkPipelineDynamicStateCreateInfo m_dynamic_state;
-        PipelineLayout m_layout;
-        uint32_t m_subpass;
+        struct DepthStencilState final {
+            struct StencilOpState {
+                CompareOp compare = CompareOp::Always;
+                StencilOp depthFailOp = StencilOp::Keep;
+                StencilOp failedOp = StencilOp::Keep;
+                StencilOp passOp = StencilOp::Keep;
+                uint32_t writeMask = 0xFFFFFFFF;
+                uint32_t compareMask = 0xFFFFFFFF;
+            };
+
+            std::optional<float> depthBias;
+            std::optional<float> depthBiasClamp;
+            float depthBiasSlopeScale = 0;
+            CompareOp depthCompare = CompareOp::Greater;
+            bool depthWriteEnabled = false;
+            ImageFormat depthFormat;
+            StencilOpState stencilBack;
+            StencilOpState stencilFront;
+        };
+
+        struct BlendComponentState final {
+            BlendFactor dstFactor = BlendFactor::Zero;
+            BlendFactor srcFactor = BlendFactor::One;
+            BlendOp operation = BlendOp::Add;
+        };
+
+        struct BlendState final {
+            BlendComponentState alpha;
+            BlendComponentState color;
+            VkColorComponentFlags colorMask;
+        };
+
+        struct BufferState final {
+            struct Attribute {
+                VertexFormat format;
+                uint64_t offset;
+                uint32_t shaderLocation;
+            };
+
+            enum class StepMode {
+                Instance,
+                Vertex,
+            } stepMode = StepMode::Vertex;
+
+            uint64_t arrayStride;
+            std::vector<Attribute> attributes;
+        };
+
+        struct MultisampleState final {
+            bool alphaToCoverageEnabled = false;
+            SampleCount count = SampleCount::Count1;
+            uint32_t mask = 0xFFFFFFFF;
+        };
+
+        struct PrimitiveState final {
+            CullMode cullMode = CullMode::None;
+            FrontFace frontFace = FrontFace::CCW;
+            StripIndexFormat stripIndexFormat = StripIndexFormat::Uint32;
+            Topology topology = Topology::TriangleList;
+            bool unclippedDepth = false;
+            PolygonMode polygonMode = PolygonMode::Fill;
+        };
+
+        struct ShaderState {
+            ShaderModule module;
+            std::string entryPoint = "main";
+        };
+
+        struct VertexState {
+            std::string entryPoint = "main";
+            ShaderModule module;
+            std::vector<BufferState> buffers;
+        };
+
+        std::unordered_map<ShaderStageType, ShaderStage> m_shader_stages;
+        VertexState vertex;
+        std::optional<DepthStencilState> depthStencil;
+        std::vector<BlendState> blend_state;
+        MultisampleState multisample;
+        PrimitiveState primitive;
+        PipelineLayout layout;
+        RenderPass m_render_pass;
     };
 
     GraphicsPipeline() = default;

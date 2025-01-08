@@ -31,8 +31,11 @@ namespace nickel {
     do {                                                 \
         _NICKEL_ASSERT_CHOOSER(__VA_ARGS__)(__VA_ARGS__) \
     } while (0)
+
+#define NICKEL_CANT_REACH() NICKEL_ASSERT(false, "won't reach here")
 #else
 #define NICKEL_ASSERT(...)
+#define NICKEL_CANT_REACH(msg)
 #endif
 
 }  // namespace nickel

@@ -54,7 +54,7 @@ public:
 
     struct Entry final {
         BindingPoint binding;
-        Flags<VkShaderStageFlagBits> shader_stage;
+        ShaderStageType shader_stage;
         uint32_t arraySize = 1;
     };
 

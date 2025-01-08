@@ -45,7 +45,6 @@ private:
     void createPipeline(nickel::graphics::Device device) {
         nickel::graphics::GraphicsPipeline::Descriptor desc;
         desc.m_render_pass = m_render_pass;
-        desc.m_subpass = 0;
         // TODO: not finish
         
         m_pipeline = device.CreateGraphicPipeline(desc);

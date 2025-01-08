@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/graphics/enums.hpp"
 #include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
@@ -8,21 +9,21 @@ class SamplerImpl;
 class NICKEL_API Sampler {
 public:
     struct Descriptor {
-        VkFilter magFilter;
-        VkFilter minFilter;
-        VkSamplerMipmapMode mipmapMode;
-        VkSamplerAddressMode addressModeU;
-        VkSamplerAddressMode addressModeV;
-        VkSamplerAddressMode addressModeW;
+        Filter magFilter;
+        Filter minFilter;
+        SamplerMipmapMode mipmapMode;
+        SamplerAddressMode addressModeU;
+        SamplerAddressMode addressModeV;
+        SamplerAddressMode addressModeW;
         float mipLodBias;
-        VkBool32 anisotropyEnable;
+        bool anisotropyEnable;
         float maxAnisotropy;
-        VkBool32 compareEnable;
-        VkCompareOp compareOp;
+        bool compareEnable;
+        CompareOp compareOp;
         float minLod;
         float maxLod;
-        VkBorderColor borderColor;
-        VkBool32 unnormalizedCoordinates;
+        BorderColor borderColor;
+        bool unnormalizedCoordinates;
     };
 
     Sampler() = default;

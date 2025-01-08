@@ -1,6 +1,7 @@
 #include "nickel/graphics/internal/sampler_impl.hpp"
 
 #include "nickel/graphics/internal/device_impl.hpp"
+#include "nickel/graphics/internal/enum_convert.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
 namespace nickel::graphics {
@@ -9,20 +10,20 @@ SamplerImpl::SamplerImpl(DeviceImpl& dev, const Sampler::Descriptor& desc)
     : m_dev{dev.m_device} {
     VkSamplerCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    ci.magFilter = desc.magFilter;
-    ci.minFilter = desc.minFilter;
-    ci.mipmapMode = desc.mipmapMode;
-    ci.addressModeU = desc.addressModeU;
-    ci.addressModeV = desc.addressModeV;
-    ci.addressModeW = desc.addressModeW;
+    ci.magFilter = Filter2Vk(desc.magFilter);
+    ci.minFilter = Filter2Vk(desc.minFilter);
+    ci.mipmapMode = SamplerMipmapMode2Vk(desc.mipmapMode);
+    ci.addressModeU = SamplerAddressMode2Vk(desc.addressModeU);
+    ci.addressModeV = SamplerAddressMode2Vk(desc.addressModeV);
+    ci.addressModeW = SamplerAddressMode2Vk(desc.addressModeW);
     ci.mipLodBias = desc.mipLodBias;
     ci.anisotropyEnable = desc.anisotropyEnable;
     ci.maxAnisotropy = desc.maxAnisotropy;
     ci.compareEnable = desc.compareEnable;
-    ci.compareOp = desc.compareOp;
+    ci.compareOp = CompareOp2Vk(desc.compareOp);
     ci.minLod = desc.minLod;
     ci.maxLod = desc.maxLod;
-    ci.borderColor = desc.borderColor;
+    ci.borderColor = BorderColor2Vk(desc.borderColor);
     ci.unnormalizedCoordinates = desc.unnormalizedCoordinates;
     
     VK_CALL(vkCreateSampler(m_dev, &ci, nullptr, &m_sampler));

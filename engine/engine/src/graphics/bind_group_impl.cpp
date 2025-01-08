@@ -37,6 +37,9 @@ VkDescriptorType cvtBufferType2DescriptorType(BindGroup::BufferBinding::Type typ
         case BindGroup::BufferBinding::Type::DynamicUniform:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     }
+    
+    NICKEL_CANT_REACH();
+    return {};
 }
 
 VkDescriptorType cvtImageType2DescriptorType(BindGroup::ImageBinding::Type type) {
@@ -46,6 +49,9 @@ VkDescriptorType cvtImageType2DescriptorType(BindGroup::ImageBinding::Type type)
         case BindGroup::ImageBinding::Type::StorageImage:
             return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     }
+    
+    NICKEL_CANT_REACH();
+    return {};
 }
 
 

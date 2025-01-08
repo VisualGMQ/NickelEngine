@@ -1,5 +1,5 @@
 #pragma once
-#include "volk.h"
+#include "nickel/graphics/enums.hpp"
 #include "nickel/common/dllexport.hpp"
 
 namespace nickel::graphics {
@@ -10,8 +10,8 @@ class Image;
 class NICKEL_API ImageView {
 public:
     struct Descriptor {
-        VkImageViewType viewType;
-        VkFormat format;
+        ImageViewType viewType;
+        ImageFormat format;
         VkComponentMapping components;
         VkImageSubresourceRange subresourceRange;
     };
