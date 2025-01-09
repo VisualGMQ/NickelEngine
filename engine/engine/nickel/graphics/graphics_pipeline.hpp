@@ -4,6 +4,7 @@
 #include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/render_pass.hpp"
 #include "nickel/graphics/shader_module.hpp"
+#include <optional>
 
 namespace nickel::graphics {
 

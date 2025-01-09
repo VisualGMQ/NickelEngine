@@ -111,6 +111,8 @@ RenderPassImpl::RenderPassImpl(DeviceImpl& device,
             preserve_attachments.emplace_back(attachment);
         }
         sub.preserveAttachmentCount = preserve_attachments.size();
+
+        subpasses.emplace_back(sub);
     }
 
     ci.attachmentCount = attachments.size();
@@ -118,6 +120,9 @@ RenderPassImpl::RenderPassImpl(DeviceImpl& device,
 
     ci.dependencyCount = dependencies.size();
     ci.pDependencies = dependencies.data();
+
+    ci.subpassCount = subpasses.size();
+    ci.pSubpasses = subpasses.data();
 
     ci.subpassCount = subpasses.size();
     ci.pSubpasses = subpasses.data();
