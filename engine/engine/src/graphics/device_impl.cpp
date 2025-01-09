@@ -126,7 +126,7 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phyDev, surface,
                                                       &capacities));
 
-    auto [extent, count, format] = queryImageInfo(phyDev, window_size, surface);
+    m_image_info = queryImageInfo(phyDev, window_size, surface);
     auto presentMode = queryPresentMode(phyDev, surface);
 
     auto& queueIndices = m_queue_indices;
@@ -144,13 +144,13 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     createInfo.surface = surface;
     createInfo.clipped = true;
     createInfo.presentMode = presentMode;
-    createInfo.minImageCount = count;
+    createInfo.minImageCount = m_image_info.m_image_count;
     createInfo.imageUsage =
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    createInfo.imageExtent.width = extent.w;
-    createInfo.imageExtent.height = extent.h;
-    createInfo.imageFormat = Format2Vk(format.format);
-    createInfo.imageColorSpace = ImageColorSpace2Vk(format.colorSpace);
+    createInfo.imageExtent.width = m_image_info.m_extent.w;
+    createInfo.imageExtent.height = m_image_info.m_extent.h;
+    createInfo.imageFormat = Format2Vk(m_image_info.m_surface_format.format);
+    createInfo.imageColorSpace = ImageColorSpace2Vk(m_image_info.m_surface_format.colorSpace);
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.imageArrayLayers = 1;
     createInfo.preTransform = capacities.currentTransform;
