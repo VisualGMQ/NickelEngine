@@ -599,6 +599,7 @@ enum class ColorComponent {
     G = 0x00000002,
     B = 0x00000004,
     A = 0x00000008,
+    All = R | G | B | A,
 };
 
 enum class ImageColorSpace {

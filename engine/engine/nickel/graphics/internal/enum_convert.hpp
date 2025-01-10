@@ -264,6 +264,14 @@ inline VkFormat VertexFormat2Vk(VertexFormat fmt) {
 }
 
 inline VkShaderStageFlags ShaderStage2Vk(Flags<ShaderStage> flags) {
+    if (flags == ShaderStage::All) {
+        return VK_SHADER_STAGE_ALL;
+    }
+
+    if (flags == ShaderStage::AllGraphics) {
+        return VK_SHADER_STAGE_ALL_GRAPHICS;
+    }
+    
     VkShaderStageFlags bits = 0;
     TRY_SET_BIT(ShaderStage::Vertex, VK_SHADER_STAGE_VERTEX_BIT)
     TRY_SET_BIT(ShaderStage::TessellationControl,
@@ -273,8 +281,6 @@ inline VkShaderStageFlags ShaderStage2Vk(Flags<ShaderStage> flags) {
     TRY_SET_BIT(ShaderStage::Geometry, VK_SHADER_STAGE_GEOMETRY_BIT)
     TRY_SET_BIT(ShaderStage::Fragment, VK_SHADER_STAGE_FRAGMENT_BIT)
     TRY_SET_BIT(ShaderStage::Compute, VK_SHADER_STAGE_COMPUTE_BIT)
-    TRY_SET_BIT(ShaderStage::AllGraphics, VK_SHADER_STAGE_ALL_GRAPHICS)
-    TRY_SET_BIT(ShaderStage::All, VK_SHADER_STAGE_ALL)
     return bits;
 }
 

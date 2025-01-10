@@ -23,6 +23,11 @@ macro(attach_common_config_on_engine target_name)
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp)
     target_compile_definitions(${target_name} PRIVATE _CRT_SECURE_NO_WARNINGS)
     target_compile_definitions(${target_name} PUBLIC $<IF:$<CONFIG:Debug>,NICKEL_DEBUG,NICKEL_RELEASE>)
+
+    if (MSVC)
+    target_compile_options(${target_name} PUBLIC /Zc:preprocessor)
+    endif()
+
     if (ANDROID)
         target_compile_definitions(${target_name} PUBLIC NICKEL_PLATFORM_ANDROID)
     elseif(WIN32)

@@ -19,6 +19,7 @@ public:
         std::unordered_map<uint32_t, Entry> entries;
     };
     
+    BindGroupLayout() = default;
     explicit BindGroupLayout(BindGroupLayoutImpl*);
     BindGroupLayout(const BindGroupLayout&);
     BindGroupLayout(BindGroupLayout&&) noexcept;
