@@ -13,17 +13,17 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
     ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     ci.subpass = 0;
 
+    std::vector<VkPipelineShaderStageCreateInfo> stage_ci_list;
     // shader stage
     {
-        std::vector<VkPipelineShaderStageCreateInfo> stage_ci_list;
         stage_ci_list.reserve(desc.m_shader_stages.size());
         for (auto&& [stage, module] : desc.m_shader_stages) {
-            VkPipelineShaderStageCreateInfo ci{};
-            ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            ci.stage = static_cast<VkShaderStageFlagBits>(ShaderStage2Vk(stage));
-            ci.pName = module.entry_name.c_str();
-            ci.module = module.module.Impl().m_module;
-            stage_ci_list.push_back(ci);
+            VkPipelineShaderStageCreateInfo shader_stage{};
+            shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            shader_stage.stage = static_cast<VkShaderStageFlagBits>(ShaderStage2Vk(stage));
+            shader_stage.pName = module.entry_name.c_str();
+            shader_stage.module = module.module.Impl().m_module;
+            stage_ci_list.push_back(shader_stage);
         }
 
         ci.stageCount = stage_ci_list.size();
@@ -49,7 +49,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
             attrDescs.emplace_back(attrDesc);
         }
 
-        VkVertexInputBindingDescription binding;
+        VkVertexInputBindingDescription binding{};
         binding.binding = i;
         binding.stride = state.arrayStride;
         binding.inputRate =
@@ -127,14 +127,14 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
         attachmentStates.emplace_back(colorState);
     }
 
-    VkPipelineColorBlendStateCreateInfo colorBlend;
+    VkPipelineColorBlendStateCreateInfo colorBlend{};
     colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlend.logicOpEnable = false;
     colorBlend.attachmentCount = attachmentStates.size();
     colorBlend.pAttachments = attachmentStates.data();
 
     // depth stencil state
-    VkPipelineDepthStencilStateCreateInfo depthStencilState;
+    VkPipelineDepthStencilStateCreateInfo depthStencilState{};
     depthStencilState.sType =
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
@@ -177,7 +177,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
     }
 
     // dynamic states
-    VkPipelineDynamicStateCreateInfo dynState;
+    VkPipelineDynamicStateCreateInfo dynState{};
     dynState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     std::array states = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -185,9 +185,10 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
     };
     dynState.dynamicStateCount = states.size();
     dynState.pDynamicStates = states.data();
+    ci.pDynamicState = &dynState;
 
     // temporary viewport
-    VkPipelineViewportStateCreateInfo viewportState;
+    VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     VkViewport viewport{};
     VkRect2D scissor{};

@@ -15,7 +15,7 @@ public:
     struct Descriptor {
         struct ShaderStage {
             ShaderModule module;
-            std::string entry_name;
+            std::string entry_name = "main";
         };
 
         struct DepthStencilState final {
@@ -47,7 +47,7 @@ public:
         struct BlendState final {
             BlendComponentState alpha;
             BlendComponentState color;
-            Flags<ColorComponent> colorMask;
+            Flags<ColorComponent> colorMask = ColorComponent::All;
         };
 
         struct BufferState final {
@@ -87,8 +87,6 @@ public:
         };
 
         struct VertexState {
-            std::string entryPoint = "main";
-            ShaderModule module;
             std::vector<BufferState> buffers;
         };
 

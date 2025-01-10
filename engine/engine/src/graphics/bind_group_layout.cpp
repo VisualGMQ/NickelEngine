@@ -32,7 +32,9 @@ BindGroupLayout& BindGroupLayout::operator=(BindGroupLayout&& o) noexcept {
 }
 
 BindGroupLayout::~BindGroupLayout() {
-    m_impl->DecRefcount();
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
 }
 
 const BindGroupLayoutImpl& BindGroupLayout::Impl() const noexcept {

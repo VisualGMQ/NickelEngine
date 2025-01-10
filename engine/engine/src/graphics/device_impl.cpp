@@ -291,6 +291,7 @@ DeviceImpl::~DeviceImpl() {
     m_cmdpool.Release();
 
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+    m_shader_modules.Clear();
     m_samplers.Clear();
     m_image_views.Clear();
     m_images.Clear();

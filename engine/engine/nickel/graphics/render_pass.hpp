@@ -11,6 +11,8 @@ class NICKEL_API RenderPass final {
 public:
     struct Descriptor {
         struct SubpassDependency {
+            static constexpr uint32_t ExternalSubpass = (~0U);
+            
             uint32_t srcSubpass{};
             uint32_t dstSubpass{};
             Flags<PipelineStage> srcStageMask;
