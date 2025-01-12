@@ -40,6 +40,9 @@ Image& Image::operator=(Image&& o) noexcept {
 void Image::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
+        if (m_impl->Refcount() == 0) {
+            m_impl->PendingDelete();
+        }
         m_impl = nullptr;
     }
 }
@@ -49,9 +52,7 @@ ImageView Image::CreateView(const ImageView::Descriptor& desc) {
 }
 
 Image::~Image() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
+    Release();
 }
 
 Image::operator bool() const noexcept {

@@ -12,10 +12,11 @@ public:
     ImageViewImpl(DeviceImpl&, const Image& image, const ImageView::Descriptor&);
 
     // only for swapchain image view hack
-    ImageViewImpl(VkDevice, VkImageView);
+    ImageViewImpl(DeviceImpl&, VkImageView);
     ~ImageViewImpl();
 
     void Release();
+    void PendingDelete();
 
     Image GetImage() const;
 
@@ -23,7 +24,7 @@ public:
     Image m_image;
 
 private:
-    VkDevice m_device;
+    DeviceImpl& m_device;
 };
 
 }  // namespace nickel::graphics

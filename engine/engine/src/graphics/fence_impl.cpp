@@ -5,7 +5,7 @@
 
 namespace nickel::graphics {
 
-FenceImpl::FenceImpl(const DeviceImpl& device, bool signaled)
+FenceImpl::FenceImpl(DeviceImpl& device, bool signaled)
     : m_device{device} {
     VkFenceCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -15,6 +15,10 @@ FenceImpl::FenceImpl(const DeviceImpl& device, bool signaled)
 
 FenceImpl::~FenceImpl() {
     vkDestroyFence(m_device.m_device, m_fence, nullptr);
+}
+
+void FenceImpl::PendingDelete() {
+    m_device.m_pending_delete_fences.push_back(this);
 }
 
 }  // namespace nickel::graphics

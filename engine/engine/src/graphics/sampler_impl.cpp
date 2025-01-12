@@ -7,7 +7,7 @@
 namespace nickel::graphics {
 
 SamplerImpl::SamplerImpl(DeviceImpl& dev, const Sampler::Descriptor& desc)
-    : m_dev{dev.m_device} {
+    : m_dev{dev} {
     VkSamplerCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     ci.magFilter = Filter2Vk(desc.magFilter);
@@ -26,11 +26,15 @@ SamplerImpl::SamplerImpl(DeviceImpl& dev, const Sampler::Descriptor& desc)
     ci.borderColor = BorderColor2Vk(desc.borderColor);
     ci.unnormalizedCoordinates = desc.unnormalizedCoordinates;
     
-    VK_CALL(vkCreateSampler(m_dev, &ci, nullptr, &m_sampler));
+    VK_CALL(vkCreateSampler(m_dev.m_device, &ci, nullptr, &m_sampler));
 }
 
 SamplerImpl::~SamplerImpl() {
-    vkDestroySampler(m_dev, m_sampler, nullptr);
+    vkDestroySampler(m_dev.m_device, m_sampler, nullptr);
+}
+
+void SamplerImpl::PendingDelete() {
+    m_dev.m_pending_delete_samplers.push_back(this);
 }
 
 }  // namespace nickel::graphics

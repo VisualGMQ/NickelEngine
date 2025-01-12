@@ -15,9 +15,9 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
     createImage(desc, dev);
     allocMem(adapter.m_phyDevice);
 
-    // for (int i = 0; i < desc.extent.depth; i++) {
-    //     m_layouts.push_back(desc.initialLayout);
-    // }
+    for (int i = 0; i < desc.extent.l; i++) {
+        m_layouts.push_back(desc.initialLayout);
+    }
 
     VK_CALL(
         vkBindImageMemory(m_device.m_device, m_image, m_memory->m_memory, 0));
@@ -60,7 +60,7 @@ void ImageImpl::allocMem(VkPhysicalDevice phyDevice) {
              "(DeviceLocal)");
     } else {
         m_memory =
-            new MemoryImpl{m_device.m_device, requirements.size, index.value()};
+            new MemoryImpl{m_device, requirements.size, index.value()};
     }
 }
 
@@ -99,6 +99,10 @@ Flags<VkImageUsageFlagBits> ImageImpl::Usage() const {
 ImageView ImageImpl::CreateView(const Image& image,
                                 const ImageView::Descriptor& desc) {
     return m_device.CreateImageView(image, desc);
+}
+
+void ImageImpl::PendingDelete() {
+    m_device.m_pending_delete_images.push_back(this);
 }
 
 }  // namespace nickel::graphics

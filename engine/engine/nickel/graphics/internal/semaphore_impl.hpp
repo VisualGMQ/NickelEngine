@@ -9,6 +9,7 @@ class SemaphoreImpl : public RefCountable {
 public:
     SemaphoreImpl(DeviceImpl&);
     ~SemaphoreImpl();
+    void PendingDelete();
 
     VkSemaphore m_semaphore;
 

@@ -36,7 +36,7 @@ struct getDescriptorTypeHelper {
             case BindGroup::ImageBinding::Type::StorageImage:
                 return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         }
-        
+
         NICKEL_CANT_REACH();
         return {};
     }
@@ -53,7 +53,7 @@ VkDescriptorType getDescriptorType(const BindGroup::BindingPoint& entry) {
 
 BindGroupLayoutImpl::BindGroupLayoutImpl(
     DeviceImpl& dev, const BindGroupLayout::Descriptor& desc)
-    : m_device{dev.m_device}, m_group_elem_count{desc.entries.size()} {
+    : m_device{dev}, m_group_elem_count{desc.entries.size()} {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     for (auto&& [slot, entry] : desc.entries) {
         bindings.emplace_back(getBinding(slot, entry));
@@ -64,7 +64,7 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
     ci.bindingCount = bindings.size();
     ci.pBindings = bindings.data();
 
-    VK_CALL(vkCreateDescriptorSetLayout(m_device, &ci, nullptr, &m_layout));
+    VK_CALL(vkCreateDescriptorSetLayout(dev.m_device, &ci, nullptr, &m_layout));
 
     uint32_t count =
         dev.GetSwapchainImageInfo().m_image_count * MaxDrawCallPerCmdBuf;
@@ -115,7 +115,7 @@ void BindGroupLayoutImpl::createPool(uint32_t count,
     info.poolSizeCount = sizes.size();
     info.pPoolSizes = sizes.data();
 
-    VK_CALL(vkCreateDescriptorPool(m_device, &info, nullptr, &m_pool));
+    VK_CALL(vkCreateDescriptorPool(m_device.m_device, &info, nullptr, &m_pool));
 }
 
 void BindGroupLayoutImpl::allocSets(uint32_t count) {
@@ -127,7 +127,7 @@ void BindGroupLayoutImpl::allocSets(uint32_t count) {
     info.descriptorSetCount = count;
 
     std::vector<VkDescriptorSet> sets(count);
-    VK_CALL(vkAllocateDescriptorSets(m_device, &info, sets.data()));
+    VK_CALL(vkAllocateDescriptorSets(m_device.m_device, &info, sets.data()));
 
     for (int i = 0; i < MaxDrawCallPerCmdBuf; i++) {
         std::vector<VkDescriptorSet> set_group;
@@ -139,9 +139,13 @@ void BindGroupLayoutImpl::allocSets(uint32_t count) {
 }
 
 BindGroupLayoutImpl::~BindGroupLayoutImpl() {
-    VK_CALL(vkResetDescriptorPool(m_device, m_pool, 0));
-    vkDestroyDescriptorPool(m_device, m_pool, nullptr);
-    vkDestroyDescriptorSetLayout(m_device, m_layout, nullptr);
+    VK_CALL(vkResetDescriptorPool(m_device.m_device, m_pool, 0));
+    vkDestroyDescriptorPool(m_device.m_device, m_pool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device.m_device, m_layout, nullptr);
+}
+
+void BindGroupLayoutImpl::PendingDelete() {
+    m_device.m_pending_delete_bind_group_layouts.push_back(this);
 }
 
 }  // namespace nickel::graphics

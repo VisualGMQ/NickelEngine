@@ -20,9 +20,10 @@ public:
 
     const DescriptorSetLists* RequireSetList();
     void RecycleSetList(size_t index);
+    void PendingDelete();
 
 private:
-    VkDevice m_device;
+    DeviceImpl& m_device;
     size_t m_group_elem_count;
     std::vector<size_t> m_unused_group_indices;
 

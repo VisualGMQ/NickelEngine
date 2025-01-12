@@ -41,4 +41,8 @@ PipelineLayoutImpl::~PipelineLayoutImpl() {
     vkDestroyPipelineLayout(m_device.m_device, m_pipeline_layout, nullptr);
 }
 
+void PipelineLayoutImpl::PendingDelete() {
+    m_device.m_pending_delete_pipeline_layouts.push_back(this);
+}
+
 }  // namespace nickel::graphics

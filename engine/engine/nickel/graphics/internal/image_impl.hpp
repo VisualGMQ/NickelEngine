@@ -25,9 +25,11 @@ public:
     Flags<VkImageUsageFlagBits> Usage() const;
     ImageView CreateView(const Image& image, const ImageView::Descriptor&);
 
+    void PendingDelete();
+
     VkImage m_image;
     MemoryImpl* m_memory{};
-    std::vector<VkImageLayout> m_layouts;
+    std::vector<ImageLayout> m_layouts;
 
 private:
     DeviceImpl& m_device;

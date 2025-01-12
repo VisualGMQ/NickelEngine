@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "nickel/graphics/cmd_encoder.hpp"
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/math/smatrix.hpp"
 #include "nickel/graphics/bind_group_layout.hpp"
@@ -12,7 +13,6 @@
 #include "nickel/graphics/pipeline_layout.hpp"
 #include "nickel/graphics/sampler.hpp"
 #include "nickel/graphics/semaphore.hpp"
-#include "nickel/video/window.hpp"
 
 namespace nickel::graphics {
 
@@ -47,11 +47,15 @@ public:
     GraphicsPipeline CreateGraphicPipeline(const GraphicsPipeline::Descriptor&);
     Sampler CreateSampler(const Sampler::Descriptor&);
     ShaderModule CreateShaderModule(const uint32_t* data, size_t size);
+    CommandEncoder CreateCommandEncoder();
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
     const SwapchainImageInfo& GetSwapchainImageInfo() const;
+    std::vector<ImageView> GetSwapchainImages() const;
+    uint32_t WaitAndAcquireSwapchainImageIndex();
 
-    void AcquireSwapchainImageAndWait(video::Window& window);
+    void EndFrame();
+
     void Submit(Command& cmd);
 
 private:

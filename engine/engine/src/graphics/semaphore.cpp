@@ -38,9 +38,7 @@ Semaphore& Semaphore::operator=(Semaphore&& o) noexcept {
 }
 
 Semaphore::~Semaphore() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
+    Release();
 }
 
 Semaphore::operator bool() const noexcept {
@@ -58,6 +56,9 @@ SemaphoreImpl& Semaphore::Impl() noexcept {
 void Semaphore::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
+        if (m_impl->Refcount() == 0) {
+            m_impl->PendingDelete();
+        }
         m_impl = nullptr;
     }
 }

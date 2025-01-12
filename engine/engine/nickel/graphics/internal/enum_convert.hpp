@@ -494,6 +494,7 @@ inline VkImageLayout ImageLayout2Vk(ImageLayout layout) {
         CASE(ImageLayout::Undefined, VK_IMAGE_LAYOUT_UNDEFINED)
         CASE(ImageLayout::General, VK_IMAGE_LAYOUT_GENERAL)
         CASE(ImageLayout::Preinitialized, VK_IMAGE_LAYOUT_PREINITIALIZED)
+        CASE(ImageLayout::PresentSrcKHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
         CASE(ImageLayout::AttachmentOptimal,
              VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         CASE(ImageLayout::ReadOnly_optimal, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL)

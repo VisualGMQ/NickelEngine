@@ -37,9 +37,7 @@ Buffer& Buffer::operator=(Buffer&& o) noexcept {
 }
 
 Buffer::~Buffer() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
+    Release();
 }
 
 Buffer::operator bool() const noexcept {
@@ -54,9 +52,44 @@ BufferImpl& Buffer::Impl() noexcept {
     return *m_impl;
 }
 
+enum Buffer::MapState Buffer::MapState() const {
+    return m_impl->MapState();
+}
+
+uint64_t Buffer::Size() const {
+    return m_impl->Size();
+}
+
+void Buffer::Unmap() {
+    return m_impl->Unmap();
+}
+
+void Buffer::MapAsync(uint64_t offset, uint64_t size) {
+    return m_impl->MapAsync(offset, size);
+}
+
+void* Buffer::GetMappedRange() {
+    return m_impl->GetMappedRange();
+}
+
+void* Buffer::GetMappedRange(uint64_t offset) {
+    return m_impl->GetMappedRange(offset);
+}
+
+void Buffer::Flush() {
+    return m_impl->Flush();
+}
+
+void Buffer::Flush(uint64_t offset, uint64_t size) {
+    return m_impl->Flush(offset, size);
+}
+
 void Buffer::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
+        if (m_impl->Refcount() == 0) {
+            m_impl->PendingDelete();
+        }
         m_impl = nullptr;
     }
 }

@@ -13,6 +13,7 @@ public:
     ~GraphicsPipelineImpl();
 
     void Release();
+    void PendingDelete();
 
     VkPipeline m_pipeline;
     PipelineLayout m_layout;

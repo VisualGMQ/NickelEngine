@@ -10,6 +10,7 @@ class RenderPassImpl : public RefCountable {
 public:
     RenderPassImpl(DeviceImpl&, const RenderPass::Descriptor&);
     ~RenderPassImpl();
+    void PendingDelete();
 
     VkRenderPass m_render_pass;
 

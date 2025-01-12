@@ -8,13 +8,15 @@ class DeviceImpl;
 
 class FenceImpl : public RefCountable {
 public:
-    FenceImpl(const DeviceImpl&, bool signaled);
+    FenceImpl(DeviceImpl&, bool signaled);
     ~FenceImpl();
 
     VkFence m_fence;
 
+    void PendingDelete();
+
 private:
-    const DeviceImpl& m_device;
+    DeviceImpl& m_device;
 };
 
 }  // namespace nickel::graphics

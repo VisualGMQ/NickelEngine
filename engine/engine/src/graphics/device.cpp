@@ -56,6 +56,10 @@ ShaderModule Device::CreateShaderModule(const uint32_t* data, size_t size) {
     return m_impl->CreateShaderModule(data, size);
 }
 
+CommandEncoder Device::CreateCommandEncoder() {
+    return m_impl->CreateCommandEncoder();
+}
+
 Semaphore Device::CreateSemaphore() {
     return m_impl->CreateSemaphore();
 }
@@ -68,8 +72,16 @@ const SwapchainImageInfo& Device::GetSwapchainImageInfo() const {
     return m_impl->GetSwapchainImageInfo();
 }
 
-void Device::AcquireSwapchainImageAndWait(video::Window& window) {
-    return m_impl->AcquireSwapchainImageAndWait(window);
+std::vector<ImageView> Device::GetSwapchainImages() const {
+    return m_impl->GetSwapchainImages();
+}
+
+uint32_t Device::WaitAndAcquireSwapchainImageIndex() {
+    return m_impl->WaitAndAcquireSwapchainImageIndex();
+}
+
+void Device::EndFrame() {
+    m_impl->EndFrame();
 }
 
 void Device::Submit(Command& cmd) {

@@ -16,4 +16,8 @@ SemaphoreImpl::~SemaphoreImpl() {
     vkDestroySemaphore(m_device.m_device, m_semaphore, nullptr);
 }
 
+void SemaphoreImpl::PendingDelete() {
+    m_device.m_pending_delete_semaphores.push_back(this);
+}
+
 }  // namespace nickel::graphics

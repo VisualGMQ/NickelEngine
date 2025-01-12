@@ -7,7 +7,7 @@ namespace nickel::graphics {
 
 class CommandPoolImpl;
 
-class CommandImpl : public RefCountable {
+class CommandImpl {
 public:
     enum class Flag : uint32_t {
         Unknown = 0,
@@ -15,20 +15,22 @@ public:
         Transfer = 0x02,
     };
 
-    explicit CommandImpl(VkDevice device, CommandPoolImpl& pool,
+    explicit CommandImpl(DeviceImpl& device, CommandPoolImpl& pool,
                          VkCommandBuffer cmd);
     ~CommandImpl();
 
     VkCommandBuffer m_cmd;
     Flags<Flag> m_flags = Flag::Unknown;
 
-    void AddLayoutTransition(ImageImpl*, VkImageLayout, size_t idx);
+    void AddLayoutTransition(ImageImpl*, ImageLayout, size_t idx);
     void ApplyLayoutTransitions();
 
+    void PendingDelete();
+
 private:
-    VkDevice m_device;
+    DeviceImpl& m_device;
     CommandPoolImpl& m_pool;
-    std::unordered_map<ImageImpl*, std::unordered_map<size_t, VkImageLayout>>
+    std::unordered_map<ImageImpl*, std::unordered_map<size_t, ImageLayout>>
         m_layout_transitions;
 };
 

@@ -37,9 +37,7 @@ PipelineLayout& PipelineLayout::operator=(PipelineLayout&& o) noexcept {
 }
 
 PipelineLayout::~PipelineLayout() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
+    Release();
 }
 
 PipelineLayout::operator bool() const noexcept {
@@ -57,6 +55,9 @@ PipelineLayoutImpl& PipelineLayout::Impl() noexcept {
 void PipelineLayout::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
+        if (m_impl->Refcount() == 0) {
+            m_impl->PendingDelete();
+        }
         m_impl = nullptr;
     }
 }
