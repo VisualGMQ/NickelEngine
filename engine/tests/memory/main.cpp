@@ -8,7 +8,14 @@ uint32_t gDestructCount = 0;
 struct Num {
     int num;
 
+    Num(int num): num{num} {}
     ~Num() { gDestructCount++; }
+};
+
+struct ThrowException {
+    ThrowException() {
+        throw std::out_of_range("custom exception");
+    }
 };
 
 TEST_CASE("block memory") {
@@ -57,5 +64,15 @@ TEST_CASE("block memory") {
         allocator.Deallocate(value3);
         REQUIRE(allocator.UnuseCount(0) == 4);
         REQUIRE(gDestructCount == 3);
+    }
+
+    SECTION("strong exception guarantee") {
+        BlockMemoryAllocator<ThrowException> allocator(4);
+
+        ThrowException* elem{};
+        elem = allocator.Allocate();
+        REQUIRE(elem == nullptr);
+        REQUIRE(allocator.InuseCount(0) == 0);
+        REQUIRE(allocator.UnuseCount(0) == 4);
     }
 }

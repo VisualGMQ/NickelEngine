@@ -32,7 +32,7 @@ public:
     }
 
     template <typename... Args>
-    T* Allocate(Args&&... args) {
+    T* Allocate(Args&&... args) noexcept {
         Block* block = ensure_block();
         if (block == nullptr) {
             return nullptr;
@@ -43,9 +43,10 @@ public:
 
         T* elem;
         try {
-            elem = std::construct_at((T*)&mem->m_mem, std::forward<Args>(args)...);
+            elem =
+                std::construct_at((T*)&mem->m_mem, std::forward<Args>(args)...);
         } catch (...) {
-            LOGE("catched exception when construct object");
+            LOGE("catch exception when deconstruct object");
             return nullptr;
         }
 
@@ -56,7 +57,7 @@ public:
         return elem;
     }
 
-    void Deallocate(T* p) {
+    void Deallocate(T* p) noexcept {
         Node<Block>* block_node = m_block_head;
 
         while (block_node &&
@@ -80,7 +81,8 @@ public:
             try {
                 ((T*)&mem->m_mem)->~T();
             } catch (...) {
-                LOGE("catched exception when deconstruct object");
+                LOGE("catch exception when deconstruct object");
+                return;
             }
 
             mem->m_in_use = false;
@@ -219,7 +221,13 @@ private:
         }
 
         if (!node) {
-            Node<Block>* new_block = new Node<Block>;
+            Node<Block>* new_block = new (std::nothrow) Node<Block>;
+
+            if (!new_block) {
+                LOGE("bad alloc exception! out of memory");
+                return nullptr;
+            }
+
             new_block->m_data.m_mem = new (std::nothrow) Mem[m_block_mem_count];
             if (!new_block->m_data.m_mem) {
                 LOGE("allocate memory block failed");
@@ -228,7 +236,13 @@ private:
 
             Node<size_t>* prev_index = new_block->m_data.m_unused_index_head;
             for (size_t i = 0; i < m_block_mem_count; i++) {
-                Node<size_t>* new_index = new Node<size_t>;
+                Node<size_t>* new_index = new (std::nothrow) Node<size_t>;
+
+                if (!new_index) {
+                    LOGE("bad alloc exception! out of memory");
+                    continue; 
+                }
+                
                 new_index->m_data = i;
 
                 if (prev_index) {
