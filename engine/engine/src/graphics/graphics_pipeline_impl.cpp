@@ -221,3 +221,7 @@ nickel::graphics::GraphicsPipelineImpl::~GraphicsPipelineImpl() {
 void nickel::graphics::GraphicsPipelineImpl::Release() {
     m_layout.Release();
 }
+
+void nickel::graphics::GraphicsPipelineImpl::PendingDelete() {
+    m_device.m_pending_delete_graphics_pipelines.push_back(this);
+}

@@ -4,15 +4,19 @@
 
 namespace nickel::graphics {
 
+class DeviceImpl;
+
 class ShaderModuleImpl: public RefCountable  {
 public:
-    ShaderModuleImpl(VkDevice, const uint32_t* data, size_t size);
+    ShaderModuleImpl(DeviceImpl&, const uint32_t* data, size_t size);
     ~ShaderModuleImpl();
+
+    void PendingDelete();
 
     VkShaderModule m_module;
 
 private:
-    VkDevice m_device;
+    DeviceImpl& m_device;
 };
 
 

@@ -32,9 +32,7 @@ BindGroupLayout& BindGroupLayout::operator=(BindGroupLayout&& o) noexcept {
 }
 
 BindGroupLayout::~BindGroupLayout() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
+    Release();
 }
 
 const BindGroupLayoutImpl& BindGroupLayout::Impl() const noexcept {
@@ -48,6 +46,9 @@ BindGroupLayoutImpl& BindGroupLayout::Impl() noexcept {
 void BindGroupLayout::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
+        if (m_impl->Refcount() == 0) {
+            m_impl->PendingDelete();
+        }
         m_impl = nullptr;
     }
 }

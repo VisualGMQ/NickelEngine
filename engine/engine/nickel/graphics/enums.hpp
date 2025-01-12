@@ -561,6 +561,7 @@ enum class Dependency {
 enum class ImageLayout {
     Undefined = 0,
     General,
+    PresentSrcKHR,
     ColorAttachmentOptimal,
     DepthStencilAttachmentOptimal,
     DepthStencilReadOnlyOptimal,

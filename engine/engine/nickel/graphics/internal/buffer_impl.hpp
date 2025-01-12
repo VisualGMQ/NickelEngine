@@ -21,12 +21,13 @@ public:
     void* GetMappedRange(uint64_t offset);
     void Flush();
     void Flush(uint64_t offset, uint64_t size);
+    void PendingDelete();
 
     VkBuffer m_buffer;
     MemoryImpl* m_memory;
 
 private:
-    VkDevice m_device;
+    DeviceImpl& m_device;
     uint64_t m_size{};
     enum Buffer::MapState m_map_state = Buffer::MapState::Unmapped;
     void* m_map{};

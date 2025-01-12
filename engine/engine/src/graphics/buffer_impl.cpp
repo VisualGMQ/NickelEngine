@@ -10,7 +10,7 @@ namespace nickel::graphics {
 
 BufferImpl::BufferImpl(DeviceImpl& dev, VkPhysicalDevice phyDev,
                        const Buffer::Descriptor& desc)
-    : m_device{dev.m_device} {
+    : m_device{dev} {
     std::vector<uint32_t> indices;
     if (dev.m_queue_indices.HasSeparateQueue()) {
         indices.emplace_back(dev.m_queue_indices.m_graphics_index.value());
@@ -98,7 +98,7 @@ BufferImpl::~BufferImpl() {
         Unmap();
     }
     delete m_memory;
-    vkDestroyBuffer(m_device, m_buffer, nullptr);
+    vkDestroyBuffer(m_device.m_device, m_buffer, nullptr);
 }
 
 enum Buffer::MapState BufferImpl::MapState() const {
@@ -110,13 +110,13 @@ uint64_t BufferImpl::Size() const {
 }
 
 void BufferImpl::Unmap() {
-    vkUnmapMemory(m_device, m_memory->m_memory);
+    vkUnmapMemory(m_device.m_device, m_memory->m_memory);
     m_map_state = Buffer::MapState::Unmapped;
     m_map = nullptr;
 }
 
 void BufferImpl::MapAsync(uint64_t offset, uint64_t size) {
-    VK_CALL(vkMapMemory(m_device, m_memory->m_memory, offset, size, 0, &m_map));
+    VK_CALL(vkMapMemory(m_device.m_device, m_memory->m_memory, offset, size, 0, &m_map));
     if (m_map) {
         m_mapped_offset = offset;
         m_mapped_size = size;
@@ -138,7 +138,7 @@ void BufferImpl::Flush() {
     range.memory = m_memory->m_memory;
     range.offset = m_mapped_offset;
     range.size = m_mapped_size;
-    VK_CALL(vkFlushMappedMemoryRanges(m_device, 1, &range));
+    VK_CALL(vkFlushMappedMemoryRanges(m_device.m_device, 1, &range));
 }
 
 void BufferImpl::Flush(uint64_t offset, uint64_t size) {
@@ -147,7 +147,11 @@ void BufferImpl::Flush(uint64_t offset, uint64_t size) {
     range.memory = m_memory->m_memory;
     range.offset = offset;
     range.size = size;
-    VK_CALL(vkFlushMappedMemoryRanges(m_device, 1, &range));
+    VK_CALL(vkFlushMappedMemoryRanges(m_device.m_device, 1, &range));
+}
+
+void BufferImpl::PendingDelete() {
+    m_device.m_pending_delete_buffers.push_back(this);
 }
 
 }  // namespace nickel::graphics

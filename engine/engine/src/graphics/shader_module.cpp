@@ -37,9 +37,7 @@ ShaderModule& ShaderModule::operator=(ShaderModule&& o) noexcept {
 }
 
 ShaderModule::~ShaderModule() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
+    Release();
 }
 
 ShaderModule::operator bool() const noexcept {
@@ -57,6 +55,9 @@ ShaderModuleImpl& ShaderModule::Impl() noexcept {
 void ShaderModule::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
+        if (m_impl->Refcount() == 0) {
+            m_impl->PendingDelete();
+        }
         m_impl = nullptr;
     }
 }

@@ -9,6 +9,11 @@ namespace nickel {
 template <typename T>
 class BlockMemoryAllocator {
 public:
+    static BlockMemoryAllocator& GetInst() {
+        static BlockMemoryAllocator instance;
+        return instance;
+    }
+    
     BlockMemoryAllocator(size_t block_mem_count = 256)
         : m_block_mem_count{block_mem_count} {}
 
@@ -77,6 +82,11 @@ public:
 
             size_t idx = (Mem*)p - block_node->m_data.m_mem;
             Mem* mem = block_node->m_data.m_mem + idx;
+
+            if (!mem->m_in_use) {
+                LOGE("memory is not in use when deallocate");
+                return ; 
+            }
 
             try {
                 ((T*)&mem->m_mem)->~T();
@@ -153,7 +163,7 @@ public:
         return 0;
     }
 
-    ~BlockMemoryAllocator() {
+    void FreeAll() noexcept {
         if (!m_block_head) {
             return;
         }
@@ -164,7 +174,10 @@ public:
             node = node->m_next;
             delete cur;
         }
+        m_block_head = nullptr;
     }
+
+    ~BlockMemoryAllocator() { FreeAll(); }
 
 private:
     struct Mem {
@@ -210,7 +223,7 @@ private:
     };
 
     Node<Block>* m_block_head{};
-    size_t m_block_mem_count;
+    const size_t m_block_mem_count;
 
     Block* ensure_block() noexcept {
         Node<Block>* node = m_block_head;
@@ -240,9 +253,9 @@ private:
 
                 if (!new_index) {
                     LOGE("bad alloc exception! out of memory");
-                    continue; 
+                    continue;
                 }
-                
+
                 new_index->m_data = i;
 
                 if (prev_index) {

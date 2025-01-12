@@ -40,4 +40,8 @@ void FramebufferImpl::Release() {
     m_views.clear();
 }
 
+void FramebufferImpl::PendingDelete() {
+    m_device.m_pending_delete_framebuffers.push_back(this);
+}
+
 }  // namespace nickel::graphics

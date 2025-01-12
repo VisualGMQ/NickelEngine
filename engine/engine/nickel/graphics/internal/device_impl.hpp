@@ -1,6 +1,7 @@
 ﻿#pragma once
+#include "nickel/common/memory/memory.hpp"
 #include "nickel/graphics/cmd.hpp"
-#include "nickel/graphics/cmd_pool.hpp"
+#include "nickel/graphics/cmd_encoder.hpp"
 #include "nickel/graphics/device.hpp"
 #include "nickel/graphics/fence.hpp"
 #include "nickel/graphics/internal/bind_group_layout_impl.hpp"
@@ -13,61 +14,14 @@
 #include "nickel/graphics/internal/image_view_impl.hpp"
 #include "nickel/graphics/internal/pipeline_layout_impl.hpp"
 #include "nickel/graphics/internal/render_pass_impl.hpp"
+#include "nickel/graphics/internal/sampler_impl.hpp"
+#include "nickel/graphics/internal/semaphore_impl.hpp"
 #include "nickel/graphics/internal/shader_module_impl.hpp"
 #include "nickel/graphics/sampler.hpp"
 #include "nickel/graphics/semaphore.hpp"
 #include "nickel/internal/pch.hpp"
-#include "nickel/video/window.hpp"
-#include "sampler_impl.hpp"
-#include "semaphore_impl.hpp"
 
 namespace nickel::graphics {
-
-template <typename T>
-class ResourceManager {
-public:
-    template <typename... Args>
-    T* Allocate(Args&&... args) {
-        if (m_unused_index >= m_resources.size()) {
-            m_resources.push_back(new T(std::forward<Args>(args)...));
-            m_unused_index++;
-            return m_resources.back();
-        }
-
-        new (m_resources[m_unused_index]) T{std::forward<Args>(args)...};
-        return m_resources[m_unused_index++];
-    }
-
-    void Free(T* resource) {
-        auto it = std::find(m_resources.begin(),
-                            m_resources.begin() + m_unused_index, resource);
-        if (it != m_resources.end()) {
-            resource->~T();
-            std::swap(m_resources[--m_unused_index], *it);
-        } else {
-            LOGE("try to free an unmanaged resource");
-        }
-    }
-
-    void Clear() {
-        size_t i = 0;
-        for (; i < m_unused_index; i++) {
-            delete m_resources[i];
-        }
-
-        for (; i < m_resources.size(); i++) {
-            free(m_resources[i]);
-        }
-
-        m_unused_index = 0;
-        m_resources.clear();
-        m_resources.shrink_to_fit();
-    }
-
-private:
-    std::vector<T*> m_resources;
-    size_t m_unused_index{};
-};
 
 class DeviceImpl {
 public:
@@ -103,6 +57,11 @@ public:
         }
     };
 
+    struct AcquiredSwapchainImage {
+        std::vector<ImageView>  m_views;
+        uint32_t m_using_index{};
+    };
+
     DeviceImpl(const AdapterImpl&, const SVector<uint32_t, 2>& window_size);
     ~DeviceImpl();
 
@@ -125,27 +84,29 @@ public:
     GraphicsPipeline CreateGraphicPipeline(const GraphicsPipeline::Descriptor&);
     Sampler CreateSampler(const Sampler::Descriptor&);
     ShaderModule CreateShaderModule(const uint32_t* data, size_t size);
-    CommandPool CreateCommandPool(VkCommandPoolCreateFlags flags);
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
+    CommandEncoder CreateCommandEncoder();
+    uint32_t WaitAndAcquireSwapchainImageIndex();
+    std::vector<ImageView> GetSwapchainImages() const;
+    
     void Submit(Command&);
     void WaitIdle();
 
-    void AcquireSwapchainImageAndWait(video::Window& window);
+    void EndFrame();
 
-    ResourceManager<BufferImpl> m_buffers;
-    ResourceManager<ImageImpl> m_images;
-    ResourceManager<ImageViewImpl> m_image_views;
-    ResourceManager<BindGroupLayoutImpl> m_bind_group_layouts;
-    ResourceManager<CommandPoolImpl> m_pools;
-    ResourceManager<FramebufferImpl> m_fbos;
-    ResourceManager<GraphicsPipelineImpl> m_graphic_pipelines;
-    ResourceManager<RenderPassImpl> m_render_passes;
-    ResourceManager<SamplerImpl> m_samplers;
-    ResourceManager<ShaderModuleImpl> m_shader_modules;
-    ResourceManager<PipelineLayoutImpl> m_pipeline_layout;
-    ResourceManager<SemaphoreImpl> m_semaphores;
-    ResourceManager<FenceImpl> m_fences;
+    std::vector<BufferImpl*> m_pending_delete_buffers;
+    std::vector<ImageImpl*> m_pending_delete_images;
+    std::vector<ImageViewImpl*> m_pending_delete_image_views;
+    std::vector<BindGroupLayoutImpl*> m_pending_delete_bind_group_layouts;
+    std::vector<FramebufferImpl*> m_pending_delete_framebuffers;
+    std::vector<GraphicsPipelineImpl*> m_pending_delete_graphics_pipelines;
+    std::vector<RenderPassImpl*> m_pending_delete_render_passes;
+    std::vector<SamplerImpl*> m_pending_delete_samplers;
+    std::vector<ShaderModuleImpl*> m_pending_delete_shader_modules;
+    std::vector<PipelineLayoutImpl*> m_pending_delete_pipeline_layouts;
+    std::vector<SemaphoreImpl*> m_pending_delete_semaphores;
+    std::vector<FenceImpl*> m_pending_delete_fences;
 
 private:
     SwapchainImageInfo m_image_info;
@@ -155,21 +116,36 @@ private:
     std::vector<Fence> m_render_fences;
     std::vector<Semaphore> m_image_avaliable_sems;
     std::vector<Semaphore> m_render_finish_sems;
-    CommandPool m_cmdpool;
+    std::vector<CommandPoolImpl*> m_cmd_pools;
+    std::vector<bool> m_need_present;
+
+    BlockMemoryAllocator<BufferImpl> m_buffer_allocator;
+    BlockMemoryAllocator<ImageImpl> m_image_allocator;
+    BlockMemoryAllocator<ImageViewImpl> m_image_view_allocator;
+    BlockMemoryAllocator<BindGroupLayoutImpl> m_bind_group_layout_allocator;
+    BlockMemoryAllocator<FramebufferImpl> m_framebuffer_allocator;
+    BlockMemoryAllocator<GraphicsPipelineImpl> m_graphics_pipeline_allocator;
+    BlockMemoryAllocator<RenderPassImpl> m_render_pass_allocator;
+    BlockMemoryAllocator<SamplerImpl> m_sampler_allocator;
+    BlockMemoryAllocator<ShaderModuleImpl> m_shader_module_allocator;
+    BlockMemoryAllocator<PipelineLayoutImpl> m_pipeline_layout_allocator;
+    BlockMemoryAllocator<SemaphoreImpl> m_semaphore_allocator;
+    BlockMemoryAllocator<FenceImpl> m_fence_allocator;
 
     QueueFamilyIndices chooseQueue(VkPhysicalDevice phyDevice,
                                    VkSurfaceKHR surface);
 
-    void createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
-                         const SVector<uint32_t, 2>& window_size);
+    void createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface);
     SwapchainImageInfo queryImageInfo(VkPhysicalDevice,
                                       const SVector<uint32_t, 2>&,
                                       VkSurfaceKHR);
     VkPresentModeKHR queryPresentMode(VkPhysicalDevice, VkSurfaceKHR);
+    void createCmdPools();
 
     void getAndCreateImageViews();
     void createRenderRelateSyncObjs();
-    void createDefaultCmdPool();
+    void cleanUpOneFrame();
 };
+
 
 }  // namespace nickel::graphics

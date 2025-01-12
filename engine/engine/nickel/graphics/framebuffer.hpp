@@ -12,7 +12,7 @@ class NICKEL_API Framebuffer {
 public:
     struct Descriptor {
         std::vector<ImageView> m_views;
-        Vec3 m_extent;
+        SVector<uint32_t, 3> m_extent;
         RenderPass m_render_pass;
     };
 

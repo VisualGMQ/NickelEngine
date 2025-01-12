@@ -84,9 +84,12 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     vkGetDeviceQueue(m_device, m_queue_indices.m_present_index.value(), 0,
                      &m_present_queue);
 
-    createSwapchain(impl.m_phyDevice, impl.m_surface, window_size);
+    m_image_info =
+        queryImageInfo(impl.m_phyDevice, window_size, impl.m_surface);
+    createCmdPools();
+    createSwapchain(impl.m_phyDevice, impl.m_surface);
     createRenderRelateSyncObjs();
-    createDefaultCmdPool();
+    m_need_present.resize(m_image_info.m_image_count, false);
 }
 
 DeviceImpl::QueueFamilyIndices DeviceImpl::chooseQueue(
@@ -120,13 +123,11 @@ DeviceImpl::QueueFamilyIndices DeviceImpl::chooseQueue(
     return indices;
 }
 
-void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
-                                 const SVector<uint32_t, 2>& window_size) {
+void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev,
+                                 VkSurfaceKHR surface) {
     VkSurfaceCapabilitiesKHR capacities;
     VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phyDev, surface,
                                                       &capacities));
-
-    m_image_info = queryImageInfo(phyDev, window_size, surface);
     auto presentMode = queryPresentMode(phyDev, surface);
 
     auto& queueIndices = m_queue_indices;
@@ -150,7 +151,8 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev, VkSurfaceKHR surface,
     createInfo.imageExtent.width = m_image_info.m_extent.w;
     createInfo.imageExtent.height = m_image_info.m_extent.h;
     createInfo.imageFormat = Format2Vk(m_image_info.m_surface_format.format);
-    createInfo.imageColorSpace = ImageColorSpace2Vk(m_image_info.m_surface_format.colorSpace);
+    createInfo.imageColorSpace =
+        ImageColorSpace2Vk(m_image_info.m_surface_format.colorSpace);
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.imageArrayLayers = 1;
     createInfo.preTransform = capacities.currentTransform;
@@ -230,6 +232,12 @@ VkPresentModeKHR DeviceImpl::queryPresentMode(VkPhysicalDevice dev,
     return choose;
 }
 
+void DeviceImpl::createCmdPools() {
+    for (int i = 0; i < m_image_info.m_image_count; i++) {
+        m_cmd_pools.push_back(new CommandPoolImpl(*this, 0));
+    }
+}
+
 void DeviceImpl::getAndCreateImageViews() {
     std::vector<VkImage> images;
     uint32_t count = 0;
@@ -238,7 +246,7 @@ void DeviceImpl::getAndCreateImageViews() {
     VK_CALL(
         vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, images.data()));
 
-    for (auto& image : images) {
+    for (auto image : images) {
         VkImageSubresourceRange range;
         range.levelCount = 1;
         range.layerCount = 1;
@@ -259,28 +267,68 @@ void DeviceImpl::getAndCreateImageViews() {
         VkImageView view;
         VK_CALL(vkCreateImageView(m_device, &ci, nullptr, &view));
         if (view) {
-            m_swapchain_image_views.push_back(
-                new ImageViewImpl{m_device, view});
+            m_swapchain_image_views.push_back(new ImageViewImpl{*this, view});
         } else {
             LOGC("create image view from swapchain image failed");
         }
     }
+
+    // layout transition
+    VkCommandBufferAllocateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    info.commandBufferCount = 1;
+    info.commandPool = m_cmd_pools[0]->m_pool;
+    VkCommandBuffer cmd;
+    VK_CALL(vkAllocateCommandBuffers(m_device, &info, &cmd));
+
+    std::vector<VkImageMemoryBarrier> barriers;
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VK_CALL(vkBeginCommandBuffer(cmd, &begin_info));
+    for (auto image : images) {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.image = image;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrier.srcAccessMask = VK_ACCESS_NONE;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        barriers.push_back(barrier);
+    }
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, 0, 0, nullptr, 0,
+                         nullptr, barriers.size(), barriers.data());
+    VK_CALL(vkEndCommandBuffer(cmd));
+
+    VkSubmitInfo submit{};
+    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmd;
+    VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &submit, VK_NULL_HANDLE));
+    WaitIdle();
+
+    VK_CALL(vkResetCommandPool(m_device, m_cmd_pools[0]->m_pool, 0));
 }
 
 void DeviceImpl::createRenderRelateSyncObjs() {
     for (uint32_t i = 0; i < m_image_info.m_image_count; i++) {
-        m_render_fences.push_back(CreateFence(false));
+        m_render_fences.push_back(CreateFence(true));
         m_image_avaliable_sems.push_back(CreateSemaphore());
         m_render_finish_sems.push_back(CreateSemaphore());
     }
 }
 
-void DeviceImpl::createDefaultCmdPool() {
-    m_cmdpool =
-        CreateCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-}
-
 DeviceImpl::~DeviceImpl() {
+    WaitIdle();
+    
     for (auto view : m_swapchain_image_views) {
         delete view;
     }
@@ -288,23 +336,87 @@ DeviceImpl::~DeviceImpl() {
     m_render_fences.clear();
     m_image_avaliable_sems.clear();
     m_render_finish_sems.clear();
-    m_cmdpool.Release();
 
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-    m_shader_modules.Clear();
-    m_samplers.Clear();
-    m_image_views.Clear();
-    m_images.Clear();
-    m_render_passes.Clear();
-    m_buffers.Clear();
-    m_pipeline_layout.Clear();
-    m_bind_group_layouts.Clear();
-    m_fbos.Clear();
-    m_graphic_pipelines.Clear();
-    m_pools.Clear();
-    m_semaphores.Clear();
-    m_fences.Clear();
+
+    m_shader_module_allocator.FreeAll();
+    m_sampler_allocator.FreeAll();
+    m_image_view_allocator.FreeAll();
+    m_image_allocator.FreeAll();
+    m_render_pass_allocator.FreeAll();
+    m_buffer_allocator.FreeAll();
+    m_pipeline_layout_allocator.FreeAll();
+    m_bind_group_layout_allocator.FreeAll();
+    m_framebuffer_allocator.FreeAll();
+    m_graphics_pipeline_allocator.FreeAll();
+    m_semaphore_allocator.FreeAll();
+    m_fence_allocator.FreeAll();
+    for (auto pool : m_cmd_pools) {
+        delete pool;
+    }
     vkDestroyDevice(m_device, nullptr);
+}
+
+void DeviceImpl::cleanUpOneFrame() {
+    for (auto& elem : m_pending_delete_shader_modules) {
+        m_shader_module_allocator.Deallocate(elem);
+    }
+    m_pending_delete_shader_modules.clear();
+
+    for (auto& elem : m_pending_delete_samplers) {
+        m_sampler_allocator.Deallocate(elem);
+    }
+    m_pending_delete_samplers.clear();
+
+    for (auto& elem : m_pending_delete_image_views) {
+        m_image_view_allocator.Deallocate(elem);
+    }
+    m_pending_delete_image_views.clear();
+
+    for (auto& elem : m_pending_delete_images) {
+        m_image_allocator.Deallocate(elem);
+    }
+    m_pending_delete_images.clear();
+
+    for (auto& elem : m_pending_delete_render_passes) {
+        m_render_pass_allocator.Deallocate(elem);
+    }
+    m_pending_delete_render_passes.clear();
+
+    for (auto& elem : m_pending_delete_buffers) {
+        m_buffer_allocator.Deallocate(elem);
+    }
+    m_pending_delete_buffers.clear();
+
+    for (auto& elem : m_pending_delete_pipeline_layouts) {
+        m_pipeline_layout_allocator.Deallocate(elem);
+    }
+    m_pending_delete_pipeline_layouts.clear();
+
+    for (auto& elem : m_pending_delete_bind_group_layouts) {
+        m_bind_group_layout_allocator.Deallocate(elem);
+    }
+    m_pending_delete_bind_group_layouts.clear();
+
+    for (auto& elem : m_pending_delete_framebuffers) {
+        m_framebuffer_allocator.Deallocate(elem);
+    }
+    m_pending_delete_framebuffers.clear();
+
+    for (auto& elem : m_pending_delete_graphics_pipelines) {
+        m_graphics_pipeline_allocator.Deallocate(elem);
+    }
+    m_pending_delete_graphics_pipelines.clear();
+
+    for (auto& elem : m_pending_delete_semaphores) {
+        m_semaphore_allocator.Deallocate(elem);
+    }
+    m_pending_delete_semaphores.clear();
+
+    for (auto& elem : m_pending_delete_fences) {
+        m_fence_allocator.Deallocate(elem);
+    }
+    m_pending_delete_fences.clear();
 }
 
 const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo() const noexcept {
@@ -312,73 +424,72 @@ const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo() const noexcept {
 }
 
 Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
-    BufferImpl* impl = m_buffers.Allocate(*this, m_adapter.m_phyDevice, desc);
-    return Buffer{impl};
+    return Buffer{
+        m_buffer_allocator.Allocate(*this, m_adapter.m_phyDevice, desc)};
 }
 
 Image DeviceImpl::CreateImage(const Image::Descriptor& desc) {
-    return Image{m_images.Allocate(m_adapter, *this, desc)};
+    return Image{m_image_allocator.Allocate(m_adapter, *this, desc)};
 }
 
 ImageView DeviceImpl::CreateImageView(const Image& image,
                                       const ImageView::Descriptor& desc) {
-    return ImageView{m_image_views.Allocate(*this, image, desc)};
+    return ImageView{m_image_view_allocator.Allocate(*this, image, desc)};
 }
 
 BindGroupLayout DeviceImpl::CreateBindGroupLayout(
     const BindGroupLayout::Descriptor& desc) {
-    return BindGroupLayout{m_bind_group_layouts.Allocate(*this, desc)};
+    return BindGroupLayout{m_bind_group_layout_allocator.Allocate(*this, desc)};
 }
 
 PipelineLayout DeviceImpl::CreatePipelineLayout(
     const PipelineLayout::Descriptor& desc) {
-    return PipelineLayout{m_pipeline_layout.Allocate(*this, desc)};
+    return PipelineLayout{m_pipeline_layout_allocator.Allocate(*this, desc)};
 }
 
 Framebuffer DeviceImpl::CreateFramebuffer(const Framebuffer::Descriptor& desc) {
-    return Framebuffer{m_fbos.Allocate(*this, desc)};
+    return Framebuffer{m_framebuffer_allocator.Allocate(*this, desc)};
 }
 
 RenderPass DeviceImpl::CreateRenderPass(const RenderPass::Descriptor& desc) {
-    return RenderPass{m_render_passes.Allocate(*this, desc)};
+    return RenderPass{m_render_pass_allocator.Allocate(*this, desc)};
 }
 
 GraphicsPipeline DeviceImpl::CreateGraphicPipeline(
     const GraphicsPipeline::Descriptor& desc) {
-    return GraphicsPipeline{m_graphic_pipelines.Allocate(*this, desc)};
+    return GraphicsPipeline{
+        m_graphics_pipeline_allocator.Allocate(*this, desc)};
 }
 
 Sampler DeviceImpl::CreateSampler(const Sampler::Descriptor& desc) {
-    return Sampler{m_samplers.Allocate(*this, desc)};
+    return Sampler{m_sampler_allocator.Allocate(*this, desc)};
 }
 
 ShaderModule DeviceImpl::CreateShaderModule(const uint32_t* data, size_t size) {
-    return ShaderModule{m_shader_modules.Allocate(m_device, data, size)};
-}
-
-CommandPool DeviceImpl::CreateCommandPool(VkCommandPoolCreateFlags flags) {
-    return CommandPool{m_pools.Allocate(*this, flags)};
+    return ShaderModule{m_shader_module_allocator.Allocate(*this, data, size)};
 }
 
 Semaphore DeviceImpl::CreateSemaphore() {
-    return Semaphore{m_semaphores.Allocate(*this)};
+    return Semaphore{m_semaphore_allocator.Allocate(*this)};
 }
 
 Fence DeviceImpl::CreateFence(bool signaled) {
-    return Fence{m_fences.Allocate(*this, signaled)};
+    return Fence{m_fence_allocator.Allocate(*this, signaled)};
+}
+
+CommandEncoder DeviceImpl::CreateCommandEncoder() {
+    auto& cmd_pool = m_cmd_pools[m_cur_frame];
+    return cmd_pool->CreateCommandEncoder();
 }
 
 void DeviceImpl::Submit(Command& cmd) {
-    std::vector<VkCommandBuffer> bufs;
-    bufs.push_back(cmd.Impl().m_cmd);
-
     if (cmd.Impl().m_flags & CommandImpl::Flag::Render) {
         VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
 
-        VkSubmitInfo info;
+        VkSubmitInfo info{};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.commandBufferCount = 1;
-        info.pCommandBuffers = bufs.data();
+        info.pCommandBuffers = &cmd.Impl().m_cmd;
 
         VkPipelineStageFlags waitDstStage =
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -392,11 +503,12 @@ void DeviceImpl::Submit(Command& cmd) {
         info.waitSemaphoreCount = 1;
 
         VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, fence));
+        m_need_present[m_cur_frame] = true;
     } else {
         VkSubmitInfo info;
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.commandBufferCount = 1;
-        info.pCommandBuffers = bufs.data();
+        info.pCommandBuffers = &cmd.Impl().m_cmd;
 
         VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, VK_NULL_HANDLE));
         WaitIdle();
@@ -408,34 +520,45 @@ void DeviceImpl::WaitIdle() {
     VK_CALL(vkDeviceWaitIdle(m_device));
 }
 
-void DeviceImpl::AcquireSwapchainImageAndWait(video::Window& window) {
-    if (window.IsMinimize()) {
-        return;
-    }
+uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex() {
+    VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
+    VK_CALL(vkWaitForFences(m_device, 1, &fence, true, UINT64_MAX));
+    VK_CALL(vkResetFences(m_device, 1, &fence));
+    m_cmd_pools[m_cur_frame]->Reset();
+    m_need_present[m_cur_frame] = true;
 
     VK_CALL(vkAcquireNextImageKHR(
         m_device, m_swapchain, UINT64_MAX,
         m_image_avaliable_sems[m_cur_frame].Impl().m_semaphore, VK_NULL_HANDLE,
         &m_cur_swapchain_image_index));
 
-    VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
-    VK_CALL(vkWaitForFences(m_device, 1, &fence, true, UINT64_MAX));
-    VK_CALL(vkResetFences(m_device, 1, &fence));
+    return m_cur_swapchain_image_index;
+}
 
-    m_cmdpool.Reset();
+std::vector<ImageView> DeviceImpl::GetSwapchainImages() const {
+    std::vector<ImageView> views;
+    for (auto view : m_swapchain_image_views) {
+        views.push_back(ImageView{view});
+    }
+    return views;
+}
 
-    VkPresentInfoKHR info;
-    info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    info.pImageIndices = &m_cur_swapchain_image_index;
-    info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores =
-        &m_render_finish_sems[m_cur_frame].Impl().m_semaphore;
-    info.swapchainCount = 1;
-    info.pSwapchains = &m_swapchain;
+void DeviceImpl::EndFrame() {
+    if (m_need_present[m_cur_frame]) {
+        VkPresentInfoKHR info{};
+        info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        info.pImageIndices = &m_cur_swapchain_image_index;
+        info.waitSemaphoreCount = 1;
+        info.pWaitSemaphores =
+            &m_render_finish_sems[m_cur_frame].Impl().m_semaphore;
+        info.swapchainCount = 1;
+        info.pSwapchains = &m_swapchain;
 
-    VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
+        VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
+        m_cur_frame = (m_cur_frame + 1) % m_image_info.m_image_count;
+    }
 
-    m_cur_frame = (m_cur_frame + 1) % m_image_info.m_image_count;
+    cleanUpOneFrame();
 }
 
 }  // namespace nickel::graphics

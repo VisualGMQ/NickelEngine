@@ -20,8 +20,10 @@ LogSystem::LogSystem() {
         std::string(SDL_GetAndroidInternalStoragePath()) + '/' + log_filename;
 #else
     m_console_logger = spdlog::stdout_color_mt("console");
+    m_console_logger->set_level(spdlog::level::trace);
 #endif
     m_file_logger = spdlog::basic_logger_mt("file_logger", log_filename);
+    m_file_logger->set_level(spdlog::level::trace);
 }
 
 }  // namespace nickel

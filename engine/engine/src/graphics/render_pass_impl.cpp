@@ -135,4 +135,8 @@ RenderPassImpl::~RenderPassImpl() {
     vkDestroyRenderPass(m_dev.m_device, m_render_pass, nullptr);
 }
 
+void RenderPassImpl::PendingDelete() {
+    m_dev.m_pending_delete_render_passes.push_back(this);
+}
+
 }  // namespace nickel::graphics

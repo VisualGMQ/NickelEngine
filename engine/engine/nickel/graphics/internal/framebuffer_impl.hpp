@@ -12,6 +12,7 @@ public:
     FramebufferImpl(DeviceImpl& dev, const Framebuffer::Descriptor&);
     ~FramebufferImpl();
     void Release();
+    void PendingDelete();
 
     VkFramebuffer m_fbo;
     std::vector<ImageView> m_views;

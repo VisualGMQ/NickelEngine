@@ -37,6 +37,7 @@ void AdapterImpl::createInstance() {
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.apiVersion = VK_API_VERSION_1_3;
     appInfo.pEngineName = "NickelEngine";
+    appInfo.pApplicationName = "NickelEngine";
     ci.pApplicationInfo = &appInfo;
 
     unsigned int count;

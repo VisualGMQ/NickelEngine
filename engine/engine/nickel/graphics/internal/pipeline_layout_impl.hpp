@@ -15,6 +15,8 @@ public:
 
     VkPipelineLayout m_pipeline_layout;
 
+    void PendingDelete();
+
 private:
     DeviceImpl& m_device;
 };

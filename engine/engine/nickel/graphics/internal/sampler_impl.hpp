@@ -11,11 +11,12 @@ class SamplerImpl : public RefCountable {
 public:
     explicit SamplerImpl(DeviceImpl& dev, const Sampler::Descriptor&);
     ~SamplerImpl();
+    void PendingDelete();
 
     VkSampler m_sampler;
 
 private:
-    VkDevice m_dev;
+    DeviceImpl& m_dev;
 };
 
 }  // namespace nickel::graphics
