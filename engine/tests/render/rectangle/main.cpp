@@ -48,7 +48,7 @@ public:
         render_pass.BindIndexBuffer(m_index_buffer, IndexType::Uint32, 0);
 
         render_pass.BindGraphicsPipeline(m_pipeline);
-        render_pass.DrawIndexed(6, 1, 0, 0, 1);
+        render_pass.DrawIndexed(6, 1, 0, 0, 0);
 
         render_pass.End();
         Command cmd = encoder.Finish();
@@ -93,7 +93,7 @@ private:
         float datas[] = {
             // position, color
             -0.5, -0.5,  1, 0, 0, 1,
-             0.5  -0.5,  0, 1, 0, 1,
+             0.5, -0.5,  0, 1, 0, 1,
             -0.5,  0.5,  0, 0, 1, 1,
              0.5,  0.5,  1, 1, 0, 1,
         };
