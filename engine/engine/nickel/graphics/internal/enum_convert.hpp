@@ -653,6 +653,20 @@ inline ImageColorSpace VkColorSpace2ImageColorSpace(
     return {};
 }
 
+inline VkMemoryPropertyFlags MemoryType2Vk(MemoryType type) {
+    switch(type) {
+        case MemoryType::CPULocal:
+            return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        case MemoryType::Coherence:
+            return VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        case MemoryType::GPULocal:
+            return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
 #undef CASE
 
 }  // namespace nickel::graphics

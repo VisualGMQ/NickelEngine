@@ -505,7 +505,7 @@ void DeviceImpl::Submit(Command& cmd) {
         VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, fence));
         m_need_present[m_cur_frame] = true;
     } else {
-        VkSubmitInfo info;
+        VkSubmitInfo info{};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.commandBufferCount = 1;
         info.pCommandBuffers = &cmd.Impl().m_cmd;

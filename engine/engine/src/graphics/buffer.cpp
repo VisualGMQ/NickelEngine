@@ -68,6 +68,10 @@ void Buffer::MapAsync(uint64_t offset, uint64_t size) {
     return m_impl->MapAsync(offset, size);
 }
 
+void Buffer::MapAsync() {
+    return m_impl->MapAsync();
+}
+
 void* Buffer::GetMappedRange() {
     return m_impl->GetMappedRange();
 }
@@ -82,6 +86,10 @@ void Buffer::Flush() {
 
 void Buffer::Flush(uint64_t offset, uint64_t size) {
     return m_impl->Flush(offset, size);
+}
+
+void Buffer::BuffData(void* data, size_t size, size_t offset) {
+    return m_impl->BuffData(data, size, offset);
 }
 
 void Buffer::Release() {

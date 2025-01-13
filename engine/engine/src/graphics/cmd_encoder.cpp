@@ -264,6 +264,12 @@ CopyEncoder CommandEncoder::BeginCopy() {
 void CopyEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                                      const Buffer& dst, uint64_t dstOffset,
                                      uint64_t size) {
+    copyBufferToBuffer(src.Impl(), srcOffset, dst.Impl(), dstOffset, size);
+}
+
+void CopyEncoder::copyBufferToBuffer(const BufferImpl& src, uint64_t srcOffset,
+                                     const BufferImpl& dst, uint64_t dstOffset,
+                                     uint64_t size) {
     BufCopyBuf copy_cmd{src, dst, srcOffset, dstOffset, size};
     m_buffer_copies.emplace_back(std::move(copy_cmd));
 }
@@ -281,8 +287,8 @@ void CopyEncoder::End() {
         region.srcOffset = copy_cmd.src_offset;
         region.dstOffset = copy_cmd.dst_offset;
 
-        vkCmdCopyBuffer(m_cmd.m_cmd, copy_cmd.src.Impl().m_buffer,
-                        copy_cmd.dst.Impl().m_buffer, 1, &region);
+        vkCmdCopyBuffer(m_cmd.m_cmd, copy_cmd.src.m_buffer,
+                        copy_cmd.dst.m_buffer, 1, &region);
 
         m_cmd.m_flags |= CommandImpl::Flag::Transfer;
     }

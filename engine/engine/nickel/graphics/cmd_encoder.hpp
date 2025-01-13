@@ -12,10 +12,6 @@ namespace nickel::graphics {
 
 class Framebuffer;
 
-struct NICKEL_API Viewport {
-    float x, y, width, height, min_depth, max_depth;
-};
-
 class NICKEL_API RenderPassEncoder final {
 public:
     explicit RenderPassEncoder(CommandImpl& cmd);
@@ -115,6 +111,8 @@ private:
 
 class NICKEL_API CopyEncoder final {
 public:
+    friend class BufferImpl;
+    
     struct BufferImageCopy {
         struct ImageSubresourceLayers {
             Flags<ImageAspect> aspectMask;
@@ -142,8 +140,8 @@ public:
 
 private:
     struct BufCopyBuf {
-        const Buffer& src;
-        const Buffer& dst;
+        const BufferImpl& src;
+        const BufferImpl& dst;
         uint64_t src_offset{};
         uint64_t dst_offset{};
         uint64_t size{};
@@ -158,6 +156,10 @@ private:
     CommandImpl& m_cmd;
     std::vector<BufCopyBuf> m_buffer_copies;
     std::vector<BufCopyImage> m_image_copies;
+
+    void copyBufferToBuffer(const BufferImpl& src, uint64_t srcOffset,
+                            const BufferImpl& dst, uint64_t dstOffset,
+                            uint64_t size);
 };
 
 class CommandImpl;
