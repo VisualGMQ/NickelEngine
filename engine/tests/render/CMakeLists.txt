@@ -1,1 +1,2 @@
-add_subdirectory(screen_clear)
+add_subdirectory(triangle)
+add_subdirectory(rectangle)

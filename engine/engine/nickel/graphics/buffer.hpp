@@ -12,6 +12,7 @@ public:
     struct Descriptor {
         size_t m_size;
         Flags<BufferUsage> m_usage;
+        MemoryType m_memory_type;
     };
 
     enum class MapState {
@@ -34,10 +35,12 @@ public:
     uint64_t Size() const;
     void Unmap();
     void MapAsync(uint64_t offset, uint64_t size);
-    void* GetMappedRange();
+    void MapAsync();
+    [[nodiscard]] void* GetMappedRange();
     void* GetMappedRange(uint64_t offset);
     void Flush();
     void Flush(uint64_t offset, uint64_t size);
+    void BuffData(void* data, size_t size, size_t offset);
 
     operator bool() const noexcept;
     void Release();

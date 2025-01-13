@@ -41,7 +41,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
     for (int i = 0; i < vertexInputState.buffers.size(); i++) {
         auto& state = vertexInputState.buffers[i];
         for (auto& attr : state.attributes) {
-            VkVertexInputAttributeDescription attrDesc;
+            VkVertexInputAttributeDescription attrDesc{};
             attrDesc.binding = i;
             attrDesc.location = attr.shaderLocation;
             attrDesc.format = VertexFormat2Vk(attr.format);
@@ -61,7 +61,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
     }
     vertexInput.vertexAttributeDescriptionCount = attrDescs.size();
     vertexInput.pVertexAttributeDescriptions = attrDescs.data();
-    vertexInput.vertexAttributeDescriptionCount = bindings.size();
+    vertexInput.vertexBindingDescriptionCount = bindings.size();
     vertexInput.pVertexBindingDescriptions = bindings.data();
 
     // input assembly state

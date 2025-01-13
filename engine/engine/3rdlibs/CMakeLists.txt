@@ -27,9 +27,12 @@ add_subdirectory(volk)
 set(SPDLOG_ENABLE_PCH ON)
 add_subdirectory(spdlog)
 
+add_subdirectory(stb)
+
 mark_as_3rdlib(SDL3-static)
 mark_as_3rdlib(SDL3-shared)
 mark_as_3rdlib(SDL_uclibc)
 mark_as_3rdlib(Vulkan-Headers)
 mark_as_3rdlib(spdlog)
 mark_as_3rdlib(volk)
+mark_as_3rdlib(stb_image)

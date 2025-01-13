@@ -35,6 +35,12 @@ enum class BufferUsage {
     Indirect = 0x0100,
 };
 
+enum class MemoryType {
+    CPULocal,
+    Coherence,
+    GPULocal,
+};
+
 enum class SamplerAddressMode {
     ClampToEdge = 0,
     Repeat = 1,

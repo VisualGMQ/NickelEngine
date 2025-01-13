@@ -6,6 +6,8 @@
 #include "nickel/graphics/internal/memory_impl.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
+#include <AsyncInfo.h>
+
 namespace nickel::graphics {
 
 BufferImpl::BufferImpl(DeviceImpl& dev, VkPhysicalDevice phyDev,
@@ -23,7 +25,7 @@ BufferImpl::BufferImpl(DeviceImpl& dev, VkPhysicalDevice phyDev,
     createBuffer(dev, desc);
     allocateMem(
         dev, phyDev,
-        static_cast<VkMemoryPropertyFlagBits>(getMemoryProperty(phyDev, desc)));
+        getMemoryProperty(phyDev, desc));
 
     VK_CALL(vkBindBufferMemory(dev.m_device, m_buffer, m_memory->m_memory, 0));
 }
@@ -63,32 +65,33 @@ void BufferImpl::allocateMem(DeviceImpl& device, VkPhysicalDevice phyDevice,
     if (!type) {
         LOGE("find corresponding memory type failed");
     } else {
-        VkMemoryAllocateInfo allocInfo;
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = requirements.size;
-        allocInfo.memoryTypeIndex = type.value();
-        VK_CALL(vkAllocateMemory(device.m_device, &allocInfo, nullptr,
-                                 &m_memory->m_memory));
+        m_memory = new MemoryImpl{m_device, requirements.size, type.value()};
     }
 }
 
-Flags<VkMemoryPropertyFlagBits> BufferImpl::getMemoryProperty(
+VkMemoryPropertyFlags BufferImpl::getMemoryProperty(
     VkPhysicalDevice phyDevice, const Buffer::Descriptor& desc) {
-    Flags<VkMemoryPropertyFlagBits> mem_props;
-    auto usageBits = static_cast<VkBufferUsageFlags>(desc.m_usage);
-    if (usageBits == VK_BUFFER_USAGE_TRANSFER_SRC_BIT) {
-        VkPhysicalDeviceProperties props;
-        vkGetPhysicalDeviceProperties(phyDevice, &props);
-        if (props.limits.nonCoherentAtomSize == 0) {
-            mem_props |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-            m_is_mapping_coherence = false;
-        } else {
-            mem_props |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-            mem_props |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-            m_is_mapping_coherence = true;
-        }
-    } else {
-        mem_props |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    VkMemoryPropertyFlags mem_props{};
+    switch (desc.m_memory_type) {
+        case MemoryType::CPULocal:
+            mem_props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            break;
+        case MemoryType::Coherence: {
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(phyDevice, &props);
+            if (props.limits.nonCoherentAtomSize == 0) {
+                LOGW("your GPU don't support coherence memory type");
+                mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+                m_is_mapping_coherence = false;
+            } else {
+                mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+                m_is_mapping_coherence = true;
+            }
+        } break;
+        case MemoryType::GPULocal:
+            mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+            break;
     }
     return mem_props;
 }
@@ -111,6 +114,7 @@ uint64_t BufferImpl::Size() const {
 
 void BufferImpl::Unmap() {
     vkUnmapMemory(m_device.m_device, m_memory->m_memory);
+    Flush();
     m_map_state = Buffer::MapState::Unmapped;
     m_map = nullptr;
 }
@@ -124,6 +128,16 @@ void BufferImpl::MapAsync(uint64_t offset, uint64_t size) {
     }
 }
 
+void BufferImpl::MapAsync() {
+    VK_CALL(vkMapMemory(m_device.m_device, m_memory->m_memory, 0, m_size, 0, &m_map));
+    if (m_map) {
+        m_mapped_offset = 0;
+        m_mapped_size = m_size;
+        m_map_state = Buffer::MapState::Mapped;
+    }
+}
+
+
 void* BufferImpl::GetMappedRange() {
     return GetMappedRange(0);
 }
@@ -133,12 +147,14 @@ void* BufferImpl::GetMappedRange(uint64_t offset) {
 }
 
 void BufferImpl::Flush() {
-    VkMappedMemoryRange range{};
-    range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    range.memory = m_memory->m_memory;
-    range.offset = m_mapped_offset;
-    range.size = m_mapped_size;
-    VK_CALL(vkFlushMappedMemoryRanges(m_device.m_device, 1, &range));
+    if (!m_is_mapping_coherence) {
+        VkMappedMemoryRange range{};
+        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range.memory = m_memory->m_memory;
+        range.offset = m_mapped_offset;
+        range.size = m_mapped_size;
+        VK_CALL(vkFlushMappedMemoryRanges(m_device.m_device, 1, &range));
+    }
 }
 
 void BufferImpl::Flush(uint64_t offset, uint64_t size) {
@@ -152,6 +168,26 @@ void BufferImpl::Flush(uint64_t offset, uint64_t size) {
 
 void BufferImpl::PendingDelete() {
     m_device.m_pending_delete_buffers.push_back(this);
+}
+
+void BufferImpl::BuffData(void* data, size_t size, size_t offset) {
+    Buffer::Descriptor desc;
+    desc.m_memory_type = MemoryType::Coherence;
+    desc.m_size = size;
+    desc.m_usage = BufferUsage::CopySrc;
+    Buffer buffer = m_device.CreateBuffer(desc);
+    buffer.MapAsync(0, size);
+    void* map = buffer.GetMappedRange();
+    memcpy(map, data, size);
+    buffer.Unmap();
+
+    CommandEncoder encoder = m_device.CreateCommandEncoder();
+    CopyEncoder copy_encoder = encoder.BeginCopy();
+    copy_encoder.copyBufferToBuffer(buffer.Impl(), 0, *this, offset, size);
+    copy_encoder.End();
+    Command cmd = encoder.Finish();
+
+    m_device.Submit(cmd);
 }
 
 }  // namespace nickel::graphics

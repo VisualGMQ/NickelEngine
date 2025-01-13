@@ -17,11 +17,14 @@ public:
     uint64_t Size() const;
     void Unmap();
     void MapAsync(uint64_t offset, uint64_t size);
+    void MapAsync();
     void* GetMappedRange();
     void* GetMappedRange(uint64_t offset);
     void Flush();
     void Flush(uint64_t offset, uint64_t size);
     void PendingDelete();
+
+    void BuffData(void* data, size_t size, size_t offset);
 
     VkBuffer m_buffer;
     MemoryImpl* m_memory;
@@ -35,8 +38,8 @@ private:
     uint64_t m_mapped_size{};
     bool m_is_mapping_coherence{};
 
-    Flags<VkMemoryPropertyFlagBits> getMemoryProperty(
-        VkPhysicalDevice phyDevice, const Buffer::Descriptor&);
+    VkMemoryPropertyFlags getMemoryProperty(VkPhysicalDevice phyDevice,
+                                            const Buffer::Descriptor&);
     void createBuffer(DeviceImpl&, const Buffer::Descriptor&);
     void allocateMem(DeviceImpl&, VkPhysicalDevice phyDevice,
                      VkMemoryPropertyFlags flags);
