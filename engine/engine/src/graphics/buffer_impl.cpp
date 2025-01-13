@@ -6,8 +6,6 @@
 #include "nickel/graphics/internal/memory_impl.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
 
-#include <AsyncInfo.h>
-
 namespace nickel::graphics {
 
 BufferImpl::BufferImpl(DeviceImpl& dev, VkPhysicalDevice phyDev,
