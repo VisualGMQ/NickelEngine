@@ -12,7 +12,7 @@ jobs:
               os: windows-latest
               android: none
             - name: Ubuntu
-              os: ubuntu-latest
+              os: ubuntu-22.04
               android: none
             - name: MacOS
               os: macOS-latest
