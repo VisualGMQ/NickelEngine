@@ -9,7 +9,7 @@ class DeviceImpl;
 
 class MemoryImpl {
 public:
-    MemoryImpl(DeviceImpl&, size_t size, uint32_t memory_type_index);
+    MemoryImpl(DeviceImpl&, uint64_t size, uint32_t memory_type_index);
     ~MemoryImpl();
     size_t Size() const noexcept;
 
