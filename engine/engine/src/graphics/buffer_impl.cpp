@@ -63,7 +63,7 @@ void BufferImpl::allocateMem(DeviceImpl& device, VkPhysicalDevice phyDevice,
     if (!type) {
         LOGE("find corresponding memory type failed");
     } else {
-        m_memory = new MemoryImpl{m_device, requirements.size, type.value()};
+        m_memory = new MemoryImpl{m_device, static_cast<uint64_t>(requirements.size), type.value()};
     }
 }
 

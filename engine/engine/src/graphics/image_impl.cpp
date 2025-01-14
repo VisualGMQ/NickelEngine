@@ -60,7 +60,7 @@ void ImageImpl::allocMem(VkPhysicalDevice phyDevice) {
              "(DeviceLocal)");
     } else {
         m_memory =
-            new MemoryImpl{m_device, requirements.size, index.value()};
+            new MemoryImpl{m_device, static_cast<uint64_t>(requirements.size), index.value()};
     }
 }
 

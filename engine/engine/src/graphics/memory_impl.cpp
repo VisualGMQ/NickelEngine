@@ -5,7 +5,7 @@
 
 namespace nickel::graphics {
 
-MemoryImpl::MemoryImpl(DeviceImpl& device, size_t size, uint32_t memory_type_index)
+MemoryImpl::MemoryImpl(DeviceImpl& device, uint64_t size, uint32_t memory_type_index)
     : m_device{device} {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
