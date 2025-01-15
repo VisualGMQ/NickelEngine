@@ -11,9 +11,6 @@ jobs:
             - name: Windows
               os: windows-latest
               android: none
-            - name: Ubuntu
-              os: ubuntu-latest
-              android: none
             - name: MacOS
               os: macOS-latest
               android: none
