@@ -5,27 +5,8 @@ namespace nickel::graphics {
 
 BindGroup::BindGroup(BindGroupImpl* impl) : m_impl{impl} {}
 
-BindGroup::BindGroup(const BindGroup& o) : m_impl{o.m_impl} {
-    if (m_impl) {
-        m_impl->IncRefcount();
-    }
-}
-
 BindGroup::BindGroup(BindGroup&& o) noexcept : m_impl{o.m_impl} {
     o.m_impl = nullptr;
-}
-
-BindGroup& BindGroup::operator=(const BindGroup& o) noexcept {
-    if (&o != this) {
-        if (m_impl) {
-            m_impl->DecRefcount();
-        }
-        m_impl = o.m_impl;
-        if (m_impl) {
-            m_impl->IncRefcount();
-        }
-    }
-    return *this;
 }
 
 BindGroup& BindGroup::operator=(BindGroup&& o) noexcept {
@@ -36,16 +17,9 @@ BindGroup& BindGroup::operator=(BindGroup&& o) noexcept {
     return *this;
 }
 
-void BindGroup::Release() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-        m_impl = nullptr;
-    }
-}
-
 BindGroup::~BindGroup() {
     if (m_impl) {
-        m_impl->DecRefcount();
+        m_impl->Delete();
     }
 }
 
@@ -60,6 +34,5 @@ const BindGroupImpl& BindGroup::Impl() const noexcept {
 BindGroupImpl& BindGroup::Impl() noexcept {
     return *m_impl;
 }
-
 
 }  // namespace nickel::graphics

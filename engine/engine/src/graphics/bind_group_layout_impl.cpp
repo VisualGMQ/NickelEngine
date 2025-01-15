@@ -1,5 +1,6 @@
 ﻿#include "nickel/graphics/internal/bind_group_layout_impl.hpp"
 #include "nickel/graphics/bind_group.hpp"
+#include "nickel/graphics/internal/bind_group_impl.hpp"
 #include "nickel/graphics/internal/device_impl.hpp"
 #include "nickel/graphics/internal/enum_convert.hpp"
 #include "nickel/graphics/internal/vk_call.hpp"
@@ -53,7 +54,7 @@ VkDescriptorType getDescriptorType(const BindGroup::BindingPoint& entry) {
 
 BindGroupLayoutImpl::BindGroupLayoutImpl(
     DeviceImpl& dev, const BindGroupLayout::Descriptor& desc)
-    : m_device{dev}, m_group_elem_count{desc.entries.size()} {
+    : m_device{dev} {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     for (auto&& [slot, entry] : desc.entries) {
         bindings.emplace_back(getBinding(slot, entry));
@@ -72,15 +73,25 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
     allocSets(count);
 }
 
-const DescriptorSetLists* BindGroupLayoutImpl::RequireSetList() {
+BindGroup BindGroupLayoutImpl::RequireBindGroup(
+    const BindGroup::Descriptor& desc) {
+    size_t idx;
+    VkDescriptorSet set = RequireSet(idx);
+    BindGroup bind_group{
+        m_bind_group_allocator.Allocate(m_device, idx, set, *this, desc)};
+    bind_group.Impl().WriteDescriptors();
+    return bind_group;
+}
+
+VkDescriptorSet BindGroupLayoutImpl::RequireSet(size_t& out_idx) {
     if (m_unused_group_indices.empty()) {
         LOGW("run out of descriptor set!");
-        return nullptr;
+        return VK_NULL_HANDLE;
     }
 
-    size_t idx = m_unused_group_indices.back();
+    out_idx = m_unused_group_indices.back();
     m_unused_group_indices.pop_back();
-    return &m_groups[idx];
+    return m_groups[out_idx];
 }
 
 void BindGroupLayoutImpl::RecycleSetList(size_t index) {
@@ -126,19 +137,17 @@ void BindGroupLayoutImpl::allocSets(uint32_t count) {
     info.pSetLayouts = layouts.data();
     info.descriptorSetCount = count;
 
-    std::vector<VkDescriptorSet> sets(count);
-    VK_CALL(vkAllocateDescriptorSets(m_device.m_device, &info, sets.data()));
-
-    for (int i = 0; i < MaxDrawCallPerCmdBuf; i++) {
-        std::vector<VkDescriptorSet> set_group;
-        for (int j = 0; j < m_group_elem_count; j++) {
-            set_group.push_back(sets[i * m_group_elem_count + j]);
-        }
-        m_groups.emplace_back(std::move(set_group));
+    m_groups.resize(count);
+    VK_CALL(
+        vkAllocateDescriptorSets(m_device.m_device, &info, m_groups.data()));
+    m_unused_group_indices.reserve(count);
+    for (size_t i = 0; i < count; i++) {
+        m_unused_group_indices.push_back(i) ;
     }
 }
 
 BindGroupLayoutImpl::~BindGroupLayoutImpl() {
+    m_bind_group_allocator.FreeAll();
     VK_CALL(vkResetDescriptorPool(m_device.m_device, m_pool, 0));
     vkDestroyDescriptorPool(m_device.m_device, m_pool, nullptr);
     vkDestroyDescriptorSetLayout(m_device.m_device, m_layout, nullptr);

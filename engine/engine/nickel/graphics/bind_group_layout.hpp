@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/flags.hpp"
+#include "nickel/graphics/bind_group.hpp"
 #include "nickel/graphics/enums.hpp"
 
 namespace nickel::graphics {
@@ -18,7 +19,7 @@ public:
     struct Descriptor final {
         std::unordered_map<uint32_t, Entry> entries;
     };
-    
+
     BindGroupLayout() = default;
     explicit BindGroupLayout(BindGroupLayoutImpl*);
     BindGroupLayout(const BindGroupLayout&);
@@ -29,6 +30,8 @@ public:
 
     const BindGroupLayoutImpl& Impl() const noexcept;
     BindGroupLayoutImpl& Impl() noexcept;
+
+    BindGroup RequireBindGroup(const BindGroup::Descriptor& desc);
 
     void Release();
 

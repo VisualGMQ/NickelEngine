@@ -37,7 +37,7 @@ public:
 
 private:
     struct SetBindGroupCmd {
-        BindGroup bind_group;
+        const BindGroup* bind_group{};
         std::vector<uint32_t> dynamic_offsets;
     };
 

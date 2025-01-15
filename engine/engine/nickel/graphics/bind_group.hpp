@@ -64,16 +64,13 @@ public:
 
     BindGroup() = default;
     explicit BindGroup(BindGroupImpl*);
-    BindGroup(const BindGroup&);
     BindGroup(BindGroup&&) noexcept;
-    BindGroup& operator=(const BindGroup&) noexcept;
     BindGroup& operator=(BindGroup&&) noexcept;
     ~BindGroup();
 
     const BindGroupImpl& Impl() const noexcept;
     BindGroupImpl& Impl() noexcept;
     
-    void Release();
     operator bool() const noexcept;
 
 private:

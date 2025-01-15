@@ -78,12 +78,12 @@ struct RenderPassEncoder::ApplyRenderCmd {
     }
 
     void operator()(const SetBindGroupCmd& cmd) {
-        auto& descriptor_sets = cmd.bind_group.Impl().m_set_lists;
+        auto descriptor_set = cmd.bind_group->Impl().m_set;
         vkCmdBindDescriptorSets(
             m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, 0,
-            descriptor_sets.size(), descriptor_sets.data(),
-            cmd.dynamic_offsets.size(), cmd.dynamic_offsets.data());
+            m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, 0, 1,
+            &descriptor_set, cmd.dynamic_offsets.size(),
+            cmd.dynamic_offsets.data());
     }
 
 private:
@@ -139,18 +139,18 @@ void RenderPassEncoder::BindIndexBuffer(Buffer buffer, IndexType type,
 
 void RenderPassEncoder::SetBindGroup(const BindGroup& bind_group) {
     SetBindGroupCmd cmd;
-    cmd.bind_group = bind_group;
+    cmd.bind_group = &bind_group;
     m_record_cmds.push_back(cmd);
 }
 
 void RenderPassEncoder::SetBindGroup(
     const BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
     SetBindGroupCmd cmd;
-    cmd.bind_group = bind_group;
+    cmd.bind_group = &bind_group;
     cmd.dynamic_offsets = dynamicOffset;
     m_record_cmds.push_back(cmd);
 
-    auto& desc = cmd.bind_group.Impl().GetDescriptor();
+    auto& desc = bind_group.Impl().GetDescriptor();
     for (auto& [_, entry] : desc.entries) {
         auto& bind_entry = entry.binding.entry;
         ImageImpl* image_impl{};

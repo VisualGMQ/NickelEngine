@@ -13,11 +13,11 @@ class NICKEL_API ImageView {
 public:
     struct Descriptor {
         struct ImageSubresourceRange {
-            Flags<ImageAspect> aspectMask;
-            uint32_t baseMipLevel;
-            uint32_t levelCount;
-            uint32_t baseArrayLayer;
-            uint32_t layerCount;
+            Flags<ImageAspect> aspectMask = ImageAspect::None;
+            uint32_t baseMipLevel = 0;
+            uint32_t levelCount = 1;
+            uint32_t baseArrayLayer = 0;
+            uint32_t layerCount = 1;
         };
 
         ImageViewType viewType;
@@ -42,7 +42,7 @@ public:
     void Release();
 
 private:
-    ImageViewImpl* m_impl;
+    ImageViewImpl* m_impl{};
 };
 
 class ImageImpl;
@@ -50,16 +50,16 @@ class ImageImpl;
 class NICKEL_API Image {
 public:
     struct Descriptor {
-        ImageType imageType;
-        Format format;
+        ImageType imageType = ImageType::Dim2;
+        Format format = Format::R8G8B8A8_SRGB;
         SVector<uint32_t, 3> extent;
-        uint32_t mipLevels;
-        uint32_t arrayLayers;
-        SampleCount samples;
-        ImageTiling tiling;
-        Flags<ImageUsage> usage;
-        SharingMode sharingMode;
-        ImageLayout initialLayout;
+        uint32_t mipLevels = 1;
+        uint32_t arrayLayers = 1;
+        SampleCount samples = SampleCount::Count1;
+        ImageTiling tiling = ImageTiling::Linear;
+        Flags<ImageUsage> usage = ImageUsage::Sampled;
+        SharingMode sharingMode = SharingMode::Concurrent;
+        ImageLayout initialLayout = ImageLayout::Undefined;
     };
 
     Image() = default;
