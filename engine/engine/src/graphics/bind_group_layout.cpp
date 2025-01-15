@@ -43,6 +43,10 @@ BindGroupLayoutImpl& BindGroupLayout::Impl() noexcept {
     return *m_impl;
 }
 
+BindGroup BindGroupLayout::RequireBindGroup(const BindGroup::Descriptor& desc) {
+    return m_impl->RequireBindGroup(desc);
+}
+
 void BindGroupLayout::Release() {
     if (m_impl) {
         m_impl->DecRefcount();

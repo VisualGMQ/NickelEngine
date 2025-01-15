@@ -9,21 +9,21 @@ class SamplerImpl;
 class NICKEL_API Sampler {
 public:
     struct Descriptor {
-        Filter magFilter;
-        Filter minFilter;
-        SamplerMipmapMode mipmapMode;
-        SamplerAddressMode addressModeU;
-        SamplerAddressMode addressModeV;
-        SamplerAddressMode addressModeW;
-        float mipLodBias;
-        bool anisotropyEnable;
-        float maxAnisotropy;
-        bool compareEnable;
-        CompareOp compareOp;
-        float minLod;
-        float maxLod;
-        BorderColor borderColor;
-        bool unnormalizedCoordinates;
+        Filter magFilter = Filter::Linear;
+        Filter minFilter = Filter::Linear;
+        SamplerMipmapMode mipmapMode = SamplerMipmapMode::Linear;
+        SamplerAddressMode addressModeU = SamplerAddressMode::Repeat;
+        SamplerAddressMode addressModeV = SamplerAddressMode::Repeat;
+        SamplerAddressMode addressModeW = SamplerAddressMode::Repeat;
+        float mipLodBias = 0.0;
+        bool anisotropyEnable = false;
+        float maxAnisotropy = 0.0;
+        bool compareEnable = false;
+        CompareOp compareOp = CompareOp::Always;
+        float minLod = 0;
+        float maxLod = 0;
+        BorderColor borderColor = BorderColor::IntOpaqueWhite;
+        bool unnormalizedCoordinates = false;
     };
 
     Sampler() = default;

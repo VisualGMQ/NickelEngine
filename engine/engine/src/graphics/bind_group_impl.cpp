@@ -9,11 +9,11 @@
 namespace nickel::graphics {
 
 BindGroupImpl::BindGroupImpl(DeviceImpl& dev, size_t group_index,
-                             DescriptorSetLists& set_lists,
+                             VkDescriptorSet descriptor_set,
                              BindGroupLayoutImpl& layout,
                              const BindGroup::Descriptor& desc)
     : m_layout{layout},
-      m_set_lists{set_lists},
+      m_set{descriptor_set},
       m_group_index{group_index},
       m_device{dev},
       m_desc{desc} {}
@@ -137,7 +137,7 @@ struct WriteDescriptorHelper final {
         write_info.dstBinding = m_bind_point.slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 1, nullptr);
+        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info,0, nullptr);
     }
 
 private:
@@ -147,11 +147,14 @@ private:
 };
 
 void BindGroupImpl::WriteDescriptors() {
-    size_t i = 0;
     for (auto&& [slot, entry] : m_desc.entries) {
-        WriteDescriptorHelper helper{m_set_lists[i++], m_device, entry.binding};
+        WriteDescriptorHelper helper{m_set, m_device, entry.binding};
         std::visit(helper, entry.binding.entry);
     }
+}
+
+void BindGroupImpl::Delete() {
+    m_layout.m_bind_group_allocator.Deallocate(this);
 }
 
 }  // namespace nickel::graphics
