@@ -10,12 +10,16 @@ class DeviceImpl;
 class GraphicsPipelineImpl: public RefCountable {
 public:
     GraphicsPipelineImpl(DeviceImpl&, const GraphicsPipeline::Descriptor&);
+    GraphicsPipelineImpl(const GraphicsPipelineImpl&) = delete;
+    GraphicsPipelineImpl(GraphicsPipelineImpl&&) = delete;
+    GraphicsPipelineImpl& operator=(const GraphicsPipelineImpl&) = delete;
+    GraphicsPipelineImpl& operator=(GraphicsPipelineImpl&&) = delete;
+
     ~GraphicsPipelineImpl();
 
-    void Release();
-    void PendingDelete();
+    void DecRefcount() override;
 
-    VkPipeline m_pipeline;
+    VkPipeline m_pipeline = VK_NULL_HANDLE;
     PipelineLayout m_layout;
 
 private:

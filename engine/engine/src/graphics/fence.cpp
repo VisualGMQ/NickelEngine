@@ -56,9 +56,6 @@ FenceImpl& Fence::Impl() noexcept {
 void Fence::Release() {
     if (m_impl) {
         m_impl->DecRefcount();
-        if (m_impl->Refcount() == 0) {
-            m_impl->PendingDelete();
-        }
         m_impl = nullptr;
     }
 }

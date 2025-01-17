@@ -63,7 +63,8 @@ void BufferImpl::allocateMem(DeviceImpl& device, VkPhysicalDevice phyDevice,
     if (!type) {
         LOGE("find corresponding memory type failed");
     } else {
-        m_memory = new MemoryImpl{m_device, static_cast<uint64_t>(requirements.size), type.value()};
+        m_memory = new (std::nothrow) MemoryImpl{
+            m_device, static_cast<uint64_t>(requirements.size), type.value()};
     }
 }
 
@@ -72,7 +73,7 @@ VkMemoryPropertyFlags BufferImpl::getMemoryProperty(
     VkMemoryPropertyFlags mem_props{};
     switch (desc.m_memory_type) {
         case MemoryType::CPULocal:
-            mem_props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
             break;
         case MemoryType::Coherence: {
             VkPhysicalDeviceProperties props;
@@ -88,7 +89,7 @@ VkMemoryPropertyFlags BufferImpl::getMemoryProperty(
             }
         } break;
         case MemoryType::GPULocal:
-            mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+            mem_props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
             break;
     }
     return mem_props;
@@ -111,8 +112,8 @@ uint64_t BufferImpl::Size() const {
 }
 
 void BufferImpl::Unmap() {
-    vkUnmapMemory(m_device.m_device, m_memory->m_memory);
     Flush();
+    vkUnmapMemory(m_device.m_device, m_memory->m_memory);
     m_map_state = Buffer::MapState::Unmapped;
     m_map = nullptr;
 }
@@ -164,8 +165,12 @@ void BufferImpl::Flush(uint64_t offset, uint64_t size) {
     VK_CALL(vkFlushMappedMemoryRanges(m_device.m_device, 1, &range));
 }
 
-void BufferImpl::PendingDelete() {
-    m_device.m_pending_delete_buffers.push_back(this);
+void BufferImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_buffers.push_back(this);
+    }
 }
 
 void BufferImpl::BuffData(void* data, size_t size, size_t offset) {

@@ -11,13 +11,18 @@ class DeviceImpl;
 class CommandPoolImpl : public RefCountable {
 public:
     CommandPoolImpl(DeviceImpl& device, VkCommandPoolCreateFlags flags);
+    CommandPoolImpl(const CommandPoolImpl&) = delete;
+    CommandPoolImpl(CommandPoolImpl&&) = delete;
+    CommandPoolImpl& operator=(const CommandPoolImpl&) = delete;
+    CommandPoolImpl& operator=(CommandPoolImpl&&) = delete;
+
     ~CommandPoolImpl();
     bool CanResetSingleCmd() const noexcept;
     CommandEncoder CreateCommandEncoder();
 
     void Reset();
 
-    VkCommandPool m_pool;
+    VkCommandPool m_pool = VK_NULL_HANDLE;
     BlockMemoryAllocator<CommandImpl> m_cmd_allocator;
     std::vector<CommandImpl*> m_pending_delete_cmds;
 

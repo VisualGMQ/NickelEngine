@@ -13,7 +13,10 @@ class AdapterImpl {
 public:
     AdapterImpl(const video::Window::Impl& window);
     AdapterImpl(const AdapterImpl&) = delete;
+    AdapterImpl(AdapterImpl&&) = delete;
     AdapterImpl& operator=(const AdapterImpl&) = delete;
+    AdapterImpl& operator=(AdapterImpl&&) = delete;
+
     ~AdapterImpl();
     Device GetDevice() const;
 

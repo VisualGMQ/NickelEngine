@@ -219,6 +219,8 @@ private:
                     LOGE("catched exception when object deconstruct");
                 }
             }
+            
+            delete[] m_mem;
         }
     };
 

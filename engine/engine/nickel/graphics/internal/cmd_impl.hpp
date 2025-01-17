@@ -17,9 +17,14 @@ public:
 
     explicit CommandImpl(DeviceImpl& device, CommandPoolImpl& pool,
                          VkCommandBuffer cmd);
+    CommandImpl(const CommandImpl&) = delete;
+    CommandImpl(CommandImpl&&) = delete;
+    CommandImpl& operator=(const CommandImpl&) = delete;
+    CommandImpl& operator=(CommandImpl&&) = delete;
+
     ~CommandImpl();
 
-    VkCommandBuffer m_cmd;
+    VkCommandBuffer m_cmd = VK_NULL_HANDLE;
     Flags<Flag> m_flags = Flag::Unknown;
 
     void AddLayoutTransition(ImageImpl*, ImageLayout, size_t idx);

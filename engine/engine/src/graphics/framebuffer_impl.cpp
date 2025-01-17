@@ -36,12 +36,12 @@ FramebufferImpl::~FramebufferImpl() {
     vkDestroyFramebuffer(m_device.m_device, m_fbo, nullptr);
 }
 
-void FramebufferImpl::Release() {
-    m_views.clear();
-}
+void FramebufferImpl::DecRefcount() {
+    RefCountable::DecRefcount();
 
-void FramebufferImpl::PendingDelete() {
-    m_device.m_pending_delete_framebuffers.push_back(this);
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_framebuffers.push_back(this);
+    }
 }
 
 }  // namespace nickel::graphics

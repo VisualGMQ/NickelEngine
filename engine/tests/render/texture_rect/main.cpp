@@ -49,12 +49,12 @@ public:
             m_render_pass, m_framebuffers[idx], render_area, {clear_value});
         render_pass.SetViewport(0, 0, window_size.w, window_size.h, 0, 1);
         render_pass.SetScissor(0, 0, window_size.w, window_size.h);
+        render_pass.BindGraphicsPipeline(m_pipeline);
+        
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
         render_pass.BindIndexBuffer(m_index_buffer, IndexType::Uint32, 0);
-
-        render_pass.BindGraphicsPipeline(m_pipeline);
-        render_pass.DrawIndexed(6, 1, 0, 0, 0);
         render_pass.SetBindGroup(m_bind_group);
+        render_pass.DrawIndexed(6, 1, 0, 0, 0);
 
         render_pass.End();
         Command cmd = encoder.Finish();
@@ -113,24 +113,54 @@ private:
         ImageRawData raw_data{"./tests/render/texture_rect/girl.png"};
 
         // create image
-        Image::Descriptor desc;
-        desc.imageType = ImageType::Dim2;
-        desc.extent.w = raw_data.GetExtent().w;
-        desc.extent.h = raw_data.GetExtent().h;
-        desc.extent.l = 1;
-        desc.format = Format::R8G8B8A8_SRGB;
-        m_image = device.CreateImage(desc);
+        {
+            Image::Descriptor desc;
+            desc.imageType = ImageType::Dim2;
+            desc.extent.w = raw_data.GetExtent().w;
+            desc.extent.h = raw_data.GetExtent().h;
+            desc.extent.l = 1;
+            desc.format = Format::R8G8B8A8_UNORM;
+            desc.usage = nickel::Flags{ImageUsage::CopyDst}|ImageUsage::Sampled;
+            m_image = device.CreateImage(desc);
+        }
 
         // buffer data to image
-        // TODO: not finish 
+        {
+            Buffer::Descriptor desc;
+            desc.m_memory_type = MemoryType::CPULocal;
+            desc.m_size = 4 * raw_data.GetExtent().w * raw_data.GetExtent().h;
+            desc.m_usage = BufferUsage::CopySrc;
+            Buffer buffer = device.CreateBuffer(desc);
+            buffer.MapAsync();
+            void* data = buffer.GetMappedRange();
+            memcpy(data, raw_data.GetData(), desc.m_size);
+            buffer.Unmap();
+
+            CommandEncoder encoder = device.CreateCommandEncoder();
+            CopyEncoder copy = encoder.BeginCopy();
+            CopyEncoder::BufferImageCopy copy_info;
+            copy_info.bufferOffset = 0;
+            copy_info.imageExtent.w = raw_data.GetExtent().w;
+            copy_info.imageExtent.h = raw_data.GetExtent().h;
+            copy_info.imageExtent.l = 1;
+            copy_info.bufferImageHeight = 0;
+            copy_info.bufferRowLength = 0;
+            copy_info.imageSubresource.aspectMask = ImageAspect::Color;
+            copy.CopyBufferToTexture(buffer, m_image, copy_info);
+            copy.End();
+            Command cmd = encoder.Finish();
+            device.Submit(cmd);
+        }
 
         // create view
-        ImageView::Descriptor view_desc;
-        view_desc.format = Format::R8G8B8A8_SRGB;
-        view_desc.components = ComponentMapping::SwizzleIdentity;
-        view_desc.subresourceRange.aspectMask = ImageAspect::Color;
-        view_desc.viewType = ImageViewType::Dim2;
-        m_image_view = m_image.CreateView(view_desc);
+        {
+            ImageView::Descriptor view_desc;
+            view_desc.format = Format::R8G8B8A8_UNORM;
+            view_desc.components = ComponentMapping::SwizzleIdentity;
+            view_desc.subresourceRange.aspectMask = ImageAspect::Color;
+            view_desc.viewType = ImageViewType::Dim2;
+            m_image_view = m_image.CreateView(view_desc);
+        }
     }
 
     void createVertexBuffer(Device& device) {

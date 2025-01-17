@@ -12,6 +12,10 @@ class BufferImpl : public RefCountable {
 public:
     BufferImpl(DeviceImpl&, VkPhysicalDevice, const Buffer::Descriptor&);
     ~BufferImpl();
+    BufferImpl(const BufferImpl&) = delete;
+    BufferImpl(BufferImpl&&) = delete;
+    BufferImpl& operator=(const BufferImpl&) = delete;
+    BufferImpl& operator=(BufferImpl&&) = delete;
 
     enum Buffer::MapState MapState() const;
     uint64_t Size() const;
@@ -22,12 +26,13 @@ public:
     void* GetMappedRange(uint64_t offset);
     void Flush();
     void Flush(uint64_t offset, uint64_t size);
-    void PendingDelete();
+
+    void DecRefcount() override;
 
     void BuffData(void* data, size_t size, size_t offset);
 
-    VkBuffer m_buffer;
-    MemoryImpl* m_memory;
+    VkBuffer m_buffer = VK_NULL_HANDLE;
+    MemoryImpl* m_memory{};
 
 private:
     DeviceImpl& m_device;

@@ -153,8 +153,12 @@ BindGroupLayoutImpl::~BindGroupLayoutImpl() {
     vkDestroyDescriptorSetLayout(m_device.m_device, m_layout, nullptr);
 }
 
-void BindGroupLayoutImpl::PendingDelete() {
-    m_device.m_pending_delete_bind_group_layouts.push_back(this);
+void BindGroupLayoutImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_bind_group_layouts.push_back(this);
+    }
 }
 
 }  // namespace nickel::graphics

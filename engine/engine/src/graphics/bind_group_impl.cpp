@@ -153,7 +153,7 @@ void BindGroupImpl::WriteDescriptors() {
     }
 }
 
-void BindGroupImpl::Delete() {
+void BindGroupImpl::PendingDelete() {
     m_layout.m_bind_group_allocator.Deallocate(this);
 }
 

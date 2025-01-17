@@ -73,6 +73,8 @@ public:
     
     operator bool() const noexcept;
 
+    const Descriptor& GetDescriptor() const;
+
 private:
     BindGroupImpl* m_impl{};
 };

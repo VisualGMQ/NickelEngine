@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/graphics/framebuffer.hpp"
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/common/math/smatrix.hpp"
@@ -12,9 +13,24 @@ namespace nickel::graphics {
 
 class Framebuffer;
 
+struct ClearValue {
+    std::variant<std::array<float, 4>, std::array<int32_t, 4>,
+                 std::array<uint32_t, 4>>
+        m_color_value;
+
+    struct {
+        float depth{};
+        uint32_t stencil{};
+    } m_depth_stencil;
+};
+
 class NICKEL_API RenderPassEncoder final {
 public:
-    explicit RenderPassEncoder(CommandImpl& cmd);
+    RenderPassEncoder(CommandImpl& cmd,
+        const RenderPass& render_pass,
+        const Framebuffer& fbo,
+        const Rect& render_area,
+        const std::vector<ClearValue>& clear_values);
 
     void Draw(uint32_t vertex_count, uint32_t instance_count,
               uint32_t first_vertex, uint32_t first_instance);
@@ -23,8 +39,8 @@ public:
                      uint32_t first_instance);
     void BindVertexBuffer(uint32_t slot, Buffer buffer, uint64_t offset);
     void BindIndexBuffer(Buffer buffer, IndexType, uint64_t offset);
-    void SetBindGroup(const BindGroup&);
-    void SetBindGroup(const BindGroup&,
+    void SetBindGroup(BindGroup&);
+    void SetBindGroup(BindGroup&,
                       const std::vector<uint32_t>& dynamicOffset);
     void SetPushConstant(Flags<ShaderStage> stage, const void* value,
                          uint32_t offset, uint32_t size);
@@ -36,6 +52,13 @@ public:
     void End();
 
 private:
+    struct RenderPassInfo {
+        RenderPass render_pass;
+        Framebuffer fbo;
+        Rect render_area;
+        std::vector<ClearValue> clear_values;
+    };
+    
     struct SetBindGroupCmd {
         const BindGroup* bind_group{};
         std::vector<uint32_t> dynamic_offsets;
@@ -107,6 +130,11 @@ private:
 
     CommandImpl& m_cmd;
     std::vector<Cmd> m_record_cmds;
+    RenderPassInfo m_render_pass_info;
+
+    void transferImageLayoutInBindGroup(BindGroup&) const;
+    void transferImageLayout2ShaderReadOnlyOptimal(ImageImpl& impl) const;
+    void beginRenderPass();
 };
 
 class NICKEL_API CopyEncoder final {
@@ -116,14 +144,15 @@ public:
     struct BufferImageCopy {
         struct ImageSubresourceLayers {
             Flags<ImageAspect> aspectMask;
-            uint32_t mipLevel = 0;
-            uint32_t baseArrayLayer = 0;
+            uint32_t mipLevelCount = 1;
+            uint32_t baseMipLevel = 0;
             uint32_t layerCount = 1;
+            uint32_t baseArrayLayer = 0;
         };
 
-        uint64_t bufferOffset;
-        uint32_t bufferRowLength;
-        uint32_t bufferImageHeight;
+        uint64_t bufferOffset{};
+        uint32_t bufferRowLength{};
+        uint32_t bufferImageHeight{};
         ImageSubresourceLayers imageSubresource;
         SVector<uint32_t, 3> imageOffset;
         SVector<uint32_t, 3> imageExtent;
@@ -163,17 +192,6 @@ private:
 };
 
 class CommandImpl;
-
-struct ClearValue {
-    std::variant<std::array<float, 4>, std::array<int32_t, 4>,
-                 std::array<uint32_t, 4>>
-        m_color_value;
-
-    struct {
-        float depth{};
-        uint32_t stencil{};
-    } m_depth_stencil;
-};
 
 class NICKEL_API CommandEncoder {
 public:

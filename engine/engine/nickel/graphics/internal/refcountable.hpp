@@ -5,9 +5,10 @@ namespace nickel::graphics {
 class RefCountable {
 public:
     RefCountable();
+    virtual ~RefCountable() = default;
     uint32_t Refcount() const noexcept;
     void IncRefcount();
-    void DecRefcount();
+    virtual void DecRefcount();
     bool IsAlive() const noexcept;
 
 private:

@@ -19,12 +19,16 @@ BindGroup& BindGroup::operator=(BindGroup&& o) noexcept {
 
 BindGroup::~BindGroup() {
     if (m_impl) {
-        m_impl->Delete();
+        m_impl->PendingDelete();
     }
 }
 
 BindGroup::operator bool() const noexcept {
     return m_impl;
+}
+
+const BindGroup::Descriptor& BindGroup::GetDescriptor() const {
+    return m_impl->GetDescriptor();
 }
 
 const BindGroupImpl& BindGroup::Impl() const noexcept {

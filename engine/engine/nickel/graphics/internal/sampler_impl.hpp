@@ -10,10 +10,15 @@ class DeviceImpl;
 class SamplerImpl : public RefCountable {
 public:
     explicit SamplerImpl(DeviceImpl& dev, const Sampler::Descriptor&);
-    ~SamplerImpl();
-    void PendingDelete();
+    SamplerImpl(const SamplerImpl&) = delete;
+    SamplerImpl(SamplerImpl&&) = delete;
+    SamplerImpl& operator=(const SamplerImpl&) = delete;
+    SamplerImpl& operator=(SamplerImpl&&) = delete;
 
-    VkSampler m_sampler;
+    ~SamplerImpl();
+
+    void DecRefcount() override;
+    VkSampler m_sampler = VK_NULL_HANDLE;
 
 private:
     DeviceImpl& m_dev;
