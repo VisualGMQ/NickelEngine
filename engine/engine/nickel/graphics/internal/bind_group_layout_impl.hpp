@@ -11,19 +11,24 @@ class DeviceImpl;
 
 class BindGroupLayoutImpl final : public RefCountable {
 public:
-    VkDescriptorSetLayout m_layout;
-    VkDescriptorPool m_pool;
+    VkDescriptorSetLayout m_layout = VK_NULL_HANDLE;
+    VkDescriptorPool m_pool = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> m_groups;
     BlockMemoryAllocator<BindGroupImpl> m_bind_group_allocator;
-    
+
     BindGroupLayoutImpl(DeviceImpl&, const BindGroupLayout::Descriptor&);
+    BindGroupLayoutImpl(const BindGroupLayoutImpl&) = delete;
+    BindGroupLayoutImpl(BindGroupLayoutImpl&&) = delete;
+    BindGroupLayoutImpl& operator=(const BindGroupLayoutImpl&) = delete;
+    BindGroupLayoutImpl& operator=(BindGroupLayoutImpl&&) = delete;
+
     ~BindGroupLayoutImpl();
 
     BindGroup RequireBindGroup(const BindGroup::Descriptor& desc);
 
     VkDescriptorSet RequireSet(size_t& out_idx);
     void RecycleSetList(size_t index);
-    void PendingDelete();
+    void DecRefcount() override;
 
 private:
     DeviceImpl& m_device;

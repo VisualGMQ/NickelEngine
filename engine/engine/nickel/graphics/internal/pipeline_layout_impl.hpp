@@ -11,11 +11,16 @@ class BindGroupLayout;
 class PipelineLayoutImpl final : public RefCountable {
 public:
     PipelineLayoutImpl(DeviceImpl&, const PipelineLayout::Descriptor&);
+    PipelineLayoutImpl(const PipelineLayoutImpl&) = delete;
+    PipelineLayoutImpl(PipelineLayoutImpl&&) = delete;
+    PipelineLayoutImpl& operator=(const PipelineLayoutImpl&) = delete;
+    PipelineLayoutImpl& operator=(PipelineLayoutImpl&&) = delete;
+
     ~PipelineLayoutImpl();
 
-    VkPipelineLayout m_pipeline_layout;
+    VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
 
-    void PendingDelete();
+    void DecRefcount() override;
 
 private:
     DeviceImpl& m_device;

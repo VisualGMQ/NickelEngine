@@ -13,14 +13,18 @@ public:
 
     // only for swapchain image view hack
     ImageViewImpl(DeviceImpl&, VkImageView);
+    ImageViewImpl(const ImageViewImpl&) = delete;
+    ImageViewImpl(ImageViewImpl&&) = delete;
+    ImageViewImpl& operator=(const ImageViewImpl&) = delete;
+    ImageViewImpl& operator=(ImageViewImpl&&) = delete;
+
     ~ImageViewImpl();
 
-    void Release();
-    void PendingDelete();
+    void DecRefcount() override;
 
     Image GetImage() const;
 
-    VkImageView m_view;
+    VkImageView m_view = VK_NULL_HANDLE;
     Image m_image;
 
 private:

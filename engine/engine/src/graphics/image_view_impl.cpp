@@ -34,12 +34,12 @@ ImageViewImpl::~ImageViewImpl() {
     vkDestroyImageView(m_device.m_device, m_view, nullptr);
 }
 
-void ImageViewImpl::Release() {
-    m_image.Release();
-}
+void ImageViewImpl::DecRefcount() {
+    RefCountable::DecRefcount();
 
-void ImageViewImpl::PendingDelete() {
-    m_device.m_pending_delete_image_views.push_back(this);
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_image_views.push_back(this);
+    }
 }
 
 Image ImageViewImpl::GetImage() const {

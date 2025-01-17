@@ -10,11 +10,16 @@ class RenderPass;
 class FramebufferImpl : public RefCountable {
 public:
     FramebufferImpl(DeviceImpl& dev, const Framebuffer::Descriptor&);
-    ~FramebufferImpl();
-    void Release();
-    void PendingDelete();
+    FramebufferImpl(const FramebufferImpl&) = delete;
+    FramebufferImpl(FramebufferImpl&&) = delete;
+    FramebufferImpl& operator=(const FramebufferImpl&) = delete;
+    FramebufferImpl& operator=(FramebufferImpl&&) = delete;
 
-    VkFramebuffer m_fbo;
+    ~FramebufferImpl();
+
+    void DecRefcount() override;
+
+    VkFramebuffer m_fbo = VK_NULL_HANDLE;
     std::vector<ImageView> m_views;
     
 private:

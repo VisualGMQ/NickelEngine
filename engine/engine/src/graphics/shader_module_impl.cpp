@@ -20,8 +20,12 @@ ShaderModuleImpl::~ShaderModuleImpl() {
     vkDestroyShaderModule(m_device.m_device, m_module, nullptr);
 }
 
-void ShaderModuleImpl::PendingDelete() {
-    m_device.m_pending_delete_shader_modules.push_back(this);
+void ShaderModuleImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_shader_modules.push_back(this);
+    }
 }
 
 }  // namespace nickel::graphics

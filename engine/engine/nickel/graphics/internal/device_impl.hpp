@@ -63,14 +63,19 @@ public:
     };
 
     DeviceImpl(const AdapterImpl&, const SVector<uint32_t, 2>& window_size);
+    DeviceImpl(const DeviceImpl&) = delete;
+    DeviceImpl(DeviceImpl&&) = delete;
+    DeviceImpl& operator=(const DeviceImpl&) = delete;
+    DeviceImpl& operator=(DeviceImpl&&) = delete;
+
     ~DeviceImpl();
 
     const SwapchainImageInfo& GetSwapchainImageInfo() const noexcept;
 
-    VkDevice m_device;
-    VkQueue m_present_queue;
-    VkQueue m_graphics_queue;
-    VkSwapchainKHR m_swapchain;
+    VkDevice m_device = VK_NULL_HANDLE;
+    VkQueue m_present_queue = VK_NULL_HANDLE;
+    VkQueue m_graphics_queue = VK_NULL_HANDLE;
+    VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
     std::vector<ImageViewImpl*> m_swapchain_image_views;
     QueueFamilyIndices m_queue_indices;
 

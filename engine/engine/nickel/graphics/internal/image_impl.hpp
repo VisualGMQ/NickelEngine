@@ -15,6 +15,11 @@ class MemoryImpl;
 class ImageImpl : public RefCountable {
 public:
     ImageImpl(const AdapterImpl&, DeviceImpl&, const Image::Descriptor&);
+    ImageImpl(const ImageImpl&) = delete;
+    ImageImpl(ImageImpl&&) = delete;
+    ImageImpl& operator=(const ImageImpl&) = delete;
+    ImageImpl& operator=(ImageImpl&&) = delete;
+
     ~ImageImpl();
 
     VkImageType Type() const;
@@ -25,9 +30,9 @@ public:
     Flags<VkImageUsageFlagBits> Usage() const;
     ImageView CreateView(const Image& image, const ImageView::Descriptor&);
 
-    void PendingDelete();
+    void DecRefcount() override;
 
-    VkImage m_image;
+    VkImage m_image = VK_NULL_HANDLE;
     MemoryImpl* m_memory{};
     std::vector<ImageLayout> m_layouts;
 

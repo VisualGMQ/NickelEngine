@@ -91,7 +91,11 @@ private:
     const GraphicsPipeline* m_pipeline{};
 };
 
-RenderPassEncoder::RenderPassEncoder(CommandImpl& cmd) : m_cmd{cmd} {}
+RenderPassEncoder::RenderPassEncoder(
+    CommandImpl& cmd, const RenderPass& render_pass, const Framebuffer& fbo,
+    const Rect& render_area, const std::vector<ClearValue>& clear_values)
+    : m_cmd{cmd},
+      m_render_pass_info{render_pass, fbo, render_area, clear_values} {}
 
 void RenderPassEncoder::Draw(uint32_t vertex_count, uint32_t instance_count,
                              uint32_t first_vertex, uint32_t first_instance) {
@@ -137,73 +141,22 @@ void RenderPassEncoder::BindIndexBuffer(Buffer buffer, IndexType type,
     m_record_cmds.push_back(cmd);
 }
 
-void RenderPassEncoder::SetBindGroup(const BindGroup& bind_group) {
+void RenderPassEncoder::SetBindGroup(BindGroup& bind_group) {
     SetBindGroupCmd cmd;
     cmd.bind_group = &bind_group;
     m_record_cmds.push_back(cmd);
+
+    transferImageLayoutInBindGroup(bind_group);
 }
 
 void RenderPassEncoder::SetBindGroup(
-    const BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
+    BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
     SetBindGroupCmd cmd;
     cmd.bind_group = &bind_group;
     cmd.dynamic_offsets = dynamicOffset;
     m_record_cmds.push_back(cmd);
 
-    auto& desc = bind_group.Impl().GetDescriptor();
-    for (auto& [_, entry] : desc.entries) {
-        auto& bind_entry = entry.binding.entry;
-        ImageImpl* image_impl{};
-        if (auto binding = std::get_if<BindGroup::ImageBinding>(&bind_entry)) {
-            image_impl = &binding->view.GetImage().Impl();
-        }
-        if (auto binding =
-                std::get_if<BindGroup::CombinedSamplerBinding>(&bind_entry)) {
-            image_impl = &binding->view.GetImage().Impl();
-        }
-
-        if (!image_impl) {
-            continue;
-        }
-
-        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        auto format = image_impl->Format();
-        if (format == VK_FORMAT_D16_UNORM || format == VK_FORMAT_D32_SFLOAT) {
-            aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-        }
-        if (format == VK_FORMAT_S8_UINT) {
-            aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-        if (format == VK_FORMAT_D16_UNORM_S8_UINT ||
-            format == VK_FORMAT_D24_UNORM_S8_UINT ||
-            format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
-            aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-        }
-
-        for (size_t i = 0; i < image_impl->m_layouts.size(); i++) {
-            auto layout = ImageLayout2Vk(image_impl->m_layouts[i]);
-            if (layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-                VkImageMemoryBarrier barrier{};
-                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                barrier.image = image_impl->m_image;
-                barrier.oldLayout = layout;
-                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                barrier.srcAccessMask = 0;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                barrier.subresourceRange.aspectMask = aspect;
-                barrier.subresourceRange.layerCount = 1;
-                barrier.subresourceRange.levelCount = 1;
-                barrier.subresourceRange.baseArrayLayer = 0;
-                barrier.subresourceRange.baseMipLevel = 0;
-                vkCmdPipelineBarrier(m_cmd.m_cmd,
-                                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                     VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
-                                     nullptr, 0, nullptr, 1, &barrier);
-                m_cmd.AddLayoutTransition(image_impl,
-                                          ImageLayout::TransferDstOptimal, i);
-            }
-        }
-    }
+    transferImageLayoutInBindGroup(bind_group);
 }
 
 void RenderPassEncoder::SetPushConstant(Flags<ShaderStage> stage,
@@ -241,12 +194,152 @@ void RenderPassEncoder::BindGraphicsPipeline(const GraphicsPipeline& pipeline) {
 }
 
 void RenderPassEncoder::End() {
+    beginRenderPass();
+    
     ApplyRenderCmd applier(m_cmd);
     for (auto& cmd : m_record_cmds) {
         std::visit(applier, cmd);
     }
     m_record_cmds.clear();
     vkCmdEndRenderPass(m_cmd.m_cmd);
+}
+
+void RenderPassEncoder::transferImageLayoutInBindGroup(
+    BindGroup& bind_group) const {
+    auto& desc = bind_group.Impl().GetDescriptor();
+    for (auto& [_, entry] : desc.entries) {
+        auto& bind_entry = entry.binding.entry;
+        ImageImpl* image_impl{};
+        if (auto binding = std::get_if<BindGroup::ImageBinding>(&bind_entry)) {
+            image_impl = &binding->view.GetImage().Impl();
+        }
+        if (auto binding =
+                std::get_if<BindGroup::CombinedSamplerBinding>(&bind_entry)) {
+            image_impl = &binding->view.GetImage().Impl();
+        }
+
+        if (!image_impl) {
+            continue;
+        }
+
+        transferImageLayout2ShaderReadOnlyOptimal(*image_impl);
+    }
+}
+
+void RenderPassEncoder::transferImageLayout2ShaderReadOnlyOptimal(
+    ImageImpl& impl) const {
+    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    auto format = impl.Format();
+    if (format == VK_FORMAT_D16_UNORM || format == VK_FORMAT_D32_SFLOAT) {
+        aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    if (format == VK_FORMAT_S8_UINT) {
+        aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+    if (format == VK_FORMAT_D16_UNORM_S8_UINT ||
+        format == VK_FORMAT_D24_UNORM_S8_UINT ||
+        format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+        aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    for (size_t i = 0; i < impl.m_layouts.size(); i++) {
+        auto layout = ImageLayout2Vk(impl.m_layouts[i]);
+        if (layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.image = impl.m_image;
+            barrier.oldLayout = layout;
+            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.subresourceRange.aspectMask = aspect;
+            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.baseMipLevel = 0;
+            vkCmdPipelineBarrier(m_cmd.m_cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &barrier);
+            m_cmd.AddLayoutTransition(&impl, ImageLayout::ShaderReadOnlyOptimal,
+                                      i);
+        }
+    }
+}
+
+void RenderPassEncoder::beginRenderPass() {
+    VkRenderPassBeginInfo render_pass_info = {};
+
+    std::vector<VkClearValue> values{};
+    for (auto& clear_value : m_render_pass_info.clear_values) {
+        VkClearValue vk_clear_value{};
+        if (auto color =
+                std::get_if<std::array<float, 4>>(&clear_value.m_color_value)) {
+            vk_clear_value.color.float32[0] = (*color)[0];
+            vk_clear_value.color.float32[1] = (*color)[1];
+            vk_clear_value.color.float32[2] = (*color)[2];
+            vk_clear_value.color.float32[3] = (*color)[3];
+        } else if (auto color = std::get_if<std::array<int32_t, 4>>(
+                       &clear_value.m_color_value)) {
+            vk_clear_value.color.int32[0] = (*color)[0];
+            vk_clear_value.color.int32[1] = (*color)[1];
+            vk_clear_value.color.int32[2] = (*color)[2];
+            vk_clear_value.color.int32[3] = (*color)[3];
+        } else if (auto color = std::get_if<std::array<uint32_t, 4>>(
+                       &clear_value.m_color_value)) {
+            vk_clear_value.color.uint32[0] = (*color)[0];
+            vk_clear_value.color.uint32[1] = (*color)[1];
+            vk_clear_value.color.uint32[2] = (*color)[2];
+            vk_clear_value.color.uint32[3] = (*color)[3];
+        }
+        values.push_back(vk_clear_value);
+    }
+
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_info.renderPass =
+        m_render_pass_info.render_pass.Impl().m_render_pass;
+    render_pass_info.pClearValues = values.data();
+    render_pass_info.clearValueCount = values.size();
+    render_pass_info.framebuffer = m_render_pass_info.fbo.Impl().m_fbo;
+
+    auto& render_area = m_render_pass_info.render_area;
+    render_pass_info.renderArea.offset.x = render_area.position.x;
+    render_pass_info.renderArea.offset.y = render_area.position.y;
+    render_pass_info.renderArea.extent.width = render_area.size.w;
+    render_pass_info.renderArea.extent.height = render_area.size.h;
+
+    for (auto& view : m_render_pass_info.fbo.Impl().m_views) {
+        // skip swapchain image
+        if (!view.GetImage()) {
+            continue;
+        }
+
+        auto& layouts = view.GetImage().Impl().m_layouts;
+        for (int i = 0; i < layouts.size(); i++) {
+            VkImageLayout layout =
+                ImageLayout2Vk(view.GetImage().Impl().m_layouts[i]);
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.image = view.GetImage().Impl().m_image;
+            barrier.oldLayout = layout;
+            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.baseMipLevel = 0;
+            vkCmdPipelineBarrier(m_cmd.m_cmd,
+                                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+                                 nullptr, 0, nullptr, 1, &barrier);
+            m_cmd.AddLayoutTransition(&view.GetImage().Impl(),
+                                      ImageLayout::ColorAttachmentOptimal, i);
+        }
+    }
+
+    vkCmdBeginRenderPass(m_cmd.m_cmd, &render_pass_info,
+                         VK_SUBPASS_CONTENTS_INLINE);
+
+    m_cmd.m_flags |= CommandImpl::Flag::Render;
 }
 
 CopyEncoder::CopyEncoder(CommandImpl& cmd) : m_cmd{cmd} {}
@@ -306,11 +399,14 @@ void CopyEncoder::End() {
             barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_NONE;
-            barrier.subresourceRange.layerCount = 1;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.baseMipLevel = 0;
+            auto& subresource = copy_cmd.copy.imageSubresource;
+            barrier.subresourceRange.aspectMask =
+                ImageAspect2Vk(subresource.aspectMask);
+            barrier.subresourceRange.layerCount = subresource.layerCount;
+            barrier.subresourceRange.levelCount = subresource.mipLevelCount;
+            barrier.subresourceRange.baseArrayLayer =
+                subresource.baseArrayLayer;
+            barrier.subresourceRange.baseMipLevel = subresource.baseMipLevel;
             vkCmdPipelineBarrier(m_cmd.m_cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                  VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr,
                                  0, nullptr, 1, &barrier);
@@ -318,7 +414,7 @@ void CopyEncoder::End() {
                                       ImageLayout::TransferDstOptimal, i);
         }
 
-        VkBufferImageCopy copy;
+        VkBufferImageCopy copy{};
         copy.bufferRowLength = copy_cmd.copy.bufferRowLength;
         copy.bufferOffset = copy_cmd.copy.bufferOffset;
         copy.bufferImageHeight = copy_cmd.copy.bufferImageHeight;
@@ -327,7 +423,7 @@ void CopyEncoder::End() {
         copy.imageSubresource.layerCount =
             copy_cmd.copy.imageSubresource.layerCount;
         copy.imageSubresource.mipLevel =
-            copy_cmd.copy.imageSubresource.mipLevel;
+            copy_cmd.copy.imageSubresource.baseMipLevel;
         copy.imageSubresource.baseArrayLayer =
             copy_cmd.copy.imageSubresource.baseArrayLayer;
         copy.imageOffset.x = copy_cmd.copy.imageOffset.x;
@@ -339,8 +435,7 @@ void CopyEncoder::End() {
 
         vkCmdCopyBufferToImage(m_cmd.m_cmd, copy_cmd.src.Impl().m_buffer,
                                copy_cmd.dst.Impl().m_image,
-                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1,
-                               &copy);
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
         m_cmd.m_flags |= CommandImpl::Flag::Transfer;
     }
@@ -352,79 +447,8 @@ void CopyEncoder::End() {
 RenderPassEncoder CommandEncoder::BeginRenderPass(
     const RenderPass& render_pass, const Framebuffer& fbo,
     const Rect& render_area, const std::vector<ClearValue>& clear_values) {
-    VkRenderPassBeginInfo render_pass_info = {};
-
-    std::vector<VkClearValue> values{};
-    for (auto& clear_value : clear_values) {
-        VkClearValue vk_clear_value{};
-        if (auto color =
-                std::get_if<std::array<float, 4>>(&clear_value.m_color_value)) {
-            vk_clear_value.color.float32[0] = (*color)[0];
-            vk_clear_value.color.float32[1] = (*color)[1];
-            vk_clear_value.color.float32[2] = (*color)[2];
-            vk_clear_value.color.float32[3] = (*color)[3];
-        } else if (auto color = std::get_if<std::array<int32_t, 4>>(
-                       &clear_value.m_color_value)) {
-            vk_clear_value.color.int32[0] = (*color)[0];
-            vk_clear_value.color.int32[1] = (*color)[1];
-            vk_clear_value.color.int32[2] = (*color)[2];
-            vk_clear_value.color.int32[3] = (*color)[3];
-        } else if (auto color = std::get_if<std::array<uint32_t, 4>>(
-                       &clear_value.m_color_value)) {
-            vk_clear_value.color.uint32[0] = (*color)[0];
-            vk_clear_value.color.uint32[1] = (*color)[1];
-            vk_clear_value.color.uint32[2] = (*color)[2];
-            vk_clear_value.color.uint32[3] = (*color)[3];
-        }
-        values.push_back(vk_clear_value);
-    }
-
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_info.renderPass = render_pass.Impl().m_render_pass;
-    render_pass_info.pClearValues = values.data();
-    render_pass_info.clearValueCount = values.size();
-    render_pass_info.framebuffer = fbo.Impl().m_fbo;
-
-    render_pass_info.renderArea.offset.x = render_area.position.x;
-    render_pass_info.renderArea.offset.y = render_area.position.y;
-    render_pass_info.renderArea.extent.width = render_area.size.w;
-    render_pass_info.renderArea.extent.height = render_area.size.h;
-
-    for (auto& view : fbo.Impl().m_views) {
-        // skip swapchain image
-        if (!view.GetImage()) {
-            continue;
-        }
-
-        auto& layouts = view.GetImage().Impl().m_layouts;
-        for (int i = 0; i < layouts.size(); i++) {
-            VkImageLayout layout =
-                ImageLayout2Vk(view.GetImage().Impl().m_layouts[i]);
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.image = view.GetImage().Impl().m_image;
-            barrier.oldLayout = layout;
-            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.layerCount = 1;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.baseMipLevel = 0;
-            vkCmdPipelineBarrier(m_cmd.m_cmd,
-                                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                                 nullptr, 0, nullptr, 1, &barrier);
-            m_cmd.AddLayoutTransition(&view.GetImage().Impl(),
-                                      ImageLayout::ColorAttachmentOptimal, i);
-        }
-    }
-
-    vkCmdBeginRenderPass(m_cmd.m_cmd, &render_pass_info,
-                         VK_SUBPASS_CONTENTS_INLINE);
-
-    m_cmd.m_flags |= CommandImpl::Flag::Render;
-
-    return RenderPassEncoder{m_cmd};
+    return RenderPassEncoder{m_cmd, render_pass, fbo, render_area,
+                             clear_values};
 }
 
 Command CommandEncoder::Finish() {

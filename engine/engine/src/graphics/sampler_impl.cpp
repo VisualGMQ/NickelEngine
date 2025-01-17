@@ -33,8 +33,12 @@ SamplerImpl::~SamplerImpl() {
     vkDestroySampler(m_dev.m_device, m_sampler, nullptr);
 }
 
-void SamplerImpl::PendingDelete() {
-    m_dev.m_pending_delete_samplers.push_back(this);
+void SamplerImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_dev.m_pending_delete_samplers.push_back(this);
+    }
 }
 
 }  // namespace nickel::graphics

@@ -328,32 +328,33 @@ void DeviceImpl::createRenderRelateSyncObjs() {
 
 DeviceImpl::~DeviceImpl() {
     WaitIdle();
-    
-    for (auto view : m_swapchain_image_views) {
-        delete view;
-    }
-
+   
     m_render_fences.clear();
     m_image_avaliable_sems.clear();
     m_render_finish_sems.clear();
 
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-
-    m_shader_module_allocator.FreeAll();
-    m_sampler_allocator.FreeAll();
-    m_image_view_allocator.FreeAll();
-    m_image_allocator.FreeAll();
-    m_render_pass_allocator.FreeAll();
-    m_buffer_allocator.FreeAll();
     m_pipeline_layout_allocator.FreeAll();
     m_bind_group_layout_allocator.FreeAll();
+    m_image_view_allocator.FreeAll();
+    m_image_allocator.FreeAll();
+    
+    m_shader_module_allocator.FreeAll();
+    m_sampler_allocator.FreeAll();
     m_framebuffer_allocator.FreeAll();
+ 
+    for (auto view : m_swapchain_image_views) {
+        delete view;
+    }
+    m_render_pass_allocator.FreeAll();
+    m_buffer_allocator.FreeAll();
     m_graphics_pipeline_allocator.FreeAll();
+    
     m_semaphore_allocator.FreeAll();
     m_fence_allocator.FreeAll();
     for (auto pool : m_cmd_pools) {
         delete pool;
     }
+    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
 }
 

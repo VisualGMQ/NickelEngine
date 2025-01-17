@@ -218,10 +218,10 @@ nickel::graphics::GraphicsPipelineImpl::~GraphicsPipelineImpl() {
     vkDestroyPipeline(m_device.m_device, m_pipeline, nullptr);
 }
 
-void nickel::graphics::GraphicsPipelineImpl::Release() {
-    m_layout.Release();
-}
+void nickel::graphics::GraphicsPipelineImpl::DecRefcount() {
+    RefCountable::DecRefcount();
 
-void nickel::graphics::GraphicsPipelineImpl::PendingDelete() {
-    m_device.m_pending_delete_graphics_pipelines.push_back(this);
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_graphics_pipelines.push_back(this);
+    }
 }

@@ -17,8 +17,12 @@ FenceImpl::~FenceImpl() {
     vkDestroyFence(m_device.m_device, m_fence, nullptr);
 }
 
-void FenceImpl::PendingDelete() {
-    m_device.m_pending_delete_fences.push_back(this);
+void FenceImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_fences.push_back(this);
+    }
 }
 
 }  // namespace nickel::graphics

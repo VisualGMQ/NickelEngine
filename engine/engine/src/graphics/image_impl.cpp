@@ -101,8 +101,12 @@ ImageView ImageImpl::CreateView(const Image& image,
     return m_device.CreateImageView(image, desc);
 }
 
-void ImageImpl::PendingDelete() {
-    m_device.m_pending_delete_images.push_back(this);
+void ImageImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_device.m_pending_delete_images.push_back(this);
+    }
 }
 
 }  // namespace nickel::graphics
