@@ -3,8 +3,6 @@
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
-#include <3rdlibs/SDL/src/video/khronos/vulkan/vulkan_core.h>
-
 using namespace nickel::graphics;
 
 class Application : public nickel::Application {

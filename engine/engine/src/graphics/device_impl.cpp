@@ -333,8 +333,6 @@ DeviceImpl::~DeviceImpl() {
     m_image_avaliable_sems.clear();
     m_render_finish_sems.clear();
 
-    m_pipeline_layout_allocator.FreeAll();
-    m_bind_group_layout_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
     m_image_allocator.FreeAll();
     
@@ -345,9 +343,11 @@ DeviceImpl::~DeviceImpl() {
     for (auto view : m_swapchain_image_views) {
         delete view;
     }
-    m_render_pass_allocator.FreeAll();
     m_buffer_allocator.FreeAll();
     m_graphics_pipeline_allocator.FreeAll();
+    m_pipeline_layout_allocator.FreeAll();
+    m_bind_group_layout_allocator.FreeAll();
+    m_render_pass_allocator.FreeAll();
     
     m_semaphore_allocator.FreeAll();
     m_fence_allocator.FreeAll();
