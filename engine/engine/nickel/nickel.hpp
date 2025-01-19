@@ -1,17 +1,18 @@
 ﻿#pragma once
-#include "nickel/graphics/texture_manager.hpp"
+#include "nickel/common/dllexport.hpp"
+#include "nickel/common/singleton.hpp"
+#include "nickel/fs/storage.hpp"
 #include "nickel/graphics/camera.hpp"
 #include "nickel/graphics/context.hpp"
-#include "nickel/input/device/device_manager.hpp"
-#include "nickel/common/singleton.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
+#include "nickel/graphics/texture_manager.hpp"
+#include "nickel/input/device/device_manager.hpp"
 #include "nickel/video/window.hpp"
-#include "nickel/common/dllexport.hpp"
-#include "nickel/fs/storage.hpp"
 
-#include "graphics/gltf.hpp"
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
+#include "nickel/graphics/gltf.hpp"
+#include "nickel/physics/context.hpp"
 
 union SDL_Event;
 
@@ -57,6 +58,7 @@ private:
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<graphics::Context> m_graphics_ctx;
     std::unique_ptr<StorageManager> m_storage_mgr;
+    physics::Context m_physics;
 
     input::DeviceManager m_device_mgr;
     std::unique_ptr<graphics::TextureManager> m_texture_mgr;
@@ -73,16 +75,13 @@ private:
 
 class NICKEL_API Application {
 public:
-    virtual void OnInit() {
-    }
+    virtual void OnInit() {}
 
-    virtual void OnQuit() {
-    }
+    virtual void OnQuit() {}
 
-    virtual void OnUpdate() {
-    }
+    virtual void OnUpdate() {}
 
     virtual ~Application() = default;
 };
-} // namespace nickel
+}  // namespace nickel
 

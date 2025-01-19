@@ -1,3 +1,5 @@
+add_subdirectory(physx)
+
 set(SDL_CAMERA OFF)
 set(SDL_EXAMPLES OFF)
 set(SDL_GPU OFF)
