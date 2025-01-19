@@ -59,6 +59,7 @@ public:
         index_node->m_next = block->m_in_use_index_head;
         block->m_in_use_index_head = index_node;
         mem->m_in_use = true;
+        
         return elem;
     }
 
@@ -197,26 +198,45 @@ private:
         Mem* m_mem{};
         Node<size_t>* m_unused_index_head{};
         Node<size_t>* m_in_use_index_head{};
+        const size_t m_block_mem_count;
 
         ~Block() noexcept {
-            Node<size_t>* in_use_node = m_in_use_index_head;
-            while (in_use_node) {
-                try {
-                    ((T*)(m_mem + in_use_node->m_data)->m_mem)->~T();
-                } catch (...) {
-                    LOGE("catched exception when deconstruct object");
+            for (size_t i = 0; i < m_block_mem_count; i++) {
+                Mem* mem = m_mem + i;
+                if (mem->m_in_use) {
+                    try {
+                        ((T*)mem)->~T();
+                    } catch (...) {
+                        LOGE("catched exception when deconstruct object");
+                    }
                 }
-                in_use_node = in_use_node->m_next;
             }
 
-            Node<size_t>* node = m_unused_index_head;
-            while (node) {
-                Node<size_t>* cur = node;
-                node = node->m_next;
-                try {
-                    delete cur;
-                } catch (...) {
-                    LOGE("catched exception when object deconstruct");
+            // free in use index nodes
+            {
+                Node<size_t>* node = m_in_use_index_head;
+                while (node) {
+                    Node<size_t>* cur = node;
+                    node = node->m_next;
+                    try {
+                        delete cur;
+                    } catch (...) {
+                        LOGE("catched exception when object deconstruct");
+                    }
+                }
+            }
+
+            // free unuse index nodes
+            {
+                Node<size_t>* node = m_unused_index_head;
+                while (node) {
+                    Node<size_t>* cur = node;
+                    node = node->m_next;
+                    try {
+                        delete cur;
+                    } catch (...) {
+                        LOGE("catched exception when object deconstruct");
+                    }
                 }
             }
             
@@ -236,7 +256,8 @@ private:
         }
 
         if (!node) {
-            Node<Block>* new_block = new (std::nothrow) Node<Block>;
+            Node<Block>* new_block = new (std::nothrow)
+                Node<Block>{nullptr, nullptr, nullptr, m_block_mem_count};
 
             if (!new_block) {
                 LOGE("bad alloc exception! out of memory");

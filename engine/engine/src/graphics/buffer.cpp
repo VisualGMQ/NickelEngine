@@ -1,4 +1,5 @@
 #include "nickel/graphics/buffer.hpp"
+#include "nickel/common/log.hpp"
 #include "nickel/graphics/internal/buffer_impl.hpp"
 
 namespace nickel::graphics {
