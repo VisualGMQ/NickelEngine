@@ -32,7 +32,7 @@ public:
             std::optional<float> depthBiasClamp;
             float depthBiasSlopeScale = 0;
             CompareOp depthCompare = CompareOp::Greater;
-            bool depthWriteEnabled = false;
+            bool depthWriteEnabled = true;
             Format depthFormat;
             StencilOpState stencilBack;
             StencilOpState stencilFront;

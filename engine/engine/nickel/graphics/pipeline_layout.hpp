@@ -11,8 +11,8 @@ public:
     struct Descriptor {
         struct PushConstantRange {
             Flags<ShaderStage> shader_stage;
-            uint32_t offset;
-            uint32_t size;
+            uint32_t offset{};
+            uint32_t size{};
         };
         
         std::vector<BindGroupLayout> layouts;

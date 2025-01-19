@@ -42,6 +42,8 @@ private:
 
     void createImage(const Image::Descriptor&, DeviceImpl&);
     void allocMem(VkPhysicalDevice phyDevice);
+    void findSupportedFormat(VkFormat candidates, VkImageTiling tiling,
+                             VkFormatFeatureFlags features);
 };
 
 }  // namespace nickel::graphics

@@ -72,8 +72,8 @@ const SwapchainImageInfo& Device::GetSwapchainImageInfo() const {
     return m_impl->GetSwapchainImageInfo();
 }
 
-std::vector<ImageView> Device::GetSwapchainImages() const {
-    return m_impl->GetSwapchainImages();
+std::vector<ImageView> Device::GetSwapchainImageViews() const {
+    return m_impl->GetSwapchainImageViews();
 }
 
 uint32_t Device::WaitAndAcquireSwapchainImageIndex() {
@@ -82,6 +82,10 @@ uint32_t Device::WaitAndAcquireSwapchainImageIndex() {
 
 void Device::EndFrame() {
     m_impl->EndFrame();
+}
+
+void Device::WaitIdle() {
+    m_impl->WaitIdle();
 }
 
 void Device::Submit(Command& cmd) {

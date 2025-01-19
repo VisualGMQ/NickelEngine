@@ -37,7 +37,7 @@ public:
 
         CommandEncoder encoder = device.CreateCommandEncoder();
         ClearValue clear_value;
-        clear_value.m_color_value = std::array<float, 4>{0.1, 0.1, 0.1, 1};
+        clear_value.m_value = std::array<float, 4>{0.1, 0.1, 0.1, 1};
         nickel::Rect render_area;
         render_area.position.x = 0;
         render_area.position.y = 0;
@@ -89,7 +89,6 @@ private:
         BindGroup::Descriptor desc;
         BindGroup::Entry entry;
         entry.shader_stage = ShaderStage::Fragment;
-        entry.binding.slot = 0;
         BindGroup::CombinedSamplerBinding binding;
         binding.view = m_image_view;
         binding.sampler = m_sampler;
@@ -108,7 +107,7 @@ private:
     }
 
     void loadImage(Device& device) {
-        ImageRawData raw_data{"./tests/render/texture_rect/girl.png"};
+        ImageRawData raw_data{"./tests/render/resources/girl.png"};
 
         // create image
         {
@@ -291,7 +290,7 @@ private:
     }
 
     void createFramebuffers(Device& device) {
-        auto images = device.GetSwapchainImages();
+        auto images = device.GetSwapchainImageViews();
         auto image_extent = device.GetSwapchainImageInfo().m_extent;
         for (auto& image : images) {
             Framebuffer::Descriptor desc;

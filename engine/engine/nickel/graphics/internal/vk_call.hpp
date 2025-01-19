@@ -4,12 +4,12 @@
 
 namespace nickel::graphics {
 
-#define VK_CALL(expr)                                                    \
-    do {                                                                 \
-        if (auto result = (expr); result != VK_SUCCESS) {                \
-            LOGE("call ", #expr,                                         \
-                 " failed: ", nickel::graphics::VkError2String(result)); \
-        }                                                                \
+#define VK_CALL(expr)                                       \
+    do {                                                    \
+        if (auto result = (expr); result != VK_SUCCESS) {   \
+            LOGE("call {} failed: {}", #expr,               \
+                 nickel::graphics::VkError2String(result)); \
+        }                                                   \
     } while (0)
 
 inline std::string_view VkError2String(VkResult err) {

@@ -408,7 +408,7 @@ SMatrix<T, 4, 4> LookAt(const SVector<T, 3>& target,
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateXRotation(float radians) {
+SMatrix<T, 4, 4> CreateXRotation(T radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
     // clang-format off
@@ -422,7 +422,7 @@ SMatrix<T, 4, 4> CreateXRotation(float radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateYRotation(float radians) {
+SMatrix<T, 4, 4> CreateYRotation(T radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
     // clang-format off
@@ -436,7 +436,7 @@ SMatrix<T, 4, 4> CreateYRotation(float radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateZRotation(float radians) {
+SMatrix<T, 4, 4> CreateZRotation(T radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
     // clang-format off

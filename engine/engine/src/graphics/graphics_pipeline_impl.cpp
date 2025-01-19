@@ -167,7 +167,7 @@ nickel::graphics::GraphicsPipelineImpl::GraphicsPipelineImpl(
         depthStencilState.depthWriteEnable =
             desc.depthStencil->depthWriteEnabled;
         depthStencilState.depthTestEnable = true;
-        depthStencilState.stencilTestEnable = true;
+        depthStencilState.stencilTestEnable = false;
         depthStencilState.depthCompareOp =
             CompareOp2Vk(desc.depthStencil->depthCompare);
         depthStencilState.front = frontState;

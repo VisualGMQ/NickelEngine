@@ -1,3 +1,6 @@
 add_subdirectory(triangle)
 add_subdirectory(rectangle)
 add_subdirectory(texture_rect)
+add_subdirectory(colorful_rectangle)
+add_subdirectory(colorful_rectangle2)
+add_subdirectory(cube3d)

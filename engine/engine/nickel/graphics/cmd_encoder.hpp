@@ -14,23 +14,21 @@ namespace nickel::graphics {
 class Framebuffer;
 
 struct ClearValue {
-    std::variant<std::array<float, 4>, std::array<int32_t, 4>,
-                 std::array<uint32_t, 4>>
-        m_color_value;
-
-    struct {
+    struct DepthStencilValue {
         float depth{};
         uint32_t stencil{};
-    } m_depth_stencil;
+    };
+
+    std::variant<std::array<float, 4>, std::array<int32_t, 4>,
+                 std::array<uint32_t, 4>, DepthStencilValue>
+        m_value;
 };
 
 class NICKEL_API RenderPassEncoder final {
 public:
-    RenderPassEncoder(CommandImpl& cmd,
-        const RenderPass& render_pass,
-        const Framebuffer& fbo,
-        const Rect& render_area,
-        const std::vector<ClearValue>& clear_values);
+    RenderPassEncoder(CommandImpl& cmd, const RenderPass& render_pass,
+                      const Framebuffer& fbo, const Rect& render_area,
+                      const std::vector<ClearValue>& clear_values);
 
     void Draw(uint32_t vertex_count, uint32_t instance_count,
               uint32_t first_vertex, uint32_t first_instance);
@@ -40,8 +38,7 @@ public:
     void BindVertexBuffer(uint32_t slot, Buffer buffer, uint64_t offset);
     void BindIndexBuffer(Buffer buffer, IndexType, uint64_t offset);
     void SetBindGroup(BindGroup&);
-    void SetBindGroup(BindGroup&,
-                      const std::vector<uint32_t>& dynamicOffset);
+    void SetBindGroup(BindGroup&, const std::vector<uint32_t>& dynamicOffset);
     void SetPushConstant(Flags<ShaderStage> stage, const void* value,
                          uint32_t offset, uint32_t size);
     void SetViewport(float x, float y, float width, float height,
@@ -58,7 +55,7 @@ private:
         Rect render_area;
         std::vector<ClearValue> clear_values;
     };
-    
+
     struct SetBindGroupCmd {
         const BindGroup* bind_group{};
         std::vector<uint32_t> dynamic_offsets;
@@ -116,15 +113,15 @@ private:
     struct SetViewportCmd {
         float x, y, w, h, min_depth, max_depth;
     };
-    
+
     struct SetScissorCmd {
         int32_t x, y;
         uint32_t w, h;
     };
 
-
-    using Cmd = std::variant<BindGraphicsPipelineCmd, BindIndexBufferCmd,
-                             BindVertexBufferCmd, SetPushConstantCmd, SetBindGroupCmd,
+    using Cmd =
+        std::variant<BindGraphicsPipelineCmd, BindIndexBufferCmd,
+                     BindVertexBufferCmd, SetPushConstantCmd, SetBindGroupCmd,
                      DrawCmd, SetViewportCmd, SetScissorCmd>;
     struct ApplyRenderCmd;
 
@@ -140,7 +137,7 @@ private:
 class NICKEL_API CopyEncoder final {
 public:
     friend class BufferImpl;
-    
+
     struct BufferImageCopy {
         struct ImageSubresourceLayers {
             Flags<ImageAspect> aspectMask;

@@ -333,12 +333,12 @@ DeviceImpl::~DeviceImpl() {
     m_image_avaliable_sems.clear();
     m_render_finish_sems.clear();
 
+    m_framebuffer_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
     m_image_allocator.FreeAll();
     
     m_shader_module_allocator.FreeAll();
     m_sampler_allocator.FreeAll();
-    m_framebuffer_allocator.FreeAll();
  
     for (auto view : m_swapchain_image_views) {
         delete view;
@@ -536,12 +536,16 @@ uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex() {
     return m_cur_swapchain_image_index;
 }
 
-std::vector<ImageView> DeviceImpl::GetSwapchainImages() const {
+std::vector<ImageView> DeviceImpl::GetSwapchainImageViews() const {
     std::vector<ImageView> views;
     for (auto view : m_swapchain_image_views) {
         views.push_back(ImageView{view});
     }
     return views;
+}
+
+const AdapterImpl& DeviceImpl::GetAdapter() const {
+    return m_adapter;
 }
 
 void DeviceImpl::EndFrame() {
