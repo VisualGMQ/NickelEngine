@@ -24,6 +24,30 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
 }
 
 void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
+    VkFormatFeatureFlags features = 0;
+    auto usage = desc.usage;
+    if (usage & ImageUsage::Sampled) {
+        features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    }
+    if (usage & ImageUsage::ColorAttachment) {
+        features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+    }
+    if (usage & ImageUsage::CopyDst) {
+        features |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+    }
+    if (usage & ImageUsage::CopySrc) {
+        features |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+    }
+    if (usage & ImageUsage::StorageBinding) {
+        features |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+    } 
+    if (usage & ImageUsage::DepthStencilAttachment) {
+        features |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    // TODO: if format not support, return a similar format and report a warning
+    findSupportedFormat(Format2Vk(desc.format), ImageTiling2Vk(desc.tiling), features);
+    
     VkImageCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ci.imageType = ImageType2Vk(desc.imageType);
@@ -48,6 +72,22 @@ void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
     m_create_info = ci;
 
     VK_CALL(vkCreateImage(dev.m_device, &ci, nullptr, &m_image));
+}
+
+void ImageImpl::findSupportedFormat(VkFormat candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(m_device.GetAdapter().m_phyDevice, candidates, &props);
+
+    if (tiling == VK_IMAGE_TILING_LINEAR &&
+        (props.linearTilingFeatures & features) == features) {
+        return;
+    }
+    if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+        (props.optimalTilingFeatures & features) == features) {
+        return;
+    }
+
+    LOGC("failed to find supported format!");
 }
 
 void ImageImpl::allocMem(VkPhysicalDevice phyDevice) {

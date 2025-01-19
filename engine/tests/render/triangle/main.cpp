@@ -30,7 +30,7 @@ public:
 
         CommandEncoder encoder = device.CreateCommandEncoder();
         ClearValue clear_value;
-        clear_value.m_color_value = std::array<float, 4>{0.1, 0.1, 0.1, 1};
+        clear_value.m_value = std::array<float, 4>{0.1, 0.1, 0.1, 1};
         nickel::Rect render_area;
         render_area.position.x = 0;
         render_area.position.y = 0;
@@ -121,7 +121,7 @@ private:
     }
 
     void createFramebuffers(Device& device) {
-        auto images = device.GetSwapchainImages();
+        auto images = device.GetSwapchainImageViews();
         auto image_extent = device.GetSwapchainImageInfo().m_extent;
         for (auto& image : images) {
             Framebuffer::Descriptor desc;

@@ -46,7 +46,6 @@ public:
     };
 
     struct BindingPoint {
-        uint32_t slot = 0;
         std::variant<BufferBinding, SamplerBinding, CombinedSamplerBinding,
                      ImageBinding>
             entry;

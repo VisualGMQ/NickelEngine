@@ -51,10 +51,12 @@ public:
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
     const SwapchainImageInfo& GetSwapchainImageInfo() const;
-    std::vector<ImageView> GetSwapchainImages() const;
+    std::vector<ImageView> GetSwapchainImageViews() const;
     uint32_t WaitAndAcquireSwapchainImageIndex();
 
     void EndFrame();
+
+    void WaitIdle();
 
     void Submit(Command& cmd);
 

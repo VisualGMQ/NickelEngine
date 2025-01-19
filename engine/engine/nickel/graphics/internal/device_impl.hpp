@@ -93,7 +93,9 @@ public:
     Fence CreateFence(bool signaled);
     CommandEncoder CreateCommandEncoder();
     uint32_t WaitAndAcquireSwapchainImageIndex();
-    std::vector<ImageView> GetSwapchainImages() const;
+    std::vector<ImageView> GetSwapchainImageViews() const;
+
+    const AdapterImpl& GetAdapter() const;
     
     void Submit(Command&);
     void WaitIdle();

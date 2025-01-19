@@ -273,23 +273,26 @@ void RenderPassEncoder::beginRenderPass() {
     for (auto& clear_value : m_render_pass_info.clear_values) {
         VkClearValue vk_clear_value{};
         if (auto color =
-                std::get_if<std::array<float, 4>>(&clear_value.m_color_value)) {
+                std::get_if<std::array<float, 4>>(&clear_value.m_value)) {
             vk_clear_value.color.float32[0] = (*color)[0];
             vk_clear_value.color.float32[1] = (*color)[1];
             vk_clear_value.color.float32[2] = (*color)[2];
             vk_clear_value.color.float32[3] = (*color)[3];
         } else if (auto color = std::get_if<std::array<int32_t, 4>>(
-                       &clear_value.m_color_value)) {
+                       &clear_value.m_value)) {
             vk_clear_value.color.int32[0] = (*color)[0];
             vk_clear_value.color.int32[1] = (*color)[1];
             vk_clear_value.color.int32[2] = (*color)[2];
             vk_clear_value.color.int32[3] = (*color)[3];
         } else if (auto color = std::get_if<std::array<uint32_t, 4>>(
-                       &clear_value.m_color_value)) {
+                       &clear_value.m_value)) {
             vk_clear_value.color.uint32[0] = (*color)[0];
             vk_clear_value.color.uint32[1] = (*color)[1];
             vk_clear_value.color.uint32[2] = (*color)[2];
             vk_clear_value.color.uint32[3] = (*color)[3];
+        } else if (auto color = std::get_if<ClearValue::DepthStencilValue>( &clear_value.m_value)) {
+            vk_clear_value.depthStencil.depth = color->depth;
+            vk_clear_value.depthStencil.stencil = color->stencil;
         }
         values.push_back(vk_clear_value);
     }
@@ -307,34 +310,41 @@ void RenderPassEncoder::beginRenderPass() {
     render_pass_info.renderArea.extent.width = render_area.size.w;
     render_pass_info.renderArea.extent.height = render_area.size.h;
 
-    for (auto& view : m_render_pass_info.fbo.Impl().m_views) {
-        // skip swapchain image
-        if (!view.GetImage()) {
-            continue;
-        }
+    // for (auto& view : m_render_pass_info.fbo.Impl().m_views) {
+    //     // skip swapchain image
+    //     if (!view.GetImage()) {
+    //         continue;
+    //     }
 
-        auto& layouts = view.GetImage().Impl().m_layouts;
-        for (int i = 0; i < layouts.size(); i++) {
-            VkImageLayout layout =
-                ImageLayout2Vk(view.GetImage().Impl().m_layouts[i]);
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.image = view.GetImage().Impl().m_image;
-            barrier.oldLayout = layout;
-            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.layerCount = 1;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.baseMipLevel = 0;
-            vkCmdPipelineBarrier(m_cmd.m_cmd,
-                                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                                 nullptr, 0, nullptr, 1, &barrier);
-            m_cmd.AddLayoutTransition(&view.GetImage().Impl(),
-                                      ImageLayout::ColorAttachmentOptimal, i);
-        }
-    }
+    //     auto& layouts = view.GetImage().Impl().m_layouts;
+    //     VkFormat format = view.GetImage().Impl().Format();
+
+    //     VkImageAspectFlags aspect{};
+    //     if (format == ) {
+    //         
+    //     }
+    //     
+    //     for (int i = 0; i < layouts.size(); i++) {
+    //         VkImageLayout layout =
+    //             ImageLayout2Vk(view.GetImage().Impl().m_layouts[i]);
+    //         VkImageMemoryBarrier barrier{};
+    //         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    //         barrier.image = view.GetImage().Impl().m_image;
+    //         barrier.oldLayout = layout;
+    //         barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    //         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //         barrier.subresourceRange.layerCount = 1;
+    //         barrier.subresourceRange.levelCount = 1;
+    //         barrier.subresourceRange.baseArrayLayer = 0;
+    //         barrier.subresourceRange.baseMipLevel = 0;
+    //         vkCmdPipelineBarrier(m_cmd.m_cmd,
+    //                              VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+    //                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+    //                              nullptr, 0, nullptr, 1, &barrier);
+    //         m_cmd.AddLayoutTransition(&view.GetImage().Impl(),
+    //                                   ImageLayout::ColorAttachmentOptimal, i);
+    //     }
+    // }
 
     vkCmdBeginRenderPass(m_cmd.m_cmd, &render_pass_info,
                          VK_SUBPASS_CONTENTS_INLINE);

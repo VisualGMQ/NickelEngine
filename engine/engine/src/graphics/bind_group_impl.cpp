@@ -57,8 +57,8 @@ VkDescriptorType cvtImageType2DescriptorType(BindGroup::ImageBinding::Type type)
 
 struct WriteDescriptorHelper final {
     WriteDescriptorHelper(VkDescriptorSet set, DeviceImpl& dev,
-                          const BindGroup::BindingPoint& binding)
-        : m_set{set}, m_dev{dev}, m_bind_point{binding} {}
+                          const BindGroup::BindingPoint& binding, uint32_t slot)
+        : m_set{set}, m_dev{dev}, m_bind_point{binding}, m_slot{slot} {}
 
     void operator()(const BindGroup::BufferBinding& binding) const {
         if (binding.buffer.Impl().Size() == 0) {
@@ -81,9 +81,9 @@ struct WriteDescriptorHelper final {
         write_info.dstSet = m_set;
         write_info.dstArrayElement = 0;
         write_info.pBufferInfo = &buffer_info;
-        write_info.dstBinding = m_bind_point.slot;
+        write_info.dstBinding = m_slot;
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 1, nullptr);
+        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 0, nullptr);
     }
 
     void operator()(const BindGroup::SamplerBinding& binding) const {
@@ -97,10 +97,10 @@ struct WriteDescriptorHelper final {
         write_info.pImageInfo = &image_info;
         write_info.dstArrayElement = 0;
         write_info.dstSet = m_set;
-        write_info.dstBinding = m_bind_point.slot;
+        write_info.dstBinding = m_slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 1, nullptr);
+        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 0, nullptr);
     }
 
     void operator()(const BindGroup::ImageBinding& binding) const {
@@ -115,10 +115,10 @@ struct WriteDescriptorHelper final {
         write_info.pImageInfo = &image_info;
         write_info.dstArrayElement = 0;
         write_info.dstSet = m_set;
-        write_info.dstBinding = m_bind_point.slot;
+        write_info.dstBinding = m_slot;
         write_info.descriptorType = cvtImageType2DescriptorType(binding.type);
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 1, nullptr);
+        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 0, nullptr);
     }
 
     void operator()(const BindGroup::CombinedSamplerBinding& binding) const {
@@ -134,7 +134,7 @@ struct WriteDescriptorHelper final {
         write_info.pImageInfo = &image_info;
         write_info.dstArrayElement = 0;
         write_info.dstSet = m_set;
-        write_info.dstBinding = m_bind_point.slot;
+        write_info.dstBinding = m_slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
         vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info,0, nullptr);
@@ -144,11 +144,12 @@ private:
     VkDescriptorSet m_set;
     DeviceImpl& m_dev;
     const BindGroup::BindingPoint& m_bind_point;
+    uint32_t m_slot{};
 };
 
 void BindGroupImpl::WriteDescriptors() {
     for (auto&& [slot, entry] : m_desc.entries) {
-        WriteDescriptorHelper helper{m_set, m_device, entry.binding};
+        WriteDescriptorHelper helper{m_set, m_device, entry.binding, slot};
         std::visit(helper, entry.binding.entry);
     }
 }
