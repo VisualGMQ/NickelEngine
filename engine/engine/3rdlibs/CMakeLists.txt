@@ -27,6 +27,8 @@ add_subdirectory(volk)
 set(SPDLOG_ENABLE_PCH ON)
 add_subdirectory(spdlog)
 
+add_subdirectory(physx)
+
 mark_as_3rdlib(SDL3-static)
 mark_as_3rdlib(SDL3-shared)
 mark_as_3rdlib(SDL_uclibc)
