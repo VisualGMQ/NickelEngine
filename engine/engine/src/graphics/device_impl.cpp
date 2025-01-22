@@ -37,9 +37,7 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     device_ci.pQueueCreateInfos = queueCreateInfos.data();
 
     std::vector<const char*> requireExtensions;
-#ifdef NICKEL_DEBUG
     requireExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-#endif
     std::vector<VkExtensionProperties> extension_props;
     uint32_t extensionCount = 0;
     VK_CALL(vkEnumerateDeviceExtensionProperties(impl.m_phyDevice, nullptr,

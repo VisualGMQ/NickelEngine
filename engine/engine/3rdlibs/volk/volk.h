@@ -15,7 +15,7 @@
 #endif
 
 /* VOLK_GENERATE_VERSION_DEFINE */
-#define VOLK_HEADER_VERSION 295
+#define VOLK_HEADER_VERSION 304
 /* VOLK_GENERATE_VERSION_DEFINE */
 
 #ifndef VK_NO_PROTOTYPES
@@ -49,14 +49,6 @@
 #	else
 #		include <vulkan/vulkan.h>
 #	endif
-#endif
-
-/* Disable several extensions on earlier SDKs because later SDKs introduce a backwards incompatible change to function signatures */
-#if VK_HEADER_VERSION < 140
-#	undef VK_NVX_image_view_handle
-#endif
-#if VK_HEADER_VERSION < 184
-#	undef VK_HUAWEI_subpass_shading
 #endif
 
 #ifdef __cplusplus
@@ -331,6 +323,27 @@ struct VolkDeviceTable
 	PFN_vkQueueSubmit2 vkQueueSubmit2;
 	PFN_vkSetPrivateData vkSetPrivateData;
 #endif /* defined(VK_VERSION_1_3) */
+#if defined(VK_VERSION_1_4)
+	PFN_vkCmdBindDescriptorSets2 vkCmdBindDescriptorSets2;
+	PFN_vkCmdBindIndexBuffer2 vkCmdBindIndexBuffer2;
+	PFN_vkCmdPushConstants2 vkCmdPushConstants2;
+	PFN_vkCmdPushDescriptorSet vkCmdPushDescriptorSet;
+	PFN_vkCmdPushDescriptorSet2 vkCmdPushDescriptorSet2;
+	PFN_vkCmdPushDescriptorSetWithTemplate vkCmdPushDescriptorSetWithTemplate;
+	PFN_vkCmdPushDescriptorSetWithTemplate2 vkCmdPushDescriptorSetWithTemplate2;
+	PFN_vkCmdSetLineStipple vkCmdSetLineStipple;
+	PFN_vkCmdSetRenderingAttachmentLocations vkCmdSetRenderingAttachmentLocations;
+	PFN_vkCmdSetRenderingInputAttachmentIndices vkCmdSetRenderingInputAttachmentIndices;
+	PFN_vkCopyImageToImage vkCopyImageToImage;
+	PFN_vkCopyImageToMemory vkCopyImageToMemory;
+	PFN_vkCopyMemoryToImage vkCopyMemoryToImage;
+	PFN_vkGetDeviceImageSubresourceLayout vkGetDeviceImageSubresourceLayout;
+	PFN_vkGetImageSubresourceLayout2 vkGetImageSubresourceLayout2;
+	PFN_vkGetRenderingAreaGranularity vkGetRenderingAreaGranularity;
+	PFN_vkMapMemory2 vkMapMemory2;
+	PFN_vkTransitionImageLayout vkTransitionImageLayout;
+	PFN_vkUnmapMemory2 vkUnmapMemory2;
+#endif /* defined(VK_VERSION_1_4) */
 #if defined(VK_AMDX_shader_enqueue)
 	PFN_vkCmdDispatchGraphAMDX vkCmdDispatchGraphAMDX;
 	PFN_vkCmdDispatchGraphIndirectAMDX vkCmdDispatchGraphIndirectAMDX;
@@ -346,6 +359,9 @@ struct VolkDeviceTable
 #if defined(VK_AMD_buffer_marker)
 	PFN_vkCmdWriteBufferMarkerAMD vkCmdWriteBufferMarkerAMD;
 #endif /* defined(VK_AMD_buffer_marker) */
+#if defined(VK_AMD_buffer_marker) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2))
+	PFN_vkCmdWriteBufferMarker2AMD vkCmdWriteBufferMarker2AMD;
+#endif /* defined(VK_AMD_buffer_marker) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2)) */
 #if defined(VK_AMD_display_native_hdr)
 	PFN_vkSetLocalDimmingAMD vkSetLocalDimmingAMD;
 #endif /* defined(VK_AMD_display_native_hdr) */
@@ -404,6 +420,17 @@ struct VolkDeviceTable
 #if defined(VK_EXT_device_fault)
 	PFN_vkGetDeviceFaultInfoEXT vkGetDeviceFaultInfoEXT;
 #endif /* defined(VK_EXT_device_fault) */
+#if defined(VK_EXT_device_generated_commands)
+	PFN_vkCmdExecuteGeneratedCommandsEXT vkCmdExecuteGeneratedCommandsEXT;
+	PFN_vkCmdPreprocessGeneratedCommandsEXT vkCmdPreprocessGeneratedCommandsEXT;
+	PFN_vkCreateIndirectCommandsLayoutEXT vkCreateIndirectCommandsLayoutEXT;
+	PFN_vkCreateIndirectExecutionSetEXT vkCreateIndirectExecutionSetEXT;
+	PFN_vkDestroyIndirectCommandsLayoutEXT vkDestroyIndirectCommandsLayoutEXT;
+	PFN_vkDestroyIndirectExecutionSetEXT vkDestroyIndirectExecutionSetEXT;
+	PFN_vkGetGeneratedCommandsMemoryRequirementsEXT vkGetGeneratedCommandsMemoryRequirementsEXT;
+	PFN_vkUpdateIndirectExecutionSetPipelineEXT vkUpdateIndirectExecutionSetPipelineEXT;
+	PFN_vkUpdateIndirectExecutionSetShaderEXT vkUpdateIndirectExecutionSetShaderEXT;
+#endif /* defined(VK_EXT_device_generated_commands) */
 #if defined(VK_EXT_discard_rectangles)
 	PFN_vkCmdSetDiscardRectangleEXT vkCmdSetDiscardRectangleEXT;
 #endif /* defined(VK_EXT_discard_rectangles) */
@@ -447,9 +474,11 @@ struct VolkDeviceTable
 #endif /* defined(VK_EXT_line_rasterization) */
 #if defined(VK_EXT_mesh_shader)
 	PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT;
-	PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT;
 	PFN_vkCmdDrawMeshTasksIndirectEXT vkCmdDrawMeshTasksIndirectEXT;
 #endif /* defined(VK_EXT_mesh_shader) */
+#if defined(VK_EXT_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2))
+	PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT;
+#endif /* defined(VK_EXT_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2)) */
 #if defined(VK_EXT_metal_objects)
 	PFN_vkExportMetalObjectsEXT vkExportMetalObjectsEXT;
 #endif /* defined(VK_EXT_metal_objects) */
@@ -541,9 +570,11 @@ struct VolkDeviceTable
 #if defined(VK_HUAWEI_invocation_mask)
 	PFN_vkCmdBindInvocationMaskHUAWEI vkCmdBindInvocationMaskHUAWEI;
 #endif /* defined(VK_HUAWEI_invocation_mask) */
+#if defined(VK_HUAWEI_subpass_shading) && VK_HUAWEI_SUBPASS_SHADING_SPEC_VERSION >= 2
+	PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
+#endif /* defined(VK_HUAWEI_subpass_shading) && VK_HUAWEI_SUBPASS_SHADING_SPEC_VERSION >= 2 */
 #if defined(VK_HUAWEI_subpass_shading)
 	PFN_vkCmdSubpassShadingHUAWEI vkCmdSubpassShadingHUAWEI;
-	PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
 #endif /* defined(VK_HUAWEI_subpass_shading) */
 #if defined(VK_INTEL_performance_query)
 	PFN_vkAcquirePerformanceConfigurationINTEL vkAcquirePerformanceConfigurationINTEL;
@@ -756,12 +787,6 @@ struct VolkDeviceTable
 	PFN_vkCmdWriteTimestamp2KHR vkCmdWriteTimestamp2KHR;
 	PFN_vkQueueSubmit2KHR vkQueueSubmit2KHR;
 #endif /* defined(VK_KHR_synchronization2) */
-#if defined(VK_KHR_synchronization2) && defined(VK_AMD_buffer_marker)
-	PFN_vkCmdWriteBufferMarker2AMD vkCmdWriteBufferMarker2AMD;
-#endif /* defined(VK_KHR_synchronization2) && defined(VK_AMD_buffer_marker) */
-#if defined(VK_KHR_synchronization2) && defined(VK_NV_device_diagnostic_checkpoints)
-	PFN_vkGetQueueCheckpointData2NV vkGetQueueCheckpointData2NV;
-#endif /* defined(VK_KHR_synchronization2) && defined(VK_NV_device_diagnostic_checkpoints) */
 #if defined(VK_KHR_timeline_semaphore)
 	PFN_vkGetSemaphoreCounterValueKHR vkGetSemaphoreCounterValueKHR;
 	PFN_vkSignalSemaphoreKHR vkSignalSemaphoreKHR;
@@ -794,9 +819,14 @@ struct VolkDeviceTable
 	PFN_vkDestroyCuModuleNVX vkDestroyCuModuleNVX;
 #endif /* defined(VK_NVX_binary_import) */
 #if defined(VK_NVX_image_view_handle)
-	PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
 	PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX;
 #endif /* defined(VK_NVX_image_view_handle) */
+#if defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 3
+	PFN_vkGetImageViewHandle64NVX vkGetImageViewHandle64NVX;
+#endif /* defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 3 */
+#if defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 2
+	PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
+#endif /* defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 2 */
 #if defined(VK_NV_clip_space_w_scaling)
 	PFN_vkCmdSetViewportWScalingNV vkCmdSetViewportWScalingNV;
 #endif /* defined(VK_NV_clip_space_w_scaling) */
@@ -816,6 +846,9 @@ struct VolkDeviceTable
 	PFN_vkCmdSetCheckpointNV vkCmdSetCheckpointNV;
 	PFN_vkGetQueueCheckpointDataNV vkGetQueueCheckpointDataNV;
 #endif /* defined(VK_NV_device_diagnostic_checkpoints) */
+#if defined(VK_NV_device_diagnostic_checkpoints) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2))
+	PFN_vkGetQueueCheckpointData2NV vkGetQueueCheckpointData2NV;
+#endif /* defined(VK_NV_device_diagnostic_checkpoints) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2)) */
 #if defined(VK_NV_device_generated_commands)
 	PFN_vkCmdBindPipelineShaderGroupNV vkCmdBindPipelineShaderGroupNV;
 	PFN_vkCmdExecuteGeneratedCommandsNV vkCmdExecuteGeneratedCommandsNV;
@@ -850,10 +883,12 @@ struct VolkDeviceTable
 	PFN_vkCmdDecompressMemoryNV vkCmdDecompressMemoryNV;
 #endif /* defined(VK_NV_memory_decompression) */
 #if defined(VK_NV_mesh_shader)
-	PFN_vkCmdDrawMeshTasksIndirectCountNV vkCmdDrawMeshTasksIndirectCountNV;
 	PFN_vkCmdDrawMeshTasksIndirectNV vkCmdDrawMeshTasksIndirectNV;
 	PFN_vkCmdDrawMeshTasksNV vkCmdDrawMeshTasksNV;
 #endif /* defined(VK_NV_mesh_shader) */
+#if defined(VK_NV_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2))
+	PFN_vkCmdDrawMeshTasksIndirectCountNV vkCmdDrawMeshTasksIndirectCountNV;
+#endif /* defined(VK_NV_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2)) */
 #if defined(VK_NV_optical_flow)
 	PFN_vkBindOpticalFlowSessionImageNV vkBindOpticalFlowSessionImageNV;
 	PFN_vkCmdOpticalFlowExecuteNV vkCmdOpticalFlowExecuteNV;
@@ -896,6 +931,9 @@ struct VolkDeviceTable
 	PFN_vkGetDescriptorSetHostMappingVALVE vkGetDescriptorSetHostMappingVALVE;
 	PFN_vkGetDescriptorSetLayoutHostMappingInfoVALVE vkGetDescriptorSetLayoutHostMappingInfoVALVE;
 #endif /* defined(VK_VALVE_descriptor_set_host_mapping) */
+#if (defined(VK_EXT_depth_clamp_control)) || (defined(VK_EXT_shader_object) && defined(VK_EXT_depth_clamp_control))
+	PFN_vkCmdSetDepthClampRangeEXT vkCmdSetDepthClampRangeEXT;
+#endif /* (defined(VK_EXT_depth_clamp_control)) || (defined(VK_EXT_shader_object) && defined(VK_EXT_depth_clamp_control)) */
 #if (defined(VK_EXT_extended_dynamic_state)) || (defined(VK_EXT_shader_object))
 	PFN_vkCmdBindVertexBuffers2EXT vkCmdBindVertexBuffers2EXT;
 	PFN_vkCmdSetCullModeEXT vkCmdSetCullModeEXT;
@@ -1225,6 +1263,27 @@ extern PFN_vkGetPrivateData vkGetPrivateData;
 extern PFN_vkQueueSubmit2 vkQueueSubmit2;
 extern PFN_vkSetPrivateData vkSetPrivateData;
 #endif /* defined(VK_VERSION_1_3) */
+#if defined(VK_VERSION_1_4)
+extern PFN_vkCmdBindDescriptorSets2 vkCmdBindDescriptorSets2;
+extern PFN_vkCmdBindIndexBuffer2 vkCmdBindIndexBuffer2;
+extern PFN_vkCmdPushConstants2 vkCmdPushConstants2;
+extern PFN_vkCmdPushDescriptorSet vkCmdPushDescriptorSet;
+extern PFN_vkCmdPushDescriptorSet2 vkCmdPushDescriptorSet2;
+extern PFN_vkCmdPushDescriptorSetWithTemplate vkCmdPushDescriptorSetWithTemplate;
+extern PFN_vkCmdPushDescriptorSetWithTemplate2 vkCmdPushDescriptorSetWithTemplate2;
+extern PFN_vkCmdSetLineStipple vkCmdSetLineStipple;
+extern PFN_vkCmdSetRenderingAttachmentLocations vkCmdSetRenderingAttachmentLocations;
+extern PFN_vkCmdSetRenderingInputAttachmentIndices vkCmdSetRenderingInputAttachmentIndices;
+extern PFN_vkCopyImageToImage vkCopyImageToImage;
+extern PFN_vkCopyImageToMemory vkCopyImageToMemory;
+extern PFN_vkCopyMemoryToImage vkCopyMemoryToImage;
+extern PFN_vkGetDeviceImageSubresourceLayout vkGetDeviceImageSubresourceLayout;
+extern PFN_vkGetImageSubresourceLayout2 vkGetImageSubresourceLayout2;
+extern PFN_vkGetRenderingAreaGranularity vkGetRenderingAreaGranularity;
+extern PFN_vkMapMemory2 vkMapMemory2;
+extern PFN_vkTransitionImageLayout vkTransitionImageLayout;
+extern PFN_vkUnmapMemory2 vkUnmapMemory2;
+#endif /* defined(VK_VERSION_1_4) */
 #if defined(VK_AMDX_shader_enqueue)
 extern PFN_vkCmdDispatchGraphAMDX vkCmdDispatchGraphAMDX;
 extern PFN_vkCmdDispatchGraphIndirectAMDX vkCmdDispatchGraphIndirectAMDX;
@@ -1240,6 +1299,9 @@ extern PFN_vkAntiLagUpdateAMD vkAntiLagUpdateAMD;
 #if defined(VK_AMD_buffer_marker)
 extern PFN_vkCmdWriteBufferMarkerAMD vkCmdWriteBufferMarkerAMD;
 #endif /* defined(VK_AMD_buffer_marker) */
+#if defined(VK_AMD_buffer_marker) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2))
+extern PFN_vkCmdWriteBufferMarker2AMD vkCmdWriteBufferMarker2AMD;
+#endif /* defined(VK_AMD_buffer_marker) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2)) */
 #if defined(VK_AMD_display_native_hdr)
 extern PFN_vkSetLocalDimmingAMD vkSetLocalDimmingAMD;
 #endif /* defined(VK_AMD_display_native_hdr) */
@@ -1325,6 +1387,17 @@ extern PFN_vkGetAccelerationStructureOpaqueCaptureDescriptorDataEXT vkGetAcceler
 #if defined(VK_EXT_device_fault)
 extern PFN_vkGetDeviceFaultInfoEXT vkGetDeviceFaultInfoEXT;
 #endif /* defined(VK_EXT_device_fault) */
+#if defined(VK_EXT_device_generated_commands)
+extern PFN_vkCmdExecuteGeneratedCommandsEXT vkCmdExecuteGeneratedCommandsEXT;
+extern PFN_vkCmdPreprocessGeneratedCommandsEXT vkCmdPreprocessGeneratedCommandsEXT;
+extern PFN_vkCreateIndirectCommandsLayoutEXT vkCreateIndirectCommandsLayoutEXT;
+extern PFN_vkCreateIndirectExecutionSetEXT vkCreateIndirectExecutionSetEXT;
+extern PFN_vkDestroyIndirectCommandsLayoutEXT vkDestroyIndirectCommandsLayoutEXT;
+extern PFN_vkDestroyIndirectExecutionSetEXT vkDestroyIndirectExecutionSetEXT;
+extern PFN_vkGetGeneratedCommandsMemoryRequirementsEXT vkGetGeneratedCommandsMemoryRequirementsEXT;
+extern PFN_vkUpdateIndirectExecutionSetPipelineEXT vkUpdateIndirectExecutionSetPipelineEXT;
+extern PFN_vkUpdateIndirectExecutionSetShaderEXT vkUpdateIndirectExecutionSetShaderEXT;
+#endif /* defined(VK_EXT_device_generated_commands) */
 #if defined(VK_EXT_direct_mode_display)
 extern PFN_vkReleaseDisplayEXT vkReleaseDisplayEXT;
 #endif /* defined(VK_EXT_direct_mode_display) */
@@ -1382,9 +1455,11 @@ extern PFN_vkCmdSetLineStippleEXT vkCmdSetLineStippleEXT;
 #endif /* defined(VK_EXT_line_rasterization) */
 #if defined(VK_EXT_mesh_shader)
 extern PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT;
-extern PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT;
 extern PFN_vkCmdDrawMeshTasksIndirectEXT vkCmdDrawMeshTasksIndirectEXT;
 #endif /* defined(VK_EXT_mesh_shader) */
+#if defined(VK_EXT_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2))
+extern PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT;
+#endif /* defined(VK_EXT_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2)) */
 #if defined(VK_EXT_metal_objects)
 extern PFN_vkExportMetalObjectsEXT vkExportMetalObjectsEXT;
 #endif /* defined(VK_EXT_metal_objects) */
@@ -1489,9 +1564,11 @@ extern PFN_vkCmdDrawClusterIndirectHUAWEI vkCmdDrawClusterIndirectHUAWEI;
 #if defined(VK_HUAWEI_invocation_mask)
 extern PFN_vkCmdBindInvocationMaskHUAWEI vkCmdBindInvocationMaskHUAWEI;
 #endif /* defined(VK_HUAWEI_invocation_mask) */
+#if defined(VK_HUAWEI_subpass_shading) && VK_HUAWEI_SUBPASS_SHADING_SPEC_VERSION >= 2
+extern PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
+#endif /* defined(VK_HUAWEI_subpass_shading) && VK_HUAWEI_SUBPASS_SHADING_SPEC_VERSION >= 2 */
 #if defined(VK_HUAWEI_subpass_shading)
 extern PFN_vkCmdSubpassShadingHUAWEI vkCmdSubpassShadingHUAWEI;
-extern PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
 #endif /* defined(VK_HUAWEI_subpass_shading) */
 #if defined(VK_INTEL_performance_query)
 extern PFN_vkAcquirePerformanceConfigurationINTEL vkAcquirePerformanceConfigurationINTEL;
@@ -1761,12 +1838,6 @@ extern PFN_vkCmdWaitEvents2KHR vkCmdWaitEvents2KHR;
 extern PFN_vkCmdWriteTimestamp2KHR vkCmdWriteTimestamp2KHR;
 extern PFN_vkQueueSubmit2KHR vkQueueSubmit2KHR;
 #endif /* defined(VK_KHR_synchronization2) */
-#if defined(VK_KHR_synchronization2) && defined(VK_AMD_buffer_marker)
-extern PFN_vkCmdWriteBufferMarker2AMD vkCmdWriteBufferMarker2AMD;
-#endif /* defined(VK_KHR_synchronization2) && defined(VK_AMD_buffer_marker) */
-#if defined(VK_KHR_synchronization2) && defined(VK_NV_device_diagnostic_checkpoints)
-extern PFN_vkGetQueueCheckpointData2NV vkGetQueueCheckpointData2NV;
-#endif /* defined(VK_KHR_synchronization2) && defined(VK_NV_device_diagnostic_checkpoints) */
 #if defined(VK_KHR_timeline_semaphore)
 extern PFN_vkGetSemaphoreCounterValueKHR vkGetSemaphoreCounterValueKHR;
 extern PFN_vkSignalSemaphoreKHR vkSignalSemaphoreKHR;
@@ -1827,9 +1898,14 @@ extern PFN_vkDestroyCuFunctionNVX vkDestroyCuFunctionNVX;
 extern PFN_vkDestroyCuModuleNVX vkDestroyCuModuleNVX;
 #endif /* defined(VK_NVX_binary_import) */
 #if defined(VK_NVX_image_view_handle)
-extern PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
 extern PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX;
 #endif /* defined(VK_NVX_image_view_handle) */
+#if defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 3
+extern PFN_vkGetImageViewHandle64NVX vkGetImageViewHandle64NVX;
+#endif /* defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 3 */
+#if defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 2
+extern PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX;
+#endif /* defined(VK_NVX_image_view_handle) && VK_NVX_IMAGE_VIEW_HANDLE_SPEC_VERSION >= 2 */
 #if defined(VK_NV_acquire_winrt_display)
 extern PFN_vkAcquireWinrtDisplayNV vkAcquireWinrtDisplayNV;
 extern PFN_vkGetWinrtDisplayNV vkGetWinrtDisplayNV;
@@ -1840,6 +1916,9 @@ extern PFN_vkCmdSetViewportWScalingNV vkCmdSetViewportWScalingNV;
 #if defined(VK_NV_cooperative_matrix)
 extern PFN_vkGetPhysicalDeviceCooperativeMatrixPropertiesNV vkGetPhysicalDeviceCooperativeMatrixPropertiesNV;
 #endif /* defined(VK_NV_cooperative_matrix) */
+#if defined(VK_NV_cooperative_matrix2)
+extern PFN_vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV;
+#endif /* defined(VK_NV_cooperative_matrix2) */
 #if defined(VK_NV_copy_memory_indirect)
 extern PFN_vkCmdCopyMemoryIndirectNV vkCmdCopyMemoryIndirectNV;
 extern PFN_vkCmdCopyMemoryToImageIndirectNV vkCmdCopyMemoryToImageIndirectNV;
@@ -1859,6 +1938,9 @@ extern PFN_vkGetCudaModuleCacheNV vkGetCudaModuleCacheNV;
 extern PFN_vkCmdSetCheckpointNV vkCmdSetCheckpointNV;
 extern PFN_vkGetQueueCheckpointDataNV vkGetQueueCheckpointDataNV;
 #endif /* defined(VK_NV_device_diagnostic_checkpoints) */
+#if defined(VK_NV_device_diagnostic_checkpoints) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2))
+extern PFN_vkGetQueueCheckpointData2NV vkGetQueueCheckpointData2NV;
+#endif /* defined(VK_NV_device_diagnostic_checkpoints) && (defined(VK_VERSION_1_3) || defined(VK_KHR_synchronization2)) */
 #if defined(VK_NV_device_generated_commands)
 extern PFN_vkCmdBindPipelineShaderGroupNV vkCmdBindPipelineShaderGroupNV;
 extern PFN_vkCmdExecuteGeneratedCommandsNV vkCmdExecuteGeneratedCommandsNV;
@@ -1896,10 +1978,12 @@ extern PFN_vkCmdDecompressMemoryIndirectCountNV vkCmdDecompressMemoryIndirectCou
 extern PFN_vkCmdDecompressMemoryNV vkCmdDecompressMemoryNV;
 #endif /* defined(VK_NV_memory_decompression) */
 #if defined(VK_NV_mesh_shader)
-extern PFN_vkCmdDrawMeshTasksIndirectCountNV vkCmdDrawMeshTasksIndirectCountNV;
 extern PFN_vkCmdDrawMeshTasksIndirectNV vkCmdDrawMeshTasksIndirectNV;
 extern PFN_vkCmdDrawMeshTasksNV vkCmdDrawMeshTasksNV;
 #endif /* defined(VK_NV_mesh_shader) */
+#if defined(VK_NV_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2))
+extern PFN_vkCmdDrawMeshTasksIndirectCountNV vkCmdDrawMeshTasksIndirectCountNV;
+#endif /* defined(VK_NV_mesh_shader) && (defined(VK_KHR_draw_indirect_count) || defined(VK_VERSION_1_2)) */
 #if defined(VK_NV_optical_flow)
 extern PFN_vkBindOpticalFlowSessionImageNV vkBindOpticalFlowSessionImageNV;
 extern PFN_vkCmdOpticalFlowExecuteNV vkCmdOpticalFlowExecuteNV;
@@ -1947,6 +2031,9 @@ extern PFN_vkGetPhysicalDeviceScreenPresentationSupportQNX vkGetPhysicalDeviceSc
 extern PFN_vkGetDescriptorSetHostMappingVALVE vkGetDescriptorSetHostMappingVALVE;
 extern PFN_vkGetDescriptorSetLayoutHostMappingInfoVALVE vkGetDescriptorSetLayoutHostMappingInfoVALVE;
 #endif /* defined(VK_VALVE_descriptor_set_host_mapping) */
+#if (defined(VK_EXT_depth_clamp_control)) || (defined(VK_EXT_shader_object) && defined(VK_EXT_depth_clamp_control))
+extern PFN_vkCmdSetDepthClampRangeEXT vkCmdSetDepthClampRangeEXT;
+#endif /* (defined(VK_EXT_depth_clamp_control)) || (defined(VK_EXT_shader_object) && defined(VK_EXT_depth_clamp_control)) */
 #if (defined(VK_EXT_extended_dynamic_state)) || (defined(VK_EXT_shader_object))
 extern PFN_vkCmdBindVertexBuffers2EXT vkCmdBindVertexBuffers2EXT;
 extern PFN_vkCmdSetCullModeEXT vkCmdSetCullModeEXT;
