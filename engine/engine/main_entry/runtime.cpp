@@ -1,6 +1,8 @@
 ﻿#define SDL_MAIN_USE_CALLBACKS
 #include "SDL3/SDL_main.h"
 #include "nickel/common/log.hpp"
+#include "nickel/fs/dialog.hpp"
+#include "nickel/fs/storage.hpp"
 #include "nickel/graphics/adapter.hpp"
 #include "nickel/video/window.hpp"
 
@@ -18,6 +20,7 @@ private:
     bool m_should_exit = false;
     std::unique_ptr<video::Window> m_window;
     std::unique_ptr<graphics::Adapter> m_graphics_context;
+    std::unique_ptr<StorageManager> m_storage_manager;
 };
 
 Runtime::Runtime() {
@@ -34,10 +37,17 @@ Runtime::Runtime() {
     m_graphics_context =
         std::make_unique<graphics::Adapter>(m_window->GetImpl());
 
+    LOGI("init storage system");
+    m_storage_manager =
+        std::make_unique<StorageManager>("visualgmq", "nickelengine");
+
     LOGI("running engine...");
 }
 
 Runtime::~Runtime() {
+    LOGI("shutdown storage manager");
+    m_storage_manager.reset();
+    
     LOGI("shutdown graphics system");
     m_graphics_context.reset();
 

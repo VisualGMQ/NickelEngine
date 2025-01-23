@@ -15,6 +15,8 @@
 #include <utility>
 #include <cmath>
 #include <array>
+#include <span>
+#include <future>
 
 #include "volk.h"
 
