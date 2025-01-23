@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -261,7 +261,7 @@ static bool GAMEINPUT_JoystickInit(void)
 
         hR = GameInputCreateFunc(&g_pGameInput);
         if (FAILED(hR)) {
-            return SDL_SetError("GameInputCreate failure with HRESULT of %08X", hR);
+            return SDL_SetError("GameInputCreate failure with HRESULT of %08lX", hR);
         }
     }
 
@@ -274,7 +274,7 @@ static bool GAMEINPUT_JoystickInit(void)
                                            GAMEINPUT_InternalJoystickDeviceCallback,
                                            &g_GameInputCallbackToken);
     if (FAILED(hR)) {
-        return SDL_SetError("IGameInput::RegisterDeviceCallback failure with HRESULT of %08X", hR);
+        return SDL_SetError("IGameInput::RegisterDeviceCallback failure with HRESULT of %08lX", hR);
     }
 
     // Calculate the relative offset between SDL timestamps and GameInput timestamps

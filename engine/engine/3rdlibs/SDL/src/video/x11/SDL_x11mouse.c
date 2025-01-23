@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -87,12 +87,6 @@ static SDL_Cursor *X11_CreateCursorAndData(Cursor x11_cursor)
         cursor->internal = data;
     }
     return cursor;
-}
-
-static SDL_Cursor *X11_CreateDefaultCursor(void)
-{
-    // None is used to indicate the default cursor
-    return X11_CreateCursorAndData(None);
 }
 
 #ifdef SDL_VIDEO_DRIVER_X11_XCURSOR
@@ -277,6 +271,12 @@ static SDL_Cursor *X11_CreateSystemCursor(SDL_SystemCursor id)
     }
 
     return cursor;
+}
+
+static SDL_Cursor *X11_CreateDefaultCursor(void)
+{
+    SDL_SystemCursor id = SDL_GetDefaultSystemCursor();
+    return X11_CreateSystemCursor(id);
 }
 
 static void X11_FreeCursor(SDL_Cursor *cursor)

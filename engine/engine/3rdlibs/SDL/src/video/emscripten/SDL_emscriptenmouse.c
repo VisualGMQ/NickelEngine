@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -62,7 +62,9 @@ static SDL_Cursor *Emscripten_CreateCursorFromString(const char *cursor_str, boo
 
 static SDL_Cursor *Emscripten_CreateDefaultCursor(void)
 {
-    return Emscripten_CreateCursorFromString("default", false);
+    SDL_SystemCursor id = SDL_GetDefaultSystemCursor();
+    const char *cursor_name = SDL_GetCSSCursorName(id, NULL);
+    return Emscripten_CreateCursorFromString(cursor_name, false);
 }
 
 EM_JS_DEPS(sdlmouse, "$stringToUTF8,$UTF8ToString");
