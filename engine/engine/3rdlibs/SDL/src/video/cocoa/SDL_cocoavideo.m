@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -63,6 +63,10 @@ static SDL_VideoDevice *Cocoa_CreateDevice(void)
         SDL_VideoDevice *device;
         SDL_CocoaVideoData *data;
 
+        if (![NSThread isMainThread]) {
+            return NULL;  // this doesn't SDL_SetError() because SDL_VideoInit is just going to overwrite it.
+        }
+
         Cocoa_RegisterApp();
 
         // Initialize all variables that we clean on shutdown
@@ -99,6 +103,7 @@ static SDL_VideoDevice *Cocoa_CreateDevice(void)
         device->SetWindowSize = Cocoa_SetWindowSize;
         device->SetWindowMinimumSize = Cocoa_SetWindowMinimumSize;
         device->SetWindowMaximumSize = Cocoa_SetWindowMaximumSize;
+        device->SetWindowAspectRatio = Cocoa_SetWindowAspectRatio;
         device->SetWindowOpacity = Cocoa_SetWindowOpacity;
         device->GetWindowSizeInPixels = Cocoa_GetWindowSizeInPixels;
         device->ShowWindow = Cocoa_ShowWindow;
@@ -214,6 +219,7 @@ static bool Cocoa_VideoInit(SDL_VideoDevice *_this)
 
         data.allow_spaces = SDL_GetHintBoolean(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, true);
         data.trackpad_is_touch_only = SDL_GetHintBoolean(SDL_HINT_TRACKPAD_IS_TOUCH_ONLY, false);
+        SDL_AddHintCallback(SDL_HINT_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY, Cocoa_MenuVisibilityCallback, NULL);
 
         data.swaplock = SDL_CreateMutex();
         if (!data.swaplock) {
@@ -240,15 +246,13 @@ void Cocoa_VideoQuit(SDL_VideoDevice *_this)
 // This function assumes that it's called from within an autorelease pool
 SDL_SystemTheme Cocoa_GetSystemTheme(void)
 {
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101400 // Added in the 10.14.0 SDK.
-    if ([[NSApplication sharedApplication] respondsToSelector:@selector(effectiveAppearance)]) {
+    if (@available(macOS 10.14, *)) {
         NSAppearance* appearance = [[NSApplication sharedApplication] effectiveAppearance];
 
         if ([appearance.name containsString: @"Dark"]) {
             return SDL_SYSTEM_THEME_DARK;
         }
     }
-#endif
     return SDL_SYSTEM_THEME_LIGHT;
 }
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -105,10 +105,11 @@ struct SDL_DisplayData
     char *wl_output_name;
     double scale_factor;
     uint32_t registry_id;
+    int logical_width, logical_height;
     int pixel_width, pixel_height;
-    int x, y, screen_width, screen_height, refresh, transform;
+    int x, y, refresh, transform;
     SDL_DisplayOrientation orientation;
-    int physical_width, physical_height;
+    int physical_width_mm, physical_height_mm;
     bool has_logical_position, has_logical_size;
     SDL_DisplayID display;
     SDL_VideoDisplay placeholder;

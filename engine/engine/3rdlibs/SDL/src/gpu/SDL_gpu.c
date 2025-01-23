@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -167,9 +167,6 @@ static const SDL_GPUBootstrap *backends[] = {
 #ifdef SDL_GPU_D3D12
     &D3D12Driver,
 #endif
-#ifdef SDL_GPU_D3D11
-    &D3D11Driver,
-#endif
     NULL
 };
 #endif // !SDL_GPU_DISABLED
@@ -250,7 +247,7 @@ SDL_GPUGraphicsPipeline *SDL_GPU_FetchBlitPipeline(
         BlitPipelineCacheEntry,
         *blit_pipeline_count + 1,
         *blit_pipeline_capacity,
-        *blit_pipeline_capacity * 2)
+        *blit_pipeline_capacity * 2);
 
     (*blit_pipelines)[*blit_pipeline_count].pipeline = pipeline;
     (*blit_pipelines)[*blit_pipeline_count].type = source_texture_type;
@@ -786,6 +783,14 @@ SDL_GPUGraphicsPipeline *SDL_CreateGPUGraphicsPipeline(
     }
 
     if (device->debug_mode) {
+        if (graphicsPipelineCreateInfo->vertex_shader == NULL) {
+            SDL_assert_release(!"Vertex shader cannot be NULL!");
+            return NULL;
+        }
+        if (graphicsPipelineCreateInfo->fragment_shader == NULL) {
+            SDL_assert_release(!"Fragment shader cannot be NULL!");
+            return NULL;
+        }
         if (graphicsPipelineCreateInfo->target_info.num_color_targets > 0 && graphicsPipelineCreateInfo->target_info.color_target_descriptions == NULL) {
             SDL_assert_release(!"Color target descriptions array pointer cannot be NULL if num_color_targets is greater than zero!");
             return NULL;
@@ -794,6 +799,10 @@ SDL_GPUGraphicsPipeline *SDL_CreateGPUGraphicsPipeline(
             CHECK_TEXTUREFORMAT_ENUM_INVALID(graphicsPipelineCreateInfo->target_info.color_target_descriptions[i].format, NULL);
             if (IsDepthFormat(graphicsPipelineCreateInfo->target_info.color_target_descriptions[i].format)) {
                 SDL_assert_release(!"Color target formats cannot be a depth format!");
+                return NULL;
+            }
+            if (!SDL_GPUTextureSupportsFormat(device, graphicsPipelineCreateInfo->target_info.color_target_descriptions[i].format, SDL_GPU_TEXTURETYPE_2D, SDL_GPU_TEXTUREUSAGE_COLOR_TARGET)) {
+                SDL_assert_release(!"Format is not supported for color targets on this device!");
                 return NULL;
             }
             if (graphicsPipelineCreateInfo->target_info.color_target_descriptions[i].blend_state.enable_blend) {
@@ -810,6 +819,10 @@ SDL_GPUGraphicsPipeline *SDL_CreateGPUGraphicsPipeline(
             CHECK_TEXTUREFORMAT_ENUM_INVALID(graphicsPipelineCreateInfo->target_info.depth_stencil_format, NULL);
             if (!IsDepthFormat(graphicsPipelineCreateInfo->target_info.depth_stencil_format)) {
                 SDL_assert_release(!"Depth-stencil target format must be a depth format!");
+                return NULL;
+            }
+            if (!SDL_GPUTextureSupportsFormat(device, graphicsPipelineCreateInfo->target_info.depth_stencil_format, SDL_GPU_TEXTURETYPE_2D, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET)) {
+                SDL_assert_release(!"Format is not supported for depth targets on this device!");
                 return NULL;
             }
         }
@@ -1050,10 +1063,13 @@ SDL_GPUBuffer *SDL_CreateGPUBuffer(
         return NULL;
     }
 
+    const char *debugName = SDL_GetStringProperty(createinfo->props, SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, NULL);
+
     return device->CreateBuffer(
         device->driverData,
         createinfo->usage,
-        createinfo->size);
+        createinfo->size,
+        debugName);
 }
 
 SDL_GPUTransferBuffer *SDL_CreateGPUTransferBuffer(
@@ -1066,10 +1082,13 @@ SDL_GPUTransferBuffer *SDL_CreateGPUTransferBuffer(
         return NULL;
     }
 
+    const char *debugName = SDL_GetStringProperty(createinfo->props, SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, NULL);
+
     return device->CreateTransferBuffer(
         device->driverData,
         createinfo->usage,
-        createinfo->size);
+        createinfo->size,
+        debugName);
 }
 
 // Debug Naming
@@ -2645,6 +2664,25 @@ bool SDL_SetGPUSwapchainParameters(
         present_mode);
 }
 
+bool SDL_SetGPUAllowedFramesInFlight(
+    SDL_GPUDevice *device,
+    Uint32 allowed_frames_in_flight)
+{
+    CHECK_DEVICE_MAGIC(device, false);
+
+    if (device->debug_mode) {
+        if (allowed_frames_in_flight < 1 || allowed_frames_in_flight > 3)
+        {
+            SDL_assert_release(!"allowed_frames_in_flight value must be between 1 and 3!");
+        }
+    }
+
+    allowed_frames_in_flight = SDL_clamp(allowed_frames_in_flight, 1, 3);
+    return device->SetAllowedFramesInFlight(
+        device->driverData,
+        allowed_frames_in_flight);
+}
+
 SDL_GPUTextureFormat SDL_GetGPUSwapchainTextureFormat(
     SDL_GPUDevice *device,
     SDL_Window *window)
@@ -2670,16 +2708,13 @@ bool SDL_AcquireGPUSwapchainTexture(
     CommandBufferCommonHeader *commandBufferHeader = (CommandBufferCommonHeader *)command_buffer;
 
     if (command_buffer == NULL) {
-        SDL_InvalidParamError("command_buffer");
-        return false;
+        return SDL_InvalidParamError("command_buffer");
     }
     if (window == NULL) {
-        SDL_InvalidParamError("window");
-        return false;
+        return SDL_InvalidParamError("window");
     }
     if (swapchain_texture == NULL) {
-        SDL_InvalidParamError("swapchain_texture");
-        return false;
+        return SDL_InvalidParamError("swapchain_texture");
     }
 
     if (COMMAND_BUFFER_DEVICE->debug_mode) {
@@ -2688,6 +2723,59 @@ bool SDL_AcquireGPUSwapchainTexture(
     }
 
     bool result = COMMAND_BUFFER_DEVICE->AcquireSwapchainTexture(
+        command_buffer,
+        window,
+        swapchain_texture,
+        swapchain_texture_width,
+        swapchain_texture_height);
+
+    if (*swapchain_texture != NULL){
+        commandBufferHeader->swapchain_texture_acquired = true;
+    }
+
+    return result;
+}
+
+bool SDL_WaitForGPUSwapchain(
+    SDL_GPUDevice *device,
+    SDL_Window *window)
+{
+    CHECK_DEVICE_MAGIC(device, false);
+
+    if (window == NULL) {
+        return SDL_InvalidParamError("window");
+    }
+
+    return device->WaitForSwapchain(
+        device->driverData,
+        window);
+}
+
+bool SDL_WaitAndAcquireGPUSwapchainTexture(
+    SDL_GPUCommandBuffer *command_buffer,
+    SDL_Window *window,
+    SDL_GPUTexture **swapchain_texture,
+    Uint32 *swapchain_texture_width,
+    Uint32 *swapchain_texture_height)
+{
+    CommandBufferCommonHeader *commandBufferHeader = (CommandBufferCommonHeader *)command_buffer;
+
+    if (command_buffer == NULL) {
+        return SDL_InvalidParamError("command_buffer");
+    }
+    if (window == NULL) {
+        return SDL_InvalidParamError("window");
+    }
+    if (swapchain_texture == NULL) {
+        return SDL_InvalidParamError("swapchain_texture");
+    }
+
+    if (COMMAND_BUFFER_DEVICE->debug_mode) {
+        CHECK_COMMAND_BUFFER_RETURN_FALSE
+        CHECK_ANY_PASS_IN_PROGRESS("Cannot acquire a swapchain texture during a pass!", false)
+    }
+
+    bool result = COMMAND_BUFFER_DEVICE->WaitAndAcquireSwapchainTexture(
         command_buffer,
         window,
         swapchain_texture,

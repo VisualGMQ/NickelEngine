@@ -11,6 +11,9 @@ jobs:
             - name: Windows
               os: windows-latest
               android: none
+            - name: Ubuntu
+              os: ubuntu-latest
+              android: none
             - name: MacOS
               os: macOS-latest
               android: none
@@ -30,6 +33,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install ninja-build -y
+        sudo apt install build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev fcitx-libs-dev
 
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
@@ -70,12 +74,12 @@ jobs:
         sudo apt update -y
         sudo apt install cmake ninja-build -y
         yes | sdkmanager --licenses
-        cp -r ./engine ./android/app/jni/
-        chmod +x ./android/gradlew
+        cp -r ./engine ./android-project/app/jni/
+        chmod +x ./android-project/gradlew
 
     - name: Build under Android
       if: runner.os == 'Linux' && matrix.android != 'none'
-      working-directory: ./android
+      working-directory: ./android-project
       run: |
         ninja --version
         ./gradlew build
