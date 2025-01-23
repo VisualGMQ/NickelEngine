@@ -2,6 +2,7 @@
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/flags.hpp"
 #include "nickel/graphics/enums.hpp"
+#include <optional>
 
 namespace nickel::graphics {
 

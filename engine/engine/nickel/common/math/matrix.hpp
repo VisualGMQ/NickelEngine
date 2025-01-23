@@ -5,7 +5,7 @@
 namespace nickel {
 
 template <typename T>
-requires std::is_pod_v<T>
+requires std::is_standard_layout_v<T>
 class Matrix {
 public:
     using ElemType = T;

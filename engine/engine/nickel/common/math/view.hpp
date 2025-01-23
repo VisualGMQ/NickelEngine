@@ -6,11 +6,11 @@ namespace nickel {
 // fwd declare
 
 template <typename T>
-requires std::is_pod_v<T>
+requires std::is_standard_layout_v<T>
 class Matrix;
 
 template <typename T, size_t, size_t>
-requires std::is_pod_v<T>
+requires std::is_standard_layout_v<T>
 class SMatrix;
 
 template <typename T, size_t>
