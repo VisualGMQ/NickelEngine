@@ -7,6 +7,7 @@
 
 #include <map>
 #include <variant>
+#include <optional>
 
 namespace nickel::graphics {
 
