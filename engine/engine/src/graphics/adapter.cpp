@@ -4,11 +4,15 @@
 
 namespace nickel::graphics {
 
-Adapter::Adapter(const video::Window::Impl& window) : m_impl{std::make_unique<Impl>(window)} {}
+Adapter::Adapter(const video::Window::Impl& window) : m_impl{std::make_unique<AdapterImpl>(window)} {}
 
 Adapter::~Adapter() {}
 
-const Adapter::Impl& Adapter::GetImpl() const {
+Device Adapter::GetDevice() const {
+    return m_impl->GetDevice();
+}
+
+const AdapterImpl& Adapter::GetImpl() const {
     return *m_impl;
 }
 

@@ -408,7 +408,7 @@ SMatrix<T, 4, 4> LookAt(const SVector<T, 3>& target,
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateXRotation(float radians) {
+SMatrix<T, 4, 4> CreateXRotation(T radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
     // clang-format off
@@ -422,7 +422,7 @@ SMatrix<T, 4, 4> CreateXRotation(float radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateYRotation(float radians) {
+SMatrix<T, 4, 4> CreateYRotation(T radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
     // clang-format off
@@ -436,7 +436,7 @@ SMatrix<T, 4, 4> CreateYRotation(float radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateZRotation(float radians) {
+SMatrix<T, 4, 4> CreateZRotation(T radians) {
     float cos = std::cos(radians);
     float sin = std::sin(radians);
     // clang-format off
@@ -626,6 +626,11 @@ SVector<T, 3> GetNormalMapTangent(SVector<T, 3> p1, SVector<T, 3> p2,
                          dUV2.y * e1.y - dUV1.y * e2.y,
                          dUV2.y * e1.z - dUV1.y * e2.z} *
            denoInv;
+}
+
+template <typename T>
+T Clamp(T value, T min, T max) {
+    return value < min ? min : value > max ? max : value;
 }
 
 }  // namespace nickel

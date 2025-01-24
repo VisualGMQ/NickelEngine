@@ -1,10 +1,8 @@
-cmake_minimum_required(VERSION 3.5)
-cmake_policy(PUSH)
-cmake_policy(SET CMP0048 NEW) # project(... VERSION ...) support
+cmake_minimum_required(VERSION 3.5...3.30)
 
 project(volk VERSION 
 # VOLK_GENERATE_VERSION
-295
+304
 # VOLK_GENERATE_VERSION
   LANGUAGES C
 )
@@ -135,4 +133,3 @@ if(VOLK_INSTALL)
   )
 
 endif()
-cmake_policy(POP)

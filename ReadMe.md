@@ -1,5 +1,7 @@
 NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.com/VisualGMQ/NickelEngine-backup)
 
+更多信息请参阅[wiki](https://github.com/VisualGMQ/NickelEngine/wiki)
+
 新NickelEngine的特点：
 
 * 重置底层ECS系统
@@ -12,3 +14,13 @@ NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.c
     老的第三方库作为submodule，由于网络问题及git submodule问题经常拉不下来/拉一半。新工程中使用小型第三方库，并且将库源码直接放在引擎工程中，这样既避免了额外拉取问题，又可以进行源码调试
 * 更好的开发流程
     新版本每次开发功能/修改bug都会关联issue，以方便后续溯源。CI也从最开始就使用，保证main分支一定是可编译通过的
+
+## How To Build
+
+使用CMake进行编译（非安卓平台在`engine`目录下执行：）
+
+```bash
+cmake --preset=default
+cmake --build cmake-build
+```
+安卓平台需要将`engine`文件夹拷贝到`android-project/app/jni`下然后开启`Android Studio`进行编译

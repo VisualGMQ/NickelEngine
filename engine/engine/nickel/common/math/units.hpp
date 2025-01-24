@@ -60,6 +60,8 @@ public:
 
     explicit operator T() const noexcept { return value_; }
 
+    T Value() const noexcept { return value_; }
+
 private:
     T value_;
 };
@@ -115,6 +117,8 @@ public:
     TDegrees(const TDegrees&) = default;
 
     explicit operator T() const noexcept { return value_; }
+
+    T Value() const noexcept { return value_; }
 
 private:
     T value_;

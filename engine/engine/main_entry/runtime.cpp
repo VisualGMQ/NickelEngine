@@ -1,27 +1,13 @@
 ﻿#define SDL_MAIN_USE_CALLBACKS
+#include "nickel/main_entry/runtime.hpp"
 #include "SDL3/SDL_main.h"
 #include "nickel/common/log.hpp"
 #include "nickel/fs/dialog.hpp"
 #include "nickel/fs/storage.hpp"
 #include "nickel/graphics/adapter.hpp"
-#include "nickel/video/window.hpp"
+#include "nickel/nickel.hpp"
 
-namespace nickel {
-
-class Runtime : public Singlton<Runtime, true> {
-public:
-    Runtime();
-    ~Runtime();
-    void Run();
-    void HandleEvent(const SDL_Event &);
-    bool ShouldExit() const;
-
-private:
-    bool m_should_exit = false;
-    std::unique_ptr<video::Window> m_window;
-    std::unique_ptr<graphics::Adapter> m_graphics_context;
-    std::unique_ptr<StorageManager> m_storage_manager;
-};
+namespace nickel::main_entry {
 
 Runtime::Runtime() {
     LOGI("init SDL");
@@ -30,67 +16,67 @@ Runtime::Runtime() {
         LOGC("SDL init failed: {}", SDL_GetError());
     }
 
-    LOGI("init video system");
-    m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
+    Context::Init();
 
-    LOGI("init graphics system");
-    m_graphics_context =
-        std::make_unique<graphics::Adapter>(m_window->GetImpl());
-
-    LOGI("init storage system");
-    m_storage_manager =
-        std::make_unique<StorageManager>("visualgmq", "nickelengine");
+    auto &ctx = Context::GetInst();
+    ctx.RegisterCustomApplication(
+        ::CreateCustomApplication(Context::GetInst()));
+    auto app = ctx.GetApplication();
+    if (app) {
+        app->OnInit();
+    } else {
+        LOGI("no custom application");
+    }
 
     LOGI("running engine...");
 }
 
 Runtime::~Runtime() {
-    LOGI("shutdown storage manager");
-    m_storage_manager.reset();
-    
-    LOGI("shutdown graphics system");
-    m_graphics_context.reset();
-
-    LOGI("shutdown window system");
-    m_window.reset();
+    Context::Delete();
 }
 
-void Runtime::Run() {}
-
-void Runtime::HandleEvent(const SDL_Event &event) {
-    if (event.type == SDL_EVENT_QUIT) {
-        m_should_exit = true;
+void Runtime::Run() {
+    auto app = Context::GetInst().GetApplication();
+    if (app) {
+        app->OnUpdate();
     }
 }
 
-bool Runtime::ShouldExit() const {
-    return m_should_exit;
+void Runtime::HandleEvent(const SDL_Event &event) {
+    if (event.type == SDL_EVENT_QUIT) {
+        Context::GetInst().Exit();
+    }
 }
 
-}  // namespace nickel
+}  // namespace nickel::main_entry
+
+extern "C" {
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
-    nickel::Runtime::Init();
-    if (nickel::Runtime::GetInst().ShouldExit()) {
+    nickel::main_entry::Runtime::Init();
+    if (nickel::Context::GetInst().ShouldExit()) {
         return SDL_APP_FAILURE;
     }
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
-    auto &runtime = nickel::Runtime::GetInst();
+    auto &runtime = nickel::main_entry::Runtime::GetInst();
     runtime.Run();
-    if (runtime.ShouldExit()) {
+    if (nickel::Context::GetInst().ShouldExit()) {
         return SDL_APP_SUCCESS;
     }
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-    nickel::Runtime::GetInst().HandleEvent(*event);
+    nickel::main_entry::Runtime::GetInst().HandleEvent(*event);
     return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-    nickel::Runtime::Delete();
+    nickel::main_entry::Runtime::Delete();
 }
+    
+}
+

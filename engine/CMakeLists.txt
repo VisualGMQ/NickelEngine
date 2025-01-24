@@ -10,7 +10,12 @@ option(NICKEL_TESTS "build tests" OFF)
 set(NICKEL_MAIN_ENTRY_NAME NickelEngine-Main)
 set(NICKEL_ENGINE_NAME NickelEngine)
 
+find_program(GLSLC_PROG glslc)
+if (NOT GLSLC_PROG)
+    message(WARN "can't find glslc, won't auto compile shaders")
+endif()
 include(cmake/target_category_helper.cmake)
+include(cmake/compile_shader.cmake)
 
 add_subdirectory(engine)
 

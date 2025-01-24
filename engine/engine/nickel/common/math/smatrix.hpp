@@ -9,7 +9,7 @@ namespace nickel {
 // vectors
 
 template <typename Derive, typename ElemType, size_t Len>
-requires std::is_pod_v<ElemType>
+requires std::is_standard_layout_v<ElemType>
 class SVectorBase {
 public:
     constexpr size_t ElemCount() const noexcept { return Len; }
@@ -256,7 +256,7 @@ std::ostream& operator<<(std::ostream& o, const SVector<T, Len>& view) {
 // matrix
 
 template <typename T, size_t Col, size_t Row>
-requires std::is_pod_v<T>
+requires std::is_standard_layout_v<T>
 class SMatrix {
 public:
     using ElemType = T;
