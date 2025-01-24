@@ -15,7 +15,7 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
     createImage(desc, dev);
     allocMem(adapter.m_phyDevice);
 
-    for (int i = 0; i < desc.extent.l; i++) {
+    for (int i = 0; i < desc.arrayLayers; i++) {
         m_layouts.push_back(desc.initialLayout);
     }
 
@@ -50,6 +50,9 @@ void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
     
     VkImageCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    if (desc.is_cube_map) {
+        ci.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
     ci.imageType = ImageType2Vk(desc.imageType);
     ci.format = Format2Vk(desc.format);
     ci.extent = VkExtent3D{desc.extent.w, desc.extent.h, desc.extent.l};

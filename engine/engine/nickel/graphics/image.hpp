@@ -50,6 +50,7 @@ class ImageImpl;
 class NICKEL_API Image {
 public:
     struct Descriptor {
+        bool is_cube_map = false;
         ImageType imageType = ImageType::Dim2;
         Format format = Format::R8G8B8A8_SRGB;
         SVector<uint32_t, 3> extent;

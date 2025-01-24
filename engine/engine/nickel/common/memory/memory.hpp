@@ -23,7 +23,7 @@ public:
     BlockMemoryAllocator(BlockMemoryAllocator&& o) noexcept
         : m_block_mem_count{o.m_block_mem_count}, m_block_head{o.m_block_head} {
         o.m_block_mem_count = 0;
-        o.m_block_head = 0;
+        o.m_block_head = nullptr;
     }
 
     BlockMemoryAllocator& operator=(BlockMemoryAllocator&& o) noexcept {

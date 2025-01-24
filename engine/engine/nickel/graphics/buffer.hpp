@@ -10,7 +10,7 @@ class BufferImpl;
 class NICKEL_API Buffer {
 public:
     struct Descriptor {
-        size_t m_size;
+        uint64_t m_size;
         Flags<BufferUsage> m_usage;
         MemoryType m_memory_type;
     };

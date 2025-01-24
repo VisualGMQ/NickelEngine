@@ -255,7 +255,7 @@ void RenderPassEncoder::transferImageLayout2ShaderReadOnlyOptimal(
             barrier.subresourceRange.aspectMask = aspect;
             barrier.subresourceRange.layerCount = 1;
             barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.baseArrayLayer = i;
             barrier.subresourceRange.baseMipLevel = 0;
             vkCmdPipelineBarrier(m_cmd.m_cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                  VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
@@ -397,15 +397,14 @@ void CopyEncoder::End() {
     }
 
     for (auto& copy_cmd : m_image_copies) {
-        for (size_t i = 0; i < copy_cmd.copy.imageExtent.l; i++) {
-            // TODO: more precious range
-            size_t idx = i + copy_cmd.copy.imageOffset.z;
-
+        auto& subresource = copy_cmd.copy.imageSubresource;
+        // TODO: more precious range
+        for (size_t i = subresource.baseArrayLayer; i < subresource.layerCount; i++) {
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barrier.image = copy_cmd.dst.Impl().m_image;
             barrier.oldLayout =
-                ImageLayout2Vk(copy_cmd.dst.Impl().m_layouts[idx]);
+                ImageLayout2Vk(copy_cmd.dst.Impl().m_layouts[i]);
             barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
