@@ -30,6 +30,8 @@ public:
 
     struct SamplerBinding final {
         Sampler sampler;
+
+        SamplerBinding() {}
     };
 
     struct CombinedSamplerBinding final {
@@ -47,7 +49,9 @@ public:
     };
 
     struct BindingPoint {
-        std::variant<BufferBinding, SamplerBinding, CombinedSamplerBinding,
+        BindingPoint() {}
+        
+        std::variant<SamplerBinding, BufferBinding, CombinedSamplerBinding,
                      ImageBinding>
             entry;
     };
