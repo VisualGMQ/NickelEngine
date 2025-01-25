@@ -45,6 +45,14 @@ graphics::Adapter& Context::GetGPUAdapter() {
     return *m_graphics_context;
 }
 
+const input::DeviceManager& Context::GetDeviceManager() const {
+    return m_device_mgr;
+}
+
+input::DeviceManager& Context::GetDeviceManager() {
+    return m_device_mgr;
+}
+
 Application* Context::GetApplication() {
     return m_application.get();
 }

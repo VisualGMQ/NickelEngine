@@ -1,5 +1,6 @@
 #pragma once
 #include "nickel/common/singleton.hpp"
+#include "nickel/common/memory/memory.hpp"
 
 #include <vector>
 

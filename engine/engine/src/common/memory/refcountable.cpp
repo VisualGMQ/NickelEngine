@@ -1,6 +1,6 @@
-#include "nickel/graphics/internal/refcountable.hpp"
+#include "nickel/common/memory/refcountable.hpp"
 
-namespace nickel::graphics {
+namespace nickel {
 
 RefCountable::RefCountable() : m_refcount{1} {}
 

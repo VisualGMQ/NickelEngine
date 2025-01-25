@@ -36,23 +36,27 @@ Runtime::~Runtime() {
 }
 
 void Runtime::Run() {
-    auto app = Context::GetInst().GetApplication();
+    auto& ctx = Context::GetInst();
+    auto app = ctx.GetApplication();
     if (app) {
         app->OnUpdate();
     }
+
+    ctx.GetDeviceManager().Update();
 }
 
-void Runtime::HandleEvent(const SDL_Event &event) {
+void Runtime::HandleEvent(const SDL_Event& event) {
+    auto& ctx = Context::GetInst();
     if (event.type == SDL_EVENT_QUIT) {
-        Context::GetInst().Exit();
+        ctx.Exit();
     }
-}
 
-}  // namespace nickel::main_entry
+    ctx.GetDeviceManager().HandleEvent(event);
+}
+} // namespace nickel::main_entry
 
 extern "C" {
-
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
+SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     nickel::main_entry::Runtime::Init();
     if (nickel::Context::GetInst().ShouldExit()) {
         return SDL_APP_FAILURE;
@@ -60,8 +64,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppIterate(void *appstate) {
-    auto &runtime = nickel::main_entry::Runtime::GetInst();
+SDL_AppResult SDL_AppIterate(void* appstate) {
+    auto& runtime = nickel::main_entry::Runtime::GetInst();
     runtime.Run();
     if (nickel::Context::GetInst().ShouldExit()) {
         return SDL_APP_SUCCESS;
@@ -69,14 +73,13 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
     nickel::main_entry::Runtime::GetInst().HandleEvent(*event);
     return SDL_APP_CONTINUE;
 }
 
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+void SDL_AppQuit(void* appstate, SDL_AppResult result) {
     nickel::main_entry::Runtime::Delete();
 }
-    
 }
 
