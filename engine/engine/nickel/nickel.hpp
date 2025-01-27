@@ -1,12 +1,14 @@
 ﻿#pragma once
+#include "nickel/graphics/camera.hpp"
+#include "nickel/graphics/context.hpp"
 #include "input/device/device_manager.hpp"
 #include "nickel/common/singleton.hpp"
-#include "nickel/graphics/adapter.hpp"
+#include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/video/window.hpp"
 #include "nickel/common/dllexport.hpp"
+#include "nickel/fs/storage.hpp"
 
 namespace nickel {
-
 class Application;
 
 class NICKEL_API Context : public Singlton<Context, true> {
@@ -25,25 +27,47 @@ public:
     input::DeviceManager& GetDeviceManager();
     Application* GetApplication();
     const Application* GetApplication() const noexcept;
+    StorageManager& GetStorageManager();
+    const StorageManager& GetStorageManager() const;
+    graphics::Context& GetGraphicsContext();
+    Camera& GetCamera();
+
+    void EnableRender(bool);
+
+    void Update();
 
 private:
     bool m_should_exit = false;
     std::unique_ptr<video::Window> m_window;
-    std::unique_ptr<graphics::Adapter> m_graphics_context;
+    std::unique_ptr<graphics::Adapter> m_graphics_adapter;
     std::unique_ptr<Application> m_application;
+    std::unique_ptr<Camera> m_camera;
+    std::unique_ptr<graphics::Context> m_graphics_ctx;
+    std::unique_ptr<StorageManager> m_storage_mgr;
     input::DeviceManager m_device_mgr;
+
+    void initCamera() {
+        auto window_size = m_window->GetSize();
+        float aspect = window_size.w / (float)window_size.h;
+
+        m_camera = std::make_unique<FlyCamera>(
+            nickel::Radians{nickel::Degrees{45.0f}},
+            aspect, 0.1f, 100.0f);
+    }
 };
 
 class NICKEL_API Application {
 public:
-    virtual void OnInit() {}
+    virtual void OnInit() {
+    }
 
-    virtual void OnQuit() {}
+    virtual void OnQuit() {
+    }
 
-    virtual void OnUpdate() {}
+    virtual void OnUpdate() {
+    }
 
     virtual ~Application() = default;
 };
-
-}  // namespace nickel
+} // namespace nickel
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nickel/common/math/units.hpp"
 #include "nickel/common/assert.hpp"
 #include "nickel/common/math/constants.hpp"
 #include "nickel/common/math/view.hpp"
@@ -30,7 +31,7 @@ void MatrixMinus(const MatrixView<T, IsConst> m1,
 
 template <typename T, bool IsConst>
 void MatrixMul(const MatrixView<T, IsConst> m, float value,
-               MatrixView<T, IsConst> m_out) noexcept {
+               MatrixView<T, false> m_out) noexcept {
     for (int c = 0; c < m.ColNum(); c++) {
         for (int r = 0; r < m.RowNum(); r++) {
             m_out[c][r] = m[c][r] * value;
@@ -351,8 +352,8 @@ SVector<T, 2> PerpendicVector(const SVector<T, 2>& v) {
 // create functions
 
 template <typename T>
-SMatrix<T, 4, 4> CreatePersp(T fov, T aspect, T n, T f) {
-    T focal = 1.0 / std::tan(fov * 0.5);
+SMatrix<T, 4, 4> CreatePersp(TRadians<T> fov, T aspect, T n, T f) {
+    T focal = 1.0 / std::tan(fov.Value() * 0.5);
 
     // clang-format off
     return SMatrix<T, 4, 4>::FromRow(
@@ -408,9 +409,9 @@ SMatrix<T, 4, 4> LookAt(const SVector<T, 3>& target,
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateXRotation(T radians) {
-    float cos = std::cos(radians);
-    float sin = std::sin(radians);
+SMatrix<T, 4, 4> CreateXRotation(TRadians<T> radians) {
+    float cos = std::cos(radians.Value());
+    float sin = std::sin(radians.Value());
     // clang-format off
     return SMatrix<T, 4, 4>::FromRow(
         1.0f, 0.0f, 0.0f, 0.0f,
@@ -422,9 +423,9 @@ SMatrix<T, 4, 4> CreateXRotation(T radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateYRotation(T radians) {
-    float cos = std::cos(radians);
-    float sin = std::sin(radians);
+SMatrix<T, 4, 4> CreateYRotation(TRadians<T> radians) {
+    float cos = std::cos(radians.Value());
+    float sin = std::sin(radians.Value());
     // clang-format off
     return SMatrix<T, 4, 4>::FromRow(
          cos, 0.0f,  sin, 0.0f,
@@ -436,9 +437,9 @@ SMatrix<T, 4, 4> CreateYRotation(T radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateZRotation(T radians) {
-    float cos = std::cos(radians);
-    float sin = std::sin(radians);
+SMatrix<T, 4, 4> CreateZRotation(TRadians<T> radians) {
+    float cos = std::cos(radians.Value());
+    float sin = std::sin(radians.Value());
     // clang-format off
     return SMatrix<T, 4, 4>::FromRow(
          cos, -sin, 0.0f, 0.0f,
@@ -450,14 +451,14 @@ SMatrix<T, 4, 4> CreateZRotation(T radians) {
 }
 
 template <typename T>
-SMatrix<T, 4, 4> CreateXYZRotation(const SVector<T, 3>& r) {
+SMatrix<T, 4, 4> CreateXYZRotation(const SVector<TRadians<T>, 3>& r) {
     return CreateXRotation(r.x) * CreateYRotation(r.y) * CreateZRotation(r.z);
 }
 
 template <typename T>
-SMatrix<T, 2, 2> CreateRotation2D(float radians) {
-    auto cos = std::cos(radians);
-    auto sin = std::sin(radians);
+SMatrix<T, 2, 2> CreateRotation2D(TRadians<T> radians) {
+    auto cos = std::cos(radians.Value());
+    auto sin = std::sin(radians.Value());
     // clang-format off
     return SMatrix<T, 2, 2>::FromRow(
         cos, -sin,

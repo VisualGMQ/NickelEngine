@@ -32,7 +32,7 @@ public:
 
     Mouse();
     ~Mouse();
-    const Button& GetButton(Button::Type) const;
+    Button GetButton(Button::Type) const;
     const Vec2& GetPosition() const;
     const Vec2& GetOffset() const;
     void HandleEvent(const SDL_Event&);

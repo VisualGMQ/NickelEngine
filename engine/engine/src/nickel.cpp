@@ -7,9 +7,17 @@ Context::Context() {
     m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
 
     LOGI("init graphics system");
-    m_graphics_context =
+    m_graphics_adapter =
         std::make_unique<graphics::Adapter>(m_window->GetImpl());
- 
+
+    initCamera();
+
+    // TODO: change org & app from config
+    m_storage_mgr = std::make_unique<StorageManager>(
+        "visualgmq", "nickelengine");
+
+    m_graphics_ctx = std::make_unique<graphics::Context>(
+        m_graphics_adapter->GetDevice(), *m_window, *m_storage_mgr);
 }
 
 Context::~Context() {
@@ -17,9 +25,12 @@ Context::~Context() {
         m_application->OnQuit();
     }
     m_application.reset();
+
+    LOGI("clear graphics context");
+    m_graphics_ctx.reset();
     
     LOGI("shutdown graphics system");
-    m_graphics_context.reset();
+    m_graphics_adapter.reset();
 
     LOGI("shutdown window system");
     m_window.reset();
@@ -42,7 +53,7 @@ video::Window& Context::GetWindow() {
 }
 
 graphics::Adapter& Context::GetGPUAdapter() {
-    return *m_graphics_context;
+    return *m_graphics_adapter;
 }
 
 const input::DeviceManager& Context::GetDeviceManager() const {
@@ -61,4 +72,36 @@ const Application* Context::GetApplication() const noexcept {
     return m_application.get();
 }
 
+StorageManager& Context::GetStorageManager() {
+    return *m_storage_mgr;
+}
+
+const StorageManager& Context::GetStorageManager() const {
+    return *m_storage_mgr;
+}
+
+graphics::Context& Context::GetGraphicsContext() {
+    return *m_graphics_ctx;
+}
+
+Camera& Context::GetCamera() {
+    return *m_camera;
+}
+
+void Context::EnableRender(bool enable) {
+    m_graphics_ctx->EnableRender(enable);
+}
+
+void Context::Update() {
+    m_graphics_ctx->BeginFrame();
+    
+    auto app = GetApplication();
+    if (app) {
+        app->OnUpdate();
+    }
+
+    GetDeviceManager().Update();
+    
+    m_graphics_ctx->EndFrame();
+}
 }  // namespace nickel

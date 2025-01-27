@@ -14,6 +14,11 @@ file(GLOB_RECURSE ENGINE_INTERNAL_HEADERS
 set(ENGINE_EXPORT_HEADERS ${ENGINE_ALL_HEADERS})
 list(REMOVE_ITEM ENGINE_EXPORT_HEADERS ${ENGINE_INTERNAL_HEADERS})
 
+compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
+compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
+compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridline.vert.spv)
+compile_shader(assets/shaders/shader_gridline.frag assets/shaders/shader_gridline.frag.spv)
+
 macro(attach_common_config_on_engine target_name)
     target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC})
     target_include_directories(${target_name} PUBLIC .)
@@ -25,7 +30,7 @@ macro(attach_common_config_on_engine target_name)
     target_compile_definitions(${target_name} PUBLIC $<IF:$<CONFIG:Debug>,NICKEL_DEBUG,NICKEL_RELEASE>)
 
     if (MSVC)
-    target_compile_options(${target_name} PUBLIC /Zc:preprocessor)
+        target_compile_options(${target_name} PUBLIC /Zc:preprocessor)
     endif()
 
     if (ANDROID)

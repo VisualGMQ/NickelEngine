@@ -1,5 +1,5 @@
 #include "nickel/common/common.hpp"
-#include "nickel/graphics/common.hpp"
+#include "nickel/graphics/lowlevel/common.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
@@ -14,7 +14,9 @@ struct MVP {
 class Application : public nickel::Application {
 public:
     void OnInit() override {
-        Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
+        auto& ctx = nickel::Context::GetInst();
+        ctx.EnableRender(false);
+        Device device = ctx.GetGPUAdapter().GetDevice();
 
         createMVPBuffer(device);
         initMVP();
@@ -104,7 +106,7 @@ private:
         m_mvp.model = nickel::Mat44::Identity();
         m_mvp.view = nickel::Mat44::Identity();
         m_mvp.proj =
-            nickel::CreatePersp(nickel::Radians{nickel::Degrees{45.0f}}.Value(),
+            nickel::CreatePersp(nickel::Radians{nickel::Degrees{45.0f}},
                                 aspect, 0.1f, 100.0f);
     }
 

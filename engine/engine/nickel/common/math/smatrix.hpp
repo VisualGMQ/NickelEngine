@@ -32,39 +32,48 @@ public:
     const ElemType* Ptr() const noexcept { return (ElemType*)this; }
 
     Derive& operator+=(const SVectorBase& o) noexcept {
-        MatrixAdd<ElemType, true>((Derive&)*this, (Derive&)o, (Derive&)*this);
-        return (Derive&)*this;
+        MatrixAdd<ElemType, true>(static_cast<const Derive&>(*this),
+                                  static_cast<const Derive&>(o),
+                                  MatrixView<ElemType, false>{static_cast<Derive&>(*this)});
+        return static_cast<Derive&>(*this);
     }
 
     Derive& operator-=(const SVectorBase& o) noexcept {
-        MatrixMinus<ElemType, true>((Derive&)*this, (Derive&)o, (Derive&)*this);
-        return (Derive&)*this;
+        MatrixMinus<ElemType, true>(static_cast<const Derive&>(*this),
+                                    static_cast<const Derive&>(o),
+                                    static_cast<Derive&>(*this));
+        return static_cast<Derive&>(*this);
     }
 
     Derive& operator*=(float value) noexcept {
-        MatrixMul<ElemType, true>((Derive&)*this, value, (Derive&)*this);
-        return (Derive&)*this;
+        MatrixMul<ElemType, true>(static_cast<const Derive&>(*this), value,
+                                  static_cast<Derive&>(*this));
+        return static_cast<Derive&>(*this);
     }
 
     Derive& operator*=(const SVectorBase& o) noexcept {
-        MatrixMulEach<ElemType, true>((Derive&)*this, (Derive&)o,
-                                      (Derive&)*this);
-        return (Derive&)*this;
+        MatrixMulEach<ElemType, true>(static_cast<const Derive&>(*this),
+                                      static_cast<const Derive&>(o),
+                                      static_cast<Derive&>(*this));
+        return static_cast<Derive&>(*this);
     }
 
     Derive& operator/=(float value) noexcept {
-        MatrixDiv<ElemType, true>((Derive&)*this, value, (Derive&)*this);
-        return (Derive&)*this;
+        MatrixView<ElemType, false> result{static_cast<Derive&>(*this)};
+        MatrixDiv<ElemType, true>(static_cast<const Derive&>(*this), value,
+                                  result);
+        return static_cast<Derive&>(*this);
     }
 
     Derive& operator/=(const SVectorBase& o) noexcept {
-        MatrixDivEach<ElemType, true>((Derive&)*this, (Derive&)o,
-                                      (Derive&)*this);
-        return (Derive&)*this;
+        MatrixDivEach<ElemType, true>(static_cast<const Derive&>(*this),
+                                      static_cast<const Derive&>(o),
+                                      static_cast<Derive&>(*this));
+        return static_cast<Derive&>(*this);
     }
 
     Derive operator-() const noexcept {
-        const Derive& derive = (const Derive&)*this;
+        const Derive& derive = static_cast<const Derive&>(*this);
         Derive tmp = derive;
         MatrixNeg<ElemType, true>(tmp, tmp);
         return tmp;
@@ -133,6 +142,10 @@ public:
 template <typename T>
 class SVector<T, 3> : public SVectorBase<SVector<T, 3>, T, 3> {
 public:
+    static SVector UNIT_X;
+    static SVector UNIT_Y;
+    static SVector UNIT_Z;
+    
     using ElemType = T;
     static constexpr size_t ElemCount = 3;
 
@@ -156,6 +169,15 @@ public:
 };
 
 template <typename T>
+SVector<T, 3> SVector<T, 3>::UNIT_X{1, 0, 0};
+
+template <typename T>
+SVector<T, 3> SVector<T, 3>::UNIT_Y{0, 1, 0};
+
+template <typename T>
+SVector<T, 3> SVector<T, 3>::UNIT_Z{0, 0, 1};
+
+template <typename T>
 class SVector<T, 4> : public SVectorBase<SVector<T, 4>, T, 4> {
 public:
     using ElemType = T;
@@ -177,11 +199,17 @@ public:
         ElemType w, a;
     };
 
-    SVector() : x{ElemType{}}, y{ElemType{}}, z{ElemType{}}, w{ElemType{}} {}
+    SVector()
+        : x{ElemType{}}, y{ElemType{}}, z{ElemType{}}, w{ElemType{}} {
+    }
 
-    SVector(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+    SVector(T x, T y, T z, T w)
+        : x{x}, y{y}, z{z}, w{w} {
+    }
 
-    explicit SVector(T value) : x{value}, y{value}, z{value}, w{value} {}
+    explicit SVector(T value)
+        : x{value}, y{value}, z{value}, w{value} {
+    }
 };
 
 // operations
@@ -256,7 +284,7 @@ std::ostream& operator<<(std::ostream& o, const SVector<T, Len>& view) {
 // matrix
 
 template <typename T, size_t Col, size_t Row>
-requires std::is_standard_layout_v<T>
+    requires std::is_standard_layout_v<T>
 class SMatrix {
 public:
     using ElemType = T;
@@ -279,7 +307,7 @@ public:
     }
 
     template <typename U>
-    requires std::convertible_to<U, ElemType>
+        requires std::convertible_to<U, ElemType>
     static SMatrix FillWith(U elem) {
         SMatrix m;
         m.Fill(elem);
@@ -301,7 +329,7 @@ public:
     }
 
     template <typename... Ts>
-    requires(std::convertible_to<Ts, ElemType> && ...)
+        requires(std::convertible_to<Ts, ElemType> && ...)
     static SMatrix Diag(Ts... elems) {
         SMatrix m;
         m.Diagonal(elems...);
@@ -310,9 +338,13 @@ public:
 
     SMatrix() = default;
 
-    SMatrix(const SMatrix& o) : data_{o.data_} {}
+    SMatrix(const SMatrix& o)
+        : data_{o.data_} {
+    }
 
-    SMatrix(SMatrix&& o) noexcept : data_{o.data_} {}
+    SMatrix(SMatrix&& o) noexcept
+        : data_{o.data_} {
+    }
 
     SMatrix& operator=(SMatrix&& o) noexcept {
         if (&o != this) {
@@ -356,7 +388,8 @@ public:
     }
 
     template <typename... Ts>
-    requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >= 1)
+        requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >=
+                 1)
     void SetValuesFromRow(Ts... elems) {
         ElemType datas[] = {static_cast<ElemType>(elems)...};
         for (int i = 0; i < std::min(sizeof...(elems), ElemCount()); i++) {
@@ -367,7 +400,8 @@ public:
     }
 
     template <typename... Ts>
-    requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >= 1)
+        requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >=
+                 1)
     void SetValuesFromCol(Ts... elems) {
         ElemType datas[] = {static_cast<ElemType>(elems)...};
         auto ptr = Ptr();
@@ -500,7 +534,7 @@ template <typename T, size_t Col, size_t Row>
 SVector<T, Row> operator*(const SMatrix<T, Col, Row>& m,
                           const SVector<T, Col>& v) {
     SVector<T, Row> result;
-    MatrixMul(m, v, result);
+    MatrixMul<T, true>(m, v, result);
     return result;
 }
 
@@ -515,5 +549,4 @@ template <typename T, size_t Col, size_t Row>
 float Det(const SMatrix<T, Col, Row> m) {
     return Det<T, true>(m);
 }
-
-}  // namespace nickel
+} // namespace nickel

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nickel/common/math/constants.hpp"
+#include <concepts>
 
 namespace nickel {
 
@@ -72,53 +73,53 @@ class TDegrees {
 public:
     template <typename U>
     requires(std::convertible_to<T, U>)
-    TDegrees(U value) : value_{static_cast<T>(value)} {}
+    constexpr TDegrees(U value) : value_{static_cast<T>(value)} {}
 
     template <typename U>
     requires(std::convertible_to<U, T>)
-    TDegrees(TRadians<U> o)
+    constexpr TDegrees(TRadians<U> o)
         : value_{static_cast<T>(static_cast<T>(o) * static_cast<T>(180.0) /
                                 GenericPI<T>)} {}
 
-    TDegrees& operator+=(const TDegrees& o) {
+    constexpr TDegrees& operator+=(const TDegrees& o) {
         value_ += o.value_;
         return *this;
     }
 
-    TDegrees& operator-=(const TDegrees& o) {
+    constexpr TDegrees& operator-=(const TDegrees& o) {
         value_ -= o.value_;
         return *this;
     }
 
     template <typename U>
-    TDegrees& operator*=(U value) {
+    constexpr TDegrees& operator*=(U value) {
         value_ *= value;
         return *this;
     }
 
     template <typename U>
-    TDegrees& operator/=(U value) {
+    constexpr TDegrees& operator/=(U value) {
         value_ /= value;
         return *this;
     }
 
     template <typename U>
-    TDegrees& operator*=(TDegrees<U> value) {
+    constexpr TDegrees& operator*=(TDegrees<U> value) {
         value_ *= value.value_;
         return *this;
     }
 
     template <typename U>
-    TDegrees& operator/=(TDegrees<U> value) {
+    constexpr TDegrees& operator/=(TDegrees<U> value) {
         value_ /= value.value_;
         return *this;
     }
 
-    TDegrees(const TDegrees&) = default;
+    constexpr TDegrees(const TDegrees&) = default;
 
-    explicit operator T() const noexcept { return value_; }
+    constexpr explicit operator T() const noexcept { return value_; }
 
-    T Value() const noexcept { return value_; }
+    constexpr T Value() const noexcept { return value_; }
 
 private:
     T value_;
@@ -141,49 +142,49 @@ TRadians<T> operator-(TRadians<T> r) {
     return TRadians<T>(-static_cast<T>(r));
 }
 
-template <typename T>
-TRadians<T> operator*(TRadians<T> r1, T value) {
-    return TRadians<T>(static_cast<T>(r1) * value);
+template <typename T, typename U>
+TRadians<T> operator*(TRadians<T> r1, U value) {
+    return TRadians<T>(r1.Value() * value);
 }
 
-template <typename T>
-TRadians<T> operator*(T value, TRadians<T> r1) {
+template <typename T, typename U>
+TRadians<T> operator*(U value, TRadians<T> r1) {
     return r1 * value;
 }
 
-template <typename T>
-TRadians<T> operator/(TRadians<T> r1, T value) {
-    return TRadians<T>(static_cast<T>(r1) / value);
+template <typename T, typename U>
+TRadians<T> operator/(TRadians<T> r1, U value) {
+    return TRadians<T>(r1.Value() / value);
 }
 
 template <typename T>
-TDegrees<T> operator+(TDegrees<T> r1, TDegrees<T> r2) {
+constexpr TDegrees<T> operator+(TDegrees<T> r1, TDegrees<T> r2) {
     return TDegrees<T>(static_cast<T>(r1) + static_cast<T>(r2));
 }
 
 template <typename T>
-TDegrees<T> operator-(TDegrees<T> r1, TDegrees<T> r2) {
+constexpr TDegrees<T> operator-(TDegrees<T> r1, TDegrees<T> r2) {
     return TDegrees<T>(static_cast<T>(r1) - static_cast<T>(r2));
 }
 
 template <typename T>
-TDegrees<T> operator-(TDegrees<T> r) {
+constexpr TDegrees<T> operator-(TDegrees<T> r) {
     return TDegrees<T>(-static_cast<T>(r));
 }
 
-template <typename T>
-TDegrees<T> operator*(TDegrees<T> r1, T value) {
-    return TDegrees<T>(static_cast<T>(r1) * value);
+template <typename T, typename U>
+constexpr TDegrees<T> operator*(TDegrees<T> r1, U value) {
+    return TDegrees<T>(r1.Value() * value);
 }
 
-template <typename T>
-TDegrees<T> operator*(T value, TDegrees<T> r1) {
+template <typename T, typename U>
+constexpr TDegrees<T> operator*(U value, TDegrees<T> r1) {
     return r1 * value;
 }
 
-template <typename T>
-TDegrees<T> operator/(TDegrees<T> r1, T value) {
-    return TDegrees<T>(static_cast<T>(r1) / value);
+template <typename T, typename U>
+constexpr TDegrees<T> operator/(TDegrees<T> r1, U value) {
+    return TDegrees<T>(r1.Value() / value);
 }
 
 // common type comparison
@@ -219,32 +220,32 @@ bool operator<=(TRadians<T> r1, TRadians<U> r2) {
 }
 
 template <typename T, typename U>
-bool operator==(TDegrees<T> r1, TDegrees<U> r2) {
+constexpr bool operator==(TDegrees<T> r1, TDegrees<U> r2) {
     return static_cast<T>(r1) == static_cast<U>(r2);
 }
 
 template <typename T, typename U>
-bool operator!=(TDegrees<T> r1, TDegrees<U> r2) {
+constexpr bool operator!=(TDegrees<T> r1, TDegrees<U> r2) {
     return !(r1 == r2);
 }
 
 template <typename T, typename U>
-bool operator>(TDegrees<T> r1, TDegrees<U> r2) {
+constexpr bool operator>(TDegrees<T> r1, TDegrees<U> r2) {
     return static_cast<T>(r1) > static_cast<U>(r2);
 }
 
 template <typename T, typename U>
-bool operator<(TDegrees<T> r1, TDegrees<U> r2) {
+constexpr bool operator<(TDegrees<T> r1, TDegrees<U> r2) {
     return static_cast<T>(r1) < static_cast<U>(r2);
 }
 
 template <typename T, typename U>
-bool operator>=(TDegrees<T> r1, TDegrees<U> r2) {
+constexpr bool operator>=(TDegrees<T> r1, TDegrees<U> r2) {
     return static_cast<T>(r1) >= static_cast<U>(r2);
 }
 
 template <typename T, typename U>
-bool operator<=(TDegrees<T> r1, TDegrees<U> r2) {
+constexpr bool operator<=(TDegrees<T> r1, TDegrees<U> r2) {
     return static_cast<T>(r1) <= static_cast<U>(r2);
 }
 

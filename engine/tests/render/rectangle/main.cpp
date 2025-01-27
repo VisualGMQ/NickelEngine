@@ -9,7 +9,10 @@ using namespace nickel::graphics;
 class Application : public nickel::Application {
 public:
     void OnInit() override {
-        Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
+        auto& ctx = nickel::Context::GetInst();
+        ctx.EnableRender(false);
+        
+        Device device = ctx.GetGPUAdapter().GetDevice();
 
         createRenderPass(device);
         createPipelineLayout(device);
@@ -40,8 +43,9 @@ public:
         render_area.position.y = 0;
         render_area.size.w = window_size.w;
         render_area.size.h = window_size.h;
+        ClearValue values[] = {clear_value};
         RenderPassEncoder render_pass = encoder.BeginRenderPass(
-            m_render_pass, m_framebuffers[idx], render_area, {clear_value});
+            m_render_pass, m_framebuffers[idx], render_area, std::span{values});
         render_pass.SetViewport(0, 0, window_size.w, window_size.h, 0, 1);
         render_pass.SetScissor(0, 0, window_size.w, window_size.h);
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
