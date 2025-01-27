@@ -1,5 +1,5 @@
 #include "nickel/common/common.hpp"
-#include "nickel/graphics/common.hpp"
+#include "nickel/graphics/lowlevel/common.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
@@ -14,7 +14,9 @@ struct MVP {
 class Application : public nickel::Application {
 public:
     void OnInit() override {
-        Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
+        auto& ctx = nickel::Context::GetInst();
+        ctx.EnableRender(false);
+        Device device = ctx.GetGPUAdapter().GetDevice();
 
         createMVPBuffer(device);
         initMVP();
@@ -51,7 +53,7 @@ public:
         {
             ClearValue clear_value;
             clear_value.m_value = std::array<float, 4>{0.1, 0.1, 0.1, 1};
-            clear_values.push_back(clear_value);
+            clear_values.push_back({0.1f, 0.1f, 0.1f, 1.0f});
         }
         {
             ClearValue clear_value;
@@ -86,7 +88,7 @@ public:
 
         m_mvp_buffer.MapAsync();
         void* data = m_mvp_buffer.GetMappedRange();
-        m_mvp.model = nickel::CreateYRotation(y);
+        m_mvp.model = CreateYRotation(nickel::Radians{y});
         memcpy(data, &m_mvp, sizeof(m_mvp));
 
         m_mvp_buffer.Unmap();
@@ -117,8 +119,8 @@ private:
         m_mvp.model = nickel::Mat44::Identity();
         m_mvp.view = nickel::Mat44::Identity();
         m_mvp.proj =
-            nickel::CreatePersp(nickel::Radians{nickel::Degrees{45.0f}}.Value(),
-                                aspect, 0.1f, 100.0f);
+            CreatePersp(nickel::Radians{nickel::Degrees{45.0f}}, aspect,
+                                0.1f, 100.0f);
     }
 
 
