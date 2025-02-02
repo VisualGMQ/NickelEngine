@@ -54,6 +54,7 @@ public:
                      float min_depth, float max_depth);
     void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height);
     void BindGraphicsPipeline(const GraphicsPipeline&);
+    void NextSubpass(SubpassContent);
 
     void End();
 
@@ -69,6 +70,10 @@ private:
         uint32_t set = 0;
         const BindGroup* bind_group{};
         std::vector<uint32_t> dynamic_offsets;
+    };
+
+    struct NextSubpassCmd {
+        SubpassContent content;
     };
 
     struct BindPipelineCmd {
@@ -132,7 +137,7 @@ private:
     using Cmd =
         std::variant<BindGraphicsPipelineCmd, BindIndexBufferCmd,
                      BindVertexBufferCmd, SetPushConstantCmd, SetBindGroupCmd,
-                     DrawCmd, SetViewportCmd, SetScissorCmd>;
+                     DrawCmd, SetViewportCmd, SetScissorCmd, NextSubpassCmd>;
     struct ApplyRenderCmd;
 
     CommandEncoderImpl& m_cmd;

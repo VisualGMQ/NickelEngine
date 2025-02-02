@@ -1,4 +1,4 @@
-add_library(CommonRenderTestContext OBJECT common.hpp common.cpp)
+add_library(CommonRenderTestContext STATIC common.hpp common.cpp)
 target_link_libraries(CommonRenderTestContext PUBLIC Catch2 ${NICKEL_MAIN_ENTRY_NAME})
 
 add_subdirectory(triangle)

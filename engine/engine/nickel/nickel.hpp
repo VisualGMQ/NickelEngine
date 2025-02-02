@@ -1,12 +1,14 @@
 ﻿#pragma once
+#include "nickel/graphics/texture_manager.hpp"
 #include "nickel/graphics/camera.hpp"
 #include "nickel/graphics/context.hpp"
-#include "input/device/device_manager.hpp"
+#include "nickel/input/device/device_manager.hpp"
 #include "nickel/common/singleton.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/video/window.hpp"
 #include "nickel/common/dllexport.hpp"
 #include "nickel/fs/storage.hpp"
+
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
 
@@ -36,6 +38,8 @@ public:
     StorageManager& GetStorageManager();
     const StorageManager& GetStorageManager() const;
     graphics::Context& GetGraphicsContext();
+    graphics::TextureManager& GetTextureManager();
+    const graphics::TextureManager& GetTextureManager() const;
     Camera& GetCamera();
 
     void EnableRender(bool);
@@ -53,6 +57,7 @@ private:
 
 
     input::DeviceManager m_device_mgr;
+    graphics::TextureManager m_texture_mgr;
 
     void initCamera() {
         auto window_size = m_window->GetSize();

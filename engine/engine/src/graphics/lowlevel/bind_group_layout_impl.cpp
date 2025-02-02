@@ -94,7 +94,7 @@ void BindGroupLayoutImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_bind_group_layouts.push_back(this);
+        m_device.m_bind_group_layout_allocator.MarkAsGarbage(this);
     }
 }
 

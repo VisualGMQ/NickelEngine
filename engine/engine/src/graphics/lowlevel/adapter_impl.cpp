@@ -22,6 +22,8 @@ AdapterImpl::AdapterImpl(const video::Window::Impl& window) {
     vkGetPhysicalDeviceProperties(m_phyDevice, &props);
     LOGI("pick {}", props.deviceName);
 
+    queryLimits();
+
     LOGI("creating surface");
     createSurface(window);
 
@@ -96,6 +98,13 @@ void AdapterImpl::createSurface(const video::Window::Impl& impl) {
 
 void AdapterImpl::createDevice(const SVector<uint32_t, 2>& window_size) {
     m_device = new DeviceImpl{*this, window_size};
+}
+
+void AdapterImpl::queryLimits() {
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(m_phyDevice, &props);
+
+    m_limits.min_uniform_buffer_offset_alignment = props.limits.minUniformBufferOffsetAlignment;
 }
 
 AdapterImpl::~AdapterImpl() {

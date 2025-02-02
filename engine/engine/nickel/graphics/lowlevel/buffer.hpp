@@ -43,7 +43,6 @@ public:
     void BuffData(void* data, size_t size, size_t offset);
 
     operator bool() const noexcept;
-    void Release();
 
 private:
     BufferImpl* m_impl{};

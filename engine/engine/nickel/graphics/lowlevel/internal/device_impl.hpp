@@ -104,27 +104,7 @@ public:
     void EndFrame();
 
     void Present(std::span<Semaphore> semaphores);
-
-    std::vector<BufferImpl*> m_pending_delete_buffers;
-    std::vector<ImageImpl*> m_pending_delete_images;
-    std::vector<ImageViewImpl*> m_pending_delete_image_views;
-    std::vector<BindGroupLayoutImpl*> m_pending_delete_bind_group_layouts;
-    std::vector<FramebufferImpl*> m_pending_delete_framebuffers;
-    std::vector<GraphicsPipelineImpl*> m_pending_delete_graphics_pipelines;
-    std::vector<RenderPassImpl*> m_pending_delete_render_passes;
-    std::vector<SamplerImpl*> m_pending_delete_samplers;
-    std::vector<ShaderModuleImpl*> m_pending_delete_shader_modules;
-    std::vector<PipelineLayoutImpl*> m_pending_delete_pipeline_layouts;
-    std::vector<SemaphoreImpl*> m_pending_delete_semaphores;
-    std::vector<FenceImpl*> m_pending_delete_fences;
-
-private:
-    SwapchainImageInfo m_image_info;
-    const AdapterImpl& m_adapter;
-    uint32_t m_cur_swapchain_image_index = 0;
-    uint32_t m_cur_frame = 0;
-    std::vector<CommandPoolImpl*> m_cmd_pools;
-
+    
     BlockMemoryAllocator<BufferImpl> m_buffer_allocator;
     BlockMemoryAllocator<ImageImpl> m_image_allocator;
     BlockMemoryAllocator<ImageViewImpl> m_image_view_allocator;
@@ -137,6 +117,13 @@ private:
     BlockMemoryAllocator<PipelineLayoutImpl> m_pipeline_layout_allocator;
     BlockMemoryAllocator<SemaphoreImpl> m_semaphore_allocator;
     BlockMemoryAllocator<FenceImpl> m_fence_allocator;
+
+private:
+    SwapchainImageInfo m_image_info;
+    const AdapterImpl& m_adapter;
+    uint32_t m_cur_swapchain_image_index = 0;
+    uint32_t m_cur_frame = 0;
+    std::vector<CommandPoolImpl*> m_cmd_pools;
 
     QueueFamilyIndices chooseQueue(VkPhysicalDevice phyDevice,
                                    VkSurfaceKHR surface);

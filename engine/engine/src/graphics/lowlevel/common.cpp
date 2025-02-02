@@ -1,5 +1,6 @@
 #include "nickel/graphics/lowlevel/common.hpp"
 #include "nickel/internal/pch.hpp"
+#include "stb_image.h"
 
 namespace nickel::graphics {
 
@@ -11,9 +12,11 @@ const SVector<uint32_t, 2> ImageRawData::GetExtent() const {
     return m_extent;
 }
 
-ImageRawData::ImageRawData(const std::string& filename) {
+ImageRawData::ImageRawData(const Path& filename) {
     int w, h;
-    m_data = stbi_load(filename.c_str(), &w, &h, nullptr, STBI_rgb_alpha);
+
+    m_data =
+        stbi_load(filename.ToString().c_str(), &w, &h, nullptr, STBI_rgb_alpha);
     if (!m_data) {
         LOGW("load image {} failed", filename);
     } else {

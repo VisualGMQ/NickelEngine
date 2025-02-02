@@ -2,6 +2,8 @@
 
 #include "nickel/common/internal/sdl_call.hpp"
 #include "nickel/internal/pch.hpp"
+#include "nickel/nickel.hpp"
+#include "nickel/video/internal/window_impl.hpp"
 
 namespace nickel {
 
@@ -36,7 +38,6 @@ private:
     std::string m_cancel_label;
     SDL_PropertiesID m_properties;
 
-    std::promise<std::vector<std::string>> m_promise;
     std::vector<std::string> m_results;
 
     static void callback(void* userdata, const char* const* filelist,
@@ -77,8 +78,6 @@ void FileDialog::Impl::SetDefaultFolder(const std::string& folder) {
 }
 
 void FileDialog::Impl::Open() {
-    std::future f = m_promise.get_future();
-
     SDL_FileDialogType dialog_type{};
     switch (m_type) {
         case Type::OpenFile:
@@ -114,6 +113,9 @@ void FileDialog::Impl::Open() {
     SDL_CALL(SDL_SetBooleanProperty(m_properties,
                                     SDL_PROP_FILE_DIALOG_MANY_BOOLEAN,
                                     m_allow_multiple_select));
+    SDL_CALL(SDL_SetPointerProperty(
+        m_properties, SDL_PROP_FILE_DIALOG_WINDOW_POINTER,
+        ::nickel::Context::GetInst().GetWindow().GetImpl().m_window));
     SDL_CALL(SDL_SetNumberProperty(
         m_properties, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, filters.size()));
     SDL_CALL(SDL_SetPointerProperty(
@@ -121,8 +123,6 @@ void FileDialog::Impl::Open() {
 
     SDL_ShowFileDialogWithProperties(dialog_type, &callback, this,
                                      m_properties);
-
-    m_results = f.get();
 }
 
 const std::vector<std::string>& FileDialog::Impl::GetSelectedFiles() const {
@@ -131,16 +131,12 @@ const std::vector<std::string>& FileDialog::Impl::GetSelectedFiles() const {
 
 void FileDialog::Impl::callback(void* userdata, const char* const* filelist,
                                 int) {
-    auto self = static_cast<Impl*>(userdata);
-
     std::vector<std::string> results;
     while (filelist && *filelist) {
         const char* file = *filelist;
         results.push_back(file);
         filelist++;
     }
-
-    self->m_promise.set_value(std::move(results));
 }
 
 FileDialog FileDialog::CreateOpenFileDialog() {

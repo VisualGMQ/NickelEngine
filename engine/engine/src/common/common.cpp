@@ -1,11 +1,12 @@
 #include "nickel/common/common.hpp"
 #include "nickel/common/log.hpp"
+
 #include <iterator>
 
 namespace nickel {
 
-std::vector<char> ReadWholeFile(const char* filename) {
-    std::ifstream file(filename, std::ios::binary);
+std::vector<char> ReadWholeFile(const Path& filename) {
+    std::ifstream file(filename.GetUnderlyingPath(), std::ios::binary);
 
     if (file.fail()) {
         LOGW("file {} load failed", filename);

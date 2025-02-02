@@ -36,9 +36,15 @@ public:
     bool IsStorageReady() const;
     void WaitStorageReady(
         uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
+    void EnumerateStorage(const std::string& path,
+                          StorageEnumerator enumerator);
 
 private:
     SDL_Storage* m_storage = nullptr;
+
+    static SDL_EnumerationResult sdlEnumerateCallback(void* userdata,
+                                                      const char* dirname,
+                                                      const char* fname);
 };
 
 StorageImpl::StorageImpl(Type type, const std::string& param1,
@@ -128,6 +134,34 @@ void StorageImpl::WaitStorageReady(uint32_t timeout) const {
     }
 }
 
+void StorageImpl::EnumerateStorage(const std::string& path,
+                                   StorageEnumerator enumerator) {
+    SDL_EnumerateStorageDirectory(m_storage, path.c_str(), sdlEnumerateCallback,
+                                  &enumerator);
+}
+
+SDL_EnumerationResult StorageImpl::sdlEnumerateCallback(void* userdata,
+                                                        const char* dirname,
+                                                        const char* fname) {
+    if (!userdata) {
+        return SDL_ENUM_FAILURE;
+    }
+    StorageEnumerator* enumerator = static_cast<StorageEnumerator*>(userdata);
+    StorageEnumerateBehavior behavior = (*enumerator)(dirname, fname);
+
+    switch (behavior) {
+        case StorageEnumerateBehavior::Continue:
+            return SDL_ENUM_CONTINUE;
+        case StorageEnumerateBehavior::Success:
+            return SDL_ENUM_SUCCESS;
+        case StorageEnumerateBehavior::Failed:
+            return SDL_ENUM_FAILURE;
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
 bool StorageImpl::RemovePath(const std::string& path) const {
     if (!SDL_RemoveStoragePath(m_storage, path.c_str())) {
         LOGE("remove path {} failed: {}", path, SDL_GetError());
@@ -164,6 +198,10 @@ bool CommonStorageBehavior::IsStorageReady() const {
 
 void CommonStorageBehavior::WaitStorageReady(uint32_t timeout) const {
     return m_impl->WaitStorageReady(timeout);
+}
+
+void CommonStorageBehavior::EnumerateStorage(const std::string& path, StorageEnumerator enumerator){
+    return m_impl->EnumerateStorage(path, enumerator);
 }
 
 void ReadOnlyStorageBehavior::Initialize(StorageImpl* impl) {

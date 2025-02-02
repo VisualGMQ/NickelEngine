@@ -1,8 +1,12 @@
 ﻿#pragma once
+#include "nickel/fs/storage.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/primitive_draw.hpp"
 
 namespace nickel::graphics {
+
+class ContextImpl;
+
 class Context {
 public:
     Context(const Adapter&, const video::Window& window,
@@ -23,9 +27,11 @@ public:
 
     void EnableWireFrame(bool enable) const;
 
+    const ContextImpl* GetImpl() const;
+    ContextImpl* GetImpl() ;
+
 private:
-    class Impl;
-    std::unique_ptr<Impl> m_impl;
+    std::unique_ptr<ContextImpl> m_impl;
 };
 
 }

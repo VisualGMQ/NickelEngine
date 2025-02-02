@@ -177,7 +177,7 @@ void BufferImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_buffers.push_back(this);
+        m_device.m_buffer_allocator.MarkAsGarbage(this);
     }
 }
 

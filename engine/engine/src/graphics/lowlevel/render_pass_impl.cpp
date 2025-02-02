@@ -139,7 +139,7 @@ void RenderPassImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_dev.m_pending_delete_render_passes.push_back(this);
+        m_dev.m_render_pass_allocator.MarkAsGarbage(this);
     }
 }
 

@@ -28,7 +28,6 @@ Semaphore& CommonResource::GetImGuiRenderFinishSemaphore(uint32_t idx) {
     return m_imgui_render_finish_sems[idx];
 }
 
-
 Fence& CommonResource::GetFence(uint32_t idx) {
     return m_present_fences[idx];
 }
@@ -145,6 +144,72 @@ void CommonResource::initSyncObjects(Device& device) {
         m_image_avaliable_sems.push_back(device.CreateSemaphore());
         m_render_finish_sems.push_back(device.CreateSemaphore());
         m_imgui_render_finish_sems.push_back(device.CreateSemaphore());
+    }
+}
+
+void CommonResource::initDefaultResources(Device& device) {
+    {
+        Sampler::Descriptor desc;
+        desc.minFilter = Filter::Linear;
+        desc.magFilter = Filter::Linear;
+        desc.addressModeW = SamplerAddressMode::Repeat;
+        desc.addressModeU = SamplerAddressMode::Repeat;
+        desc.addressModeV = SamplerAddressMode::Repeat;
+        m_default_sampler = device.CreateSampler(desc);
+    }
+
+    m_white_image = createPureColorImage(device, 0xFFFFFFFF);
+    m_black_image = createPureColorImage(device, 0x000000FF);
+    m_default_normal_image = createPureColorImage(device, 0xFFFF8080);
+}
+
+ImageView CommonResource::createPureColorImage(Device& device, uint32_t color) {
+    Image image;
+    {
+        Image::Descriptor desc;
+        desc.imageType = ImageType::Dim2;
+        desc.extent.w = 1;
+        desc.extent.h = 1;
+        desc.extent.l = 1;
+        desc.format = Format::R8G8B8A8_UNORM;
+        desc.usage = ImageUsage::Sampled;
+        desc.tiling = ImageTiling::Optimal;
+        image = device.CreateImage(desc);
+    }
+    {
+        Buffer::Descriptor desc;
+        desc.m_memory_type = MemoryType::CPULocal;
+        desc.m_size = 4;
+        desc.m_usage = BufferUsage::CopySrc;
+        Buffer buffer = device.CreateBuffer(desc);
+        buffer.MapAsync();
+        void* data = buffer.GetMappedRange();
+        memcpy(data, &color, desc.m_size);
+        buffer.Unmap();
+
+        CommandEncoder encoder = device.CreateCommandEncoder();
+        CopyEncoder copy = encoder.BeginCopy();
+        CopyEncoder::BufferImageCopy copy_info;
+        copy_info.bufferOffset = 0;
+        copy_info.imageExtent.w = 1;
+        copy_info.imageExtent.h = 1;
+        copy_info.imageExtent.l = 1;
+        copy_info.bufferImageHeight = 0;
+        copy_info.bufferRowLength = 0;
+        copy_info.imageSubresource.aspectMask = ImageAspect::Color;
+        copy.CopyBufferToTexture(buffer, image, copy_info);
+        copy.End();
+        Command cmd = encoder.Finish();
+        device.Submit(cmd, {}, {}, {});
+        device.WaitIdle();
+    }
+    {
+        ImageView::Descriptor view_desc;
+        view_desc.format = Format::R8G8B8A8_UNORM;
+        view_desc.components = ComponentMapping::SwizzleIdentity;
+        view_desc.subresourceRange.aspectMask = Flags{ImageAspect::Color};
+        view_desc.viewType = ImageViewType::Dim2;
+        return image.CreateView(view_desc);
     }
 }
 

@@ -628,4 +628,9 @@ enum class ImageColorSpace {
     DisplayNativeAMD,
 };
 
+enum class SubpassContent {
+    Inline,
+    SecondaryCommandBuffer,
+};
+
 }  // namespace nickel::graphics

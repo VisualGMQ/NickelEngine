@@ -38,7 +38,10 @@ Buffer& Buffer::operator=(Buffer&& o) noexcept {
 }
 
 Buffer::~Buffer() {
-    Release();
+    if (m_impl) {
+        m_impl->DecRefcount();
+        m_impl = nullptr;
+    }
 }
 
 Buffer::operator bool() const noexcept {
@@ -91,13 +94,6 @@ void Buffer::Flush(uint64_t offset, uint64_t size) {
 
 void Buffer::BuffData(void* data, size_t size, size_t offset) {
     return m_impl->BuffData(data, size, offset);
-}
-
-void Buffer::Release() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-        m_impl = nullptr;
-    }
 }
 
 }  // namespace nickel::graphics

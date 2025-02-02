@@ -101,6 +101,14 @@ graphics::Context& Context::GetGraphicsContext() {
     return *m_graphics_ctx;
 }
 
+graphics::TextureManager& Context::GetTextureManager() {
+    return m_texture_mgr;
+}
+
+const graphics::TextureManager& Context::GetTextureManager() const {
+    return m_texture_mgr;
+}
+
 Camera& Context::GetCamera() {
     return *m_camera;
 }

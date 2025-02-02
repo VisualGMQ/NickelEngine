@@ -222,7 +222,7 @@ void GraphicsPipelineImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_graphics_pipelines.push_back(this);
+        m_device.m_graphics_pipeline_allocator.MarkAsGarbage(this);
     }
 }
 }

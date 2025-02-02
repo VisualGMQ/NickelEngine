@@ -13,12 +13,12 @@ layout (location = 0) out VS_OUT{
 } vs_out;
 
 layout(binding = 0) uniform MyUniform {
-    mat4 view;
     mat4 proj;
 } MVP;
 
 layout(push_constant) uniform PushConstant {
     mat4 model;
+    mat4 view;
 } pushConstant;
 
 void main() {
@@ -26,7 +26,7 @@ void main() {
 
     mat4 model = pushConstant.model;
     vec4 fragPos = model * vec4(inPosition, 1.0);
-    gl_Position = MVP.proj * MVP.view * fragPos;
+    gl_Position = MVP.proj * pushConstant.view * fragPos;
 
     vs_out.fragPos = vec3(fragPos);
 

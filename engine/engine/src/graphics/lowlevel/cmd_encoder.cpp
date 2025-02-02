@@ -56,6 +56,10 @@ struct RenderPassEncoder::ApplyRenderCmd {
         }
     }
 
+    void operator()(const NextSubpassCmd& cmd) {
+        vkCmdNextSubpass(m_cmd.m_cmd, SubpassContent2Vk(cmd.content));
+    }
+
     void operator()(const SetViewportCmd& cmd) {
         VkViewport viewport;
         viewport.x = cmd.x;
@@ -177,8 +181,8 @@ void RenderPassEncoder::SetBindGroup(uint32_t set, BindGroup& bind_group) {
 }
 
 void RenderPassEncoder::SetBindGroup(
-    uint32_t set,
-    BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
+    uint32_t set, BindGroup& bind_group,
+    const std::vector<uint32_t>& dynamicOffset) {
     SetBindGroupCmd cmd;
     cmd.set = set;
     cmd.bind_group = &bind_group;
@@ -223,6 +227,10 @@ void RenderPassEncoder::SetScissor(int32_t x, int32_t y, uint32_t width,
 void RenderPassEncoder::BindGraphicsPipeline(const GraphicsPipeline& pipeline) {
     BindGraphicsPipelineCmd cmd{pipeline};
     m_record_cmds.push_back(cmd);
+}
+
+void RenderPassEncoder::NextSubpass(SubpassContent content) {
+    m_record_cmds.push_back(NextSubpassCmd{content});
 }
 
 void RenderPassEncoder::End() {
