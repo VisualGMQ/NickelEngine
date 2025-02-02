@@ -13,6 +13,7 @@ const SVector<uint32_t, 2> ImageRawData::GetExtent() const {
 
 ImageRawData::ImageRawData(const std::string& filename) {
     int w, h;
+
     m_data = stbi_load(filename.c_str(), &w, &h, nullptr, STBI_rgb_alpha);
     if (!m_data) {
         LOGW("load image {} failed", filename);

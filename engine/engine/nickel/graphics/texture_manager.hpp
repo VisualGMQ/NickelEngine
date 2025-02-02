@@ -1,0 +1,23 @@
+﻿#pragma once
+#include <memory>
+#include <string>
+
+#include "nickel/graphics/texture.hpp"
+#include "nickel/graphics/lowlevel/enums.hpp"
+
+namespace nickel::graphics {
+
+class TextureManagerImpl;
+
+class TextureManager {
+public:
+    TextureManager();
+    ~TextureManager();
+    Texture Load(const std::string& filename, Format format);
+    Texture Find(const std::string& filename);
+    
+private:
+    std::unique_ptr<TextureManagerImpl> m_impl;
+};
+
+}

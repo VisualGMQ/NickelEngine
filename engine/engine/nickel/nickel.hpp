@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "graphics/texture_manager.hpp"
 #include "nickel/graphics/camera.hpp"
 #include "nickel/graphics/context.hpp"
 #include "input/device/device_manager.hpp"
@@ -30,6 +31,8 @@ public:
     StorageManager& GetStorageManager();
     const StorageManager& GetStorageManager() const;
     graphics::Context& GetGraphicsContext();
+    graphics::TextureManager& GetTextureManager();
+    const graphics::TextureManager& GetTextureManager() const;
     Camera& GetCamera();
 
     void EnableRender(bool);
@@ -45,6 +48,7 @@ private:
     std::unique_ptr<graphics::Context> m_graphics_ctx;
     std::unique_ptr<StorageManager> m_storage_mgr;
     input::DeviceManager m_device_mgr;
+    graphics::TextureManager m_texture_mgr;
 
     void initCamera() {
         auto window_size = m_window->GetSize();
