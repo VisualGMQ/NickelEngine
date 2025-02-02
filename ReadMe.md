@@ -23,4 +23,11 @@ NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.c
 cmake --preset=default
 cmake --build cmake-build
 ```
+
 安卓平台需要将`engine`文件夹拷贝到`android-project/app/jni`下然后开启`Android Studio`进行编译
+
+## How To Run
+
+所有可执行文件均在`engine`目录下运行。
+
+VS及基于MSBuild的IDE（如Rider）会自动设置路径，可直接在IDE里面运行。
