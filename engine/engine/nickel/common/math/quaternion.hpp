@@ -5,14 +5,17 @@
 
 namespace nickel {
 template <typename T>
+requires std::is_floating_point_v<T>
 struct Quaternion final {
     SVector<T, 3> v;
-    T w;
+    T w = 1;
 
     static Quaternion Create(const SVector<T, 3>& axis, TRadians<T> radians) {
         auto half = radians * 0.5;
         return {axis * std::sin(half.Value()), std::cos(half.Value())};
     }
+    
+    Quaternion() = default;
 
     Quaternion(const SVector<T, 3>& v, T w)
         : v{v}, w{w} {
@@ -21,6 +24,8 @@ struct Quaternion final {
     Quaternion(T x, T y, T z, T w)
         : v{x, y, z}, w{w} {
     }
+
+    Quaternion(const Quaternion&) = default;
 
     // only for unit quaternion
     Quaternion Conjugate() const {
@@ -51,15 +56,19 @@ struct Quaternion final {
         auto xw = v.x * w;
         auto yw = v.y * w;
         auto zw = v.z * w;
-        return SMatrix<T, 4, 4>::FromCol({
+        return SMatrix<T, 4, 4>::FromCol(
             1 - 2 * (y2 + z2), 2 * (xy + zw), 2 * (xz - yw), 0,
             2 * (xy - zw), 1 - 2 * (x2 + z2), 2 * (yz + xw), 0,
             2 * (xz + yw), 2 * (yz - xw), 1 - 2 * (x2 + y2), 0,
             0, 0, 0, 1
-        });
+        );
     }
-
     // clang-format on
+
+    Quaternion& operator*=(const Quaternion& o) noexcept {
+        *this = *this * o;
+        return *this;
+    }
 };
 
 template <typename T>

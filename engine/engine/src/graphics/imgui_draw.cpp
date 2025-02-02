@@ -82,6 +82,10 @@ void ImGuiRenderPass::End(Device device, CommonResource& res,
     renderImGui(device, res, cur_frame);
 }
 
+void ImGuiRenderPass::PrepareForRender() {
+    ImGui::Render();
+}
+
 void ImGuiRenderPass::initDescriptorPool(const Adapter& adapter) {
     VkDescriptorPoolSize pool_sizes[] = {
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -166,7 +170,6 @@ void ImGuiRenderPass::initFramebuffers(const Device& device) {
 
 void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
                                   int cur_frame_idx) {
-    ImGui::Render();
     auto draw_data = ImGui::GetDrawData();
 
     NICKEL_RETURN_IF_FALSE(draw_data->DisplaySize.x > 0 &&
@@ -214,6 +217,8 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
         VK_CALL(vkQueueSubmit(device.Impl().m_graphics_queue, 1, &info,
                               res.GetFence(cur_frame_idx).Impl().m_fence));
     }
+    
+    encoder.GetImpl().PendingDelete();
 }
 
 }  // namespace nickel::graphics

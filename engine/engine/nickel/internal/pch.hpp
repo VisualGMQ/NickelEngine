@@ -22,7 +22,6 @@
 #include <map>
 
 #include "volk.h"
-#include "stb_image.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"

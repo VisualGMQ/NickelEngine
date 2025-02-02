@@ -28,10 +28,15 @@ layout(binding = 10) uniform MyCameraInfo {
     vec3 eyePos;
 } CameraInfo;
 
-const float PI = 3.14159265359;
-const vec3 lightDir = normalize(vec3(1, 1, 1));
+// void main() {
+//     vec3 baseColor = texture(sampler2D(baseColorTexture, baseColorSampler), fs_in.fragUV).rgb * Material.baseColor.rgb;
+//     outColor = vec4(baseColor, 1.0);
+// }
 
-float DistributionGGX(vec3 N, vec3 H, float roughness) {
+const float PI = 3.14159265359;
+// ----------------------------------------------------------------------------
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
     float a = roughness*roughness;
     float a2 = a*a;
     float NdotH = max(dot(N, H), 0.0);
@@ -43,8 +48,9 @@ float DistributionGGX(vec3 N, vec3 H, float roughness) {
 
     return nom / denom;
 }
-
-float GeometrySchlickGGX(float NdotV, float roughness) {
+// ----------------------------------------------------------------------------
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
     float r = (roughness + 1.0);
     float k = (r*r) / 8.0;
 
@@ -53,8 +59,9 @@ float GeometrySchlickGGX(float NdotV, float roughness) {
 
     return nom / denom;
 }
-
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+// ----------------------------------------------------------------------------
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
     float ggx2 = GeometrySchlickGGX(NdotV, roughness);
@@ -62,71 +69,85 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
 
     return ggx1 * ggx2;
 }
-
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+// ----------------------------------------------------------------------------
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
+// ----------------------------------------------------------------------------
 
-vec3 LambertAlbedo(vec3 f0) {
-    return f0 / PI;
-}
+const vec3 lightDir = vec3(-0.2, -0.6, -1);
+const vec3 lightColor = vec3(1, 1, 1);
 
-// void main() {
-//     vec3 baseColor = texture(sampler2D(baseColorTexture, baseColorSampler), fs_in.fragUV).rgb * Material.baseColor.rgb;
-//     outColor = vec4(baseColor, 1.0);
-// }
-
-void main() {		
+void main()
+{
     mat3 TBN = mat3(normalize(fs_in.TBN[0]),
-                    normalize(fs_in.TBN[1]),
-                    normalize(fs_in.TBN[2]));
-    vec3 n = texture(sampler2D(normalMapTexture, normalMapSampler), fs_in.fragUV).rgb;
-    vec3 baseColor = texture(sampler2D(baseColorTexture, baseColorSampler), fs_in.fragUV).rgb * Material.baseColor.rgb;
+    normalize(fs_in.TBN[1]),
+    normalize(fs_in.TBN[2]));
+    vec3 N = texture(sampler2D(normalMapTexture, normalMapSampler), fs_in.fragUV).rgb;
+    vec3 albedo = texture(sampler2D(baseColorTexture, baseColorSampler), fs_in.fragUV).rgb * Material.baseColor.rgb;
     float occlusion = texture(sampler2D(occlusionTexture, occlusionSampler), fs_in.fragUV).r;
     vec3 metalRoughness = texture(sampler2D(metalroughnessTexture, metalroughnessSampler), fs_in.fragUV).rgb;
 
-    n = normalize(n * 2.0 - 1.0);
-    n = normalize(TBN * n);
-
-    vec3 v = normalize(CameraInfo.eyePos - fs_in.fragPos);
-    vec3 l = -lightDir;
-
-    vec3 h = normalize(v + l);
-
-    float NoV = dot(n, v);
-    float HoV = dot(h, v);
-    float NoL = clamp(dot(n, l), 0.0, 1.0);
-    float NoH = clamp(dot(n, h), 0.0, 1.0);
-    float LoH = clamp(dot(l, h), 0.0, 1.0);
-
     float roughness = metalRoughness.g * Material.roughness;
-    float metalness = metalRoughness.b * Material.metalness;
+    float metallic = metalRoughness.b * Material.metalness;
 
-    vec3 f0 = metalness * baseColor;
+    N = normalize(N * 2.0 - 1.0);
+    N = normalize(TBN * N);
+    
+    vec3 V = normalize(CameraInfo.eyePos - fs_in.fragPos);
+
+    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
+    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, albedo, metallic);
+
+    // reflectance equation
+    vec3 Lo = vec3(0.0);
 
     // calculate per-light radiance
-    vec3 radiance = vec3(100, 100, 100);
+    vec3 L = normalize(-lightDir);
+    vec3 H = normalize(V + L);
+    float distance = length(lightDir);
+    float attenuation = 1.0 / (distance * distance);
+    vec3 radiance = lightColor * attenuation;
 
     // Cook-Torrance BRDF
-    float D = DistributionGGX(n, h, roughness);   
-    float G = GeometrySmith(n, v, l, roughness);      
-    vec3 F  = fresnelSchlick(clamp(HoV, 0.0, 1.0), f0);
-        
-    vec3 numerator    = D * G * F; 
-    float denominator = 4.0 * max(NoV, 0.0) * max(NoL, 0.0) + 0.0001;
-    vec3 specular = numerator / denominator;
-    
-    vec3 kS = F;
-    vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metalness;	  
+    float NDF = DistributionGGX(N, H, roughness);
+    float G   = GeometrySmith(N, V, L, roughness);
+    vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
 
-    vec3 albedo = baseColor * occlusion;
+    vec3 numerator    = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
+    vec3 specular = numerator / denominator;
+
+    // kS is equal to Fresnel
+    vec3 kS = F;
+    // for energy conservation, the diffuse and specular light can't
+    // be above 1.0 (unless the surface emits light); to preserve this
+    // relationship the diffuse component (kD) should equal 1.0 - kS.
+    vec3 kD = vec3(1.0) - kS;
+    // multiply kD by the inverse metalness such that only non-metals 
+    // have diffuse lighting, or a linear blend if partly metal (pure metals
+    // have no diffuse light).
+    kD *= 1.0 - metallic;
+
+    // scale light by NdotL
+    float NdotL = max(dot(N, L), 0.0);
 
     // add to outgoing radiance Lo
-    vec3 Lo = (kD * albedo / PI + specular) * radiance * max(NoL, 0.0);
-    
+    Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+
+    // ambient lighting (note that the next IBL tutorial will replace 
+    // this ambient lighting with environment lighting).
     vec3 ambient = vec3(0.03) * albedo * occlusion;
+
     vec3 color = ambient + Lo;
+
+    // HDR tonemapping
+    color = color / (color + vec3(1.0));
+    // gamma correct
+    color = pow(color, vec3(1.0/2.2));
 
     outColor = vec4(color, 1.0);
 }

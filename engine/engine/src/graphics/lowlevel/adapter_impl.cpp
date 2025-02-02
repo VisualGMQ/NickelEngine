@@ -8,6 +8,46 @@
 
 namespace nickel::graphics {
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT level,
+                    VkDebugUtilsMessageTypeFlagsEXT type,
+                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                    void* pUserData) {
+    std::string type_name;
+
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+        type_name += "General";
+    }
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+        type_name += type_name.empty() ? "Validation" : "|Validation";
+    }
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        type_name += type_name.empty() ? "Performance" : "|Performance";
+    }
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT) {
+        type_name += type_name.empty() ? "DeviceAddressBinding"
+                                       : "|DeviceAddressBinding";
+    }
+
+    switch (level) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            LOGT("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            return false;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            LOGI("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            return false;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            LOGW("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            return false;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            LOGE("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            return true;
+    }
+
+    NICKEL_CANT_REACH();
+    return false;
+}
+
 AdapterImpl::AdapterImpl(const video::Window::Impl& window) {
     if (volkInitialize() != VK_SUCCESS) {
         LOGE("volk init failed");
@@ -21,6 +61,8 @@ AdapterImpl::AdapterImpl(const video::Window::Impl& window) {
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(m_phyDevice, &props);
     LOGI("pick {}", props.deviceName);
+
+    queryLimits();
 
     LOGI("creating surface");
     createSurface(window);
@@ -40,11 +82,32 @@ void AdapterImpl::createInstance() {
     appInfo.pApplicationName = "NickelEngine";
     ci.pApplicationInfo = &appInfo;
 
+    std::vector<const char*> require_extensions;
     unsigned int count;
-    auto extensions = SDL_Vulkan_GetInstanceExtensions(&count);
+    auto sdl_required_extensions = SDL_Vulkan_GetInstanceExtensions(&count);
 
-    ci.enabledExtensionCount = count;
-    ci.ppEnabledExtensionNames = extensions;
+    for (int i = 0; i < count; i++) {
+        require_extensions.push_back(sdl_required_extensions[i]);
+    }
+    require_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+    uint32_t extension_count;
+    VK_CALL(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count,
+                                                   nullptr));
+    std::vector<VkExtensionProperties> support_extensions;
+    support_extensions.resize(extension_count);
+    VK_CALL(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count,
+                                                   support_extensions.data()));
+
+    using LiteralString = const char*;
+    RemoveUnexistsElems<LiteralString, VkExtensionProperties>(
+        require_extensions, support_extensions,
+        [](const LiteralString& require, const VkExtensionProperties& prop) {
+            return std::strcmp(prop.extensionName, require) == 0;
+        });
+
+    ci.enabledExtensionCount = require_extensions.size();
+    ci.ppEnabledExtensionNames = require_extensions.data();
 
     std::vector<VkLayerProperties> supportLayers;
     uint32_t layerCount;
@@ -57,9 +120,23 @@ void AdapterImpl::createInstance() {
 #ifdef NICKEL_DEBUG
     requireLayers.push_back("VK_LAYER_KHRONOS_validation");
     LOGI("Vulkan enable validation layer");
+
+    VkDebugUtilsMessengerCreateInfoEXT debug_ci{};
+    debug_ci.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    debug_ci.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_ci.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    debug_ci.pfnUserCallback = VulkanDebugCallback;
+    debug_ci.pUserData = nullptr;  // Optional
+    ci.pNext = &debug_ci;
 #endif
 
-    using LiteralString = const char*;
     RemoveUnexistsElems<const char*, VkLayerProperties>(
         requireLayers, supportLayers,
         [](const LiteralString& require, const VkLayerProperties& prop) {
@@ -68,8 +145,18 @@ void AdapterImpl::createInstance() {
 
     ci.enabledLayerCount = requireLayers.size();
     ci.ppEnabledLayerNames = requireLayers.data();
-    vkCreateInstance(&ci, nullptr, &m_instance);
+    VK_CALL(vkCreateInstance(&ci, nullptr, &m_instance));
     volkLoadInstance(m_instance);
+
+#ifdef NICKEL_DEBUG
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+        m_instance, "vkCreateDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(m_instance, &debug_ci, nullptr, &m_debug_utils_messenger);
+    } else {
+        LOGE("vkCreateDebugUtilsMessengerEXT function not exists");
+    }
+#endif
 }
 
 void AdapterImpl::pickupPhysicalDevice() {
@@ -98,9 +185,24 @@ void AdapterImpl::createDevice(const SVector<uint32_t, 2>& window_size) {
     m_device = new DeviceImpl{*this, window_size};
 }
 
+void AdapterImpl::queryLimits() {
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(m_phyDevice, &props);
+
+    m_limits.min_uniform_buffer_offset_alignment =
+        props.limits.minUniformBufferOffsetAlignment;
+}
+
 AdapterImpl::~AdapterImpl() {
     delete m_device;
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+        m_instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(m_instance, m_debug_utils_messenger, nullptr);
+    }
+
     vkDestroyInstance(m_instance, nullptr);
 }
 

@@ -1,18 +1,20 @@
 #include "nickel/graphics/primitive_draw.hpp"
 
-#include "nickel/nickel.hpp"
+#include "nickel/graphics/internal/context_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/framebuffer_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/image_impl.hpp"
+#include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
-PrimitiveRenderPass::PrimitiveRenderPass(Device device, StorageManager& storage_mgr,
-                                     RenderPass& render_pass) {
+PrimitiveRenderPass::PrimitiveRenderPass(Device device,
+                                         StorageManager& storage_mgr,
+                                         RenderPass& render_pass,
+                                         CommonResource& res) {
     initVertexBuffer(device);
     initIndicesBuffer(device);
-    initProjectBuffer(device);
     initBindGroupLayout(device);
     initPipelineLayout(device);
-    initBindGroup();
+    initBindGroup(res);
 
     auto local_storage = storage_mgr.AcqurieLocalStorage();
     local_storage->WaitStorageReady();
@@ -34,13 +36,11 @@ PrimitiveRenderPass::PrimitiveRenderPass(Device device, StorageManager& storage_
 
 void PrimitiveRenderPass::Begin() {
     m_line_vertex_buffer.m_cpu.MapAsync();
-    m_line_vertex_buffer.m_ptr = static_cast<char*>(m_line_vertex_buffer.m_cpu.
-        GetMappedRange());
+    m_line_vertex_buffer.m_ptr =
+        static_cast<char*>(m_line_vertex_buffer.m_cpu.GetMappedRange());
     m_triangle_vertex_buffer.m_cpu.MapAsync();
-    m_triangle_vertex_buffer.m_ptr = static_cast<char*>(m_triangle_vertex_buffer
-        .m_cpu.GetMappedRange());
-
-    m_project_buffer.MapAsync();
+    m_triangle_vertex_buffer.m_ptr =
+        static_cast<char*>(m_triangle_vertex_buffer.m_cpu.GetMappedRange());
 }
 
 void PrimitiveRenderPass::UploadData2GPU(Device& device) {
@@ -88,15 +88,10 @@ void PrimitiveRenderPass::UploadData2GPU(Device& device) {
 void PrimitiveRenderPass::ApplyDrawCall(RenderPassEncoder& encoder,
                                         bool wireframe) {
     auto& camera = nickel::Context::GetInst().GetCamera();
-    if (NeedDraw()) {
-        void* ptr = m_project_buffer.GetMappedRange();
-        Mat44 proj = camera.GetProject();
-        memcpy(ptr, proj.Ptr(), sizeof(proj));
-    }
 
     Mat44 model_view[] = {
-        camera.GetView(),
         Mat44::Identity(),
+        camera.GetView(),
     };
 
     if (m_line_vertex_buffer.m_elem_count > 0) {
@@ -170,11 +165,11 @@ void PrimitiveRenderPass::initBindGroupLayout(Device& device) {
     m_bind_group_layout = device.CreateBindGroupLayout(desc);
 }
 
-void PrimitiveRenderPass::initBindGroup() {
+void PrimitiveRenderPass::initBindGroup(CommonResource& res) {
     BindGroup::Descriptor desc;
     BindGroup::Entry entry;
     BindGroup::BufferBinding binding;
-    binding.buffer = m_project_buffer;
+    binding.buffer = res.m_camera_buffer;
     binding.type = BindGroup::BufferBinding::Type::Uniform;
     entry.binding.entry = binding;
     entry.shader_stage = ShaderStage::Vertex;
@@ -293,18 +288,12 @@ void PrimitiveRenderPass::initIndicesBuffer(Device& device) {
     }
 }
 
-void PrimitiveRenderPass::initProjectBuffer(Device& device) {
-    Buffer::Descriptor desc;
-    desc.m_memory_type = MemoryType::Coherence;
-    desc.m_size = sizeof(Mat44);
-    desc.m_usage = BufferUsage::Uniform;
-    m_project_buffer = device.CreateBuffer(desc);
-}
-
 GraphicsPipeline::Descriptor PrimitiveRenderPass::getPipelineDescTmpl(
     ShaderModule& vertex_shader, ShaderModule& frag_shader,
     RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc;
+
+    desc.subpass = 0;
 
     GraphicsPipeline::Descriptor::ShaderStage vertex_stage{vertex_shader,
                                                            "main"};

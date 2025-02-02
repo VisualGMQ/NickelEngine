@@ -11,7 +11,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     : m_layout{desc.layout}, m_device{dev}, m_render_pass{desc.m_render_pass} {
     VkGraphicsPipelineCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    ci.subpass = 0;
+    ci.subpass = desc.subpass;
 
     std::vector<VkPipelineShaderStageCreateInfo> stage_ci_list;
     // shader stage
@@ -222,7 +222,7 @@ void GraphicsPipelineImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_graphics_pipelines.push_back(this);
+        m_device.m_graphics_pipeline_allocator.MarkAsGarbage(this);
     }
 }
 }

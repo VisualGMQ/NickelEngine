@@ -11,6 +11,10 @@ class AdapterImpl;
 
 class NICKEL_API Adapter {
 public:
+    struct Limits {
+        uint64_t min_uniform_buffer_offset_alignment{};
+    };
+    
     Adapter(const video::Window::Impl& window);
     ~Adapter();
 
@@ -21,6 +25,7 @@ public:
     Device GetDevice() const;
 
     const AdapterImpl& GetImpl() const;
+    const Limits& GetLimits() const;
 
 private:
     std::unique_ptr<AdapterImpl> m_impl;

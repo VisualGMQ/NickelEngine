@@ -37,7 +37,7 @@ void SamplerImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_dev.m_pending_delete_samplers.push_back(this);
+        m_dev.m_sampler_allocator.MarkAsGarbage(this);
     }
 }
 

@@ -6,6 +6,7 @@ class Camera {
 public:
     virtual Mat44 GetProject() const = 0;
     virtual Mat44 GetView() const = 0;
+    virtual Vec3 GetPosition() const = 0;
     virtual ~Camera() = default;
 };
 
@@ -27,7 +28,7 @@ public:
     void MoveForward(float dist);
     void MoveRightLeft(float dist);
     void MoveUpDown(float dist);
-    const Vec3& GetPosition() const;
+    Vec3 GetPosition() const override;
 
     Mat44 GetProject() const override;
     Mat44 GetView() const override;

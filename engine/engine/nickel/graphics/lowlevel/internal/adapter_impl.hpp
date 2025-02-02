@@ -20,16 +20,21 @@ public:
     ~AdapterImpl();
     Device GetDevice() const;
 
+    const Adapter::Limits& GetLimits() const { return m_limits; }
+
     VkInstance m_instance;
     VkPhysicalDevice m_phyDevice;
     VkSurfaceKHR m_surface;
     DeviceImpl* m_device{};
+    Adapter::Limits m_limits;
+    VkDebugUtilsMessengerEXT m_debug_utils_messenger;
 
 private:
     void createInstance();
     void pickupPhysicalDevice();
     void createSurface(const video::Window::Impl& impl);
     void createDevice(const SVector<uint32_t, 2>& window_size);
+    void queryLimits();
 };
 
 }  // namespace nickel::graphics

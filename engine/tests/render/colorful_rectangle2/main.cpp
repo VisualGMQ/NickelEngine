@@ -128,11 +128,11 @@ private:
         void* map = m_vertex_buffer.GetMappedRange();
         // clang-format off
         float datas[] = {
-            // position, texcoord
-            -0.5, -0.5, 0, 0,
-            0.5, -0.5, 1, 0,
-            -0.5, 0.5, 0, 1,
-            0.5, 0.5, 1, 1,
+            // position
+            -0.5, -0.5,
+            0.5, -0.5,
+            -0.5, 0.5,
+            0.5, 0.5,
         };
         // clang-format on
         memcpy(map, datas, sizeof(datas));
@@ -211,16 +211,7 @@ private:
             state.attributes.push_back(attr);
         }
 
-        // vertex color
-        {
-            GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-            attr.shaderLocation = 1;
-            attr.format = VertexFormat::Float32x2;
-            attr.offset = sizeof(float) * 2;
-            state.attributes.push_back(attr);
-        }
-
-        state.arrayStride = sizeof(float) * 4;
+        state.arrayStride = sizeof(float) * 2;
         state.stepMode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
         desc.vertex.buffers.push_back(state);
