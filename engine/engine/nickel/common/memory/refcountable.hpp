@@ -1,7 +1,7 @@
 #pragma once
+#include <cstdint>
 
-namespace nickel::graphics {
-
+namespace nickel {
 class RefCountable {
 public:
     RefCountable();
@@ -14,5 +14,4 @@ public:
 private:
     uint32_t m_refcount;
 };
-
-}  // namespace nickel::graphics
+} // namespace nickel::graphics

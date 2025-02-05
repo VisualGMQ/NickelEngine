@@ -2,7 +2,7 @@
 #include "nickel/common/memory/memory.hpp"
 #include "nickel/graphics/cmd.hpp"
 #include "nickel/graphics/cmd_encoder.hpp"
-#include "nickel/graphics/internal/refcountable.hpp"
+#include "nickel/common/memory/refcountable.hpp"
 
 namespace nickel::graphics {
 

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "nickel/common/flags.hpp"
 #include "nickel/graphics/internal/image_impl.hpp"
-#include "nickel/graphics/internal/refcountable.hpp"
+#include "nickel/common/memory/refcountable.hpp"
 
 namespace nickel::graphics {
 

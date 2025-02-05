@@ -19,6 +19,7 @@
 #include <future>
 #include <vector>
 #include <unordered_map>
+#include <map>
 
 #include "volk.h"
 #include "stb_image.h"

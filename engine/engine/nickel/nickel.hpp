@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "input/device/device_manager.hpp"
 #include "nickel/common/singleton.hpp"
 #include "nickel/graphics/adapter.hpp"
 #include "nickel/video/window.hpp"
@@ -20,6 +21,8 @@ public:
     void Exit() noexcept;
     video::Window& GetWindow();
     graphics::Adapter& GetGPUAdapter();
+    const input::DeviceManager& GetDeviceManager() const;
+    input::DeviceManager& GetDeviceManager();
     Application* GetApplication();
     const Application* GetApplication() const noexcept;
 
@@ -28,6 +31,7 @@ private:
     std::unique_ptr<video::Window> m_window;
     std::unique_ptr<graphics::Adapter> m_graphics_context;
     std::unique_ptr<Application> m_application;
+    input::DeviceManager m_device_mgr;
 };
 
 class NICKEL_API Application {
