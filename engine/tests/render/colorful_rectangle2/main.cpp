@@ -1,5 +1,4 @@
 #include "nickel/common/common.hpp"
-#include "nickel/graphics/common.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
@@ -8,7 +7,9 @@ using namespace nickel::graphics;
 class Application : public nickel::Application {
 public:
     void OnInit() override {
-        Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
+        auto& ctx = nickel::Context::GetInst();
+        ctx.EnableRender(false);
+        Device device = ctx.GetGPUAdapter().GetDevice();
 
         createRenderPass(device);
         createPipelineLayout(device);
@@ -30,7 +31,6 @@ public:
         uint32_t idx = device.WaitAndAcquireSwapchainImageIndex();
 
         auto window_size = window.GetSize();
-
 
         if (m_increase) {
             m_color.r += 0.0001f;
@@ -55,15 +55,17 @@ public:
         render_area.position.y = 0;
         render_area.size.w = window_size.w;
         render_area.size.h = window_size.h;
+        ClearValue values[] = {clear_value};
         RenderPassEncoder render_pass = encoder.BeginRenderPass(
-            m_render_pass, m_framebuffers[idx], render_area, {clear_value});
+            m_render_pass, m_framebuffers[idx], render_area, std::span{values});
         render_pass.SetViewport(0, 0, window_size.w, window_size.h, 0, 1);
         render_pass.SetScissor(0, 0, window_size.w, window_size.h);
         render_pass.BindGraphicsPipeline(m_pipeline);
-        
+
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
         render_pass.BindIndexBuffer(m_index_buffer, IndexType::Uint32, 0);
-        render_pass.SetPushConstant(ShaderStage::Fragment, m_color.Ptr(), 0, sizeof(float) * 3);
+        render_pass.SetPushConstant(ShaderStage::Fragment, m_color.Ptr(), 0,
+                                    sizeof(float) * 3);
         render_pass.DrawIndexed(6, 1, 0, 0, 0);
 
         render_pass.End();
@@ -115,10 +117,10 @@ private:
         // clang-format off
         float datas[] = {
             // position, texcoord
-            -0.5, -0.5,  0, 0,
-             0.5, -0.5,  1, 0,
-            -0.5,  0.5,  0, 1,
-             0.5,  0.5,  1, 1,
+            -0.5, -0.5, 0, 0,
+            0.5, -0.5, 1, 0,
+            -0.5, 0.5, 0, 1,
+            0.5, 0.5, 1, 1,
         };
         // clang-format on
         memcpy(map, datas, sizeof(datas));
@@ -173,10 +175,12 @@ private:
         desc.layout = m_pipeline_layout;
 
         auto vert_file_content =
-            nickel::ReadWholeFile("./tests/render/colorful_rectangle2/vert.spv");
+            nickel::ReadWholeFile(
+                "./tests/render/colorful_rectangle2/vert.spv");
 
         auto frag_file_content =
-            nickel::ReadWholeFile("./tests/render/colorful_rectangle2/frag.spv");
+            nickel::ReadWholeFile(
+                "./tests/render/colorful_rectangle2/frag.spv");
 
         ShaderModule vertex_shader = device.CreateShaderModule(
             (uint32_t*)vert_file_content.data(), vert_file_content.size());

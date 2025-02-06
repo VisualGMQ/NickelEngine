@@ -4,7 +4,7 @@
 #include "nickel/common/log.hpp"
 #include "nickel/fs/dialog.hpp"
 #include "nickel/fs/storage.hpp"
-#include "nickel/graphics/adapter.hpp"
+#include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/nickel.hpp"
 
 namespace nickel::main_entry {
@@ -37,12 +37,7 @@ Runtime::~Runtime() {
 
 void Runtime::Run() {
     auto& ctx = Context::GetInst();
-    auto app = ctx.GetApplication();
-    if (app) {
-        app->OnUpdate();
-    }
-
-    ctx.GetDeviceManager().Update();
+    ctx.Update();
 }
 
 void Runtime::HandleEvent(const SDL_Event& event) {

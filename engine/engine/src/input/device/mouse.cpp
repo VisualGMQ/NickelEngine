@@ -86,6 +86,8 @@ void Mouse::Impl::Update() {
     for (auto& btn : m_buttons) {
         btn.Update();
     }
+
+    m_offset = {0, 0};
 }
 
 Mouse::Button::Button(const ButtonImpl& impl): m_impl{impl} {
@@ -117,7 +119,7 @@ Mouse::Mouse()
 
 Mouse::~Mouse() {}
 
-const Mouse::Button& Mouse::GetButton(Button::Type type) const {
+Mouse::Button Mouse::GetButton(Button::Type type) const {
     return Button{m_impl->GetButton(type)};
 }
 
