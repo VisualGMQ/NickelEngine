@@ -11,3 +11,4 @@ imgui.ini
 local.properties
 log/
 *.spv
+.vscode
