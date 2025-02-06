@@ -1,6 +1,7 @@
 ﻿#include "nickel/graphics/camera.hpp"
 
 namespace nickel {
+
 class FlyCamera::Impl {
 public:
     Impl(Radians fov, float aspect, float near, float far) {
@@ -125,4 +126,7 @@ Mat44 FlyCamera::GetProject() const {
 Mat44 FlyCamera::GetView() const {
     return m_impl->GetView();
 }
+
+FlyCamera::~FlyCamera() {}
+
 }

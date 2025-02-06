@@ -12,6 +12,7 @@ public:
 class FlyCamera : public Camera {
 public:
     FlyCamera(Radians fov, float aspect, float near, float far);
+    ~FlyCamera();
     void SetProject(Radians fov, float aspect, float near, float far);
 
     void SetYaw(Radians value);
