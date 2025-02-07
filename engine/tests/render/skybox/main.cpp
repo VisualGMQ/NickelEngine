@@ -2,6 +2,7 @@
 #include "nickel/graphics/lowlevel/common.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
+#include "../common.hpp"
 
 using namespace nickel::graphics;
 
@@ -14,6 +15,8 @@ struct MVP {
 class Application : public nickel::Application {
 public:
     void OnInit() override {
+        RenderTestCommonContext::Init();
+        
         auto& ctx = nickel::Context::GetInst();
         ctx.EnableRender(false);
         Device device = ctx.GetGPUAdapter().GetDevice();
@@ -33,7 +36,13 @@ public:
         bufferVertexData();
     }
 
+    void OnQuit() override {
+        RenderTestCommonContext::Delete();
+    }
+
     void OnUpdate() override {
+        auto render_ctx = RenderTestCommonContext::GetInst();
+        
         auto& window = nickel::Context::GetInst().GetWindow();
         if (window.IsMinimize()) {
             return;
@@ -42,7 +51,7 @@ public:
         LogicUpdate();
 
         Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
-        uint32_t idx = device.WaitAndAcquireSwapchainImageIndex();
+        RenderTestCommonContext::GetInst().BeginFrame();
 
         auto window_size = window.GetSize();
 
@@ -67,7 +76,7 @@ public:
         render_area.size.w = window_size.w;
         render_area.size.h = window_size.h;
         RenderPassEncoder render_pass = encoder.BeginRenderPass(
-            m_render_pass, m_framebuffers[idx], render_area, clear_values);
+            m_render_pass, m_framebuffers[render_ctx.CurFrameIdx()], render_area, clear_values);
         render_pass.SetViewport(0, 0, window_size.w, window_size.h, 0, 1);
         render_pass.SetScissor(0, 0, window_size.w, window_size.h);
         render_pass.BindGraphicsPipeline(m_pipeline);
@@ -79,8 +88,12 @@ public:
         render_pass.End();
         Command cmd = encoder.Finish();
 
-        device.Submit(cmd);
-        device.EndFrame();
+        device.Submit(cmd,
+                      std::span{&render_ctx.GetImageAvaliableSemaphore(), 1},
+                      std::span{&render_ctx.GetRenderFinishSemaphore(), 1},
+                      render_ctx.GetFence());
+
+        RenderTestCommonContext::GetInst().EndFrame();
     }
 
     void LogicUpdate() {
@@ -264,7 +277,8 @@ private:
         copy.CopyBufferToTexture(buffer, m_image, copy_info);
         copy.End();
         Command cmd = encoder.Finish();
-        device.Submit(cmd);
+        device.Submit(cmd, {}, {}, {});
+        device.WaitIdle();
 
         // create view
         {

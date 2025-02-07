@@ -10,6 +10,7 @@ class BindGroupImpl {
 public:
     BindGroupImpl(DeviceImpl&, size_t group_index, VkDescriptorSet,
                   BindGroupLayoutImpl& layout, const BindGroup::Descriptor&);
+    explicit BindGroupImpl(DeviceImpl&, VkDescriptorSet set);
     BindGroupImpl(const BindGroupImpl&) = delete;
     BindGroupImpl(BindGroupImpl&&) = delete;
     BindGroupImpl& operator=(const BindGroupImpl&) = delete;
@@ -21,7 +22,7 @@ public:
     void WriteDescriptors();
     void PendingDelete();
 
-    BindGroupLayoutImpl& m_layout;
+    BindGroupLayoutImpl* m_layout{};
     VkDescriptorSet m_set = VK_NULL_HANDLE;
 
     size_t m_group_index{};

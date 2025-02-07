@@ -2,10 +2,10 @@
 
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/math/smatrix.hpp"
-#include "nickel/graphics/lowlevel/cmd_encoder.hpp"
 #include "nickel/graphics/lowlevel/bind_group_layout.hpp"
 #include "nickel/graphics/lowlevel/buffer.hpp"
 #include "nickel/graphics/lowlevel/cmd.hpp"
+#include "nickel/graphics/lowlevel/cmd_encoder.hpp"
 #include "nickel/graphics/lowlevel/fence.hpp"
 #include "nickel/graphics/lowlevel/framebuffer.hpp"
 #include "nickel/graphics/lowlevel/graphics_pipeline.hpp"
@@ -52,13 +52,16 @@ public:
     Fence CreateFence(bool signaled);
     const SwapchainImageInfo& GetSwapchainImageInfo() const;
     std::vector<ImageView> GetSwapchainImageViews() const;
-    uint32_t WaitAndAcquireSwapchainImageIndex();
+    uint32_t WaitAndAcquireSwapchainImageIndex(Semaphore sem,
+                                               std::span<Fence> fences);
 
     void EndFrame();
+    void Present(std::span<Semaphore> semaphores);
 
     void WaitIdle();
 
-    void Submit(Command& cmd);
+    void Submit(Command& cmd, std::span<Semaphore> wait_sems,
+                std::span<Semaphore> signal_sems, Fence fence);
 
 private:
     DeviceImpl* m_impl{};

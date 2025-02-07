@@ -1,5 +1,5 @@
-#include "nickel/nickel.hpp"
 #include "nickel/main_entry/runtime.hpp"
+#include "nickel/nickel.hpp"
 
 class Application : public nickel::Application {
 public:
@@ -14,6 +14,8 @@ public:
     void OnUpdate() override {
         updateCamera();
         drawGrid();
+        
+        // ImGui::ShowDemoWindow();
     }
 
 private:

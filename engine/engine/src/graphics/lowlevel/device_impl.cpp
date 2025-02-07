@@ -1,9 +1,12 @@
 ﻿#include "nickel/graphics/lowlevel/internal/device_impl.hpp"
+#include "nickel/common/log.hpp"
+#include "nickel/common/macro.hpp"
+#include "nickel/graphics/lowlevel/fence.hpp"
 #include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/cmd_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
+#include "nickel/graphics/lowlevel/internal/fence_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/vk_call.hpp"
-#include "nickel/common/log.hpp"
 
 namespace nickel::graphics {
 
@@ -86,8 +89,6 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
         queryImageInfo(impl.m_phyDevice, window_size, impl.m_surface);
     createCmdPools();
     createSwapchain(impl.m_phyDevice, impl.m_surface);
-    createRenderRelateSyncObjs();
-    m_need_present.resize(m_image_info.m_image_count, false);
 }
 
 DeviceImpl::QueueFamilyIndices DeviceImpl::chooseQueue(
@@ -316,28 +317,16 @@ void DeviceImpl::getAndCreateImageViews() {
     VK_CALL(vkResetCommandPool(m_device, m_cmd_pools[0]->m_pool, 0));
 }
 
-void DeviceImpl::createRenderRelateSyncObjs() {
-    for (uint32_t i = 0; i < m_image_info.m_image_count; i++) {
-        m_render_fences.push_back(CreateFence(true));
-        m_image_avaliable_sems.push_back(CreateSemaphore());
-        m_render_finish_sems.push_back(CreateSemaphore());
-    }
-}
-
 DeviceImpl::~DeviceImpl() {
     WaitIdle();
-   
-    m_render_fences.clear();
-    m_image_avaliable_sems.clear();
-    m_render_finish_sems.clear();
 
     m_framebuffer_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
     m_image_allocator.FreeAll();
-    
+
     m_shader_module_allocator.FreeAll();
     m_sampler_allocator.FreeAll();
- 
+
     for (auto view : m_swapchain_image_views) {
         delete view;
     }
@@ -346,7 +335,7 @@ DeviceImpl::~DeviceImpl() {
     m_pipeline_layout_allocator.FreeAll();
     m_bind_group_layout_allocator.FreeAll();
     m_render_pass_allocator.FreeAll();
-    
+
     m_semaphore_allocator.FreeAll();
     m_fence_allocator.FreeAll();
     for (auto pool : m_cmd_pools) {
@@ -481,37 +470,35 @@ CommandEncoder DeviceImpl::CreateCommandEncoder() {
     return cmd_pool->CreateCommandEncoder();
 }
 
-void DeviceImpl::Submit(Command& cmd) {
-    if (cmd.Impl().m_flags & CommandImpl::Flag::Render) {
-        VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
+void DeviceImpl::Submit(Command& cmd, std::span<Semaphore> wait_sems,
+                        std::span<Semaphore> signal_sems, Fence fence) {
+    VkSubmitInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    info.commandBufferCount = 1;
+    info.pCommandBuffers = &cmd.Impl().m_cmd;
 
-        VkSubmitInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        info.commandBufferCount = 1;
-        info.pCommandBuffers = &cmd.Impl().m_cmd;
+    VkPipelineStageFlags waitDstStage =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-        VkPipelineStageFlags waitDstStage =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-        info.pWaitDstStageMask = &waitDstStage;
-        info.signalSemaphoreCount = 1;
-        info.pSignalSemaphores =
-            &m_render_finish_sems[m_cur_frame].Impl().m_semaphore;
-        info.pWaitSemaphores =
-            &m_image_avaliable_sems[m_cur_frame].Impl().m_semaphore;
-        info.waitSemaphoreCount = 1;
-
-        VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, fence));
-        m_need_present[m_cur_frame] = true;
-    } else {
-        VkSubmitInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        info.commandBufferCount = 1;
-        info.pCommandBuffers = &cmd.Impl().m_cmd;
-
-        VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info, VK_NULL_HANDLE));
-        WaitIdle();
+    std::vector<VkSemaphore> signal, wait;
+    for (auto sem : wait_sems) {
+        NICKEL_CONTINUE_IF_FALSE(sem);
+        wait.push_back(sem.Impl().m_semaphore);
     }
+    for (auto sem : signal_sems) {
+        NICKEL_CONTINUE_IF_FALSE(sem);
+        signal.push_back(sem.Impl().m_semaphore);
+    }
+
+    info.pWaitDstStageMask = &waitDstStage;
+    info.signalSemaphoreCount = signal.size();
+    info.pSignalSemaphores = signal.data();
+    info.pWaitSemaphores = wait.data();
+    info.waitSemaphoreCount = wait.size();
+
+    VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info,
+                          fence ? fence.Impl().m_fence : VK_NULL_HANDLE));
+    
     cmd.Impl().ApplyLayoutTransitions();
 }
 
@@ -519,17 +506,23 @@ void DeviceImpl::WaitIdle() {
     VK_CALL(vkDeviceWaitIdle(m_device));
 }
 
-uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex() {
-    VkFence fence = m_render_fences[m_cur_frame].Impl().m_fence;
-    VK_CALL(vkWaitForFences(m_device, 1, &fence, true, UINT64_MAX));
-    VK_CALL(vkResetFences(m_device, 1, &fence));
-    m_cmd_pools[m_cur_frame]->Reset();
-    m_need_present[m_cur_frame] = true;
+uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex(Semaphore sem, std::span<Fence> fences) {
+    std::vector<VkFence> vk_fences;
+    vk_fences.reserve(fences.size());
 
-    VK_CALL(vkAcquireNextImageKHR(
-        m_device, m_swapchain, UINT64_MAX,
-        m_image_avaliable_sems[m_cur_frame].Impl().m_semaphore, VK_NULL_HANDLE,
-        &m_cur_swapchain_image_index));
+    for (auto fence : fences) {
+        NICKEL_CONTINUE_IF_FALSE(fence);
+        vk_fences.push_back(fence.Impl().m_fence);
+    }
+
+    VK_CALL(vkWaitForFences(m_device, vk_fences.size(), vk_fences.data(), true,
+                            UINT64_MAX));
+    VK_CALL(vkResetFences(m_device, vk_fences.size(), vk_fences.data()));
+    m_cmd_pools[m_cur_frame]->Reset();
+
+    vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX,
+                          sem ? sem.Impl().m_semaphore : VK_NULL_HANDLE,
+                          VK_NULL_HANDLE, &m_cur_swapchain_image_index);
 
     return m_cur_swapchain_image_index;
 }
@@ -547,21 +540,26 @@ const AdapterImpl& DeviceImpl::GetAdapter() const {
 }
 
 void DeviceImpl::EndFrame() {
-    if (m_need_present[m_cur_frame]) {
-        VkPresentInfoKHR info{};
-        info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        info.pImageIndices = &m_cur_swapchain_image_index;
-        info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores =
-            &m_render_finish_sems[m_cur_frame].Impl().m_semaphore;
-        info.swapchainCount = 1;
-        info.pSwapchains = &m_swapchain;
+    cleanUpOneFrame();
+}
 
-        VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
-        m_cur_frame = (m_cur_frame + 1) % m_image_info.m_image_count;
+void DeviceImpl::Present(std::span<Semaphore> semaphores) {
+    std::vector<VkSemaphore> vk_sems;
+    vk_sems.reserve(semaphores.size());
+    for (auto& semaphore : semaphores) {
+        vk_sems.push_back(semaphore.Impl().m_semaphore);
     }
 
-    cleanUpOneFrame();
+    VkPresentInfoKHR info{};
+    info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.pImageIndices = &m_cur_swapchain_image_index;
+    info.waitSemaphoreCount = vk_sems.size();
+    info.pWaitSemaphores = vk_sems.data();
+    info.swapchainCount = 1;
+    info.pSwapchains = &m_swapchain;
+
+    VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
+    m_cur_frame = (m_cur_frame + 1) % m_image_info.m_image_count;
 }
 
 }  // namespace nickel::graphics

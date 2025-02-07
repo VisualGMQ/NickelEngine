@@ -3,19 +3,19 @@
 
 namespace nickel::graphics {
 
-class CommandImpl;
+class CommandEncoderImpl;
 class DeviceImpl;
 
 class NICKEL_API Command {
 public:
-    explicit Command(CommandImpl&);
+    explicit Command(CommandEncoderImpl&);
     ~Command();
 
-    const CommandImpl& Impl() const noexcept;
-    CommandImpl& Impl() noexcept;
+    const CommandEncoderImpl& Impl() const noexcept;
+    CommandEncoderImpl& Impl() noexcept;
 
 private:
-    CommandImpl* m_impl{};
+    CommandEncoderImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

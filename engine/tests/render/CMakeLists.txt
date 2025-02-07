@@ -1,3 +1,6 @@
+add_library(CommonRenderTestContext OBJECT common.hpp common.cpp)
+target_link_libraries(CommonRenderTestContext PUBLIC Catch2 ${NICKEL_MAIN_ENTRY_NAME})
+
 add_subdirectory(triangle)
 add_subdirectory(rectangle)
 add_subdirectory(texture_rect)

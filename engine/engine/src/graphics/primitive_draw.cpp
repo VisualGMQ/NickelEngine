@@ -5,7 +5,7 @@
 #include "nickel/graphics/lowlevel/internal/image_impl.hpp"
 
 namespace nickel::graphics {
-PrimitiveDrawPass::PrimitiveDrawPass(Device device, StorageManager& storage_mgr,
+PrimitiveRenderPass::PrimitiveRenderPass(Device device, StorageManager& storage_mgr,
                                      RenderPass& render_pass) {
     initVertexBuffer(device);
     initIndicesBuffer(device);
@@ -32,7 +32,7 @@ PrimitiveDrawPass::PrimitiveDrawPass(Device device, StorageManager& storage_mgr,
     initTriangleSolidPipeline(device, vertex_shader, frag_shader, render_pass);
 }
 
-void PrimitiveDrawPass::Begin() {
+void PrimitiveRenderPass::Begin() {
     m_line_vertex_buffer.m_cpu.MapAsync();
     m_line_vertex_buffer.m_ptr = static_cast<char*>(m_line_vertex_buffer.m_cpu.
         GetMappedRange());
@@ -43,7 +43,7 @@ void PrimitiveDrawPass::Begin() {
     m_project_buffer.MapAsync();
 }
 
-void PrimitiveDrawPass::UploadData2GPU(Device& device) {
+void PrimitiveRenderPass::UploadData2GPU(Device& device) {
     m_line_vertex_buffer.m_cpu.Unmap();
     m_line_vertex_buffer.m_ptr = nullptr;
     m_triangle_vertex_buffer.m_cpu.Unmap();
@@ -52,42 +52,41 @@ void PrimitiveDrawPass::UploadData2GPU(Device& device) {
     if (m_line_vertex_buffer.m_elem_count > 0) {
         CommandEncoder encoder = device.CreateCommandEncoder();
         CopyEncoder copy = encoder.BeginCopy();
-        copy.CopyBufferToBuffer(m_line_vertex_buffer.m_cpu, 0,
-                                m_line_vertex_buffer.m_gpu, 0,
-                                sizeof(Vertex) * m_line_vertex_buffer.
-                                m_elem_count);
+        copy.CopyBufferToBuffer(
+            m_line_vertex_buffer.m_cpu, 0, m_line_vertex_buffer.m_gpu, 0,
+            sizeof(Vertex) * m_line_vertex_buffer.m_elem_count);
         copy.End();
         auto cmd = encoder.Finish();
-        device.Submit(cmd);
+        device.Submit(cmd, {}, {}, {});
     }
 
     if (m_triangle_vertex_buffer.m_elem_count > 0) {
         CommandEncoder encoder = device.CreateCommandEncoder();
         CopyEncoder copy = encoder.BeginCopy();
-        copy.CopyBufferToBuffer(m_triangle_vertex_buffer.m_cpu, 0,
-                                m_triangle_vertex_buffer.m_gpu, 0,
-                                sizeof(Vertex) * m_triangle_vertex_buffer.
-                                m_elem_count);
+        copy.CopyBufferToBuffer(
+            m_triangle_vertex_buffer.m_cpu, 0, m_triangle_vertex_buffer.m_gpu,
+            0, sizeof(Vertex) * m_triangle_vertex_buffer.m_elem_count);
         copy.End();
         auto cmd = encoder.Finish();
-        device.Submit(cmd);
+        device.Submit(cmd, {}, {}, {});
     }
 
     if (m_triangle_indices_buffer.m_elem_count > 0) {
         CommandEncoder encoder = device.CreateCommandEncoder();
         CopyEncoder copy = encoder.BeginCopy();
-        copy.CopyBufferToBuffer(m_triangle_indices_buffer.m_cpu, 0,
-                                m_triangle_indices_buffer.m_gpu, 0,
-                                sizeof(uint32_t) * m_triangle_indices_buffer.
-                                m_elem_count);
+        copy.CopyBufferToBuffer(
+            m_triangle_indices_buffer.m_cpu, 0, m_triangle_indices_buffer.m_gpu,
+            0, sizeof(uint32_t) * m_triangle_indices_buffer.m_elem_count);
         copy.End();
         auto cmd = encoder.Finish();
-        device.Submit(cmd);
+        device.Submit(cmd, {}, {}, {});
     }
+
+    device.WaitIdle();
 }
 
-void PrimitiveDrawPass::ApplyDrawCall(RenderPassEncoder& encoder,
-                                      bool wireframe) {
+void PrimitiveRenderPass::ApplyDrawCall(RenderPassEncoder& encoder,
+                                        bool wireframe) {
     auto& camera = nickel::Context::GetInst().GetCamera();
     if (NeedDraw()) {
         void* ptr = m_project_buffer.GetMappedRange();
@@ -121,16 +120,15 @@ void PrimitiveDrawPass::ApplyDrawCall(RenderPassEncoder& encoder,
         encoder.BindVertexBuffer(0, m_triangle_vertex_buffer.m_gpu, 0);
         encoder.BindIndexBuffer(m_triangle_indices_buffer.m_gpu,
                                 IndexType::Uint32, 0);
-        encoder.DrawIndexed(m_triangle_indices_buffer.m_elem_count, 1,
-                            0, 0, 0);
+        encoder.DrawIndexed(m_triangle_indices_buffer.m_elem_count, 1, 0, 0, 0);
     }
-    
+
     m_line_vertex_buffer.m_elem_count = 0;
     m_triangle_vertex_buffer.m_elem_count = 0;
     m_triangle_indices_buffer.m_elem_count = 0;
 }
 
-void PrimitiveDrawPass::DrawLineStrip(std::span<Vertex> vertices) {
+void PrimitiveRenderPass::DrawLineStrip(std::span<Vertex> vertices) {
     NICKEL_ASSERT(vertices.size() % 2 == 0);
 
     size_t size = vertices.size() * sizeof(Vertex);
@@ -139,8 +137,8 @@ void PrimitiveDrawPass::DrawLineStrip(std::span<Vertex> vertices) {
     m_line_vertex_buffer.m_elem_count += vertices.size();
 }
 
-void PrimitiveDrawPass::DrawTriangleList(std::span<Vertex> vertices,
-                                         std::span<uint32_t> indices) {
+void PrimitiveRenderPass::DrawTriangleList(std::span<Vertex> vertices,
+                                           std::span<uint32_t> indices) {
     NICKEL_ASSERT(indices.size() % 3 == 0);
 
     size_t vertex_size = vertices.size() * sizeof(Vertex);
@@ -155,13 +153,13 @@ void PrimitiveDrawPass::DrawTriangleList(std::span<Vertex> vertices,
     m_triangle_indices_buffer.m_elem_count += indices.size();
 }
 
-bool PrimitiveDrawPass::NeedDraw() const {
+bool PrimitiveRenderPass::NeedDraw() const {
     return m_triangle_indices_buffer.m_elem_count != 0 ||
            m_triangle_vertex_buffer.m_elem_count != 0 ||
            m_line_vertex_buffer.m_elem_count != 0;
 }
 
-void PrimitiveDrawPass::initBindGroupLayout(Device& device) {
+void PrimitiveRenderPass::initBindGroupLayout(Device& device) {
     BindGroupLayout::Descriptor desc;
     BindGroupLayout::Entry entry;
     entry.shader_stage = ShaderStage::Vertex;
@@ -172,7 +170,7 @@ void PrimitiveDrawPass::initBindGroupLayout(Device& device) {
     m_bind_group_layout = device.CreateBindGroupLayout(desc);
 }
 
-void PrimitiveDrawPass::initBindGroup() {
+void PrimitiveRenderPass::initBindGroup() {
     BindGroup::Descriptor desc;
     BindGroup::Entry entry;
     BindGroup::BufferBinding binding;
@@ -186,7 +184,7 @@ void PrimitiveDrawPass::initBindGroup() {
     m_bind_group = m_bind_group_layout.RequireBindGroup(desc);
 }
 
-void PrimitiveDrawPass::initPipelineLayout(Device& device) {
+void PrimitiveRenderPass::initPipelineLayout(Device& device) {
     PipelineLayout::Descriptor desc;
     desc.layouts.push_back(m_bind_group_layout);
     PipelineLayout::Descriptor::PushConstantRange range;
@@ -198,12 +196,12 @@ void PrimitiveDrawPass::initPipelineLayout(Device& device) {
     m_pipeline_layout = device.CreatePipelineLayout(desc);
 }
 
-void PrimitiveDrawPass::initLinePipeline(Device& device,
-                                         ShaderModule& vertex_shader,
-                                         ShaderModule& frag_shader,
-                                         RenderPass& render_pass) {
-    GraphicsPipeline::Descriptor desc = getPipelineDescTmpl(
-        vertex_shader, frag_shader, render_pass);
+void PrimitiveRenderPass::initLinePipeline(Device& device,
+                                           ShaderModule& vertex_shader,
+                                           ShaderModule& frag_shader,
+                                           RenderPass& render_pass) {
+    GraphicsPipeline::Descriptor desc =
+        getPipelineDescTmpl(vertex_shader, frag_shader, render_pass);
     desc.primitive.topology = Topology::LineList;
     desc.primitive.cullMode = CullMode::None;
     desc.primitive.frontFace = FrontFace::CCW;
@@ -211,12 +209,12 @@ void PrimitiveDrawPass::initLinePipeline(Device& device,
     m_line_pipeline = device.CreateGraphicPipeline(desc);
 }
 
-void PrimitiveDrawPass::initTrianglePipeline(Device& device,
-                                             ShaderModule& vertex_shader,
-                                             ShaderModule& frag_shader,
-                                             RenderPass& render_pass) {
-    GraphicsPipeline::Descriptor desc = getPipelineDescTmpl(
-        vertex_shader, frag_shader, render_pass);
+void PrimitiveRenderPass::initTrianglePipeline(Device& device,
+                                               ShaderModule& vertex_shader,
+                                               ShaderModule& frag_shader,
+                                               RenderPass& render_pass) {
+    GraphicsPipeline::Descriptor desc =
+        getPipelineDescTmpl(vertex_shader, frag_shader, render_pass);
     desc.primitive.topology = Topology::TriangleList;
     desc.primitive.cullMode = CullMode::Back;
     desc.primitive.frontFace = FrontFace::CCW;
@@ -224,11 +222,12 @@ void PrimitiveDrawPass::initTrianglePipeline(Device& device,
     m_triangle_wire_pipeline = device.CreateGraphicPipeline(desc);
 }
 
-void PrimitiveDrawPass::initTriangleSolidPipeline(
-    Device& device, ShaderModule& vertex_shader,
-    ShaderModule& frag_shader, RenderPass& render_pass) {
-    GraphicsPipeline::Descriptor desc = getPipelineDescTmpl(
-        vertex_shader, frag_shader, render_pass);
+void PrimitiveRenderPass::initTriangleSolidPipeline(Device& device,
+                                                    ShaderModule& vertex_shader,
+                                                    ShaderModule& frag_shader,
+                                                    RenderPass& render_pass) {
+    GraphicsPipeline::Descriptor desc =
+        getPipelineDescTmpl(vertex_shader, frag_shader, render_pass);
     desc.primitive.topology = Topology::TriangleList;
     desc.primitive.cullMode = CullMode::Back;
     desc.primitive.frontFace = FrontFace::CCW;
@@ -236,7 +235,7 @@ void PrimitiveDrawPass::initTriangleSolidPipeline(
     m_triangle_solid_pipeline = device.CreateGraphicPipeline(desc);
 }
 
-void PrimitiveDrawPass::initVertexBuffer(Device& device) {
+void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::CPULocal;
@@ -274,7 +273,7 @@ void PrimitiveDrawPass::initVertexBuffer(Device& device) {
     }
 }
 
-void PrimitiveDrawPass::initIndicesBuffer(Device& device) {
+void PrimitiveRenderPass::initIndicesBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::GPULocal;
@@ -294,7 +293,7 @@ void PrimitiveDrawPass::initIndicesBuffer(Device& device) {
     }
 }
 
-void PrimitiveDrawPass::initProjectBuffer(Device& device) {
+void PrimitiveRenderPass::initProjectBuffer(Device& device) {
     Buffer::Descriptor desc;
     desc.m_memory_type = MemoryType::Coherence;
     desc.m_size = sizeof(Mat44);
@@ -302,13 +301,13 @@ void PrimitiveDrawPass::initProjectBuffer(Device& device) {
     m_project_buffer = device.CreateBuffer(desc);
 }
 
-GraphicsPipeline::Descriptor PrimitiveDrawPass::getPipelineDescTmpl(
+GraphicsPipeline::Descriptor PrimitiveRenderPass::getPipelineDescTmpl(
     ShaderModule& vertex_shader, ShaderModule& frag_shader,
     RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc;
 
-    GraphicsPipeline::Descriptor::ShaderStage vertex_stage{
-        vertex_shader, "main"};
+    GraphicsPipeline::Descriptor::ShaderStage vertex_stage{vertex_shader,
+                                                           "main"};
     GraphicsPipeline::Descriptor::ShaderStage frag_stage{frag_shader, "main"};
 
     desc.m_shader_stages[ShaderStage::Vertex] = vertex_stage;
@@ -358,4 +357,4 @@ GraphicsPipeline::Descriptor PrimitiveDrawPass::getPipelineDescTmpl(
 
     return desc;
 }
-}
+}  // namespace nickel::graphics

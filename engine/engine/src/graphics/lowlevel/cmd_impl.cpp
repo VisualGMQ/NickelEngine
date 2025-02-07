@@ -6,17 +6,17 @@
 
 namespace nickel::graphics {
 
-CommandImpl::CommandImpl(DeviceImpl& device, CommandPoolImpl& pool,
+CommandEncoderImpl::CommandEncoderImpl(DeviceImpl& device, CommandPoolImpl& pool,
                          VkCommandBuffer cmd)
     : m_cmd{cmd}, m_device{device}, m_pool{pool} {}
 
-CommandImpl::~CommandImpl() {
+CommandEncoderImpl::~CommandEncoderImpl() {
     if (m_pool.CanResetSingleCmd()) {
         VK_CALL(vkResetCommandBuffer(m_cmd, 0));
     }
 }
 
-void CommandImpl::AddLayoutTransition(ImageImpl* img, ImageLayout layout,
+void CommandEncoderImpl::AddLayoutTransition(ImageImpl* img, ImageLayout layout,
                                       size_t idx) {
     if (auto it = m_layout_transitions.find(img);
         it != m_layout_transitions.end()) {
@@ -26,7 +26,7 @@ void CommandImpl::AddLayoutTransition(ImageImpl* img, ImageLayout layout,
     }
 }
 
-void CommandImpl::ApplyLayoutTransitions() {
+void CommandEncoderImpl::ApplyLayoutTransitions() {
     for (auto [image, transition] : m_layout_transitions) {
         for (auto [idx, layout] : transition) {
             image->m_layouts[idx] = layout;
@@ -36,7 +36,7 @@ void CommandImpl::ApplyLayoutTransitions() {
     m_layout_transitions.clear();
 }
 
-void CommandImpl::PendingDelete() {
+void CommandEncoderImpl::PendingDelete() {
     m_pool.m_pending_delete_cmds.push_back(this);
 }
 

@@ -1,14 +1,14 @@
 #include "nickel/common/common.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
-
-#include <3rdlibs/SDL/src/video/khronos/vulkan/vulkan_core.h>
+#include "../common.hpp"
 
 using namespace nickel::graphics;
 
 class Application : public nickel::Application {
 public:
     void OnInit() override {
+        RenderTestCommonContext::Init();
         auto& ctx = nickel::Context::GetInst();
         ctx.EnableRender(false);
         
@@ -23,15 +23,23 @@ public:
         bufferIndicesData();
         bufferVertexData();
     }
+    
+    void OnQuit() override {
+        RenderTestCommonContext::Delete();
+    }
+
 
     void OnUpdate() override {
+        auto render_ctx = RenderTestCommonContext::GetInst();
+        
         auto& window = nickel::Context::GetInst().GetWindow();
         if (window.IsMinimize()) {
             return;
         }
 
         Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
-        uint32_t idx = device.WaitAndAcquireSwapchainImageIndex();
+        
+        RenderTestCommonContext::GetInst().BeginFrame();
 
         auto window_size = window.GetSize();
 
@@ -45,7 +53,7 @@ public:
         render_area.size.h = window_size.h;
         ClearValue values[] = {clear_value};
         RenderPassEncoder render_pass = encoder.BeginRenderPass(
-            m_render_pass, m_framebuffers[idx], render_area, std::span{values});
+            m_render_pass, m_framebuffers[render_ctx.CurFrameIdx()], render_area, std::span{values});
         render_pass.SetViewport(0, 0, window_size.w, window_size.h, 0, 1);
         render_pass.SetScissor(0, 0, window_size.w, window_size.h);
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
@@ -57,8 +65,12 @@ public:
         render_pass.End();
         Command cmd = encoder.Finish();
 
-        device.Submit(cmd);
-        device.EndFrame();
+        device.Submit(cmd,
+                      std::span{&render_ctx.GetImageAvaliableSemaphore(), 1},
+                      std::span{&render_ctx.GetRenderFinishSemaphore(), 1},
+                      render_ctx.GetFence());
+
+        RenderTestCommonContext::GetInst().EndFrame();
     }
 
 private:

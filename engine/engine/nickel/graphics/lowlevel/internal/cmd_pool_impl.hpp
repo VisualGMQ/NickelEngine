@@ -23,8 +23,8 @@ public:
     void Reset();
 
     VkCommandPool m_pool = VK_NULL_HANDLE;
-    BlockMemoryAllocator<CommandImpl> m_cmd_allocator;
-    std::vector<CommandImpl*> m_pending_delete_cmds;
+    BlockMemoryAllocator<CommandEncoderImpl> m_cmd_allocator;
+    std::vector<CommandEncoderImpl*> m_pending_delete_cmds;
 
 private:
     DeviceImpl& m_device;

@@ -6,7 +6,7 @@ namespace nickel::graphics {
 
 class CommandPoolImpl;
 
-class CommandImpl {
+class CommandEncoderImpl {
 public:
     enum class Flag : uint32_t {
         Unknown = 0,
@@ -14,14 +14,14 @@ public:
         Transfer = 0x02,
     };
 
-    explicit CommandImpl(DeviceImpl& device, CommandPoolImpl& pool,
+    explicit CommandEncoderImpl(DeviceImpl& device, CommandPoolImpl& pool,
                          VkCommandBuffer cmd);
-    CommandImpl(const CommandImpl&) = delete;
-    CommandImpl(CommandImpl&&) = delete;
-    CommandImpl& operator=(const CommandImpl&) = delete;
-    CommandImpl& operator=(CommandImpl&&) = delete;
+    CommandEncoderImpl(const CommandEncoderImpl&) = delete;
+    CommandEncoderImpl(CommandEncoderImpl&&) = delete;
+    CommandEncoderImpl& operator=(const CommandEncoderImpl&) = delete;
+    CommandEncoderImpl& operator=(CommandEncoderImpl&&) = delete;
 
-    ~CommandImpl();
+    ~CommandEncoderImpl();
 
     VkCommandBuffer m_cmd = VK_NULL_HANDLE;
     Flags<Flag> m_flags = Flag::Unknown;
