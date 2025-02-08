@@ -38,7 +38,7 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
     init_info.Device = impl.m_device;
     init_info.QueueFamily = impl.m_queue_indices.m_graphics_index.value();
     init_info.Queue = impl.m_graphics_queue;
-    init_info.PipelineCache = nullptr;
+    init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPool = m_descriptor_pool;
     init_info.RenderPass = m_render_pass;
     init_info.Subpass = 0;
