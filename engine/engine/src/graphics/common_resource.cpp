@@ -24,6 +24,11 @@ Semaphore& CommonResource::GetRenderFinishSemaphore(uint32_t idx) {
     return m_render_finish_sems[idx];
 }
 
+Semaphore& CommonResource::GetImGuiRenderFinishSemaphore(uint32_t idx) {
+    return m_imgui_render_finish_sems[idx];
+}
+
+
 Fence& CommonResource::GetFence(uint32_t idx) {
     return m_present_fences[idx];
 }
@@ -79,7 +84,7 @@ void CommonResource::initRenderPass(Device& device) {
         RenderPass::Descriptor::AttachmentDescription attachment;
         attachment.samples = SampleCount::Count1;
         attachment.initialLayout = ImageLayout::Undefined;
-        attachment.finalLayout = ImageLayout::PresentSrcKHR;
+        attachment.finalLayout = ImageLayout::ColorAttachmentOptimal;
         attachment.loadOp = AttachmentLoadOp::Clear;
         attachment.storeOp = AttachmentStoreOp::Store;
         attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
@@ -139,6 +144,7 @@ void CommonResource::initSyncObjects(Device& device) {
         m_present_fences.push_back(device.CreateFence(true));
         m_image_avaliable_sems.push_back(device.CreateSemaphore());
         m_render_finish_sems.push_back(device.CreateSemaphore());
+        m_imgui_render_finish_sems.push_back(device.CreateSemaphore());
     }
 }
 

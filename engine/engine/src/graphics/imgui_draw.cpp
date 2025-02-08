@@ -11,10 +11,13 @@
 
 namespace nickel::graphics {
 
-void ImGuiRenderPass::initImGui(const video::Window& window,
-                                const Adapter& adapter) {
-    initImGuiDescriptorPool(adapter);
-    initImGuiRenderPass(adapter);
+ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
+                                 const Adapter& adapter)
+    : m_device{adapter.GetDevice().Impl().m_device} {
+    initDescriptorPool(adapter);
+    initRenderPass(adapter);
+    initCmdPool(adapter.GetDevice());
+    initFramebuffers(adapter.GetDevice());
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -51,7 +54,35 @@ void ImGuiRenderPass::initImGui(const video::Window& window,
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-void ImGuiRenderPass::initImGuiDescriptorPool(const Adapter& adapter) {
+ImGuiRenderPass::~ImGuiRenderPass() {
+    vkDeviceWaitIdle(m_device);
+    
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
+    for (auto fbo : m_fbos) {
+        vkDestroyFramebuffer(m_device, fbo, nullptr);
+    }
+    vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
+    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+    VK_CALL(vkResetCommandPool(m_device, m_cmd_pool, 0));
+    vkDestroyCommandPool(m_device, m_cmd_pool, nullptr);
+
+}
+
+void ImGuiRenderPass::Begin() {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+}
+
+void ImGuiRenderPass::End(Device device, CommonResource& res,
+                          uint32_t cur_frame) {
+    renderImGui(device, res, cur_frame);
+}
+
+void ImGuiRenderPass::initDescriptorPool(const Adapter& adapter) {
     VkDescriptorPoolSize pool_sizes[] = {
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
          IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE},
@@ -68,15 +99,15 @@ void ImGuiRenderPass::initImGuiDescriptorPool(const Adapter& adapter) {
                                    &pool_info, nullptr, &m_descriptor_pool));
 }
 
-void ImGuiRenderPass::initImGuiRenderPass(const Adapter& adapter) {
+void ImGuiRenderPass::initRenderPass(const Adapter& adapter) {
     VkAttachmentDescription attachment = {};
     attachment.format = Format2Vk(
         adapter.GetDevice().GetSwapchainImageInfo().m_surface_format.format);
     attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     VkAttachmentReference color_attachment = {};
@@ -105,7 +136,37 @@ void ImGuiRenderPass::initImGuiRenderPass(const Adapter& adapter) {
                                nullptr, &m_render_pass));
 }
 
-void ImGuiRenderPass::renderImGui(Device device, CommonResource& res, int swapchain_image_index) {
+void ImGuiRenderPass::initCmdPool(const Device& device) {
+    VkCommandPoolCreateInfo ci = {};
+    ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    VK_CALL(
+        vkCreateCommandPool(device.Impl().m_device, &ci, nullptr, &m_cmd_pool));
+}
+
+void ImGuiRenderPass::initFramebuffers(const Device& device) {
+    for (uint32_t i = 0; i < device.GetSwapchainImageInfo().m_image_count;
+         i++) {
+        ImageView view = device.GetSwapchainImageViews()[i];
+
+        VkFramebufferCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        info.renderPass = m_render_pass;
+        info.attachmentCount = 1;
+        info.pAttachments = &view.Impl().m_view;
+        info.width = device.GetSwapchainImageInfo().m_extent.w;
+        info.height = device.GetSwapchainImageInfo().m_extent.h;
+        info.layers = 1;
+
+        VkFramebuffer fbo;
+        VK_CALL(
+            vkCreateFramebuffer(device.Impl().m_device, &info, nullptr, &fbo));
+        m_fbos.push_back(fbo);
+    }
+}
+
+void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
+                                  int cur_frame_idx) {
+    ImGui::Render();
     auto draw_data = ImGui::GetDrawData();
 
     NICKEL_RETURN_IF_FALSE(draw_data->DisplaySize.x > 0 &&
@@ -118,12 +179,12 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res, int swapch
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = m_render_pass;
-        info.framebuffer = res.GetFramebuffer(swapchain_image_index).Impl().m_fbo;
+        info.framebuffer = m_fbos[cur_frame_idx];
         info.renderArea.extent.width =
             device.GetSwapchainImageInfo().m_extent.w;
         info.renderArea.extent.height =
             device.GetSwapchainImageInfo().m_extent.h;
-        info.clearValueCount = 1;
+        info.clearValueCount = 0;
         vkCmdBeginRenderPass(cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
 
@@ -131,37 +192,28 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res, int swapch
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
     // Submit command buffer
-    // vkCmdEndRenderPass(cmd);
-    // {
-    //     VkPipelineStageFlags wait_stage =
-    //         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    //     VkSubmitInfo info = {};
-    //     info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //     info.waitSemaphoreCount = 1;
-    //     info.pWaitSemaphores = &image_acquired_semaphore;
-    //     info.pWaitDstStageMask = &wait_stage;
-    //     info.commandBufferCount = 1;
-    //     info.pCommandBuffers = &cmd;
-    //     info.signalSemaphoreCount = 1;
-    //     info.pSignalSemaphores = &render_complete_semaphore;
+    vkCmdEndRenderPass(cmd);
+    {
+        VkPipelineStageFlags wait_stage =
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkSubmitInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.waitSemaphoreCount = 1;
+        info.pWaitSemaphores =
+            &res.GetRenderFinishSemaphore(cur_frame_idx).Impl().m_semaphore;
+        info.pWaitDstStageMask = &wait_stage;
+        info.commandBufferCount = 1;
+        info.pCommandBuffers = &cmd;
+        info.signalSemaphoreCount = 1;
+        info.pSignalSemaphores =
+            &res.GetImGuiRenderFinishSemaphore(cur_frame_idx)
+                 .Impl()
+                 .m_semaphore;
 
-    //     VK_CALL(vkEndCommandBuffer(cmd));
-    //     vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
-    // }
+        VK_CALL(vkEndCommandBuffer(cmd));
+        VK_CALL(vkQueueSubmit(device.Impl().m_graphics_queue, 1, &info,
+                              res.GetFence(cur_frame_idx).Impl().m_fence));
+    }
 }
-
-void ImGuiRenderPass::shutdownImGui() {
-    auto device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
-    device.WaitIdle();
-    VkDevice vk_device = device.Impl().m_device;
-
-    vkDestroyDescriptorPool(vk_device, m_descriptor_pool, nullptr);
-    vkDestroyRenderPass(vk_device, m_render_pass, nullptr);
-
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-}
-
 
 }  // namespace nickel::graphics

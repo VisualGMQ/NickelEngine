@@ -45,7 +45,7 @@ Context::~Context() {
 }
 
 void Context::HandleEvent(const SDL_Event& event) {
-    // ImGui_ImplSDL3_ProcessEvent(&event);
+    ImGui_ImplSDL3_ProcessEvent(&event);
     if (event.type == SDL_EVENT_QUIT) {
         Exit();
     }

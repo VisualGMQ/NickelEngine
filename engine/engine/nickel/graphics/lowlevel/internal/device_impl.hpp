@@ -76,7 +76,7 @@ public:
     VkQueue m_present_queue = VK_NULL_HANDLE;
     VkQueue m_graphics_queue = VK_NULL_HANDLE;
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
-    std::vector<ImageViewImpl*> m_swapchain_image_views;
+    std::vector<ImageView> m_swapchain_image_views;
     QueueFamilyIndices m_queue_indices;
 
     Buffer CreateBuffer(const Buffer::Descriptor&);

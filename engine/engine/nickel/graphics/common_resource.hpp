@@ -11,6 +11,7 @@ public:
     Framebuffer GetFramebuffer(uint32_t idx);
     Semaphore& GetImageAvaliableSemaphore(uint32_t idx);
     Semaphore& GetRenderFinishSemaphore(uint32_t idx);
+    Semaphore& GetImGuiRenderFinishSemaphore(uint32_t idx);
     Fence& GetFence(uint32_t idx);
 
     std::vector<Image> m_depth_images;
@@ -20,6 +21,7 @@ public:
     std::vector<Fence> m_present_fences;
     std::vector<Semaphore> m_image_avaliable_sems;
     std::vector<Semaphore> m_render_finish_sems;
+    std::vector<Semaphore> m_imgui_render_finish_sems;
 
 private:
     void initDepthImages(Device& device, const video::Window& window);

@@ -10,22 +10,25 @@ namespace nickel::graphics {
 
 class ImGuiRenderPass {
 public:
-    ImGuiRenderPass();
+    ImGuiRenderPass(const video::Window& window, const Adapter&);
     ~ImGuiRenderPass();
 
     void Begin();
-    void ApplyDrawCall(CommonResource&);
+    void End(Device device, CommonResource&, uint32_t cur_frame);
     
 private:
+    VkDevice m_device;
     VkRenderPass m_render_pass;
     VkDescriptorPool m_descriptor_pool;
     VkPipeline m_pipeline;
+    VkCommandPool m_cmd_pool;
+    std::vector<VkFramebuffer> m_fbos;
 
-    void initImGui(const video::Window& window, const Adapter& adapter);
-    void initImGuiDescriptorPool(const Adapter& adapter);
-    void initImGuiRenderPass(const Adapter& adapter);
-    void renderImGui(Device, CommonResource&, int swapchain_image_index);
-    void shutdownImGui();
+    void initDescriptorPool(const Adapter& adapter);
+    void initRenderPass(const Adapter& adapter);
+    void initCmdPool(const Device& device);
+    void initFramebuffers(const Device&);
+    void renderImGui(Device, CommonResource&, int cur_frame_idx);
 };
 
 }

@@ -266,7 +266,8 @@ void DeviceImpl::getAndCreateImageViews() {
         VkImageView view;
         VK_CALL(vkCreateImageView(m_device, &ci, nullptr, &view));
         if (view) {
-            m_swapchain_image_views.push_back(new ImageViewImpl{*this, view});
+            m_swapchain_image_views.push_back(
+                ImageView{m_image_view_allocator.Allocate(*this, view)});
         } else {
             LOGC("create image view from swapchain image failed");
         }
@@ -320,6 +321,8 @@ void DeviceImpl::getAndCreateImageViews() {
 DeviceImpl::~DeviceImpl() {
     WaitIdle();
 
+    m_swapchain_image_views.clear();
+
     m_framebuffer_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
     m_image_allocator.FreeAll();
@@ -327,9 +330,6 @@ DeviceImpl::~DeviceImpl() {
     m_shader_module_allocator.FreeAll();
     m_sampler_allocator.FreeAll();
 
-    for (auto view : m_swapchain_image_views) {
-        delete view;
-    }
     m_buffer_allocator.FreeAll();
     m_graphics_pipeline_allocator.FreeAll();
     m_pipeline_layout_allocator.FreeAll();
@@ -355,6 +355,11 @@ void DeviceImpl::cleanUpOneFrame() {
         m_sampler_allocator.Deallocate(elem);
     }
     m_pending_delete_samplers.clear();
+    
+    for (auto& elem : m_pending_delete_framebuffers) {
+        m_framebuffer_allocator.Deallocate(elem);
+    }
+    m_pending_delete_framebuffers.clear();
 
     for (auto& elem : m_pending_delete_image_views) {
         m_image_view_allocator.Deallocate(elem);
@@ -385,11 +390,6 @@ void DeviceImpl::cleanUpOneFrame() {
         m_bind_group_layout_allocator.Deallocate(elem);
     }
     m_pending_delete_bind_group_layouts.clear();
-
-    for (auto& elem : m_pending_delete_framebuffers) {
-        m_framebuffer_allocator.Deallocate(elem);
-    }
-    m_pending_delete_framebuffers.clear();
 
     for (auto& elem : m_pending_delete_graphics_pipelines) {
         m_graphics_pipeline_allocator.Deallocate(elem);
@@ -498,7 +498,7 @@ void DeviceImpl::Submit(Command& cmd, std::span<Semaphore> wait_sems,
 
     VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info,
                           fence ? fence.Impl().m_fence : VK_NULL_HANDLE));
-    
+
     cmd.Impl().ApplyLayoutTransitions();
 }
 
@@ -506,7 +506,8 @@ void DeviceImpl::WaitIdle() {
     VK_CALL(vkDeviceWaitIdle(m_device));
 }
 
-uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex(Semaphore sem, std::span<Fence> fences) {
+uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex(
+    Semaphore sem, std::span<Fence> fences) {
     std::vector<VkFence> vk_fences;
     vk_fences.reserve(fences.size());
 
@@ -528,11 +529,7 @@ uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex(Semaphore sem, std::span<
 }
 
 std::vector<ImageView> DeviceImpl::GetSwapchainImageViews() const {
-    std::vector<ImageView> views;
-    for (auto view : m_swapchain_image_views) {
-        views.push_back(ImageView{view});
-    }
-    return views;
+    return m_swapchain_image_views;
 }
 
 const AdapterImpl& DeviceImpl::GetAdapter() const {

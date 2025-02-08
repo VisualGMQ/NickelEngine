@@ -1,6 +1,7 @@
 ﻿#include "nickel/graphics/context.hpp"
 #include "nickel/common/macro.hpp"
 #include "nickel/graphics/common_resource.hpp"
+#include "nickel/graphics/imgui_draw.hpp"
 #include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/device_impl.hpp"
 #include "nickel/nickel.hpp"
@@ -11,7 +12,6 @@ class Context::Impl {
 public:
     Impl(const Adapter& adapter, const video::Window& window,
          StorageManager& storage_mgr);
-    ~Impl();
 
     void EnableRender(bool enable);
     bool IsRenderEnabled() const;
@@ -30,6 +30,7 @@ public:
 private:
     CommonResource m_common_resource;
     PrimitiveRenderPass m_primitive_draw;
+    ImGuiRenderPass m_imgui_draw;
     uint32_t m_swapchain_image_index{};
     uint32_t m_render_frame_index{};
     bool m_is_wireframe{};
@@ -40,10 +41,9 @@ private:
 Context::Impl::Impl(const Adapter& adapter, const video::Window& window,
                     StorageManager& storage_mgr)
     : m_common_resource{adapter.GetDevice(), window},
-      m_primitive_draw(adapter.GetDevice(), storage_mgr,
-                       m_common_resource.m_render_pass) {}
-
-Context::Impl::~Impl() {}
+      m_primitive_draw{adapter.GetDevice(), storage_mgr,
+                       m_common_resource.m_render_pass},
+      m_imgui_draw{window, adapter} {}
 
 void Context::Impl::EnableRender(bool enable) {
     m_enable_render = enable;
@@ -63,6 +63,7 @@ void Context::Impl::BeginFrame() {
         m_common_resource.GetImageAvaliableSemaphore(m_render_frame_index),
         std::span{&fence, 1});
 
+    m_imgui_draw.Begin();
     m_primitive_draw.Begin();
 }
 
@@ -104,10 +105,13 @@ void Context::Impl::EndFrame() {
         std::span{
             &m_common_resource.GetRenderFinishSemaphore(m_render_frame_index),
             1},
-        m_common_resource.GetFence(m_render_frame_index));
+        // m_common_resource.GetFence(m_render_frame_index));
+        {});
+
+    m_imgui_draw.End(device, m_common_resource, m_render_frame_index);
 
     device.Present(std::span{
-        &m_common_resource.GetRenderFinishSemaphore(m_render_frame_index), 1});
+        &m_common_resource.GetImGuiRenderFinishSemaphore(m_render_frame_index), 1});
     device.EndFrame();
 
     m_render_frame_index = (m_render_frame_index + 1) %

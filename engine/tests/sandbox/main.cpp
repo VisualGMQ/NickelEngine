@@ -15,7 +15,7 @@ public:
         updateCamera();
         drawGrid();
         
-        // ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow();
     }
 
 private:
