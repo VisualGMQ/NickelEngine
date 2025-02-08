@@ -35,7 +35,7 @@ struct ClearValue {
 
 class NICKEL_API RenderPassEncoder final {
 public:
-    RenderPassEncoder(CommandImpl& cmd, const RenderPass& render_pass,
+    RenderPassEncoder(CommandEncoderImpl& cmd, const RenderPass& render_pass,
                       const Framebuffer& fbo, const Rect& render_area,
                       std::span<ClearValue> clear_values);
 
@@ -134,7 +134,7 @@ private:
                      DrawCmd, SetViewportCmd, SetScissorCmd>;
     struct ApplyRenderCmd;
 
-    CommandImpl& m_cmd;
+    CommandEncoderImpl& m_cmd;
     std::vector<Cmd> m_record_cmds;
     RenderPassInfo m_render_pass_info;
 
@@ -164,7 +164,7 @@ public:
         SVector<uint32_t, 3> imageExtent;
     };
 
-    explicit CopyEncoder(CommandImpl& cmd);
+    explicit CopyEncoder(CommandEncoderImpl& cmd);
     void CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
                             const Buffer& dst, uint64_t dstOffset,
                             uint64_t size);
@@ -188,7 +188,7 @@ private:
         BufferImageCopy copy;
     };
 
-    CommandImpl& m_cmd;
+    CommandEncoderImpl& m_cmd;
     std::vector<BufCopyBuf> m_buffer_copies;
     std::vector<BufCopyImage> m_image_copies;
 
@@ -197,11 +197,11 @@ private:
                             uint64_t size);
 };
 
-class CommandImpl;
+class CommandEncoderImpl;
 
 class NICKEL_API CommandEncoder {
 public:
-    explicit CommandEncoder(CommandImpl& cmd);
+    explicit CommandEncoder(CommandEncoderImpl& cmd);
 
     CopyEncoder BeginCopy();
     RenderPassEncoder BeginRenderPass(
@@ -210,8 +210,11 @@ public:
 
     Command Finish();
 
+    CommandEncoderImpl& GetImpl();
+    const CommandEncoderImpl& GetImpl() const;
+
 private:
-    CommandImpl& m_cmd;
+    CommandEncoderImpl& m_cmd;
 };
 
 }  // namespace nickel::graphics

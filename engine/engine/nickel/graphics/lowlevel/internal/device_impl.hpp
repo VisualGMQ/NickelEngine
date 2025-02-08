@@ -76,7 +76,7 @@ public:
     VkQueue m_present_queue = VK_NULL_HANDLE;
     VkQueue m_graphics_queue = VK_NULL_HANDLE;
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
-    std::vector<ImageViewImpl*> m_swapchain_image_views;
+    std::vector<ImageView> m_swapchain_image_views;
     QueueFamilyIndices m_queue_indices;
 
     Buffer CreateBuffer(const Buffer::Descriptor&);
@@ -92,15 +92,18 @@ public:
     Semaphore CreateSemaphore();
     Fence CreateFence(bool signaled);
     CommandEncoder CreateCommandEncoder();
-    uint32_t WaitAndAcquireSwapchainImageIndex();
+    uint32_t WaitAndAcquireSwapchainImageIndex(Semaphore signal_sem, std::span<Fence>);
     std::vector<ImageView> GetSwapchainImageViews() const;
 
     const AdapterImpl& GetAdapter() const;
-    
-    void Submit(Command&);
+
+    void Submit(Command&, std::span<Semaphore> wait_sems,
+                std::span<Semaphore> signal_sems, Fence fence);
     void WaitIdle();
 
     void EndFrame();
+
+    void Present(std::span<Semaphore> semaphores);
 
     std::vector<BufferImpl*> m_pending_delete_buffers;
     std::vector<ImageImpl*> m_pending_delete_images;
@@ -120,11 +123,7 @@ private:
     const AdapterImpl& m_adapter;
     uint32_t m_cur_swapchain_image_index = 0;
     uint32_t m_cur_frame = 0;
-    std::vector<Fence> m_render_fences;
-    std::vector<Semaphore> m_image_avaliable_sems;
-    std::vector<Semaphore> m_render_finish_sems;
     std::vector<CommandPoolImpl*> m_cmd_pools;
-    std::vector<bool> m_need_present;
 
     BlockMemoryAllocator<BufferImpl> m_buffer_allocator;
     BlockMemoryAllocator<ImageImpl> m_image_allocator;
@@ -150,7 +149,6 @@ private:
     void createCmdPools();
 
     void getAndCreateImageViews();
-    void createRenderRelateSyncObjs();
     void cleanUpOneFrame();
 };
 

@@ -76,20 +76,26 @@ std::vector<ImageView> Device::GetSwapchainImageViews() const {
     return m_impl->GetSwapchainImageViews();
 }
 
-uint32_t Device::WaitAndAcquireSwapchainImageIndex() {
-    return m_impl->WaitAndAcquireSwapchainImageIndex();
+uint32_t Device::WaitAndAcquireSwapchainImageIndex(Semaphore sem,
+                                                   std::span<Fence> fences) {
+    return m_impl->WaitAndAcquireSwapchainImageIndex(sem, fences);
 }
 
 void Device::EndFrame() {
     m_impl->EndFrame();
 }
 
+void Device::Present(std::span<Semaphore> semaphores) {
+    m_impl->Present(semaphores);
+}
+
 void Device::WaitIdle() {
     m_impl->WaitIdle();
 }
 
-void Device::Submit(Command& cmd) {
-    return m_impl->Submit(cmd);
+void Device::Submit(Command& cmd, std::span<Semaphore> wait_sems,
+                    std::span<Semaphore> signal_sems, Fence fence) {
+    return m_impl->Submit(cmd, wait_sems, signal_sems, fence);
 }
 
 }  // namespace nickel::graphics

@@ -2,12 +2,15 @@
 #include "nickel/graphics/lowlevel/common.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
+#include "../common.hpp"
 
 using namespace nickel::graphics;
 
 class Application : public nickel::Application {
 public:
     void OnInit() override {
+        RenderTestCommonContext::Init();
+        
         auto& ctx = nickel::Context::GetInst();
         ctx.EnableRender(false);
         Device device = ctx.GetGPUAdapter().GetDevice();
@@ -26,14 +29,20 @@ public:
         bufferVertexData();
     }
 
+    void OnQuit() override {
+        RenderTestCommonContext::Delete();
+    }
+
     void OnUpdate() override {
+        auto render_ctx = RenderTestCommonContext::GetInst();
+        
         auto& window = nickel::Context::GetInst().GetWindow();
         if (window.IsMinimize()) {
             return;
         }
 
         Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
-        uint32_t idx = device.WaitAndAcquireSwapchainImageIndex();
+        RenderTestCommonContext::GetInst().BeginFrame();
 
         auto window_size = window.GetSize();
 
@@ -47,11 +56,12 @@ public:
         render_area.size.h = window_size.h;
         ClearValue values[] = {clear_value};
         RenderPassEncoder render_pass = encoder.BeginRenderPass(
-            m_render_pass, m_framebuffers[idx], render_area, std::span{values});
+            m_render_pass, m_framebuffers[render_ctx.CurFrameIdx()],
+            render_area, std::span{values});
         render_pass.SetViewport(0, 0, window_size.w, window_size.h, 0, 1);
         render_pass.SetScissor(0, 0, window_size.w, window_size.h);
         render_pass.BindGraphicsPipeline(m_pipeline);
-        
+
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
         render_pass.BindIndexBuffer(m_index_buffer, IndexType::Uint32, 0);
         render_pass.SetBindGroup(m_bind_group);
@@ -60,8 +70,12 @@ public:
         render_pass.End();
         Command cmd = encoder.Finish();
 
-        device.Submit(cmd);
-        device.EndFrame();
+        device.Submit(cmd,
+                      std::span{&render_ctx.GetImageAvaliableSemaphore(), 1},
+                      std::span{&render_ctx.GetRenderFinishSemaphore(), 1},
+                      render_ctx.GetFence());
+
+        RenderTestCommonContext::GetInst().EndFrame();
     }
 
 private:
@@ -120,7 +134,8 @@ private:
             desc.extent.h = raw_data.GetExtent().h;
             desc.extent.l = 1;
             desc.format = Format::R8G8B8A8_UNORM;
-            desc.usage = nickel::Flags{ImageUsage::CopyDst}|ImageUsage::Sampled;
+            desc.usage =
+                nickel::Flags{ImageUsage::CopyDst} | ImageUsage::Sampled;
             m_image = device.CreateImage(desc);
         }
 
@@ -149,7 +164,8 @@ private:
             copy.CopyBufferToTexture(buffer, m_image, copy_info);
             copy.End();
             Command cmd = encoder.Finish();
-            device.Submit(cmd);
+            device.Submit(cmd, {}, {}, {});
+            device.WaitIdle();
         }
 
         // create view
@@ -201,7 +217,7 @@ private:
 
         m_vertex_buffer.Unmap();
     }
-    
+
     void bufferIndicesData() {
         uint32_t indices[] = {
             0, 1, 2, 1, 2, 3,

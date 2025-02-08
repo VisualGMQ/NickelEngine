@@ -1,5 +1,11 @@
 ﻿#include "nickel/nickel.hpp"
 
+#include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/device_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
+#include "nickel/graphics/lowlevel/internal/vk_call.hpp"
+#include "nickel/internal/pch.hpp"
+
 namespace nickel {
 
 Context::Context() {
@@ -12,12 +18,14 @@ Context::Context() {
 
     initCamera();
 
+    LOGI("init storage manager");
     // TODO: change org & app from config
-    m_storage_mgr = std::make_unique<StorageManager>(
-        "visualgmq", "nickelengine");
+    m_storage_mgr =
+        std::make_unique<StorageManager>("visualgmq", "nickelengine");
 
+    LOGI("init graphics context");
     m_graphics_ctx = std::make_unique<graphics::Context>(
-        m_graphics_adapter->GetDevice(), *m_window, *m_storage_mgr);
+        *m_graphics_adapter, *m_window, *m_storage_mgr);
 }
 
 Context::~Context() {
@@ -28,12 +36,21 @@ Context::~Context() {
 
     LOGI("clear graphics context");
     m_graphics_ctx.reset();
-    
+
     LOGI("shutdown graphics system");
     m_graphics_adapter.reset();
 
     LOGI("shutdown window system");
     m_window.reset();
+}
+
+void Context::HandleEvent(const SDL_Event& event) {
+    ImGui_ImplSDL3_ProcessEvent(&event);
+    if (event.type == SDL_EVENT_QUIT) {
+        Exit();
+    }
+
+    m_device_mgr.HandleEvent(event);
 }
 
 bool Context::ShouldExit() const noexcept {
@@ -94,14 +111,15 @@ void Context::EnableRender(bool enable) {
 
 void Context::Update() {
     m_graphics_ctx->BeginFrame();
-    
+
     auto app = GetApplication();
     if (app) {
         app->OnUpdate();
     }
 
     GetDeviceManager().Update();
-    
+
     m_graphics_ctx->EndFrame();
 }
+
 }  // namespace nickel

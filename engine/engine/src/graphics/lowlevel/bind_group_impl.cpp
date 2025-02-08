@@ -12,14 +12,17 @@ BindGroupImpl::BindGroupImpl(DeviceImpl& dev, size_t group_index,
                              VkDescriptorSet descriptor_set,
                              BindGroupLayoutImpl& layout,
                              const BindGroup::Descriptor& desc)
-    : m_layout{layout},
+    : m_layout{&layout},
       m_set{descriptor_set},
       m_group_index{group_index},
       m_device{dev},
       m_desc{desc} {}
 
+BindGroupImpl::BindGroupImpl(DeviceImpl& device, VkDescriptorSet set)
+    : m_set{set}, m_device{device} {}
+
 BindGroupImpl::~BindGroupImpl() {
-    m_layout.RecycleSetList(m_group_index);
+    m_layout->RecycleSetList(m_group_index);
 }
 
 const BindGroup::Descriptor& BindGroupImpl::GetDescriptor() const {
@@ -155,7 +158,7 @@ void BindGroupImpl::WriteDescriptors() {
 }
 
 void BindGroupImpl::PendingDelete() {
-    m_layout.m_bind_group_allocator.Deallocate(this);
+    m_layout->m_bind_group_allocator.Deallocate(this);
 }
 
 }  // namespace nickel::graphics

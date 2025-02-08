@@ -14,7 +14,7 @@
 
 namespace nickel::graphics {
 struct RenderPassEncoder::ApplyRenderCmd {
-    explicit ApplyRenderCmd(CommandImpl& cmd)
+    explicit ApplyRenderCmd(CommandEncoderImpl& cmd)
         : m_cmd{cmd} {
     }
 
@@ -88,7 +88,7 @@ struct RenderPassEncoder::ApplyRenderCmd {
     }
 
 private:
-    CommandImpl& m_cmd;
+    CommandEncoderImpl& m_cmd;
     const GraphicsPipeline* m_pipeline{};
 };
 
@@ -109,7 +109,7 @@ ClearValue::ClearValue(DepthStencilValue value) {
 }
 
 RenderPassEncoder::RenderPassEncoder(
-    CommandImpl& cmd, const RenderPass& render_pass, const Framebuffer& fbo,
+    CommandEncoderImpl& cmd, const RenderPass& render_pass, const Framebuffer& fbo,
     const Rect& render_area, std::span<ClearValue> clear_values)
     : m_cmd{cmd},
       m_render_pass_info{render_pass, fbo, render_area,
@@ -373,14 +373,14 @@ void RenderPassEncoder::beginRenderPass() {
     vkCmdBeginRenderPass(m_cmd.m_cmd, &render_pass_info,
                          VK_SUBPASS_CONTENTS_INLINE);
 
-    m_cmd.m_flags |= CommandImpl::Flag::Render;
+    m_cmd.m_flags |= CommandEncoderImpl::Flag::Render;
 }
 
-CopyEncoder::CopyEncoder(CommandImpl& cmd)
+CopyEncoder::CopyEncoder(CommandEncoderImpl& cmd)
     : m_cmd{cmd} {
 }
 
-CommandEncoder::CommandEncoder(CommandImpl& cmd)
+CommandEncoder::CommandEncoder(CommandEncoderImpl& cmd)
     : m_cmd{cmd} {
     VkCommandBufferBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -420,7 +420,7 @@ void CopyEncoder::End() {
         vkCmdCopyBuffer(m_cmd.m_cmd, copy_cmd.src.m_buffer,
                         copy_cmd.dst.m_buffer, 1, &region);
 
-        m_cmd.m_flags |= CommandImpl::Flag::Transfer;
+        m_cmd.m_flags |= CommandEncoderImpl::Flag::Transfer;
     }
 
     for (auto& copy_cmd : m_image_copies) {
@@ -474,7 +474,7 @@ void CopyEncoder::End() {
                                copy_cmd.dst.Impl().m_image,
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
-        m_cmd.m_flags |= CommandImpl::Flag::Transfer;
+        m_cmd.m_flags |= CommandEncoderImpl::Flag::Transfer;
     }
 
     m_buffer_copies.clear();
@@ -492,4 +492,13 @@ Command CommandEncoder::Finish() {
     VK_CALL(vkEndCommandBuffer(m_cmd.m_cmd));
     return Command{m_cmd};
 }
+
+CommandEncoderImpl& CommandEncoder::GetImpl() {
+    return m_cmd;
+}
+
+const CommandEncoderImpl& CommandEncoder::GetImpl() const {
+    return m_cmd;
+}
+
 } // namespace nickel::graphics

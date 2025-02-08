@@ -1,10 +1,11 @@
 ﻿#include "nickel/graphics/common_resource.hpp"
 
 namespace nickel::graphics {
-CommonResource::CommonResource(Device device, video::Window& window) {
+CommonResource::CommonResource(Device device, const video::Window& window) {
     initDepthImages(device, window);
     initRenderPass(device);
     initFramebuffers(device);
+    initSyncObjects(device);
 }
 
 ImageView CommonResource::GetDepthImageView(uint32_t idx) {
@@ -15,7 +16,25 @@ Framebuffer CommonResource::GetFramebuffer(uint32_t idx) {
     return m_fbos[idx];
 }
 
-void CommonResource::initDepthImages(Device& device, video::Window& window) {
+Semaphore& CommonResource::GetImageAvaliableSemaphore(uint32_t idx) {
+    return m_image_avaliable_sems[idx];
+}
+
+Semaphore& CommonResource::GetRenderFinishSemaphore(uint32_t idx) {
+    return m_render_finish_sems[idx];
+}
+
+Semaphore& CommonResource::GetImGuiRenderFinishSemaphore(uint32_t idx) {
+    return m_imgui_render_finish_sems[idx];
+}
+
+
+Fence& CommonResource::GetFence(uint32_t idx) {
+    return m_present_fences[idx];
+}
+
+void CommonResource::initDepthImages(Device& device,
+                                     const video::Window& window) {
     for (uint32_t i = 0; i < device.GetSwapchainImageInfo().m_image_count;
          i++) {
         {
@@ -65,7 +84,7 @@ void CommonResource::initRenderPass(Device& device) {
         RenderPass::Descriptor::AttachmentDescription attachment;
         attachment.samples = SampleCount::Count1;
         attachment.initialLayout = ImageLayout::Undefined;
-        attachment.finalLayout = ImageLayout::PresentSrcKHR;
+        attachment.finalLayout = ImageLayout::ColorAttachmentOptimal;
         attachment.loadOp = AttachmentLoadOp::Clear;
         attachment.storeOp = AttachmentStoreOp::Store;
         attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
@@ -117,4 +136,16 @@ void CommonResource::initRenderPass(Device& device) {
 
     m_render_pass = device.CreateRenderPass(desc);
 }
+
+void CommonResource::initSyncObjects(Device& device) {
+    uint32_t swapchain_image_count =
+        device.GetSwapchainImageInfo().m_image_count;
+    for (uint32_t i = 0; i < swapchain_image_count; i++) {
+        m_present_fences.push_back(device.CreateFence(true));
+        m_image_avaliable_sems.push_back(device.CreateSemaphore());
+        m_render_finish_sems.push_back(device.CreateSemaphore());
+        m_imgui_render_finish_sems.push_back(device.CreateSemaphore());
+    }
 }
+
+}  // namespace nickel::graphics

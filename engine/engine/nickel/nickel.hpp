@@ -7,6 +7,10 @@
 #include "nickel/video/window.hpp"
 #include "nickel/common/dllexport.hpp"
 #include "nickel/fs/storage.hpp"
+#include "imgui.h"
+#include "misc/cpp/imgui_stdlib.h"
+
+union SDL_Event;
 
 namespace nickel {
 class Application;
@@ -15,6 +19,8 @@ class NICKEL_API Context : public Singlton<Context, true> {
 public:
     Context();
     ~Context();
+
+    void HandleEvent(const SDL_Event&);
 
     bool ShouldExit() const noexcept;
 
@@ -44,15 +50,16 @@ private:
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<graphics::Context> m_graphics_ctx;
     std::unique_ptr<StorageManager> m_storage_mgr;
+
+
     input::DeviceManager m_device_mgr;
 
     void initCamera() {
         auto window_size = m_window->GetSize();
         float aspect = window_size.w / (float)window_size.h;
 
-        m_camera = std::make_unique<FlyCamera>(
-            nickel::Radians{nickel::Degrees{45.0f}},
-            aspect, 0.1f, 100.0f);
+        m_camera = std::make_unique<FlyCamera>(Radians{Degrees{45.0f}}, aspect,
+                                               0.1f, 100.0f);
     }
 };
 

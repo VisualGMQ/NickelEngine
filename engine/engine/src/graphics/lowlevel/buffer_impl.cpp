@@ -198,6 +198,7 @@ void BufferImpl::BuffData(void* data, size_t size, size_t offset) {
     copy_encoder.End();
     Command cmd = encoder.Finish();
 
-    m_device.Submit(cmd);
+    m_device.Submit(cmd, {}, {}, {});
+    m_device.WaitIdle();
 }
 } // namespace nickel::graphics

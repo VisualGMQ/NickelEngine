@@ -130,7 +130,7 @@ void BindGroupLayoutImpl::createPool(uint32_t count,
 }
 
 void BindGroupLayoutImpl::allocSets(uint32_t count) {
-    std::vector<VkDescriptorSetLayout> layouts{count, m_layout};
+    std::vector layouts{count, m_layout};
     VkDescriptorSetAllocateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     info.descriptorPool = m_pool;

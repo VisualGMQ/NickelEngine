@@ -3,7 +3,7 @@
 
 namespace nickel::graphics {
 
-Command::Command(CommandImpl& impl) : m_impl{&impl} {}
+Command::Command(CommandEncoderImpl& impl) : m_impl{&impl} {}
 
 Command::~Command() {
     if (m_impl) {
@@ -11,11 +11,11 @@ Command::~Command() {
     }
 }
 
-const CommandImpl& Command::Impl() const noexcept {
+const CommandEncoderImpl& Command::Impl() const noexcept {
     return *m_impl;
 }
 
-CommandImpl& Command::Impl() noexcept {
+CommandEncoderImpl& Command::Impl() noexcept {
     return *m_impl;
 }
 

@@ -24,10 +24,12 @@ set(VOLK_STATIC ON)
 set(VOLK_INSTALL OFF)
 add_subdirectory(volk)
 
-set(SPDLOG_ENABLE_PCH ON)
-add_subdirectory(spdlog)
+add_subdirectory(imgui)
 
 add_subdirectory(stb)
+
+set(SPDLOG_ENABLE_PCH ON)
+add_subdirectory(spdlog)
 
 mark_as_3rdlib(SDL3-static)
 mark_as_3rdlib(SDL3-shared)
@@ -36,3 +38,4 @@ mark_as_3rdlib(Vulkan-Headers)
 mark_as_3rdlib(spdlog)
 mark_as_3rdlib(volk)
 mark_as_3rdlib(stb_image)
+mark_as_3rdlib(imgui)

@@ -11,9 +11,9 @@ struct Vertex {
     Vec4 color;
 };
 
-class PrimitiveDrawPass {
+class PrimitiveRenderPass {
 public:
-    PrimitiveDrawPass(Device, StorageManager&, RenderPass& render_pass);
+    PrimitiveRenderPass(Device, StorageManager&, RenderPass& render_pass);
 
     void Begin();
     void UploadData2GPU(Device& device);
