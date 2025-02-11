@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "nickel/graphics/lowlevel/bind_group.hpp"
 #include "nickel/graphics/lowlevel/internal/bind_group_layout_impl.hpp"
+#include <forward_list>
 
 namespace nickel::graphics {
 
