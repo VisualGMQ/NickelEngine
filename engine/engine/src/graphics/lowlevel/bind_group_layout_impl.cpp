@@ -62,40 +62,16 @@ BindGroupLayoutImpl::BindGroupLayoutImpl(
 
     VkDescriptorSetLayoutCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
     ci.bindingCount = bindings.size();
     ci.pBindings = bindings.data();
 
     VK_CALL(vkCreateDescriptorSetLayout(dev.m_device, &ci, nullptr, &m_layout));
-
-    uint32_t count =
-        dev.GetSwapchainImageInfo().m_image_count * MaxDrawCallPerCmdBuf;
-    createPool(count, desc);
-    allocSets(count);
 }
 
 BindGroup BindGroupLayoutImpl::RequireBindGroup(
     const BindGroup::Descriptor& desc) {
-    size_t idx;
-    VkDescriptorSet set = RequireSet(idx);
-    BindGroup bind_group{
-        m_bind_group_allocator.Allocate(m_device, idx, set, *this, desc)};
-    bind_group.Impl().WriteDescriptors();
-    return bind_group;
-}
-
-VkDescriptorSet BindGroupLayoutImpl::RequireSet(size_t& out_idx) {
-    if (m_unused_group_indices.empty()) {
-        LOGW("run out of descriptor set!");
-        return VK_NULL_HANDLE;
-    }
-
-    out_idx = m_unused_group_indices.back();
-    m_unused_group_indices.pop_back();
-    return m_groups[out_idx];
-}
-
-void BindGroupLayoutImpl::RecycleSetList(size_t index) {
-    m_unused_group_indices.push_back(index);
+    return BindGroup{m_bind_group_allocator.Allocate(m_device, *this, desc)};
 }
 
 VkDescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
@@ -109,47 +85,8 @@ VkDescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
     return binding;
 }
 
-void BindGroupLayoutImpl::createPool(uint32_t count,
-                                     const BindGroupLayout::Descriptor& desc) {
-    VkDescriptorPoolCreateInfo info{};
-    std::vector<VkDescriptorPoolSize> sizes;
-    uint32_t maxCount = 0;
-    for (auto&& [slot, entry] : desc.entries) {
-        VkDescriptorPoolSize size;
-        size.type = BindGroupEntryType2Vk(entry.type);
-        size.descriptorCount = count;
-        sizes.emplace_back(size);
-        maxCount += count;
-    }
-    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    info.maxSets = maxCount;
-    info.poolSizeCount = sizes.size();
-    info.pPoolSizes = sizes.data();
-
-    VK_CALL(vkCreateDescriptorPool(m_device.m_device, &info, nullptr, &m_pool));
-}
-
-void BindGroupLayoutImpl::allocSets(uint32_t count) {
-    std::vector layouts{count, m_layout};
-    VkDescriptorSetAllocateInfo info{};
-    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    info.descriptorPool = m_pool;
-    info.pSetLayouts = layouts.data();
-    info.descriptorSetCount = count;
-
-    m_groups.resize(count);
-    VK_CALL(
-        vkAllocateDescriptorSets(m_device.m_device, &info, m_groups.data()));
-    m_unused_group_indices.reserve(count);
-    for (size_t i = 0; i < count; i++) {
-        m_unused_group_indices.push_back(i) ;
-    }
-}
-
 BindGroupLayoutImpl::~BindGroupLayoutImpl() {
     m_bind_group_allocator.FreeAll();
-    VK_CALL(vkResetDescriptorPool(m_device.m_device, m_pool, 0));
-    vkDestroyDescriptorPool(m_device.m_device, m_pool, nullptr);
     vkDestroyDescriptorSetLayout(m_device.m_device, m_layout, nullptr);
 }
 
@@ -159,6 +96,10 @@ void BindGroupLayoutImpl::DecRefcount() {
     if (Refcount() == 0) {
         m_device.m_pending_delete_bind_group_layouts.push_back(this);
     }
+}
+
+void BindGroupLayoutImpl::GC() {
+    m_bind_group_allocator.GC();
 }
 
 }  // namespace nickel::graphics

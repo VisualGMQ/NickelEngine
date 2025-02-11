@@ -7,7 +7,7 @@ endmacro()
 macro(mark_as_gui_test target_name)
     add_test(NAME ${target_name}
             COMMAND ${target_name}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     target_sources(${target_name} PRIVATE $<TARGET_OBJECTS:CommonRenderTestContext>)
     set_target_properties(${target_name} PROPERTIES
         FOLDER tests
@@ -19,7 +19,7 @@ endmacro()
 macro(mark_as_cli_test target_name)
     add_test(NAME ${target_name}
             COMMAND ${target_name}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     set_target_properties(${target_name} PROPERTIES
         FOLDER tests
         VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})

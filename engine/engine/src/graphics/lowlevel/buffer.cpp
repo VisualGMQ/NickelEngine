@@ -100,5 +100,4 @@ void Buffer::Release() {
     }
 }
 
-
 }  // namespace nickel::graphics

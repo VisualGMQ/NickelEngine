@@ -64,7 +64,7 @@ public:
 
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
         render_pass.BindIndexBuffer(m_index_buffer, IndexType::Uint32, 0);
-        render_pass.SetBindGroup(m_bind_group);
+        render_pass.SetBindGroup(0, m_bind_group);
         render_pass.DrawIndexed(6, 1, 0, 0, 0);
 
         render_pass.End();

@@ -12,9 +12,6 @@ class DeviceImpl;
 class BindGroupLayoutImpl final : public RefCountable {
 public:
     VkDescriptorSetLayout m_layout = VK_NULL_HANDLE;
-    VkDescriptorPool m_pool = VK_NULL_HANDLE;
-    std::vector<VkDescriptorSet> m_groups;
-    BlockMemoryAllocator<BindGroupImpl> m_bind_group_allocator;
 
     BindGroupLayoutImpl(DeviceImpl&, const BindGroupLayout::Descriptor&);
     BindGroupLayoutImpl(const BindGroupLayoutImpl&) = delete;
@@ -26,18 +23,16 @@ public:
 
     BindGroup RequireBindGroup(const BindGroup::Descriptor& desc);
 
-    VkDescriptorSet RequireSet(size_t& out_idx);
-    void RecycleSetList(size_t index);
     void DecRefcount() override;
+    void GC();
+
+    BlockMemoryAllocator<BindGroupImpl> m_bind_group_allocator;
 
 private:
     DeviceImpl& m_device;
-    std::vector<size_t> m_unused_group_indices;
 
     VkDescriptorSetLayoutBinding getBinding(uint32_t slot,
                                             const BindGroupLayout::Entry&);
-    void allocSets(uint32_t count);
-    void createPool(uint32_t count, const BindGroupLayout::Descriptor& desc);
 };
 
 }  // namespace nickel::graphics
