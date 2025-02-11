@@ -14,9 +14,7 @@
 
 namespace nickel::graphics {
 struct RenderPassEncoder::ApplyRenderCmd {
-    explicit ApplyRenderCmd(CommandEncoderImpl& cmd)
-        : m_cmd{cmd} {
-    }
+    explicit ApplyRenderCmd(CommandEncoderImpl& cmd) : m_cmd{cmd} {}
 
     void operator()(const BindGraphicsPipelineCmd& cmd) {
         vkCmdBindPipeline(m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -79,12 +77,20 @@ struct RenderPassEncoder::ApplyRenderCmd {
     }
 
     void operator()(const SetBindGroupCmd& cmd) {
-        auto descriptor_set = cmd.bind_group->Impl().m_set;
-        vkCmdBindDescriptorSets(
+        auto& write_infos =
+            cmd.bind_group->Impl().GetWriteInfo().GetWriteDescriptorSets();
+
+        // for (int i = 0; i < write_infos.size(); ++i) {
+        //     vkCmdPushDescriptorSetKHR(
+        //         m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        //         m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, i, 1,
+        //         &write_infos[i]);
+        // }
+
+        vkCmdPushDescriptorSetKHR(
             m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, 0, 1,
-            &descriptor_set, cmd.dynamic_offsets.size(),
-            cmd.dynamic_offsets.data());
+            m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, cmd.set,
+            write_infos.size(), write_infos.data());
     }
 
 private:
@@ -161,17 +167,20 @@ void RenderPassEncoder::BindIndexBuffer(Buffer buffer, IndexType type,
     m_record_cmds.push_back(cmd);
 }
 
-void RenderPassEncoder::SetBindGroup(BindGroup& bind_group) {
+void RenderPassEncoder::SetBindGroup(uint32_t set, BindGroup& bind_group) {
     SetBindGroupCmd cmd;
     cmd.bind_group = &bind_group;
+    cmd.set = set;
     m_record_cmds.push_back(cmd);
 
     transferImageLayoutInBindGroup(bind_group);
 }
 
 void RenderPassEncoder::SetBindGroup(
+    uint32_t set,
     BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
     SetBindGroupCmd cmd;
+    cmd.set = set;
     cmd.bind_group = &bind_group;
     cmd.dynamic_offsets = dynamicOffset;
     m_record_cmds.push_back(cmd);
@@ -184,7 +193,7 @@ void RenderPassEncoder::SetPushConstant(Flags<ShaderStage> stage,
                                         uint32_t size) {
     NICKEL_ASSERT(size <= 128,
                   "currently we don't support > 128 bytes in push constants");
-    
+
     SetPushConstantCmd cmd;
     cmd.stage = stage;
     memcpy(cmd.data, value, size);
@@ -237,7 +246,7 @@ void RenderPassEncoder::transferImageLayoutInBindGroup(
             image_impl = &binding->view.GetImage().Impl();
         }
         if (auto binding =
-            std::get_if<BindGroup::CombinedSamplerBinding>(&bind_entry)) {
+                std::get_if<BindGroup::CombinedSamplerBinding>(&bind_entry)) {
             image_impl = &binding->view.GetImage().Impl();
         }
 
@@ -296,25 +305,25 @@ void RenderPassEncoder::beginRenderPass() {
     for (auto& clear_value : m_render_pass_info.clear_values) {
         VkClearValue vk_clear_value{};
         if (auto color =
-            std::get_if<std::array<float, 4>>(&clear_value.m_value)) {
+                std::get_if<std::array<float, 4>>(&clear_value.m_value)) {
             vk_clear_value.color.float32[0] = (*color)[0];
             vk_clear_value.color.float32[1] = (*color)[1];
             vk_clear_value.color.float32[2] = (*color)[2];
             vk_clear_value.color.float32[3] = (*color)[3];
         } else if (auto color = std::get_if<std::array<int32_t, 4>>(
-            &clear_value.m_value)) {
+                       &clear_value.m_value)) {
             vk_clear_value.color.int32[0] = (*color)[0];
             vk_clear_value.color.int32[1] = (*color)[1];
             vk_clear_value.color.int32[2] = (*color)[2];
             vk_clear_value.color.int32[3] = (*color)[3];
         } else if (auto color = std::get_if<std::array<uint32_t, 4>>(
-            &clear_value.m_value)) {
+                       &clear_value.m_value)) {
             vk_clear_value.color.uint32[0] = (*color)[0];
             vk_clear_value.color.uint32[1] = (*color)[1];
             vk_clear_value.color.uint32[2] = (*color)[2];
             vk_clear_value.color.uint32[3] = (*color)[3];
         } else if (auto color = std::get_if<ClearValue::DepthStencilValue>(
-            &clear_value.m_value)) {
+                       &clear_value.m_value)) {
             vk_clear_value.depthStencil.depth = color->depth;
             vk_clear_value.depthStencil.stencil = color->stencil;
         }
@@ -345,9 +354,9 @@ void RenderPassEncoder::beginRenderPass() {
 
     //     VkImageAspectFlags aspect{};
     //     if (format == ) {
-    //         
+    //
     //     }
-    //     
+    //
     //     for (int i = 0; i < layouts.size(); i++) {
     //         VkImageLayout layout =
     //             ImageLayout2Vk(view.GetImage().Impl().m_layouts[i]);
@@ -366,7 +375,8 @@ void RenderPassEncoder::beginRenderPass() {
     //                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
     //                              nullptr, 0, nullptr, 1, &barrier);
     //         m_cmd.AddLayoutTransition(&view.GetImage().Impl(),
-    //                                   ImageLayout::ColorAttachmentOptimal, i);
+    //                                   ImageLayout::ColorAttachmentOptimal,
+    //                                   i);
     //     }
     // }
 
@@ -376,12 +386,9 @@ void RenderPassEncoder::beginRenderPass() {
     m_cmd.m_flags |= CommandEncoderImpl::Flag::Render;
 }
 
-CopyEncoder::CopyEncoder(CommandEncoderImpl& cmd)
-    : m_cmd{cmd} {
-}
+CopyEncoder::CopyEncoder(CommandEncoderImpl& cmd) : m_cmd{cmd} {}
 
-CommandEncoder::CommandEncoder(CommandEncoderImpl& cmd)
-    : m_cmd{cmd} {
+CommandEncoder::CommandEncoder(CommandEncoderImpl& cmd) : m_cmd{cmd} {
     VkCommandBufferBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     VK_CALL(vkBeginCommandBuffer(cmd.m_cmd, &begin_info));
@@ -501,4 +508,4 @@ const CommandEncoderImpl& CommandEncoder::GetImpl() const {
     return m_cmd;
 }
 
-} // namespace nickel::graphics
+}  // namespace nickel::graphics

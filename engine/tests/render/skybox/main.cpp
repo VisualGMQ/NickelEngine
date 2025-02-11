@@ -82,7 +82,7 @@ public:
         render_pass.BindGraphicsPipeline(m_pipeline);
 
         render_pass.BindVertexBuffer(0, m_vertex_buffer, 0);
-        render_pass.SetBindGroup(m_bind_group);
+        render_pass.SetBindGroup(0, m_bind_group);
         render_pass.Draw(36, 1, 0, 0);
 
         render_pass.End();

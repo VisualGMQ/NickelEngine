@@ -39,15 +39,20 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     device_ci.queueCreateInfoCount = queueCreateInfos.size();
     device_ci.pQueueCreateInfos = queueCreateInfos.data();
 
-    std::vector<const char*> requireExtensions;
-    requireExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    std::vector<const char*> requireExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME};
     std::vector<VkExtensionProperties> extension_props;
     uint32_t extensionCount = 0;
     VK_CALL(vkEnumerateDeviceExtensionProperties(impl.m_phyDevice, nullptr,
                                                  &extensionCount, nullptr));
+
     extension_props.resize(extensionCount);
     VK_CALL(vkEnumerateDeviceExtensionProperties(
         impl.m_phyDevice, nullptr, &extensionCount, extension_props.data()));
+
+    for (auto& extension: extension_props) {
+        LOGI("extension: {}", extension.extensionName);
+    }
 
     RemoveUnexistsElems<const char*, VkExtensionProperties>(
         requireExtensions, extension_props,
@@ -322,6 +327,7 @@ DeviceImpl::~DeviceImpl() {
     WaitIdle();
 
     m_swapchain_image_views.clear();
+    m_bind_group_layout_allocator.FreeAll();
 
     m_framebuffer_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
@@ -333,7 +339,6 @@ DeviceImpl::~DeviceImpl() {
     m_buffer_allocator.FreeAll();
     m_graphics_pipeline_allocator.FreeAll();
     m_pipeline_layout_allocator.FreeAll();
-    m_bind_group_layout_allocator.FreeAll();
     m_render_pass_allocator.FreeAll();
 
     m_semaphore_allocator.FreeAll();

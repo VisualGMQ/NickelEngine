@@ -8,28 +8,18 @@
 
 namespace nickel::graphics {
 
-BindGroupImpl::BindGroupImpl(DeviceImpl& dev, size_t group_index,
-                             VkDescriptorSet descriptor_set,
-                             BindGroupLayoutImpl& layout,
+BindGroupImpl::BindGroupImpl(DeviceImpl& dev, BindGroupLayoutImpl& layout,
                              const BindGroup::Descriptor& desc)
-    : m_layout{&layout},
-      m_set{descriptor_set},
-      m_group_index{group_index},
-      m_device{dev},
-      m_desc{desc} {}
-
-BindGroupImpl::BindGroupImpl(DeviceImpl& device, VkDescriptorSet set)
-    : m_set{set}, m_device{device} {}
-
-BindGroupImpl::~BindGroupImpl() {
-    m_layout->RecycleSetList(m_group_index);
+    : m_layout{&layout}, m_device{dev}, m_desc{desc} {
+    writeDescriptors();
 }
 
 const BindGroup::Descriptor& BindGroupImpl::GetDescriptor() const {
     return m_desc;
 }
 
-VkDescriptorType cvtBufferType2DescriptorType(BindGroup::BufferBinding::Type type) {
+VkDescriptorType cvtBufferType2DescriptorType(
+    BindGroup::BufferBinding::Type type) {
     switch (type) {
         case BindGroup::BufferBinding::Type::Storage:
             return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -40,28 +30,28 @@ VkDescriptorType cvtBufferType2DescriptorType(BindGroup::BufferBinding::Type typ
         case BindGroup::BufferBinding::Type::DynamicUniform:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     }
-    
+
     NICKEL_CANT_REACH();
     return {};
 }
 
-VkDescriptorType cvtImageType2DescriptorType(BindGroup::ImageBinding::Type type) {
+VkDescriptorType cvtImageType2DescriptorType(
+    BindGroup::ImageBinding::Type type) {
     switch (type) {
         case BindGroup::ImageBinding::Type::Image:
             return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         case BindGroup::ImageBinding::Type::StorageImage:
             return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     }
-    
+
     NICKEL_CANT_REACH();
     return {};
 }
 
-
 struct WriteDescriptorHelper final {
-    WriteDescriptorHelper(VkDescriptorSet set, DeviceImpl& dev,
-                          const BindGroup::BindingPoint& binding, uint32_t slot)
-        : m_set{set}, m_dev{dev}, m_bind_point{binding}, m_slot{slot} {}
+    explicit WriteDescriptorHelper(DescriptorSetWriteInfo& write_info,
+                                   uint32_t slot)
+        : m_slot{slot}, m_write_info{write_info} {}
 
     void operator()(const BindGroup::BufferBinding& binding) const {
         if (binding.buffer.Impl().Size() == 0) {
@@ -81,12 +71,12 @@ struct WriteDescriptorHelper final {
 
         write_info.descriptorCount = 1;
         write_info.descriptorType = cvtBufferType2DescriptorType(binding.type);
-        write_info.dstSet = m_set;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstArrayElement = 0;
-        write_info.pBufferInfo = &buffer_info;
+        write_info.pBufferInfo = &m_write_info.RecordBufferInfo(buffer_info);
         write_info.dstBinding = m_slot;
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 0, nullptr);
+        m_write_info.RecordWriteDescriptor(write_info);
     }
 
     void operator()(const BindGroup::SamplerBinding& binding) const {
@@ -97,13 +87,13 @@ struct WriteDescriptorHelper final {
         image_info.sampler = binding.sampler.Impl().m_sampler;
 
         write_info.descriptorCount = 1;
-        write_info.pImageInfo = &image_info;
+        write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
         write_info.dstArrayElement = 0;
-        write_info.dstSet = m_set;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstBinding = m_slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 0, nullptr);
+        m_write_info.RecordWriteDescriptor(write_info);
     }
 
     void operator()(const BindGroup::ImageBinding& binding) const {
@@ -115,13 +105,13 @@ struct WriteDescriptorHelper final {
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         write_info.descriptorCount = 1;
-        write_info.pImageInfo = &image_info;
+        write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
         write_info.dstArrayElement = 0;
-        write_info.dstSet = m_set;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstBinding = m_slot;
         write_info.descriptorType = cvtImageType2DescriptorType(binding.type);
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info, 0, nullptr);
+        m_write_info.RecordWriteDescriptor(write_info);
     }
 
     void operator()(const BindGroup::CombinedSamplerBinding& binding) const {
@@ -134,31 +124,33 @@ struct WriteDescriptorHelper final {
         image_info.sampler = binding.sampler.Impl().m_sampler;
 
         write_info.descriptorCount = 1;
-        write_info.pImageInfo = &image_info;
+        write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
         write_info.dstArrayElement = 0;
-        write_info.dstSet = m_set;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstBinding = m_slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
-        vkUpdateDescriptorSets(m_dev.m_device, 1, &write_info,0, nullptr);
+        m_write_info.RecordWriteDescriptor(write_info);
     }
 
 private:
-    VkDescriptorSet m_set;
-    DeviceImpl& m_dev;
-    const BindGroup::BindingPoint& m_bind_point;
     uint32_t m_slot{};
+    DescriptorSetWriteInfo& m_write_info;
 };
 
-void BindGroupImpl::WriteDescriptors() {
+void BindGroupImpl::writeDescriptors() {
     for (auto&& [slot, entry] : m_desc.entries) {
-        WriteDescriptorHelper helper{m_set, m_device, entry.binding, slot};
+        WriteDescriptorHelper helper{m_write_infos, slot};
         std::visit(helper, entry.binding.entry);
     }
 }
 
 void BindGroupImpl::PendingDelete() {
-    m_layout->m_bind_group_allocator.Deallocate(this);
+    m_layout->m_bind_group_allocator.MarkAsGarbage(this);
+}
+
+const DescriptorSetWriteInfo& BindGroupImpl::GetWriteInfo() const {
+    return m_write_infos;
 }
 
 }  // namespace nickel::graphics

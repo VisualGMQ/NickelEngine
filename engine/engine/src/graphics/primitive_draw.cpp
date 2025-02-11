@@ -103,7 +103,7 @@ void PrimitiveRenderPass::ApplyDrawCall(RenderPassEncoder& encoder,
         encoder.BindGraphicsPipeline(m_line_pipeline);
         encoder.SetPushConstant(ShaderStage::Vertex, &model_view, 0,
                                 sizeof(model_view));
-        encoder.SetBindGroup(m_bind_group);
+        encoder.SetBindGroup(0, m_bind_group);
         encoder.BindVertexBuffer(0, m_line_vertex_buffer.m_gpu, 0);
         encoder.Draw(m_line_vertex_buffer.m_elem_count, 1, 0, 0);
     }
@@ -114,7 +114,7 @@ void PrimitiveRenderPass::ApplyDrawCall(RenderPassEncoder& encoder,
         } else {
             encoder.BindGraphicsPipeline(m_triangle_solid_pipeline);
         }
-        encoder.SetBindGroup(m_bind_group);
+        encoder.SetBindGroup(0, m_bind_group);
         encoder.SetPushConstant(ShaderStage::Vertex, &model_view, 0,
                                 sizeof(model_view));
         encoder.BindVertexBuffer(0, m_triangle_vertex_buffer.m_gpu, 0);
