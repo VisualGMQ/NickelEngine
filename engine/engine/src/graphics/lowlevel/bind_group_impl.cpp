@@ -71,7 +71,7 @@ struct WriteDescriptorHelper final {
 
         write_info.descriptorCount = 1;
         write_info.descriptorType = cvtBufferType2DescriptorType(binding.type);
-        write_info.dstSet = nullptr;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstArrayElement = 0;
         write_info.pBufferInfo = &m_write_info.RecordBufferInfo(buffer_info);
         write_info.dstBinding = m_slot;
@@ -89,7 +89,7 @@ struct WriteDescriptorHelper final {
         write_info.descriptorCount = 1;
         write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
         write_info.dstArrayElement = 0;
-        write_info.dstSet = nullptr;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstBinding = m_slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 
@@ -107,7 +107,7 @@ struct WriteDescriptorHelper final {
         write_info.descriptorCount = 1;
         write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
         write_info.dstArrayElement = 0;
-        write_info.dstSet = nullptr;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstBinding = m_slot;
         write_info.descriptorType = cvtImageType2DescriptorType(binding.type);
 
@@ -126,7 +126,7 @@ struct WriteDescriptorHelper final {
         write_info.descriptorCount = 1;
         write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
         write_info.dstArrayElement = 0;
-        write_info.dstSet = nullptr;
+        write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstBinding = m_slot;
         write_info.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
