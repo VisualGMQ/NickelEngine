@@ -18,6 +18,7 @@ option(TINYGLTF_HEADER_ONLY "On: header-only mode. Off: create tinygltf library(
 option(TINYGLTF_INSTALL "Install tinygltf files during install step. Usually set to OFF if you include tinygltf through add_subdirectory()" ON)
 option(TINYGLTF_INSTALL_VENDOR "Install vendored nlohmann/json and nothings/stb headers" ON)
 option(TINYGLTF_NO_STB_IMAGE "No stb_image library" OFF)
+option(TINYGLTF_NO_EXTERNAL_IMAGE "Dont load external image" OFF)
 
 if (TINYGLTF_BUILD_LOADER_EXAMPLE)
   add_executable(loader_example
@@ -62,6 +63,9 @@ else (TINYGLTF_HEADER_ONLY)
   if (TINYGLTF_NO_INCLUDE_STB_IMAGE)
     target_compile_definitions(tinygltf PUBLIC TINYGLTF_NO_INCLUDE_STB_IMAGE TINYGLTF_NO_STB_IMAGE)
   endif(TINYGLTF_NO_INCLUDE_STB_IMAGE)
+  if (TINYGLTF_NO_EXTERNAL_IMAGE)
+    target_compile_definitions(tinygltf PUBLIC TINYGLTF_NO_EXTERNAL_IMAGE)
+  endif(TINYGLTF_NO_EXTERNAL_IMAGE)
 endif (TINYGLTF_HEADER_ONLY)
 
 if (TINYGLTF_INSTALL)

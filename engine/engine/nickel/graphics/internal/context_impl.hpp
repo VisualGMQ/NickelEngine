@@ -22,12 +22,15 @@ public:
     void DrawLineStrip(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
                           std::span<uint32_t> indices);
+    void DrawModel(const GLTFModel& model);
+    
     void SetClearColor(const Color& color);
     void SetDepthClearValue(float depth, uint32_t stencil);
 
     void EnableWireFrame(bool enable);
 
     GLTFRenderPass& GetGLTFRenderPass();
+    CommonResource& GetCommonResource();
 
 private:
     CommonResource m_common_resource;

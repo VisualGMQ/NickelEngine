@@ -1,6 +1,9 @@
 #include "nickel/graphics/gltf_draw.hpp"
 
 #include "nickel/common/common.hpp"
+#include "nickel/graphics/internal/gltf_model_impl.hpp"
+#include "nickel/graphics/internal/material3d_impl.hpp"
+#include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
 
@@ -27,6 +30,41 @@ GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res) {
                           res.m_render_pass);
 }
 
+void GLTFRenderPass::RenderModel(const GLTFModel& model) {
+    m_models.push_back(model);
+}
+
+void GLTFRenderPass::ApplyDrawCall(RenderPassEncoder& encoder, bool wireframe) {
+    auto& camera = nickel::Context::GetInst().GetCamera();
+
+    if (wireframe) {
+        encoder.BindGraphicsPipeline(m_line_frame_pipeline);
+    } else {
+        encoder.BindGraphicsPipeline(m_solid_pipeline);
+    }
+
+    encoder.SetPushConstant(ShaderStage::Vertex, camera.GetView().Ptr(), 0,
+                            sizeof(Mat44));
+
+    for (auto& model : m_models) {
+        GLTFModelImpl* impl = model.GetImpl();
+
+        for (auto& scene : impl->scenes) {
+            for (auto& node : scene.nodes) {
+                visitGPUMesh(encoder, *model.GetImpl(), *node);
+            }
+        }
+    }
+}
+
+bool GLTFRenderPass::NeedDraw() const noexcept {
+    return !m_models.empty();
+}
+
+void GLTFRenderPass::End() {
+    m_models.clear();
+}
+
 BindGroupLayout GLTFRenderPass::GetBindGroupLayout() {
     return m_bind_group_layout;
 }
@@ -50,41 +88,65 @@ GraphicsPipeline::Descriptor GLTFRenderPass::getPipelineDescTmpl(
     desc.primitive.stripIndexFormat = StripIndexFormat::Uint32;
 
     // input vertex state
-    GraphicsPipeline::Descriptor::BufferState buffer_state;
+    // Position
     {
+        GraphicsPipeline::Descriptor::BufferState buffer_state;
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
         attr.format = VertexFormat::Float32x3;
         attr.offset = 0;
         attr.shaderLocation = 0;
         buffer_state.attributes.push_back(attr);
+
+        buffer_state.arrayStride = sizeof(float) * 3;
+        buffer_state.stepMode =
+            GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
+        desc.vertex.buffers.push_back(buffer_state);
     }
 
+    // UV
     {
+        GraphicsPipeline::Descriptor::BufferState buffer_state;
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
         attr.format = VertexFormat::Float32x2;
-        attr.offset = sizeof(float) * 3;
+        attr.offset = 0;
         attr.shaderLocation = 1;
         buffer_state.attributes.push_back(attr);
-    }
-    {
-        GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x3;
-        attr.offset = sizeof(float) * 5;
-        attr.shaderLocation = 2;
-        buffer_state.attributes.push_back(attr);
-    }
-    {
-        GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x4;
-        attr.offset = sizeof(float) * 8;
-        attr.shaderLocation = 3;
-        buffer_state.attributes.push_back(attr);
+
+        buffer_state.arrayStride = sizeof(float) * 2;
+        buffer_state.stepMode =
+            GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
+        desc.vertex.buffers.push_back(buffer_state);
     }
 
-    buffer_state.arrayStride = sizeof(float) * 12;
-    buffer_state.stepMode =
-        GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-    desc.vertex.buffers.push_back(buffer_state);
+    // normal
+    {
+        GraphicsPipeline::Descriptor::BufferState buffer_state;
+        GraphicsPipeline::Descriptor::BufferState::Attribute attr;
+        attr.format = VertexFormat::Float32x3;
+        attr.offset = 0;
+        attr.shaderLocation = 2;
+        buffer_state.attributes.push_back(attr);
+
+        buffer_state.arrayStride = sizeof(float) * 3;
+        buffer_state.stepMode =
+            GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
+        desc.vertex.buffers.push_back(buffer_state);
+    }
+
+    // tangent
+    {
+        GraphicsPipeline::Descriptor::BufferState buffer_state;
+        GraphicsPipeline::Descriptor::BufferState::Attribute attr;
+        attr.format = VertexFormat::Float32x4;
+        attr.offset = 0;
+        attr.shaderLocation = 3;
+        buffer_state.attributes.push_back(attr);
+
+        buffer_state.arrayStride = sizeof(float) * 4;
+        buffer_state.stepMode =
+            GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
+        desc.vertex.buffers.push_back(buffer_state);
+    }
 
     // blend state
     GraphicsPipeline::Descriptor::BlendState blend_state;
@@ -108,6 +170,7 @@ void GLTFRenderPass::initSolidPipeline(Device& device,
                                        RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc = getPipelineDescTmpl(
         vertex_shader, frag_shader, render_pass, m_pipeline_layout);
+    desc.subpass = 0;
     desc.primitive.topology = Topology::TriangleList;
     desc.primitive.cullMode = CullMode::Back;
     desc.primitive.frontFace = FrontFace::CCW;
@@ -125,7 +188,7 @@ void GLTFRenderPass::initLineFramePipeline(Device& device,
     desc.primitive.cullMode = CullMode::None;
     desc.primitive.frontFace = FrontFace::CCW;
     desc.primitive.polygonMode = PolygonMode::Line;
-    m_solid_pipeline = device.CreateGraphicPipeline(desc);
+    m_line_frame_pipeline = device.CreateGraphicPipeline(desc);
 }
 
 void GLTFRenderPass::initPipelineLayout(Device& device) {
@@ -158,7 +221,7 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
         BindGroupLayout::Entry entry;
         entry.shader_stage = ShaderStage::Fragment;
         entry.arraySize = 1;
-        entry.type = BindGroupEntryType::UniformBuffer;
+        entry.type = BindGroupEntryType::UniformBufferDynamic;
         desc.entries[1] = entry;
     }
 
@@ -235,6 +298,57 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
     }
 
     m_bind_group_layout = device.CreateBindGroupLayout(desc);
+}
+
+void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
+                                  GLTFModelImpl& model, GPUMesh& mesh) {
+    for (auto& prim : mesh.primitives) {
+        auto& mtl = model.materials[prim.material.value()];
+
+        encoder.SetPushConstant(ShaderStage::Vertex, mesh.modelMat.Ptr(),
+                                sizeof(Mat44), sizeof(Mat44));
+
+        auto& pbr_param_buffer_view = mtl.GetImpl()->pbrParameters;
+        encoder.SetBindGroup(0, mtl.GetImpl()->bindGroup);
+
+        // position
+        auto& pos_buffer_view = prim.posBufView;
+        encoder.BindVertexBuffer(
+            0, model.dataBuffers[pos_buffer_view.buffer.value()],
+            pos_buffer_view.offset);
+
+        // uv
+        auto& uv_buffer_view = prim.uvBufView;
+        encoder.BindVertexBuffer(
+            1, model.dataBuffers[uv_buffer_view.buffer.value()],
+            uv_buffer_view.offset);
+
+        // normal
+        auto& normal_buffer_view = prim.normBufView;
+        encoder.BindVertexBuffer(
+            2, model.dataBuffers[normal_buffer_view.buffer.value()],
+            normal_buffer_view.offset);
+
+        // tangent
+        auto& tangent_buffer_view = prim.tanBufView;
+        encoder.BindVertexBuffer(
+            3, model.dataBuffers[tangent_buffer_view.buffer.value()],
+            tangent_buffer_view.offset);
+
+        if (prim.indicesBufView) {
+            auto& indices_buffer_view = prim.indicesBufView;
+            encoder.BindIndexBuffer(
+                model.dataBuffers[indices_buffer_view.buffer.value()],
+                prim.index_type, indices_buffer_view.offset);
+            encoder.DrawIndexed(indices_buffer_view.count, 1, 0, 0, 0);
+        } else {
+            encoder.Draw(pos_buffer_view.count, 1, 0, 0);
+        }
+    }
+
+    for (auto& child : mesh.children) {
+        visitGPUMesh(encoder, model, *child);
+    }
 }
 
 }  // namespace nickel::graphics

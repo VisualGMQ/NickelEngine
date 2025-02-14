@@ -11,6 +11,7 @@ class TextureManagerImpl {
 public:
     Texture Load(const Path& filename, Format format);
     Texture Find(const Path& filename);
+    void GC();
 
 private:
     std::unordered_map<Path, Texture> m_textures;

@@ -1,5 +1,7 @@
 ﻿#include "nickel/graphics/camera.hpp"
 
+#include "nickel/graphics/lowlevel/buffer.hpp"
+
 namespace nickel {
 
 class FlyCamera::Impl {
@@ -115,7 +117,7 @@ void FlyCamera::MoveUpDown(float dist) {
     return m_impl->MoveUpDown(dist);
 }
 
-const Vec3& FlyCamera::GetPosition() const {
+Vec3 FlyCamera::GetPosition() const {
     return m_impl->GetPosition();
 }
 

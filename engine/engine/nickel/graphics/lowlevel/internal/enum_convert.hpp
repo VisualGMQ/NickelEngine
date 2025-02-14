@@ -328,13 +328,13 @@ inline VkDescriptorType BindGroupEntryType2Vk(BindGroupEntryType type) {
         CASE(BindGroupEntryType::StorageBuffer,
              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
         CASE(BindGroupEntryType::UniformBufferDynamic,
-             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         CASE(BindGroupEntryType::StoragesBufferDynamic,
-             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
+             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
         CASE(BindGroupEntryType::InputAttachment,
              VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
         CASE(BindGroupEntryType::InlineUniformBlock,
-             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+             VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK);
     }
 
     NICKEL_CANT_REACH();

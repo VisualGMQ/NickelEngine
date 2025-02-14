@@ -1,4 +1,6 @@
 #pragma once
+#include "mesh.hpp"
+#include "nickel/common/transform.hpp"
 #include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/graphics/lowlevel/device.hpp"
@@ -9,6 +11,12 @@ namespace nickel::graphics {
 class GLTFRenderPass {
 public:
     GLTFRenderPass(Device device, CommonResource&);
+
+    void RenderModel(const GLTFModel&);
+    void ApplyDrawCall(RenderPassEncoder&, bool wireframe);
+    bool NeedDraw() const noexcept;
+
+    void End();
 
     BindGroupLayout GetBindGroupLayout();
 
@@ -29,6 +37,9 @@ private:
                                RenderPass& render_pass);
     void initPipelineLayout(Device& device);
     void initBindGroupLayout(Device& device);
+
+    void visitGPUMesh(RenderPassEncoder& encoder, GLTFModelImpl& model,
+                      GPUMesh& mesh);
 };
 
 }  // namespace nickel::graphics

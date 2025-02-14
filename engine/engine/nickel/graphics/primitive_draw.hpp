@@ -6,6 +6,8 @@
 #include <span>
 
 namespace nickel::graphics {
+class CommonResource;
+
 struct Vertex {
     Vec3 position;
     Vec4 color;
@@ -13,7 +15,7 @@ struct Vertex {
 
 class PrimitiveRenderPass {
 public:
-    PrimitiveRenderPass(Device, StorageManager&, RenderPass& render_pass);
+    PrimitiveRenderPass(Device, StorageManager&, RenderPass&, CommonResource&);
 
     void Begin();
     void UploadData2GPU(Device& device);
@@ -42,15 +44,13 @@ private:
     GraphicsPipeline m_triangle_wire_pipeline;
     GraphicsPipeline m_triangle_solid_pipeline;
     std::vector<Image> m_depth_images;
-    Buffer m_project_buffer;
     BufferBundle m_line_vertex_buffer;
     BufferBundle m_triangle_vertex_buffer;
     BufferBundle m_triangle_indices_buffer;
 
     void initBindGroupLayout(Device&);
-    void initBindGroup();
+    void initBindGroup(CommonResource& res);
     void initPipelineLayout(Device&);
-    void initProjectBuffer(Device&);
     void initLinePipeline(Device&, ShaderModule& vertex, ShaderModule& frag,
                           RenderPass& render_pass);
     void initTrianglePipeline(Device&, ShaderModule& vertex, ShaderModule& frag,

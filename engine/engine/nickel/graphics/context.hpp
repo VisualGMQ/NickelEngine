@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/graphics/gltf.hpp"
 #include "nickel/fs/storage.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/primitive_draw.hpp"
@@ -24,6 +25,8 @@ public:
                           std::span<uint32_t> indices);
     void SetClearColor(const Color& color);
     void SetDepthClearValue(float depth, uint32_t stencil);
+
+    void DrawModel(const GLTFModel& model);
 
     void EnableWireFrame(bool enable) const;
 

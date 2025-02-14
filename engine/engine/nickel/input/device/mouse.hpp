@@ -35,6 +35,9 @@ public:
     Button GetButton(Button::Type) const;
     const Vec2& GetPosition() const;
     const Vec2& GetOffset() const;
+    void RelativeMode(bool);
+    bool IsRelativeMode() const;
+    void Show(bool);
     void HandleEvent(const SDL_Event&);
     void Update();
 

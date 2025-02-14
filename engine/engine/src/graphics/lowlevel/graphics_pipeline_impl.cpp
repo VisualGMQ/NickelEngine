@@ -11,7 +11,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     : m_layout{desc.layout}, m_device{dev}, m_render_pass{desc.m_render_pass} {
     VkGraphicsPipelineCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    ci.subpass = 0;
+    ci.subpass = desc.subpass;
 
     std::vector<VkPipelineShaderStageCreateInfo> stage_ci_list;
     // shader stage

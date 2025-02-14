@@ -3,11 +3,12 @@
 #include "nickel/fs/path.hpp"
 
 namespace nickel::graphics {
-struct GLTFModel final {
-    class Impl;
 
+class GLTFModelImpl;
+
+struct GLTFModel final {
     GLTFModel() = default;
-    GLTFModel(Impl* impl);
+    GLTFModel(GLTFModelImpl* impl);
     GLTFModel(const GLTFModel&) noexcept;
     GLTFModel(GLTFModel&&) noexcept;
     GLTFModel& operator=(const GLTFModel&) noexcept;
@@ -16,16 +17,24 @@ struct GLTFModel final {
     
     operator bool() const;
 
+    const GLTFModelImpl* GetImpl() const;
+    GLTFModelImpl* GetImpl();
+
 private:
-    Impl* m_impl{};
+    GLTFModelImpl* m_impl{};
 };
 
 class GLTFManager {
 public:
+    GLTFManager();
+    ~GLTFManager();
+    
     GLTFModel Load(const Path&);
+    void GC();
 
 private:
-    BlockMemoryAllocator<GLTFModel::Impl> m_model_allocator;
+    class Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 }

@@ -27,6 +27,7 @@ public:
     VkSurfaceKHR m_surface;
     DeviceImpl* m_device{};
     Adapter::Limits m_limits;
+    VkDebugUtilsMessengerEXT m_debug_utils_messenger;
 
 private:
     void createInstance();

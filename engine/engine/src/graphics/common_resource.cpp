@@ -1,11 +1,15 @@
 ﻿#include "nickel/graphics/common_resource.hpp"
 
+#include "nickel/nickel.hpp"
+
 namespace nickel::graphics {
 CommonResource::CommonResource(Device device, const video::Window& window) {
     initDepthImages(device, window);
     initRenderPass(device);
     initFramebuffers(device);
     initSyncObjects(device);
+    initCameraBuffer(device);
+    initDefaultResources(device);
 }
 
 ImageView CommonResource::GetDepthImageView(uint32_t idx) {
@@ -30,6 +34,22 @@ Semaphore& CommonResource::GetImGuiRenderFinishSemaphore(uint32_t idx) {
 
 Fence& CommonResource::GetFence(uint32_t idx) {
     return m_present_fences[idx];
+}
+
+void CommonResource::Begin() {
+    m_camera_buffer.MapAsync();
+    auto& camera = nickel::Context::GetInst().GetCamera();
+    memcpy(m_camera_buffer.GetMappedRange(), camera.GetProject().Ptr(),
+           sizeof(Mat44));
+
+    m_view_buffer.MapAsync();
+    Vec3 pos = camera.GetPosition();
+    memcpy(m_view_buffer.GetMappedRange(), pos.Ptr(), sizeof(Vec3));
+}
+
+void CommonResource::End() {
+    m_view_buffer.Unmap();
+    m_camera_buffer.Unmap();
 }
 
 void CommonResource::initDepthImages(Device& device,
@@ -159,8 +179,26 @@ void CommonResource::initDefaultResources(Device& device) {
     }
 
     m_white_image = createPureColorImage(device, 0xFFFFFFFF);
-    m_black_image = createPureColorImage(device, 0x000000FF);
+    m_black_image = createPureColorImage(device, 0xFF000000);
     m_default_normal_image = createPureColorImage(device, 0xFFFF8080);
+}
+
+void CommonResource::initCameraBuffer(Device& device) {
+    {
+        Buffer::Descriptor desc;
+        desc.m_memory_type = MemoryType::Coherence;
+        desc.m_size = sizeof(Mat44);
+        desc.m_usage = BufferUsage::Uniform;
+        m_camera_buffer = device.CreateBuffer(desc);
+    }
+
+    {
+        Buffer::Descriptor desc;
+        desc.m_memory_type = MemoryType::Coherence;
+        desc.m_size = sizeof(Vec3);
+        desc.m_usage = BufferUsage::Uniform;
+        m_view_buffer = device.CreateBuffer(desc);
+    }
 }
 
 ImageView CommonResource::createPureColorImage(Device& device, uint32_t color) {
@@ -172,7 +210,7 @@ ImageView CommonResource::createPureColorImage(Device& device, uint32_t color) {
         desc.extent.h = 1;
         desc.extent.l = 1;
         desc.format = Format::R8G8B8A8_UNORM;
-        desc.usage = ImageUsage::Sampled;
+        desc.usage = Flags{ImageUsage::Sampled} | ImageUsage::CopyDst;
         desc.tiling = ImageTiling::Optimal;
         image = device.CreateImage(desc);
     }

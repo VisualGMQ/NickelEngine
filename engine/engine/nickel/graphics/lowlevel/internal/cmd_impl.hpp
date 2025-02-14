@@ -27,6 +27,8 @@ public:
     Flags<Flag> m_flags = Flag::Unknown;
 
     void AddLayoutTransition(ImageImpl*, ImageLayout, size_t idx);
+    std::optional<VkImageLayout> QueryImageLayout(ImageImpl* img,
+                                                  size_t idx) const;
     void ApplyLayoutTransitions();
 
     void PendingDelete();

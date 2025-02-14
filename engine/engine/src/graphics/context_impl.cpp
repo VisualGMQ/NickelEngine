@@ -9,7 +9,7 @@ ContextImpl::ContextImpl(const Adapter& adapter, const video::Window& window,
                     StorageManager& storage_mgr)
     : m_common_resource{adapter.GetDevice(), window},
       m_primitive_draw{adapter.GetDevice(), storage_mgr,
-                       m_common_resource.m_render_pass},
+                       m_common_resource.m_render_pass, m_common_resource},
       m_imgui_draw{window, adapter},
       m_gltf_draw{adapter.GetDevice(), m_common_resource} {}
 
@@ -31,6 +31,7 @@ void ContextImpl::BeginFrame() {
         m_common_resource.GetImageAvaliableSemaphore(m_render_frame_index),
         std::span{&fence, 1});
 
+    m_common_resource.Begin();
     m_imgui_draw.Begin();
     m_primitive_draw.Begin();
 }
@@ -62,6 +63,10 @@ void ContextImpl::EndFrame() {
         m_primitive_draw.ApplyDrawCall(render_pass_encoder, m_is_wireframe);
     }
 
+    if (m_gltf_draw.NeedDraw()) {
+        m_gltf_draw.ApplyDrawCall(render_pass_encoder, m_is_wireframe);
+    }
+
     render_pass_encoder.End();
 
     auto cmd = encoder.Finish();
@@ -73,7 +78,6 @@ void ContextImpl::EndFrame() {
         std::span{
             &m_common_resource.GetRenderFinishSemaphore(m_render_frame_index),
             1},
-        // m_common_resource.GetFence(m_render_frame_index));
         {});
 
     m_imgui_draw.End(device, m_common_resource, m_render_frame_index);
@@ -82,6 +86,9 @@ void ContextImpl::EndFrame() {
         &m_common_resource.GetImGuiRenderFinishSemaphore(m_render_frame_index),
         1});
     device.EndFrame();
+
+    m_gltf_draw.End();
+    m_common_resource.End();
 
     m_render_frame_index = (m_render_frame_index + 1) %
                            device.GetSwapchainImageInfo().m_image_count;
@@ -94,10 +101,14 @@ void ContextImpl::DrawLineStrip(std::span<Vertex> vertices) {
 }
 
 void ContextImpl::DrawTriangleList(std::span<Vertex> vertices,
-                                     std::span<uint32_t> indices) {
+                                   std::span<uint32_t> indices) {
     NICKEL_RETURN_IF_FALSE(m_enable_render);
 
     m_primitive_draw.DrawTriangleList(vertices, indices);
+}
+
+void ContextImpl::DrawModel(const GLTFModel& model) {
+    m_gltf_draw.RenderModel(model);
 }
 
 void ContextImpl::SetClearColor(const Color& color) {
@@ -114,6 +125,10 @@ void ContextImpl::EnableWireFrame(bool enable) {
 
 GLTFRenderPass& ContextImpl::GetGLTFRenderPass() {
     return m_gltf_draw;
+}
+
+CommonResource& ContextImpl::GetCommonResource() {
+    return m_common_resource;
 }
 
 }  // namespace nickel::graphics

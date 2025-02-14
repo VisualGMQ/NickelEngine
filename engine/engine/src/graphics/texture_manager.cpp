@@ -18,4 +18,8 @@ Texture TextureManager::Find(const Path& filename) {
     return m_impl->Find(filename);
 }
 
+void TextureManager::GC() {
+    m_impl->GC();
+}
+
 }  // namespace nickel::graphics

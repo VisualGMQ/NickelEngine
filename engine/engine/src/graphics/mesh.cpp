@@ -2,5 +2,4 @@
 
 namespace nickel::graphics {
 
-
-}
+}  // namespace nickel::graphics

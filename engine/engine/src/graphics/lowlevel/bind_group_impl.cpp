@@ -25,10 +25,14 @@ VkDescriptorType cvtBufferType2DescriptorType(
             return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         case BindGroup::BufferBinding::Type::Uniform:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        // NOTE: Now we use VK_KHR_push_descriptor, we can use non-dynamic
+        // buffer with offset to do same thing as dynamic buffer
         case BindGroup::BufferBinding::Type::DynamicStorage:
-            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            // return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         case BindGroup::BufferBinding::Type::DynamicUniform:
-            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            // return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     }
 
     NICKEL_CANT_REACH();

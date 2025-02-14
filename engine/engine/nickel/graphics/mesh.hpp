@@ -1,17 +1,19 @@
 ﻿#pragma once
-#include "nickel/graphics/material.hpp"
-#include "nickel/graphics/lowlevel/buffer.hpp"
 #include "nickel/common/math/math.hpp"
+#include "nickel/common/transform.hpp"
+#include "nickel/graphics/lowlevel/buffer.hpp"
+#include "nickel/graphics/material.hpp"
 
 namespace nickel::graphics {
 struct Primitive final {
     std::string name;
-    std::optional<uint32_t> posBufView{};
-    std::optional<uint32_t> normBufView{};
-    std::optional<uint32_t> tanBufView{};
-    std::optional<uint32_t> uvBufView{};
-    std::optional<uint32_t> colorBufView{};
-    std::optional<uint32_t> indicesBufView{};
+    BufferView posBufView;
+    BufferView normBufView;
+    BufferView tanBufView;
+    BufferView uvBufView;
+    BufferView colorBufView;
+    BufferView indicesBufView;
+    IndexType index_type;
     std::optional<uint32_t> material;
 };
 

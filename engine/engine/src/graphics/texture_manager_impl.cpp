@@ -27,4 +27,9 @@ Texture TextureManagerImpl::Find(const Path& filename) {
     }
     return {};
 }
+
+void TextureManagerImpl::GC() {
+    // TODO: remove texture from manager
+    m_texture_allocator.GC();
+}
 }  // namespace nickel::graphics

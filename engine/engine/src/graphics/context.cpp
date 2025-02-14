@@ -46,6 +46,10 @@ void Context::SetDepthClearValue(float depth, uint32_t stencil) {
     m_impl->SetDepthClearValue(depth, stencil);
 }
 
+void Context::DrawModel(const GLTFModel& model) {
+    m_impl->DrawModel(model);
+}
+
 void Context::EnableWireFrame(bool enable) const {
     m_impl->EnableWireFrame(enable);
 }

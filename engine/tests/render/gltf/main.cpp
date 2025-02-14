@@ -14,26 +14,36 @@ public:
         auto& mouse = ctx.GetDeviceManager().GetMouse();
         mouse.RelativeMode(true);
         mouse.Show(false);
+
+        auto& mgr = ctx.GetGLTFManager();
+        m_model = mgr.Load("tests/render/gltf/assets/Box/Box.gltf");
     }
-    
+
     void OnUpdate() override {
         updateCamera();
         drawGrid();
+        
 
         auto& ctx = nickel::Context::GetInst();
+        ctx.GetGraphicsContext().DrawModel(m_model);
+
+        
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
         if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
             mouse.RelativeMode(mouse.IsRelativeMode() ? false : true);
         }
-        
+
         // ImGui::ShowDemoWindow();
     }
 
 private:
+    nickel::graphics::GLTFModel m_model;
+    
     void updateCamera() {
         auto& ctx = nickel::Context::GetInst();
-        nickel::FlyCamera& camera = static_cast<nickel::FlyCamera&>(ctx.GetCamera());
+        nickel::FlyCamera& camera =
+            static_cast<nickel::FlyCamera&>(ctx.GetCamera());
         auto& device_mgr = ctx.GetDeviceManager();
         auto& keyboard = device_mgr.GetKeyboard();
         auto& mouse = device_mgr.GetMouse();
@@ -42,31 +52,31 @@ private:
 
         constexpr float speed = 0.1f;
 
-        if (auto btn = keyboard.GetKey(nickel::input::Key::W); btn.
-            IsPressing()) {
+        if (auto btn = keyboard.GetKey(nickel::input::Key::W);
+            btn.IsPressing()) {
             camera.MoveForward(speed);
         }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::S); btn.
-            IsPressing()) {
+        if (auto btn = keyboard.GetKey(nickel::input::Key::S);
+            btn.IsPressing()) {
             camera.MoveForward(-speed);
         }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::A); btn.
-            IsPressing()) {
+        if (auto btn = keyboard.GetKey(nickel::input::Key::A);
+            btn.IsPressing()) {
             camera.MoveRightLeft(-speed);
         }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::D); btn.
-            IsPressing()) {
+        if (auto btn = keyboard.GetKey(nickel::input::Key::D);
+            btn.IsPressing()) {
             camera.MoveRightLeft(speed);
         }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::R); btn.
-            IsPressing()) {
+        if (auto btn = keyboard.GetKey(nickel::input::Key::R);
+            btn.IsPressing()) {
             camera.MoveUpDown(speed);
         }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::F); btn.
-            IsPressing()) {
+        if (auto btn = keyboard.GetKey(nickel::input::Key::F);
+            btn.IsPressing()) {
             camera.MoveUpDown(-speed);
         }
-        
+
         constexpr nickel::Degrees rot_radians{1};
         auto offset = mouse.GetOffset();
 
@@ -85,8 +95,8 @@ private:
                 continue;
             }
             nickel::graphics::Vertex vertices[] = {
-                nickel::graphics::Vertex
-                {nickel::Vec3(i, 0, HalfLineNum), color},
+                nickel::graphics::Vertex{nickel::Vec3(i, 0,  HalfLineNum),
+                                         color},
                 nickel::graphics::Vertex{nickel::Vec3(i, 0, -HalfLineNum),
                                          color}
             };
@@ -98,8 +108,8 @@ private:
                 continue;
             }
             nickel::graphics::Vertex vertices[] = {
-                nickel::graphics::Vertex
-                {nickel::Vec3(HalfLineNum, 0, i), color},
+                nickel::graphics::Vertex{ nickel::Vec3(HalfLineNum, 0, i),
+                                         color},
                 nickel::graphics::Vertex{nickel::Vec3(-HalfLineNum, 0, i),
                                          color}
             };
@@ -109,27 +119,32 @@ private:
         // draw axis
         {
             nickel::graphics::Vertex vertices[] = {
-                nickel::graphics::Vertex{nickel::Vec3(0, 0, 0), nickel::Color{1, 0, 0, 1}},
-                nickel::graphics::Vertex{nickel::Vec3(HalfLineNum, 0, 0), nickel::Color{1, 0, 0, 1}}
+                nickel::graphics::Vertex{          nickel::Vec3(0, 0, 0),
+                                         nickel::Color{1, 0, 0, 1}},
+                nickel::graphics::Vertex{nickel::Vec3(HalfLineNum, 0, 0),
+                                         nickel::Color{1, 0, 0, 1}}
             };
             ctx.DrawLineStrip(vertices);
         }
         {
             nickel::graphics::Vertex vertices[] = {
-                nickel::graphics::Vertex{nickel::Vec3(0, 0, 0), nickel::Color{0, 1, 0, 1}},
-                nickel::graphics::Vertex{nickel::Vec3(0, HalfLineNum, 0), nickel::Color{0, 1, 0, 1}}
+                nickel::graphics::Vertex{nickel::Vec3(0,           0, 0),
+                                         nickel::Color{0, 1, 0, 1}},
+                nickel::graphics::Vertex{nickel::Vec3(0, HalfLineNum, 0),
+                                         nickel::Color{0, 1, 0, 1}}
             };
             ctx.DrawLineStrip(vertices);
         }
         {
             nickel::graphics::Vertex vertices[] = {
-                nickel::graphics::Vertex{nickel::Vec3(0, 0, 0), nickel::Color{0, 0, 1, 1}},
-                nickel::graphics::Vertex{nickel::Vec3(0, 0, HalfLineNum), nickel::Color{0, 0, 1, 1}}
+                nickel::graphics::Vertex{nickel::Vec3(0, 0,           0),
+                                         nickel::Color{0, 0, 1, 1}},
+                nickel::graphics::Vertex{nickel::Vec3(0, 0, HalfLineNum),
+                                         nickel::Color{0, 0, 1, 1}}
             };
             ctx.DrawLineStrip(vertices);
         }
     }
 };
 
-NICKEL_RUN_APP(Application)
-
+NICKEL_RUN_APP(Application);

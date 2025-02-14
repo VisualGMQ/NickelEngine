@@ -4,6 +4,7 @@ namespace nickel::input {
 class DeviceManager::Impl {
 public:
     const Mouse& GetMouse() const { return m_mouse; }
+    Mouse& GetMouse() { return m_mouse; }
     const Keyboard& GetKeyboard() const { return m_keyboard; }
     const FingerInput& GetFingerInput() const { return m_finger; }
     const GamepadManager& GetGamepadManager() const { return m_gamepad_mgr; }
@@ -37,6 +38,11 @@ DeviceManager::DeviceManager()
 }
 
 DeviceManager::~DeviceManager() {
+}
+
+
+Mouse& DeviceManager::GetMouse() {
+    return m_impl->GetMouse();
 }
 
 const Mouse& DeviceManager::GetMouse() const {

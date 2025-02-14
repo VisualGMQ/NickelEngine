@@ -17,9 +17,9 @@ struct getDescriptorTypeHelper {
             case BindGroup::BufferBinding::Type::Uniform:
                 return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             case BindGroup::BufferBinding::Type::DynamicStorage:
-                return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+                return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             case BindGroup::BufferBinding::Type::DynamicUniform:
-                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         }
 
         NICKEL_CANT_REACH();

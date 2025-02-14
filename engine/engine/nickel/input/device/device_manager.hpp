@@ -13,6 +13,7 @@ public:
     DeviceManager();
     ~DeviceManager();
     const Mouse& GetMouse() const;
+    Mouse& GetMouse();
     const Keyboard& GetKeyboard() const;
     const FingerInput& GetFingerInput() const;
     const GamepadManager& GetGamepadManager() const;

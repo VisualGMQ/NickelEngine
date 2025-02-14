@@ -9,6 +9,7 @@
 #include "nickel/common/dllexport.hpp"
 #include "nickel/fs/storage.hpp"
 
+#include "graphics/gltf.hpp"
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
 
@@ -40,6 +41,8 @@ public:
     graphics::Context& GetGraphicsContext();
     graphics::TextureManager& GetTextureManager();
     const graphics::TextureManager& GetTextureManager() const;
+    const graphics::GLTFManager& GetGLTFManager() const;
+    graphics::GLTFManager& GetGLTFManager();
     Camera& GetCamera();
 
     void EnableRender(bool);
@@ -55,9 +58,9 @@ private:
     std::unique_ptr<graphics::Context> m_graphics_ctx;
     std::unique_ptr<StorageManager> m_storage_mgr;
 
-
     input::DeviceManager m_device_mgr;
-    graphics::TextureManager m_texture_mgr;
+    std::unique_ptr<graphics::TextureManager> m_texture_mgr;
+    std::unique_ptr<graphics::GLTFManager> m_gltf_mgr;
 
     void initCamera() {
         auto window_size = m_window->GetSize();

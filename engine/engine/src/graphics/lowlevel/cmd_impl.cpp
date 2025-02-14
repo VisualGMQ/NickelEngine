@@ -2,6 +2,7 @@
 
 #include "nickel/graphics/lowlevel/internal/cmd_pool_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/device_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
 #include "nickel/graphics/lowlevel/internal/vk_call.hpp"
 
 namespace nickel::graphics {
@@ -24,6 +25,17 @@ void CommandEncoderImpl::AddLayoutTransition(ImageImpl* img, ImageLayout layout,
     } else {
         m_layout_transitions[img][idx] = layout;
     }
+}
+
+std::optional<VkImageLayout> CommandEncoderImpl::QueryImageLayout(
+    ImageImpl* img, size_t idx) const {
+    if (auto it = m_layout_transitions.find(img);
+        it != m_layout_transitions.end()) {
+        if (auto it2 = it->second.find(idx); it2 != it->second.end()) {
+            return ImageLayout2Vk(it2->second);
+        }
+    }
+    return {};
 }
 
 void CommandEncoderImpl::ApplyLayoutTransitions() {

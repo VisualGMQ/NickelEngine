@@ -16,6 +16,7 @@ public:
     ~TextureManager();
     Texture Load(const Path& filename, Format format);
     Texture Find(const Path& filename);
+    void GC();
     
 private:
     std::unique_ptr<TextureManagerImpl> m_impl;
