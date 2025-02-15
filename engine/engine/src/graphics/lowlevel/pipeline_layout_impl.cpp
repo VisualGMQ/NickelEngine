@@ -45,7 +45,7 @@ void PipelineLayoutImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_pipeline_layouts.push_back(this);
+        m_device.m_pipeline_layout_allocator.MarkAsGarbage(this);
     }
 }
 

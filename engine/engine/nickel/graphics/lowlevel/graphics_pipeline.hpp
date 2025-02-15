@@ -90,6 +90,7 @@ public:
             std::vector<BufferState> buffers;
         };
 
+        uint32_t subpass{};
         std::unordered_map<graphics::ShaderStage, ShaderStage> m_shader_stages;
         VertexState vertex;
         std::optional<DepthStencilState> depthStencil;

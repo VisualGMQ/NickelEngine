@@ -16,4 +16,8 @@ const AdapterImpl& Adapter::GetImpl() const {
     return *m_impl;
 }
 
+const Adapter::Limits& Adapter::GetLimits() const {
+    return m_impl->GetLimits();
+}
+
 }  // namespace nickel::graphics

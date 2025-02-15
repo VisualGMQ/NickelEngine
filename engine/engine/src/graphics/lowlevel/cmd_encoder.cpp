@@ -56,6 +56,10 @@ struct RenderPassEncoder::ApplyRenderCmd {
         }
     }
 
+    void operator()(const NextSubpassCmd& cmd) {
+        vkCmdNextSubpass(m_cmd.m_cmd, SubpassContent2Vk(cmd.content));
+    }
+
     void operator()(const SetViewportCmd& cmd) {
         VkViewport viewport;
         viewport.x = cmd.x;
@@ -79,13 +83,6 @@ struct RenderPassEncoder::ApplyRenderCmd {
     void operator()(const SetBindGroupCmd& cmd) {
         auto& write_infos =
             cmd.bind_group->Impl().GetWriteInfo().GetWriteDescriptorSets();
-
-        // for (int i = 0; i < write_infos.size(); ++i) {
-        //     vkCmdPushDescriptorSetKHR(
-        //         m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        //         m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, i, 1,
-        //         &write_infos[i]);
-        // }
 
         vkCmdPushDescriptorSetKHR(
             m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -176,18 +173,6 @@ void RenderPassEncoder::SetBindGroup(uint32_t set, BindGroup& bind_group) {
     transferImageLayoutInBindGroup(bind_group);
 }
 
-void RenderPassEncoder::SetBindGroup(
-    uint32_t set,
-    BindGroup& bind_group, const std::vector<uint32_t>& dynamicOffset) {
-    SetBindGroupCmd cmd;
-    cmd.set = set;
-    cmd.bind_group = &bind_group;
-    cmd.dynamic_offsets = dynamicOffset;
-    m_record_cmds.push_back(cmd);
-
-    transferImageLayoutInBindGroup(bind_group);
-}
-
 void RenderPassEncoder::SetPushConstant(Flags<ShaderStage> stage,
                                         const void* value, uint32_t offset,
                                         uint32_t size) {
@@ -223,6 +208,10 @@ void RenderPassEncoder::SetScissor(int32_t x, int32_t y, uint32_t width,
 void RenderPassEncoder::BindGraphicsPipeline(const GraphicsPipeline& pipeline) {
     BindGraphicsPipelineCmd cmd{pipeline};
     m_record_cmds.push_back(cmd);
+}
+
+void RenderPassEncoder::NextSubpass(SubpassContent content) {
+    m_record_cmds.push_back(NextSubpassCmd{content});
 }
 
 void RenderPassEncoder::End() {
@@ -275,12 +264,15 @@ void RenderPassEncoder::transferImageLayout2ShaderReadOnlyOptimal(
     }
 
     for (size_t i = 0; i < impl.m_layouts.size(); i++) {
-        auto layout = ImageLayout2Vk(impl.m_layouts[i]);
+        auto layout = m_cmd.QueryImageLayout(&impl, i);
+        if (!layout) {
+            layout = ImageLayout2Vk(impl.m_layouts[i]);
+        }
         if (layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barrier.image = impl.m_image;
-            barrier.oldLayout = layout;
+            barrier.oldLayout = layout.value();
             barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -343,43 +335,6 @@ void RenderPassEncoder::beginRenderPass() {
     render_pass_info.renderArea.extent.width = render_area.size.w;
     render_pass_info.renderArea.extent.height = render_area.size.h;
 
-    // for (auto& view : m_render_pass_info.fbo.Impl().m_views) {
-    //     // skip swapchain image
-    //     if (!view.GetImage()) {
-    //         continue;
-    //     }
-
-    //     auto& layouts = view.GetImage().Impl().m_layouts;
-    //     VkFormat format = view.GetImage().Impl().Format();
-
-    //     VkImageAspectFlags aspect{};
-    //     if (format == ) {
-    //
-    //     }
-    //
-    //     for (int i = 0; i < layouts.size(); i++) {
-    //         VkImageLayout layout =
-    //             ImageLayout2Vk(view.GetImage().Impl().m_layouts[i]);
-    //         VkImageMemoryBarrier barrier{};
-    //         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    //         barrier.image = view.GetImage().Impl().m_image;
-    //         barrier.oldLayout = layout;
-    //         barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    //         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //         barrier.subresourceRange.layerCount = 1;
-    //         barrier.subresourceRange.levelCount = 1;
-    //         barrier.subresourceRange.baseArrayLayer = 0;
-    //         barrier.subresourceRange.baseMipLevel = 0;
-    //         vkCmdPipelineBarrier(m_cmd.m_cmd,
-    //                              VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-    //                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-    //                              nullptr, 0, nullptr, 1, &barrier);
-    //         m_cmd.AddLayoutTransition(&view.GetImage().Impl(),
-    //                                   ImageLayout::ColorAttachmentOptimal,
-    //                                   i);
-    //     }
-    // }
-
     vkCmdBeginRenderPass(m_cmd.m_cmd, &render_pass_info,
                          VK_SUBPASS_CONTENTS_INLINE);
 
@@ -435,11 +390,14 @@ void CopyEncoder::End() {
         // TODO: more precious range
         for (size_t i = subresource.baseArrayLayer; i < subresource.layerCount;
              i++) {
+            auto layout = m_cmd.QueryImageLayout(&copy_cmd.dst.Impl(), i);
+            if (!layout) {
+                layout = ImageLayout2Vk(copy_cmd.dst.Impl().m_layouts[i]);
+            }
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barrier.image = copy_cmd.dst.Impl().m_image;
-            barrier.oldLayout =
-                ImageLayout2Vk(copy_cmd.dst.Impl().m_layouts[i]);
+            barrier.oldLayout = layout.value();
             barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;

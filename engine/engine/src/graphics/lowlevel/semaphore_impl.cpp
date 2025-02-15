@@ -20,7 +20,7 @@ void SemaphoreImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_semaphores.push_back(this);
+        m_device.m_semaphore_allocator.MarkAsGarbage(this);
     }
 }
 

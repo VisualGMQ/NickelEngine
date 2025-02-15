@@ -26,6 +26,10 @@ Context::Context() {
     LOGI("init graphics context");
     m_graphics_ctx = std::make_unique<graphics::Context>(
         *m_graphics_adapter, *m_window, *m_storage_mgr);
+
+    LOGI("init asset managers");
+    m_gltf_mgr = std::make_unique<graphics::GLTFManager>();
+    m_texture_mgr = std::make_unique<graphics::TextureManager>();
 }
 
 Context::~Context() {
@@ -33,6 +37,10 @@ Context::~Context() {
         m_application->OnQuit();
     }
     m_application.reset();
+
+    LOGI("release assets");
+    m_gltf_mgr.reset();
+    m_texture_mgr.reset();
 
     LOGI("clear graphics context");
     m_graphics_ctx.reset();
@@ -101,6 +109,22 @@ graphics::Context& Context::GetGraphicsContext() {
     return *m_graphics_ctx;
 }
 
+graphics::TextureManager& Context::GetTextureManager() {
+    return *m_texture_mgr;
+}
+
+const graphics::TextureManager& Context::GetTextureManager() const {
+    return *m_texture_mgr;
+}
+
+const graphics::GLTFManager& Context::GetGLTFManager() const {
+    return *m_gltf_mgr;
+}
+
+graphics::GLTFManager& Context::GetGLTFManager() {
+    return *m_gltf_mgr;
+}
+
 Camera& Context::GetCamera() {
     return *m_camera;
 }
@@ -119,7 +143,11 @@ void Context::Update() {
 
     GetDeviceManager().Update();
 
+    m_gltf_mgr->Update();
     m_graphics_ctx->EndFrame();
+    
+    m_gltf_mgr->GC();
+    m_texture_mgr->GC();
 }
 
 }  // namespace nickel

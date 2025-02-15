@@ -8,6 +8,15 @@ namespace nickel {
 
 class StorageImpl;
 
+enum class StorageEnumerateBehavior {
+    Continue,
+    Success,
+    Failed,
+};
+
+using StorageEnumerator =
+    std::function<StorageEnumerateBehavior(std::string_view, std::string_view)>;
+
 namespace internal {
 
 class CommonStorageBehavior {
@@ -17,6 +26,8 @@ public:
     bool IsStorageReady() const;
     void WaitStorageReady(
         uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
+    void EnumerateStorage(const std::string& path,
+                          StorageEnumerator enumerator);
 
 private:
     StorageImpl* m_impl{};

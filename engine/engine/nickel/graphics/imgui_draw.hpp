@@ -15,6 +15,7 @@ public:
 
     void Begin();
     void End(Device device, CommonResource&, uint32_t cur_frame);
+    void PrepareForRender();
     
 private:
     VkDevice m_device;

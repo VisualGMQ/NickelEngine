@@ -24,7 +24,7 @@ void ShaderModuleImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_device.m_pending_delete_shader_modules.push_back(this);
+        m_device.m_shader_module_allocator.MarkAsGarbage(this);
     }
 }
 

@@ -50,9 +50,7 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     VK_CALL(vkEnumerateDeviceExtensionProperties(
         impl.m_phyDevice, nullptr, &extensionCount, extension_props.data()));
 
-    for (auto& extension: extension_props) {
-        LOGI("extension: {}", extension.extensionName);
-    }
+    size_t required_extensions_size = requireExtensions.size();
 
     RemoveUnexistsElems<const char*, VkExtensionProperties>(
         requireExtensions, extension_props,
@@ -62,6 +60,10 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
 
     for (auto ext : requireExtensions) {
         LOGI("enable vulkan device extension: {}", ext);
+    }
+
+    if (requireExtensions.size() != required_extensions_size) {
+        LOGC("some vulkan extension not support");
     }
 
     std::vector<const char*> extension_names;
@@ -330,13 +332,14 @@ DeviceImpl::~DeviceImpl() {
     m_bind_group_layout_allocator.FreeAll();
 
     m_framebuffer_allocator.FreeAll();
+    m_bind_group_layout_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
     m_image_allocator.FreeAll();
 
     m_shader_module_allocator.FreeAll();
-    m_sampler_allocator.FreeAll();
 
     m_buffer_allocator.FreeAll();
+    m_sampler_allocator.FreeAll();
     m_graphics_pipeline_allocator.FreeAll();
     m_pipeline_layout_allocator.FreeAll();
     m_render_pass_allocator.FreeAll();
@@ -351,65 +354,18 @@ DeviceImpl::~DeviceImpl() {
 }
 
 void DeviceImpl::cleanUpOneFrame() {
-    for (auto& elem : m_pending_delete_shader_modules) {
-        m_shader_module_allocator.Deallocate(elem);
-    }
-    m_pending_delete_shader_modules.clear();
-
-    for (auto& elem : m_pending_delete_samplers) {
-        m_sampler_allocator.Deallocate(elem);
-    }
-    m_pending_delete_samplers.clear();
-    
-    for (auto& elem : m_pending_delete_framebuffers) {
-        m_framebuffer_allocator.Deallocate(elem);
-    }
-    m_pending_delete_framebuffers.clear();
-
-    for (auto& elem : m_pending_delete_image_views) {
-        m_image_view_allocator.Deallocate(elem);
-    }
-    m_pending_delete_image_views.clear();
-
-    for (auto& elem : m_pending_delete_images) {
-        m_image_allocator.Deallocate(elem);
-    }
-    m_pending_delete_images.clear();
-
-    for (auto& elem : m_pending_delete_render_passes) {
-        m_render_pass_allocator.Deallocate(elem);
-    }
-    m_pending_delete_render_passes.clear();
-
-    for (auto& elem : m_pending_delete_buffers) {
-        m_buffer_allocator.Deallocate(elem);
-    }
-    m_pending_delete_buffers.clear();
-
-    for (auto& elem : m_pending_delete_pipeline_layouts) {
-        m_pipeline_layout_allocator.Deallocate(elem);
-    }
-    m_pending_delete_pipeline_layouts.clear();
-
-    for (auto& elem : m_pending_delete_bind_group_layouts) {
-        m_bind_group_layout_allocator.Deallocate(elem);
-    }
-    m_pending_delete_bind_group_layouts.clear();
-
-    for (auto& elem : m_pending_delete_graphics_pipelines) {
-        m_graphics_pipeline_allocator.Deallocate(elem);
-    }
-    m_pending_delete_graphics_pipelines.clear();
-
-    for (auto& elem : m_pending_delete_semaphores) {
-        m_semaphore_allocator.Deallocate(elem);
-    }
-    m_pending_delete_semaphores.clear();
-
-    for (auto& elem : m_pending_delete_fences) {
-        m_fence_allocator.Deallocate(elem);
-    }
-    m_pending_delete_fences.clear();
+    m_shader_module_allocator.GC();
+    m_bind_group_layout_allocator.GC();
+    m_framebuffer_allocator.GC();
+    m_image_view_allocator.GC();
+    m_image_allocator.GC();
+    m_render_pass_allocator.GC();
+    m_sampler_allocator.GC();
+    m_buffer_allocator.GC();
+    m_pipeline_layout_allocator.GC();
+    m_graphics_pipeline_allocator.GC();
+    m_semaphore_allocator.GC();
+    m_fence_allocator.GC();
 }
 
 const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo() const noexcept {

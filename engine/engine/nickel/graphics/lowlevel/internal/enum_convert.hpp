@@ -328,13 +328,13 @@ inline VkDescriptorType BindGroupEntryType2Vk(BindGroupEntryType type) {
         CASE(BindGroupEntryType::StorageBuffer,
              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
         CASE(BindGroupEntryType::UniformBufferDynamic,
-             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         CASE(BindGroupEntryType::StoragesBufferDynamic,
-             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
+             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
         CASE(BindGroupEntryType::InputAttachment,
              VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
         CASE(BindGroupEntryType::InlineUniformBlock,
-             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+             VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK);
     }
 
     NICKEL_CANT_REACH();
@@ -655,12 +655,20 @@ inline ImageColorSpace VkColorSpace2ImageColorSpace(
 
 inline VkMemoryPropertyFlags MemoryType2Vk(MemoryType type) {
     switch(type) {
-        case MemoryType::CPULocal:
-            return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        case MemoryType::Coherence:
-            return VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        case MemoryType::GPULocal:
-            return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        CASE(MemoryType::CPULocal, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        CASE(MemoryType::Coherence, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        CASE(MemoryType::GPULocal, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline VkSubpassContents SubpassContent2Vk(SubpassContent type) {
+    switch (type) {
+        CASE(SubpassContent::Inline, VK_SUBPASS_CONTENTS_INLINE);
+        CASE(SubpassContent::SecondaryCommandBuffer,
+             VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     }
 
     NICKEL_CANT_REACH();

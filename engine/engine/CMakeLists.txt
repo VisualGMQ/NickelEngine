@@ -8,11 +8,13 @@ file(GLOB_RECURSE ENGINE_SRC src/*.cpp)
 file(GLOB_RECURSE ENGINE_ALL_HEADERS nickel/*.hpp)
 file(GLOB_RECURSE ENGINE_INTERNAL_HEADERS
         nickel/internal/*.hpp
+        nickel/graphics/lowlevel/internal/*.hpp
         nickel/graphics/internal/*.hpp
         nickel/video/internal/*.hpp
         nickel/main_entry/*.hpp)
 set(ENGINE_EXPORT_HEADERS ${ENGINE_ALL_HEADERS})
 list(REMOVE_ITEM ENGINE_EXPORT_HEADERS ${ENGINE_INTERNAL_HEADERS})
+file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.vert)
 
 compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
@@ -20,10 +22,10 @@ compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridlin
 compile_shader(assets/shaders/shader_gridline.frag assets/shaders/shader_gridline.frag.spv)
 
 macro(attach_common_config_on_engine target_name)
-    target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC})
+    target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_SHADER_FILES})
     target_include_directories(${target_name} PUBLIC .)
     target_compile_features(${target_name} PUBLIC cxx_std_20)
-    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image)
+    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf)
     target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui)
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp)
     target_compile_definitions(${target_name} PRIVATE _CRT_SECURE_NO_WARNINGS)
