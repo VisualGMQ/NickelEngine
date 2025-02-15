@@ -118,9 +118,9 @@ Path Path::Extension() const {
 Path::Path(const std::filesystem::path& path)
     : m_path{path, std::filesystem::path::generic_format} {}
 
-}  // namespace nickel
-
-std::ostream& operator<<(std::ostream& os, const nickel::Path& path) {
+std::ostream& operator<<(std::ostream& os, const Path& path) {
     os << path.ToString();
     return os;
 }
+
+}  // namespace nickel

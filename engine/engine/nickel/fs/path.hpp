@@ -49,9 +49,9 @@ private:
     explicit Path(const std::filesystem::path& path);
 };
 
-}  // namespace nickel
+std::ostream& operator<<(std::ostream& os, const Path& path);
 
-std::ostream& operator<<(std::ostream& os, const nickel::Path& path);
+}  // namespace nickel
 
 // for spdlog output
 template <> struct fmt::formatter<nickel::Path> : fmt::ostream_formatter {};
