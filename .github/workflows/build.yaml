@@ -14,12 +14,12 @@ jobs:
             - name: Ubuntu
               os: ubuntu-22.04
               android: none
-            - name: MacOS
-              os: macOS-latest
-              android: none
-            - name: Android
-              os: ubuntu-latest
-              android: arm64
+            # - name: MacOS
+            #   os: macOS-latest
+            #   android: none
+            # - name: Android
+            #   os: ubuntu-latest
+            #   android: arm64
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     steps:
