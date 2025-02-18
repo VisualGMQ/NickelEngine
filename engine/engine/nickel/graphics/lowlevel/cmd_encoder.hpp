@@ -18,8 +18,8 @@ class Framebuffer;
 
 struct ClearValue {
     struct DepthStencilValue {
-        float depth{};
-        uint32_t stencil{};
+        float m_depth{};
+        uint32_t m_stencil{};
     };
 
     ClearValue() = default;
@@ -59,53 +59,53 @@ public:
 
 private:
     struct RenderPassInfo {
-        RenderPass render_pass;
-        Framebuffer fbo;
-        Rect render_area;
-        std::vector<ClearValue> clear_values;
+        RenderPass m_render_pass;
+        Framebuffer m_fbo;
+        Rect m_render_area;
+        std::vector<ClearValue> m_clear_values;
     };
 
     struct SetBindGroupCmd {
-        uint32_t set = 0;
-        const BindGroup* bind_group{};
-        std::vector<uint32_t> dynamic_offsets;
+        uint32_t m_set = 0;
+        const BindGroup* m_bind_group{};
+        std::vector<uint32_t> m_dynamic_offsets;
     };
 
     struct NextSubpassCmd {
-        SubpassContent content;
+        SubpassContent m_content;
     };
 
     struct BindPipelineCmd {
-        const GraphicsPipeline* pipeline{};
+        const GraphicsPipeline* m_pipeline{};
     };
 
     struct SetPushConstantCmd {
-        Flags<ShaderStage> stage;
-        char data[128]{}; // NOTE: temporary store datas
-        uint32_t offset{};
-        uint32_t size{};
+        Flags<ShaderStage> m_stage;
+        char m_data[128]{}; // NOTE: temporary store datas
+        uint32_t m_offset{};
+        uint32_t m_size{};
 
-        operator bool() const noexcept { return size != 0;; }
+        operator bool() const noexcept { return m_size != 0;; }
     };
 
     struct BindVertexBufferCmd {
-        uint32_t slot;
-        Buffer buffer;
-        uint64_t offset;
+        uint32_t m_slot;
+        Buffer m_buffer;
+        uint64_t m_offset;
 
-        operator bool() const noexcept { return buffer; }
+        operator bool() const noexcept { return m_buffer; }
     };
 
     struct BindIndexBufferCmd {
-        Buffer buffer;
-        IndexType index_type;
-        uint64_t offset;
+        Buffer m_buffer;
+        IndexType m_index_type;
+        uint64_t m_offset;
 
-        operator bool() const noexcept { return buffer; }
+        operator bool() const noexcept { return m_buffer; }
     };
 
     struct BindGraphicsPipelineCmd {
-        const GraphicsPipeline pipeline;
+        const GraphicsPipeline m_pipeline;
     };
 
     struct DrawCmd {
@@ -117,20 +117,20 @@ private:
             // Indirect
         } m_type = Type::Unknown;
 
-        uint32_t elem_count;
-        uint32_t instance_count;
-        uint32_t first_elem;
-        uint32_t vertex_offset;
-        uint32_t first_instance;
+        uint32_t m_elem_count;
+        uint32_t m_instance_count;
+        uint32_t m_first_elem;
+        uint32_t m_vertex_offset;
+        uint32_t m_first_instance;
     };
 
     struct SetViewportCmd {
-        float x, y, w, h, min_depth, max_depth;
+        float m_x, m_y, m_w, m_h, m_min_depth, m_max_depth;
     };
 
     struct SetScissorCmd {
-        int32_t x, y;
-        uint32_t w, h;
+        SVector<int32_t, 2> m_position;
+        SVector<uint32_t, 2> m_size;
     };
 
     using Cmd =
@@ -154,24 +154,24 @@ public:
 
     struct BufferImageCopy {
         struct ImageSubresourceLayers {
-            Flags<ImageAspect> aspectMask;
-            uint32_t mipLevelCount = 1;
-            uint32_t baseMipLevel = 0;
-            uint32_t layerCount = 1;
-            uint32_t baseArrayLayer = 0;
+            Flags<ImageAspect> m_aspect_mask;
+            uint32_t m_mip_level_count = 1;
+            uint32_t m_base_mip_level = 0;
+            uint32_t m_layer_count = 1;
+            uint32_t m_base_array_layer = 0;
         };
 
-        uint64_t bufferOffset{};
-        uint32_t bufferRowLength{};
-        uint32_t bufferImageHeight{};
-        ImageSubresourceLayers imageSubresource;
-        SVector<uint32_t, 3> imageOffset;
-        SVector<uint32_t, 3> imageExtent;
+        uint64_t m_buffer_offset{};
+        uint32_t m_buffer_row_length{};
+        uint32_t m_buffer_image_height{};
+        ImageSubresourceLayers m_image_subresource;
+        SVector<uint32_t, 3> m_image_offset;
+        SVector<uint32_t, 3> m_image_extent;
     };
 
     explicit CopyEncoder(CommandEncoderImpl& cmd);
-    void CopyBufferToBuffer(const Buffer& src, uint64_t srcOffset,
-                            const Buffer& dst, uint64_t dstOffset,
+    void CopyBufferToBuffer(const Buffer& src, uint64_t src_offset,
+                            const Buffer& dst, uint64_t dst_offset,
                             uint64_t size);
     void CopyBufferToTexture(const Buffer& src, Image& dst,
                              const BufferImageCopy&);
@@ -180,17 +180,17 @@ public:
 
 private:
     struct BufCopyBuf {
-        const BufferImpl& src;
-        const BufferImpl& dst;
-        uint64_t src_offset{};
-        uint64_t dst_offset{};
-        uint64_t size{};
+        const BufferImpl& m_src;
+        const BufferImpl& m_dst;
+        uint64_t m_src_offset{};
+        uint64_t m_dst_offset{};
+        uint64_t m_size{};
     };
 
     struct BufCopyImage {
-        const Buffer& src;
-        Image& dst;
-        BufferImageCopy copy;
+        const Buffer& m_src;
+        Image& m_dst;
+        BufferImageCopy m_copy;
     };
 
     CommandEncoderImpl& m_cmd;

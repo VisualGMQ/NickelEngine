@@ -14,17 +14,17 @@ TextureImpl::TextureImpl(Device device,
 
     {
         Image::Descriptor desc;
-        desc.imageType = ImageType::Dim2;
-        desc.extent.w = raw_data.GetExtent().w;
-        desc.extent.h = raw_data.GetExtent().h;
-        desc.extent.l = 1;
-        desc.format = format;
-        desc.usage = Flags{ImageUsage::CopyDst} | ImageUsage::Sampled;
+        desc.m_image_type = ImageType::Dim2;
+        desc.m_extent.w = raw_data.GetExtent().w;
+        desc.m_extent.h = raw_data.GetExtent().h;
+        desc.m_extent.l = 1;
+        desc.m_format = format;
+        desc.m_usage = Flags{ImageUsage::CopyDst} | ImageUsage::Sampled;
         m_image = device.CreateImage(desc);
     }
 
-    // buffer data to image
-    // TODO: optimize this: don't create buffer per image
+    // m_buffer data to image
+    // TODO: optimize this: don't create m_buffer per image
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::CPULocal;
@@ -39,13 +39,13 @@ TextureImpl::TextureImpl(Device device,
         CommandEncoder encoder = device.CreateCommandEncoder();
         CopyEncoder copy = encoder.BeginCopy();
         CopyEncoder::BufferImageCopy copy_info;
-        copy_info.bufferOffset = 0;
-        copy_info.imageExtent.w = raw_data.GetExtent().w;
-        copy_info.imageExtent.h = raw_data.GetExtent().h;
-        copy_info.imageExtent.l = 1;
-        copy_info.bufferImageHeight = 0;
-        copy_info.bufferRowLength = 0;
-        copy_info.imageSubresource.aspectMask = ImageAspect::Color;
+        copy_info.m_buffer_offset = 0;
+        copy_info.m_image_extent.w = raw_data.GetExtent().w;
+        copy_info.m_image_extent.h = raw_data.GetExtent().h;
+        copy_info.m_image_extent.l = 1;
+        copy_info.m_buffer_image_height = 0;
+        copy_info.m_buffer_row_length = 0;
+        copy_info.m_image_subresource.m_aspect_mask = ImageAspect::Color;
         copy.CopyBufferToTexture(buffer, m_image, copy_info);
         copy.End();
         Command cmd = encoder.Finish();
@@ -53,13 +53,13 @@ TextureImpl::TextureImpl(Device device,
         device.WaitIdle();
     }
 
-    // create view
+    // create m_view
     {
         ImageView::Descriptor view_desc;
-        view_desc.format = format;
-        view_desc.components = ComponentMapping::SwizzleIdentity;
-        view_desc.subresourceRange.aspectMask = ImageAspect::Color;
-        view_desc.viewType = ImageViewType::Dim2;
+        view_desc.m_format = format;
+        view_desc.m_components = ComponentMapping::SwizzleIdentity;
+        view_desc.m_subresource_range.m_aspect_mask = ImageAspect::Color;
+        view_desc.m_view_type = ImageViewType::Dim2;
         m_view = m_image.CreateView(view_desc);
     }
 }

@@ -9,8 +9,8 @@ namespace nickel::graphics {
 class CommonResource;
 
 struct Vertex {
-    Vec3 position;
-    Vec4 color;
+    Vec3 m_position;
+    Vec4 m_color;
 };
 
 class PrimitiveRenderPass {

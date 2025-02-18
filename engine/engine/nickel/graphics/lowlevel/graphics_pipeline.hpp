@@ -14,90 +14,90 @@ class NICKEL_API GraphicsPipeline {
 public:
     struct Descriptor {
         struct ShaderStage {
-            ShaderModule module;
-            std::string entry_name = "main";
+            ShaderModule m_module;
+            std::string m_entry_name = "main";
         };
 
         struct DepthStencilState final {
             struct StencilOpState {
-                CompareOp compare = CompareOp::Always;
-                StencilOp depthFailOp = StencilOp::Keep;
-                StencilOp failedOp = StencilOp::Keep;
-                StencilOp passOp = StencilOp::Keep;
-                uint32_t writeMask = 0xFFFFFFFF;
-                uint32_t compareMask = 0xFFFFFFFF;
+                CompareOp m_compare = CompareOp::Always;
+                StencilOp m_depth_fail_op = StencilOp::Keep;
+                StencilOp m_failed_op = StencilOp::Keep;
+                StencilOp m_pass_op = StencilOp::Keep;
+                uint32_t m_write_mask = 0xFFFFFFFF;
+                uint32_t m_compare_mask = 0xFFFFFFFF;
             };
 
-            std::optional<float> depthBias;
-            std::optional<float> depthBiasClamp;
-            float depthBiasSlopeScale = 0;
-            CompareOp depthCompare = CompareOp::Greater;
-            bool depthWriteEnabled = true;
-            Format depthFormat;
-            StencilOpState stencilBack;
-            StencilOpState stencilFront;
+            std::optional<float> m_depth_bias;
+            std::optional<float> m_depth_bias_clamp;
+            float m_depth_bias_slope_scale = 0;
+            CompareOp m_depth_compare = CompareOp::Greater;
+            bool m_depth_write_enabled = true;
+            Format m_depth_format;
+            StencilOpState m_stencil_back;
+            StencilOpState m_stencil_front;
         };
 
         struct BlendComponentState final {
-            BlendFactor dstFactor = BlendFactor::Zero;
-            BlendFactor srcFactor = BlendFactor::One;
-            BlendOp operation = BlendOp::Add;
+            BlendFactor m_dst_factor = BlendFactor::Zero;
+            BlendFactor m_src_factor = BlendFactor::One;
+            BlendOp m_operation = BlendOp::Add;
         };
 
         struct BlendState final {
-            BlendComponentState alpha;
-            BlendComponentState color;
-            Flags<ColorComponent> colorMask = ColorComponent::All;
+            BlendComponentState m_alpha;
+            BlendComponentState m_color;
+            Flags<ColorComponent> m_color_mask = ColorComponent::All;
         };
 
         struct BufferState final {
             struct Attribute {
-                VertexFormat format;
-                uint64_t offset;
-                uint32_t shaderLocation;
+                VertexFormat m_format;
+                uint64_t m_offset;
+                uint32_t m_shader_location;
             };
 
             enum class StepMode {
                 Instance,
                 Vertex,
-            } stepMode = StepMode::Vertex;
+            } m_step_mode = StepMode::Vertex;
 
-            uint64_t arrayStride;
-            std::vector<Attribute> attributes;
+            uint64_t m_array_stride;
+            std::vector<Attribute> m_attributes;
         };
 
         struct MultisampleState final {
-            bool alphaToCoverageEnabled = false;
-            SampleCount count = SampleCount::Count1;
-            uint32_t mask = 0xFFFFFFFF;
+            bool m_alpha_to_coverage_enabled = false;
+            SampleCount m_count = SampleCount::Count1;
+            uint32_t m_mask = 0xFFFFFFFF;
         };
 
         struct PrimitiveState final {
-            CullMode cullMode = CullMode::None;
-            FrontFace frontFace = FrontFace::CCW;
-            StripIndexFormat stripIndexFormat = StripIndexFormat::Uint32;
-            Topology topology = Topology::TriangleList;
-            bool unclippedDepth = false;
-            PolygonMode polygonMode = PolygonMode::Fill;
+            CullMode m_cull_mode = CullMode::None;
+            FrontFace m_front_face = FrontFace::CCW;
+            StripIndexFormat m_strip_index_format = StripIndexFormat::Uint32;
+            Topology m_topology = Topology::TriangleList;
+            bool m_unclipped_depth = false;
+            PolygonMode m_polygon_mode = PolygonMode::Fill;
         };
 
         struct ShaderState {
-            ShaderModule module;
-            std::string entryPoint = "main";
+            ShaderModule m_module;
+            std::string m_entry_point = "main";
         };
 
         struct VertexState {
-            std::vector<BufferState> buffers;
+            std::vector<BufferState> m_buffers;
         };
 
-        uint32_t subpass{};
+        uint32_t m_subpass{};
         std::unordered_map<graphics::ShaderStage, ShaderStage> m_shader_stages;
-        VertexState vertex;
-        std::optional<DepthStencilState> depthStencil;
-        std::vector<BlendState> blend_state;
-        MultisampleState multisample;
-        PrimitiveState primitive;
-        PipelineLayout layout;
+        VertexState m_vertex;
+        std::optional<DepthStencilState> m_depth_stencil;
+        std::vector<BlendState> m_blend_state;
+        MultisampleState m_multisample;
+        PrimitiveState m_primitive;
+        PipelineLayout m_layout;
         RenderPass m_render_pass;
     };
 

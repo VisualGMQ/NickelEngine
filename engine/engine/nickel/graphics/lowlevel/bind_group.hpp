@@ -22,21 +22,21 @@ public:
             DynamicStorage,
             DynamicUniform,
         };
-        Type type = Type::Uniform;
-        Buffer buffer;
-        std::optional<uint32_t> offset;
-        std::optional<uint32_t> size;
+        Type m_type = Type::Uniform;
+        Buffer m_buffer;
+        std::optional<uint32_t> m_offset;
+        std::optional<uint32_t> m_size;
     };
 
     struct SamplerBinding final {
-        Sampler sampler;
+        Sampler m_sampler;
 
         SamplerBinding() = default;
     };
 
     struct CombinedSamplerBinding final {
-        ImageView view;
-        Sampler sampler;
+        ImageView m_view;
+        Sampler m_sampler;
     };
 
     struct ImageBinding final {
@@ -44,24 +44,24 @@ public:
             Image,
             StorageImage,
         };
-        Type type = Type::Image;
-        ImageView view;
+        Type m_type = Type::Image;
+        ImageView m_view;
     };
 
     struct BindingPoint {
         std::variant<SamplerBinding, BufferBinding, CombinedSamplerBinding,
                      ImageBinding>
-            entry;
+            m_entry;
     };
 
     struct Entry final {
-        BindingPoint binding;
-        Flags<ShaderStage> shader_stage;
-        uint32_t arraySize = 1;
+        BindingPoint m_binding;
+        Flags<ShaderStage> m_shader_stage;
+        uint32_t m_array_size = 1;
     };
 
     struct Descriptor final {
-        std::map<uint32_t, Entry> entries;
+        std::map<uint32_t, Entry> m_entries;
     };
 
     BindGroup() = default;

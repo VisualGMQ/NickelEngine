@@ -94,10 +94,10 @@ private:
     void createBindGropuLayout(Device& device) {
         BindGroupLayout::Descriptor desc;
         BindGroupLayout::Entry image_entry;
-        image_entry.shader_stage = ShaderStage::Fragment;
-        image_entry.type = BindGroupEntryType::CombinedImageSampler;
-        image_entry.arraySize = 1;
-        desc.entries[0] = std::move(image_entry);
+        image_entry.m_shader_stage = ShaderStage::Fragment;
+        image_entry.m_type = BindGroupEntryType::CombinedImageSampler;
+        image_entry.m_array_size = 1;
+        desc.m_entries[0] = std::move(image_entry);
 
         m_bind_layout = device.CreateBindGroupLayout(desc);
     }
@@ -105,21 +105,21 @@ private:
     void createBindGroup(Device& device) {
         BindGroup::Descriptor desc;
         BindGroup::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
+        entry.m_shader_stage = ShaderStage::Fragment;
         BindGroup::CombinedSamplerBinding binding;
-        binding.view = m_image_view;
-        binding.sampler = m_sampler;
-        entry.binding.entry = binding;
-        entry.arraySize = 1;
-        desc.entries[0] = entry;
+        binding.m_view = m_image_view;
+        binding.m_sampler = m_sampler;
+        entry.m_binding.m_entry = binding;
+        entry.m_array_size = 1;
+        desc.m_entries[0] = entry;
 
         m_bind_group = m_bind_layout.RequireBindGroup(desc);
     }
 
     void createSampler(Device& device) {
         Sampler::Descriptor desc;
-        desc.minFilter = Filter::Nearest;
-        desc.magFilter = Filter::Nearest;
+        desc.m_min_filter = Filter::Nearest;
+        desc.m_mag_filter = Filter::Nearest;
         m_sampler = device.CreateSampler(desc);
     }
 
@@ -129,17 +129,17 @@ private:
         // create image
         {
             Image::Descriptor desc;
-            desc.imageType = ImageType::Dim2;
-            desc.extent.w = raw_data.GetExtent().w;
-            desc.extent.h = raw_data.GetExtent().h;
-            desc.extent.l = 1;
-            desc.format = Format::R8G8B8A8_UNORM;
-            desc.usage =
+            desc.m_image_type = ImageType::Dim2;
+            desc.m_extent.w = raw_data.GetExtent().w;
+            desc.m_extent.h = raw_data.GetExtent().h;
+            desc.m_extent.l = 1;
+            desc.m_format = Format::R8G8B8A8_UNORM;
+            desc.m_usage =
                 nickel::Flags{ImageUsage::CopyDst} | ImageUsage::Sampled;
             m_image = device.CreateImage(desc);
         }
 
-        // buffer data to image
+        // m_buffer data to image
         {
             Buffer::Descriptor desc;
             desc.m_memory_type = MemoryType::CPULocal;
@@ -154,13 +154,13 @@ private:
             CommandEncoder encoder = device.CreateCommandEncoder();
             CopyEncoder copy = encoder.BeginCopy();
             CopyEncoder::BufferImageCopy copy_info;
-            copy_info.bufferOffset = 0;
-            copy_info.imageExtent.w = raw_data.GetExtent().w;
-            copy_info.imageExtent.h = raw_data.GetExtent().h;
-            copy_info.imageExtent.l = 1;
-            copy_info.bufferImageHeight = 0;
-            copy_info.bufferRowLength = 0;
-            copy_info.imageSubresource.aspectMask = ImageAspect::Color;
+            copy_info.m_buffer_offset = 0;
+            copy_info.m_image_extent.w = raw_data.GetExtent().w;
+            copy_info.m_image_extent.h = raw_data.GetExtent().h;
+            copy_info.m_image_extent.l = 1;
+            copy_info.m_buffer_image_height = 0;
+            copy_info.m_buffer_row_length = 0;
+            copy_info.m_image_subresource.m_aspect_mask = ImageAspect::Color;
             copy.CopyBufferToTexture(buffer, m_image, copy_info);
             copy.End();
             Command cmd = encoder.Finish();
@@ -168,13 +168,13 @@ private:
             device.WaitIdle();
         }
 
-        // create view
+        // create m_view
         {
             ImageView::Descriptor view_desc;
-            view_desc.format = Format::R8G8B8A8_UNORM;
-            view_desc.components = ComponentMapping::SwizzleIdentity;
-            view_desc.subresourceRange.aspectMask = ImageAspect::Color;
-            view_desc.viewType = ImageViewType::Dim2;
+            view_desc.m_format = Format::R8G8B8A8_UNORM;
+            view_desc.m_components = ComponentMapping::SwizzleIdentity;
+            view_desc.m_subresource_range.m_aspect_mask = ImageAspect::Color;
+            view_desc.m_view_type = ImageViewType::Dim2;
             m_image_view = m_image.CreateView(view_desc);
         }
     }
@@ -197,7 +197,7 @@ private:
 
     void createPipelineLayout(Device& device) {
         PipelineLayout::Descriptor desc;
-        desc.layouts.push_back(m_bind_layout);
+        desc.m_layouts.push_back(m_bind_layout);
         m_pipeline_layout = device.CreatePipelineLayout(desc);
     }
 
@@ -228,33 +228,33 @@ private:
     void createRenderPass(Device& device) {
         RenderPass::Descriptor desc;
         RenderPass::Descriptor::AttachmentDescription attachment;
-        attachment.samples = SampleCount::Count1;
-        attachment.initialLayout = ImageLayout::Undefined;
-        attachment.finalLayout = ImageLayout::PresentSrcKHR;
-        attachment.loadOp = AttachmentLoadOp::Clear;
-        attachment.storeOp = AttachmentStoreOp::Store;
-        attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
-        attachment.stencilStoreOp = AttachmentStoreOp::DontCare;
-        attachment.format =
+        attachment.m_samples = SampleCount::Count1;
+        attachment.m_initial_layout = ImageLayout::Undefined;
+        attachment.m_final_layout = ImageLayout::PresentSrcKHR;
+        attachment.m_load_op = AttachmentLoadOp::Clear;
+        attachment.m_store_op = AttachmentStoreOp::Store;
+        attachment.m_stencil_load_op = AttachmentLoadOp::DontCare;
+        attachment.m_stencil_store_op = AttachmentStoreOp::DontCare;
+        attachment.m_format =
             device.GetSwapchainImageInfo().m_surface_format.format;
-        desc.attachments.push_back(attachment);
+        desc.m_attachments.push_back(attachment);
 
         RenderPass::Descriptor::SubpassDescription subpass;
         RenderPass::Descriptor::AttachmentReference ref;
-        ref.attachment = 0;
-        ref.layout = ImageLayout::ColorAttachmentOptimal;
-        subpass.colorAttachments.push_back(ref);
-        desc.subpasses.push_back(subpass);
+        ref.m_attachment = 0;
+        ref.m_layout = ImageLayout::ColorAttachmentOptimal;
+        subpass.m_color_attachments.push_back(ref);
+        desc.m_subpasses.push_back(subpass);
 
         RenderPass::Descriptor::SubpassDependency deps;
-        deps.srcSubpass =
+        deps.m_src_subpass =
             RenderPass::Descriptor::SubpassDependency::ExternalSubpass;
-        deps.dstSubpass = 0;
-        deps.srcAccessMask = Access::None;
-        deps.dstAccessMask = Access::ColorAttachmentWrite;
-        deps.srcStageMask = PipelineStage::TopOfPipe;
-        deps.dstStageMask = PipelineStage::ColorAttachmentOutput;
-        desc.dependencies.push_back(deps);
+        deps.m_dst_subpass = 0;
+        deps.m_src_access_mask = Access::None;
+        deps.m_dst_access_mask = Access::ColorAttachmentWrite;
+        deps.m_src_stage_mask = PipelineStage::TopOfPipe;
+        deps.m_dst_stage_mask = PipelineStage::ColorAttachmentOutput;
+        desc.m_dependencies.push_back(deps);
 
         m_render_pass = device.CreateRenderPass(desc);
     }
@@ -262,7 +262,7 @@ private:
     void createPipeline(Device& device) {
         GraphicsPipeline::Descriptor desc;
         desc.m_render_pass = m_render_pass;
-        desc.layout = m_pipeline_layout;
+        desc.m_layout = m_pipeline_layout;
 
         auto vert_file_content =
             nickel::ReadWholeFile("./tests/render/texture_rect/vert.spv");
@@ -282,28 +282,28 @@ private:
         // vertex position
         {
             GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-            attr.shaderLocation = 0;
-            attr.format = VertexFormat::Float32x2;
-            attr.offset = 0;
-            state.attributes.push_back(attr);
+            attr.m_shader_location = 0;
+            attr.m_format = VertexFormat::Float32x2;
+            attr.m_offset = 0;
+            state.m_attributes.push_back(attr);
         }
 
         // vertex color
         {
             GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-            attr.shaderLocation = 1;
-            attr.format = VertexFormat::Float32x2;
-            attr.offset = sizeof(float) * 2;
-            state.attributes.push_back(attr);
+            attr.m_shader_location = 1;
+            attr.m_format = VertexFormat::Float32x2;
+            attr.m_offset = sizeof(float) * 2;
+            state.m_attributes.push_back(attr);
         }
 
-        state.arrayStride = sizeof(float) * 4;
-        state.stepMode =
+        state.m_array_stride = sizeof(float) * 4;
+        state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(state);
+        desc.m_vertex.m_buffers.push_back(state);
 
         GraphicsPipeline::Descriptor::BlendState blend_state;
-        desc.blend_state.push_back(blend_state);
+        desc.m_blend_state.push_back(blend_state);
 
         m_pipeline = device.CreateGraphicPipeline(desc);
     }

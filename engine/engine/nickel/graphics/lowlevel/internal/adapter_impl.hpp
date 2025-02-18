@@ -23,7 +23,7 @@ public:
     const Adapter::Limits& GetLimits() const { return m_limits; }
 
     VkInstance m_instance;
-    VkPhysicalDevice m_phyDevice;
+    VkPhysicalDevice m_phy_device;
     VkSurfaceKHR m_surface;
     DeviceImpl* m_device{};
     Adapter::Limits m_limits;

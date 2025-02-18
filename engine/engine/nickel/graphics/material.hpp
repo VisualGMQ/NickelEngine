@@ -4,20 +4,20 @@
 
 namespace nickel::graphics {
 struct BufferView {
-    std::optional<uint32_t> buffer;
-    uint32_t offset{};
-    uint64_t size{};
-    uint32_t count{};
+    std::optional<uint32_t> m_buffer;
+    uint32_t m_offset{};
+    uint64_t m_size{};
+    uint32_t m_count{};
 
     operator bool() const noexcept {
-        return buffer && size > 0 && count > 0;
+        return m_buffer && m_size > 0 && m_count > 0;
     }
 };
 
 struct PBRParameters {
-    Vec4 baseColor;
-    float metalness = 1.0f;
-    float roughness = 1.0f;
+    Vec4 m_base_color;
+    float m_metallic = 1.0f;
+    float m_roughness = 1.0f;
 };
 
 class Material3DImpl;

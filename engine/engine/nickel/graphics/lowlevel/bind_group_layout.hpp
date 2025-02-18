@@ -11,13 +11,13 @@ class BindGroupLayoutImpl;
 class NICKEL_API BindGroupLayout final {
 public:
     struct Entry final {
-        BindGroupEntryType type;
-        Flags<ShaderStage> shader_stage;
-        uint32_t arraySize = 1;
+        BindGroupEntryType m_type;
+        Flags<ShaderStage> m_shader_stage;
+        uint32_t m_array_size = 1;
     };
 
     struct Descriptor final {
-        std::unordered_map<uint32_t, Entry> entries;
+        std::unordered_map<uint32_t, Entry> m_entries;
     };
 
     BindGroupLayout() = default;

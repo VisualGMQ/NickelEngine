@@ -13,10 +13,10 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
                      const Image::Descriptor& desc)
     : m_device{dev} {
     createImage(desc, dev);
-    allocMem(adapter.m_phyDevice);
+    allocMem(adapter.m_phy_device);
 
-    for (int i = 0; i < desc.arrayLayers; i++) {
-        m_layouts.push_back(desc.initialLayout);
+    for (int i = 0; i < desc.m_array_layers; i++) {
+        m_layouts.push_back(desc.m_initial_layout);
     }
 
     VK_CALL(
@@ -25,7 +25,7 @@ ImageImpl::ImageImpl(const AdapterImpl& adapter, DeviceImpl& dev,
 
 void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
     VkFormatFeatureFlags features = 0;
-    auto usage = desc.usage;
+    auto usage = desc.m_usage;
     if (usage & ImageUsage::Sampled) {
         features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     }
@@ -46,24 +46,24 @@ void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
     }
 
     // TODO: if format not support, return a similar format and report a warning
-    findSupportedFormat(Format2Vk(desc.format), ImageTiling2Vk(desc.tiling), features);
+    findSupportedFormat(Format2Vk(desc.m_format), ImageTiling2Vk(desc.m_tiling), features);
     
     VkImageCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    if (desc.is_cube_map) {
+    if (desc.m_is_cube_map) {
         ci.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
-    ci.imageType = ImageType2Vk(desc.imageType);
-    ci.format = Format2Vk(desc.format);
-    ci.extent = VkExtent3D{desc.extent.w, desc.extent.h, desc.extent.l};
-    ci.mipLevels = desc.mipLevels;
-    ci.arrayLayers = desc.arrayLayers;
+    ci.imageType = ImageType2Vk(desc.m_image_type);
+    ci.format = Format2Vk(desc.m_format);
+    ci.extent = VkExtent3D{desc.m_extent.w, desc.m_extent.h, desc.m_extent.l};
+    ci.mipLevels = desc.m_mip_levels;
+    ci.arrayLayers = desc.m_array_layers;
     ci.samples =
-        static_cast<VkSampleCountFlagBits>(SampleCount2Vk(desc.samples));
-    ci.tiling = ImageTiling2Vk(desc.tiling);
-    ci.usage = ImageUsage2Vk(desc.usage);
-    ci.sharingMode = SharingMode2Vk(desc.sharingMode);
-    ci.initialLayout = ImageLayout2Vk(desc.initialLayout);
+        static_cast<VkSampleCountFlagBits>(SampleCount2Vk(desc.m_samples));
+    ci.tiling = ImageTiling2Vk(desc.m_tiling);
+    ci.usage = ImageUsage2Vk(desc.m_usage);
+    ci.sharingMode = SharingMode2Vk(desc.m_sharing_mode);
+    ci.initialLayout = ImageLayout2Vk(desc.m_initial_layout);
     auto indices = dev.m_queue_indices.GetIndices();
     ci.pQueueFamilyIndices = indices.data();
     ci.queueFamilyIndexCount = indices.size();
@@ -79,7 +79,7 @@ void ImageImpl::createImage(const Image::Descriptor& desc, DeviceImpl& dev) {
 
 void ImageImpl::findSupportedFormat(VkFormat candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(m_device.GetAdapter().m_phyDevice, candidates, &props);
+    vkGetPhysicalDeviceFormatProperties(m_device.GetAdapter().m_phy_device, candidates, &props);
 
     if (tiling == VK_IMAGE_TILING_LINEAR &&
         (props.linearTilingFeatures & features) == features) {

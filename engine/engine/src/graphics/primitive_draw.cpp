@@ -157,10 +157,10 @@ bool PrimitiveRenderPass::NeedDraw() const {
 void PrimitiveRenderPass::initBindGroupLayout(Device& device) {
     BindGroupLayout::Descriptor desc;
     BindGroupLayout::Entry entry;
-    entry.shader_stage = ShaderStage::Vertex;
-    entry.type = BindGroupEntryType::UniformBuffer;
-    entry.arraySize = 1;
-    desc.entries[0] = entry;
+    entry.m_shader_stage = ShaderStage::Vertex;
+    entry.m_type = BindGroupEntryType::UniformBuffer;
+    entry.m_array_size = 1;
+    desc.m_entries[0] = entry;
 
     m_bind_group_layout = device.CreateBindGroupLayout(desc);
 }
@@ -169,24 +169,24 @@ void PrimitiveRenderPass::initBindGroup(CommonResource& res) {
     BindGroup::Descriptor desc;
     BindGroup::Entry entry;
     BindGroup::BufferBinding binding;
-    binding.buffer = res.m_camera_buffer;
-    binding.type = BindGroup::BufferBinding::Type::Uniform;
-    entry.binding.entry = binding;
-    entry.shader_stage = ShaderStage::Vertex;
-    entry.arraySize = 1;
-    desc.entries[0] = entry;
+    binding.m_buffer = res.m_camera_buffer;
+    binding.m_type = BindGroup::BufferBinding::Type::Uniform;
+    entry.m_binding.m_entry = binding;
+    entry.m_shader_stage = ShaderStage::Vertex;
+    entry.m_array_size = 1;
+    desc.m_entries[0] = entry;
 
     m_bind_group = m_bind_group_layout.RequireBindGroup(desc);
 }
 
 void PrimitiveRenderPass::initPipelineLayout(Device& device) {
     PipelineLayout::Descriptor desc;
-    desc.layouts.push_back(m_bind_group_layout);
+    desc.m_layouts.push_back(m_bind_group_layout);
     PipelineLayout::Descriptor::PushConstantRange range;
-    range.offset = 0;
-    range.shader_stage = ShaderStage::Vertex;
-    range.size = sizeof(Mat44) * 2;
-    desc.push_contants.push_back(range);
+    range.m_offset = 0;
+    range.m_shader_stage = ShaderStage::Vertex;
+    range.m_size = sizeof(Mat44) * 2;
+    desc.m_push_contants.push_back(range);
 
     m_pipeline_layout = device.CreatePipelineLayout(desc);
 }
@@ -197,10 +197,10 @@ void PrimitiveRenderPass::initLinePipeline(Device& device,
                                            RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc =
         getPipelineDescTmpl(vertex_shader, frag_shader, render_pass);
-    desc.primitive.topology = Topology::LineList;
-    desc.primitive.cullMode = CullMode::None;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.polygonMode = PolygonMode::Line;
+    desc.m_primitive.m_topology = Topology::LineList;
+    desc.m_primitive.m_cull_mode = CullMode::None;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_polygon_mode = PolygonMode::Line;
     m_line_pipeline = device.CreateGraphicPipeline(desc);
 }
 
@@ -210,10 +210,10 @@ void PrimitiveRenderPass::initTrianglePipeline(Device& device,
                                                RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc =
         getPipelineDescTmpl(vertex_shader, frag_shader, render_pass);
-    desc.primitive.topology = Topology::TriangleList;
-    desc.primitive.cullMode = CullMode::Back;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.polygonMode = PolygonMode::Line;
+    desc.m_primitive.m_topology = Topology::TriangleList;
+    desc.m_primitive.m_cull_mode = CullMode::Back;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_polygon_mode = PolygonMode::Line;
     m_triangle_wire_pipeline = device.CreateGraphicPipeline(desc);
 }
 
@@ -223,10 +223,10 @@ void PrimitiveRenderPass::initTriangleSolidPipeline(Device& device,
                                                     RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc =
         getPipelineDescTmpl(vertex_shader, frag_shader, render_pass);
-    desc.primitive.topology = Topology::TriangleList;
-    desc.primitive.cullMode = CullMode::Back;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.polygonMode = PolygonMode::Fill;
+    desc.m_primitive.m_topology = Topology::TriangleList;
+    desc.m_primitive.m_cull_mode = CullMode::Back;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_polygon_mode = PolygonMode::Fill;
     m_triangle_solid_pipeline = device.CreateGraphicPipeline(desc);
 }
 
@@ -293,7 +293,7 @@ GraphicsPipeline::Descriptor PrimitiveRenderPass::getPipelineDescTmpl(
     RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc;
 
-    desc.subpass = 0;
+    desc.m_subpass = 0;
 
     GraphicsPipeline::Descriptor::ShaderStage vertex_stage{vertex_shader,
                                                            "main"};
@@ -302,47 +302,47 @@ GraphicsPipeline::Descriptor PrimitiveRenderPass::getPipelineDescTmpl(
     desc.m_shader_stages[ShaderStage::Vertex] = vertex_stage;
     desc.m_shader_stages[ShaderStage::Fragment] = frag_stage;
 
-    desc.primitive.topology = Topology::LineStrip;
-    desc.primitive.cullMode = CullMode::None;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.unclippedDepth = false;
-    desc.primitive.stripIndexFormat = StripIndexFormat::Uint32;
+    desc.m_primitive.m_topology = Topology::LineStrip;
+    desc.m_primitive.m_cull_mode = CullMode::None;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_unclipped_depth = false;
+    desc.m_primitive.m_strip_index_format = StripIndexFormat::Uint32;
 
     // input vertex state
     GraphicsPipeline::Descriptor::BufferState buffer_state;
     {
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x3;
-        attr.offset = 0;
-        attr.shaderLocation = 0;
-        buffer_state.attributes.push_back(attr);
+        attr.m_format = VertexFormat::Float32x3;
+        attr.m_offset = 0;
+        attr.m_shader_location = 0;
+        buffer_state.m_attributes.push_back(attr);
     }
 
     {
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x4;
-        attr.offset = sizeof(float) * 3;
-        attr.shaderLocation = 1;
-        buffer_state.attributes.push_back(attr);
+        attr.m_format = VertexFormat::Float32x4;
+        attr.m_offset = sizeof(float) * 3;
+        attr.m_shader_location = 1;
+        buffer_state.m_attributes.push_back(attr);
     }
 
-    buffer_state.arrayStride = sizeof(float) * 7;
-    buffer_state.stepMode =
+    buffer_state.m_array_stride = sizeof(float) * 7;
+    buffer_state.m_step_mode =
         GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-    desc.vertex.buffers.push_back(buffer_state);
+    desc.m_vertex.m_buffers.push_back(buffer_state);
 
     // blend state
     GraphicsPipeline::Descriptor::BlendState blend_state;
-    desc.blend_state.push_back(blend_state);
+    desc.m_blend_state.push_back(blend_state);
 
     {
         GraphicsPipeline::Descriptor::DepthStencilState depth_stencil_state;
-        depth_stencil_state.depthFormat = Format::D32_SFLOAT_S8_UINT;
-        desc.depthStencil = depth_stencil_state;
+        depth_stencil_state.m_depth_format = Format::D32_SFLOAT_S8_UINT;
+        desc.m_depth_stencil = depth_stencil_state;
     }
 
     desc.m_render_pass = render_pass;
-    desc.layout = m_pipeline_layout;
+    desc.m_layout = m_pipeline_layout;
 
     return desc;
 }

@@ -61,7 +61,7 @@ void BufferImpl::allocateMem(DeviceImpl& device, VkPhysicalDevice phyDevice,
     auto type = FindMemoryType(phyDevice, requirements, flags);
 
     if (!type) {
-        LOGE("find corresponding memory type failed");
+        LOGE("find corresponding memory m_type failed");
     } else {
         m_memory = new (std::nothrow) MemoryImpl{
             m_device, static_cast<uint64_t>(requirements.size), type.value()};
@@ -79,7 +79,7 @@ VkMemoryPropertyFlags BufferImpl::getMemoryProperty(
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(phyDevice, &props);
             if (props.limits.nonCoherentAtomSize == 0) {
-                LOGW("your GPU don't support coherence memory type");
+                LOGW("your GPU don't support coherence memory m_type");
                 mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
                 m_is_mapping_coherence = false;
             } else {

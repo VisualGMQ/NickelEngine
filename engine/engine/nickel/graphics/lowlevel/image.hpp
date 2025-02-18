@@ -13,17 +13,17 @@ class NICKEL_API ImageView {
 public:
     struct Descriptor {
         struct ImageSubresourceRange {
-            Flags<ImageAspect> aspectMask = ImageAspect::None;
-            uint32_t baseMipLevel = 0;
-            uint32_t levelCount = 1;
-            uint32_t baseArrayLayer = 0;
-            uint32_t layerCount = 1;
+            Flags<ImageAspect> m_aspect_mask = ImageAspect::None;
+            uint32_t m_base_mipLevel = 0;
+            uint32_t m_level_count = 1;
+            uint32_t m_base_array_layer = 0;
+            uint32_t m_layer_count = 1;
         };
 
-        ImageViewType viewType;
-        Format format;
-        ComponentMapping components;
-        ImageSubresourceRange subresourceRange;
+        ImageViewType m_view_type;
+        Format m_format;
+        ComponentMapping m_components;
+        ImageSubresourceRange m_subresource_range;
     };
 
     ImageView() = default;
@@ -50,17 +50,17 @@ class ImageImpl;
 class NICKEL_API Image {
 public:
     struct Descriptor {
-        bool is_cube_map = false;
-        ImageType imageType = ImageType::Dim2;
-        Format format = Format::R8G8B8A8_SRGB;
-        SVector<uint32_t, 3> extent;
-        uint32_t mipLevels = 1;
-        uint32_t arrayLayers = 1;
-        SampleCount samples = SampleCount::Count1;
-        ImageTiling tiling = ImageTiling::Linear;
-        Flags<ImageUsage> usage = ImageUsage::Sampled;
-        SharingMode sharingMode = SharingMode::Concurrent;
-        ImageLayout initialLayout = ImageLayout::Undefined;
+        bool m_is_cube_map = false;
+        ImageType m_image_type = ImageType::Dim2;
+        Format m_format = Format::R8G8B8A8_SRGB;
+        SVector<uint32_t, 3> m_extent;
+        uint32_t m_mip_levels = 1;
+        uint32_t m_array_layers = 1;
+        SampleCount m_samples = SampleCount::Count1;
+        ImageTiling m_tiling = ImageTiling::Linear;
+        Flags<ImageUsage> m_usage = ImageUsage::Sampled;
+        SharingMode m_sharing_mode = SharingMode::Concurrent;
+        ImageLayout m_initial_layout = ImageLayout::Undefined;
     };
 
     Image() = default;

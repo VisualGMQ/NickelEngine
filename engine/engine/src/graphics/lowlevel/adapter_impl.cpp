@@ -11,8 +11,8 @@ namespace nickel::graphics {
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT level,
                     VkDebugUtilsMessageTypeFlagsEXT type,
-                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                    void* pUserData) {
+                    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+                    void* user_data) {
     std::string type_name;
 
     if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
@@ -31,16 +31,16 @@ VulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT level,
 
     switch (level) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            LOGT("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            LOGT("[Vulkan][{}]: {}", type_name, callback_data->pMessage);
             return false;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOGI("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            LOGI("[Vulkan][{}]: {}", type_name, callback_data->pMessage);
             return false;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            LOGW("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            LOGW("[Vulkan][{}]: {}", type_name, callback_data->pMessage);
             return false;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            LOGE("[Vulkan][{}]: {}", type_name, pCallbackData->pMessage);
+            LOGE("[Vulkan][{}]: {}", type_name, callback_data->pMessage);
             return true;
     }
 
@@ -59,7 +59,7 @@ AdapterImpl::AdapterImpl(const video::Window::Impl& window) {
     LOGI("picking up physics device");
     pickupPhysicalDevice();
     VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(m_phyDevice, &props);
+    vkGetPhysicalDeviceProperties(m_phy_device, &props);
     LOGI("pick {}", props.deviceName);
 
     queryLimits();
@@ -109,16 +109,16 @@ void AdapterImpl::createInstance() {
     ci.enabledExtensionCount = require_extensions.size();
     ci.ppEnabledExtensionNames = require_extensions.data();
 
-    std::vector<VkLayerProperties> supportLayers;
-    uint32_t layerCount;
-    VK_CALL(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
-    supportLayers.resize(layerCount);
+    std::vector<VkLayerProperties> support_layers;
+    uint32_t layer_count;
+    VK_CALL(vkEnumerateInstanceLayerProperties(&layer_count, nullptr));
+    support_layers.resize(layer_count);
     VK_CALL(
-        vkEnumerateInstanceLayerProperties(&layerCount, supportLayers.data()));
+        vkEnumerateInstanceLayerProperties(&layer_count, support_layers.data()));
 
-    std::vector<const char*> requireLayers;
+    std::vector<const char*> require_layers;
 #ifdef NICKEL_DEBUG
-    requireLayers.push_back("VK_LAYER_KHRONOS_validation");
+    require_layers.push_back("VK_LAYER_KHRONOS_validation");
     LOGI("Vulkan enable validation layer");
 
     VkDebugUtilsMessengerCreateInfoEXT debug_ci{};
@@ -138,13 +138,13 @@ void AdapterImpl::createInstance() {
 #endif
 
     RemoveUnexistsElems<const char*, VkLayerProperties>(
-        requireLayers, supportLayers,
+        require_layers, support_layers,
         [](const LiteralString& require, const VkLayerProperties& prop) {
             return std::strcmp(prop.layerName, require) == 0;
         });
 
-    ci.enabledLayerCount = requireLayers.size();
-    ci.ppEnabledLayerNames = requireLayers.data();
+    ci.enabledLayerCount = require_layers.size();
+    ci.ppEnabledLayerNames = require_layers.data();
     VK_CALL(vkCreateInstance(&ci, nullptr, &m_instance));
     volkLoadInstance(m_instance);
 
@@ -162,15 +162,15 @@ void AdapterImpl::createInstance() {
 void AdapterImpl::pickupPhysicalDevice() {
     NICKEL_ASSERT(m_instance, "vulkan instance not create");
 
-    std::vector<VkPhysicalDevice> physicalDevices;
+    std::vector<VkPhysicalDevice> physical_devices;
     uint32_t count;
     VK_CALL(vkEnumeratePhysicalDevices(m_instance, &count, nullptr));
-    physicalDevices.resize(count);
+    physical_devices.resize(count);
     VK_CALL(
-        vkEnumeratePhysicalDevices(m_instance, &count, physicalDevices.data()));
+        vkEnumeratePhysicalDevices(m_instance, &count, physical_devices.data()));
 
-    NICKEL_ASSERT(!physicalDevices.empty(), "no vulkan physics device");
-    m_phyDevice = physicalDevices[0];
+    NICKEL_ASSERT(!physical_devices.empty(), "no vulkan physics device");
+    m_phy_device = physical_devices[0];
 }
 
 void AdapterImpl::createSurface(const video::Window::Impl& impl) {
@@ -187,7 +187,7 @@ void AdapterImpl::createDevice(const SVector<uint32_t, 2>& window_size) {
 
 void AdapterImpl::queryLimits() {
     VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(m_phyDevice, &props);
+    vkGetPhysicalDeviceProperties(m_phy_device, &props);
 
     m_limits.min_uniform_buffer_offset_alignment =
         props.limits.minUniformBufferOffsetAlignment;
@@ -197,10 +197,10 @@ AdapterImpl::~AdapterImpl() {
     delete m_device;
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+    auto vkDestroyDebugUtilsMessengerExTFuc = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
         m_instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        func(m_instance, m_debug_utils_messenger, nullptr);
+    if (vkDestroyDebugUtilsMessengerExTFuc != nullptr) {
+        vkDestroyDebugUtilsMessengerExTFuc(m_instance, m_debug_utils_messenger, nullptr);
     }
 
     vkDestroyInstance(m_instance, nullptr);

@@ -8,10 +8,10 @@
 namespace nickel::graphics {
 GraphicsPipelineImpl::GraphicsPipelineImpl(
     DeviceImpl& dev, const GraphicsPipeline::Descriptor& desc)
-    : m_layout{desc.layout}, m_device{dev}, m_render_pass{desc.m_render_pass} {
+    : m_layout{desc.m_layout}, m_device{dev}, m_render_pass{desc.m_render_pass} {
     VkGraphicsPipelineCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    ci.subpass = desc.subpass;
+    ci.subpass = desc.m_subpass;
 
     std::vector<VkPipelineShaderStageCreateInfo> stage_ci_list;
     // shader stage
@@ -21,8 +21,8 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
             VkPipelineShaderStageCreateInfo shader_stage{};
             shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             shader_stage.stage = static_cast<VkShaderStageFlagBits>(ShaderStage2Vk(stage));
-            shader_stage.pName = module.entry_name.c_str();
-            shader_stage.module = module.module.Impl().m_module;
+            shader_stage.pName = module.m_entry_name.c_str();
+            shader_stage.module = module.m_module.Impl().m_module;
             stage_ci_list.push_back(shader_stage);
         }
 
@@ -31,29 +31,29 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     }
 
     // vertex input state
-    auto& vertexInputState = desc.vertex;
+    auto& vertexInputState = desc.m_vertex;
     VkPipelineVertexInputStateCreateInfo vertexInput{};
     vertexInput.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
     std::vector<VkVertexInputAttributeDescription> attrDescs;
     std::vector<VkVertexInputBindingDescription> bindings;
-    for (int i = 0; i < vertexInputState.buffers.size(); i++) {
-        auto& state = vertexInputState.buffers[i];
-        for (auto& attr : state.attributes) {
+    for (int i = 0; i < vertexInputState.m_buffers.size(); i++) {
+        auto& state = vertexInputState.m_buffers[i];
+        for (auto& attr : state.m_attributes) {
             VkVertexInputAttributeDescription attrDesc{};
             attrDesc.binding = i;
-            attrDesc.location = attr.shaderLocation;
-            attrDesc.format = VertexFormat2Vk(attr.format);
-            attrDesc.offset = attr.offset;
+            attrDesc.location = attr.m_shader_location;
+            attrDesc.format = VertexFormat2Vk(attr.m_format);
+            attrDesc.offset = attr.m_offset;
             attrDescs.emplace_back(attrDesc);
         }
 
         VkVertexInputBindingDescription binding{};
         binding.binding = i;
-        binding.stride = state.arrayStride;
+        binding.stride = state.m_array_stride;
         binding.inputRate =
-            state.stepMode ==
+            state.m_step_mode ==
                     GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex
                 ? VK_VERTEX_INPUT_RATE_VERTEX
                 : VK_VERTEX_INPUT_RATE_INSTANCE;
@@ -68,7 +68,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     VkPipelineInputAssemblyStateCreateInfo inputAsm{};
     inputAsm.sType =
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAsm.topology = Topology2Vk(desc.primitive.topology);
+    inputAsm.topology = Topology2Vk(desc.m_primitive.m_topology);
     inputAsm.primitiveRestartEnable = false;  // TODO: read from config later
 
     // rasterization
@@ -78,52 +78,52 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     rasterState.rasterizerDiscardEnable =
         false;  // TODO: read from config later
 
-    if (desc.depthStencil) {
-        rasterState.depthBiasEnable = desc.depthStencil->depthBias.has_value();
+    if (desc.m_depth_stencil) {
+        rasterState.depthBiasEnable = desc.m_depth_stencil->m_depth_bias.has_value();
         rasterState.depthClampEnable =
-            desc.depthStencil->depthBiasClamp.has_value();
+            desc.m_depth_stencil->m_depth_bias_clamp.has_value();
         rasterState.depthBiasSlopeFactor =
-            desc.depthStencil->depthBiasSlopeScale;
+            desc.m_depth_stencil->m_depth_bias_slope_scale;
 
-        if (desc.depthStencil->depthBias) {
+        if (desc.m_depth_stencil->m_depth_bias) {
             rasterState.depthBiasConstantFactor =
-                desc.depthStencil->depthBias.value();
+                desc.m_depth_stencil->m_depth_bias.value();
         }
 
-        if (desc.depthStencil->depthBiasClamp) {
+        if (desc.m_depth_stencil->m_depth_bias_clamp) {
             rasterState.depthBiasClamp =
-                desc.depthStencil->depthBiasClamp.value();
+                desc.m_depth_stencil->m_depth_bias_clamp.value();
         }
     }
 
-    rasterState.cullMode = CullMode2Vk(desc.primitive.cullMode);
-    rasterState.polygonMode = PolygonMode2Vk(desc.primitive.polygonMode);
+    rasterState.cullMode = CullMode2Vk(desc.m_primitive.m_cull_mode);
+    rasterState.polygonMode = PolygonMode2Vk(desc.m_primitive.m_polygon_mode);
     rasterState.lineWidth = 1.0f;  // TODO: read from config later
-    rasterState.frontFace = FrontFace2Vk(desc.primitive.frontFace);
+    rasterState.frontFace = FrontFace2Vk(desc.m_primitive.m_front_face);
 
     // multisample
     VkPipelineMultisampleStateCreateInfo multisample{};
     multisample.sType =
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisample.alphaToCoverageEnable = desc.multisample.alphaToCoverageEnabled;
+    multisample.alphaToCoverageEnable = desc.m_multisample.m_alpha_to_coverage_enabled;
     multisample.sampleShadingEnable = false;
     multisample.rasterizationSamples = static_cast<VkSampleCountFlagBits>(
-        SampleCount2Vk(desc.multisample.count));
-    multisample.pSampleMask = &desc.multisample.mask;
+        SampleCount2Vk(desc.m_multisample.m_count));
+    multisample.pSampleMask = &desc.m_multisample.m_mask;
 
     // color blend
     std::vector<VkPipelineColorBlendAttachmentState> attachmentStates;
-    for (auto& state : desc.blend_state) {
+    for (auto& state : desc.m_blend_state) {
         VkPipelineColorBlendAttachmentState colorState;
-        colorState.colorBlendOp = BlendOp2Vk(state.color.operation);
+        colorState.colorBlendOp = BlendOp2Vk(state.m_color.m_operation);
         colorState.srcColorBlendFactor =
-            BlendFactor2Vk(state.color.srcFactor);
-        colorState.dstColorBlendFactor = BlendFactor2Vk(state.color.dstFactor);
-        colorState.alphaBlendOp = BlendOp2Vk(state.alpha.operation);
-        colorState.srcAlphaBlendFactor = BlendFactor2Vk(state.alpha.srcFactor);
-        colorState.dstAlphaBlendFactor = BlendFactor2Vk(state.alpha.dstFactor);
+            BlendFactor2Vk(state.m_color.m_src_factor);
+        colorState.dstColorBlendFactor = BlendFactor2Vk(state.m_color.m_dst_factor);
+        colorState.alphaBlendOp = BlendOp2Vk(state.m_alpha.m_operation);
+        colorState.srcAlphaBlendFactor = BlendFactor2Vk(state.m_alpha.m_src_factor);
+        colorState.dstAlphaBlendFactor = BlendFactor2Vk(state.m_alpha.m_dst_factor);
         colorState.blendEnable = true;
-        colorState.colorWriteMask = ColorComponent2Vk(state.colorMask);
+        colorState.colorWriteMask = ColorComponent2Vk(state.m_color_mask);
         attachmentStates.emplace_back(colorState);
     }
 
@@ -133,43 +133,43 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     colorBlend.attachmentCount = attachmentStates.size();
     colorBlend.pAttachments = attachmentStates.data();
 
-    // depth stencil state
+    // m_depth m_stencil state
     VkPipelineDepthStencilStateCreateInfo depthStencilState{};
     depthStencilState.sType =
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
-    if (desc.depthStencil) {
+    if (desc.m_depth_stencil) {
         VkStencilOpState frontState, backState;
-        frontState.writeMask = desc.depthStencil->stencilFront.writeMask;
-        frontState.compareMask = desc.depthStencil->stencilFront.compareMask;
+        frontState.writeMask = desc.m_depth_stencil->m_stencil_front.m_write_mask;
+        frontState.compareMask = desc.m_depth_stencil->m_stencil_front.m_compare_mask;
         frontState.compareOp =
-            CompareOp2Vk(desc.depthStencil->stencilFront.compare);
+            CompareOp2Vk(desc.m_depth_stencil->m_stencil_front.m_compare);
         frontState.failOp =
-            StencilOp2Vk(desc.depthStencil->stencilFront.failedOp);
+            StencilOp2Vk(desc.m_depth_stencil->m_stencil_front.m_failed_op);
         frontState.passOp =
-            StencilOp2Vk(desc.depthStencil->stencilFront.passOp);
+            StencilOp2Vk(desc.m_depth_stencil->m_stencil_front.m_pass_op);
         frontState.depthFailOp =
-            StencilOp2Vk(desc.depthStencil->stencilFront.depthFailOp);
+            StencilOp2Vk(desc.m_depth_stencil->m_stencil_front.m_depth_fail_op);
         frontState.reference = 0;
 
-        backState.writeMask = desc.depthStencil->stencilBack.writeMask;
-        backState.compareMask = desc.depthStencil->stencilBack.compareMask;
+        backState.writeMask = desc.m_depth_stencil->m_stencil_back.m_write_mask;
+        backState.compareMask = desc.m_depth_stencil->m_stencil_back.m_compare_mask;
         backState.compareOp =
-            CompareOp2Vk(desc.depthStencil->stencilBack.compare);
+            CompareOp2Vk(desc.m_depth_stencil->m_stencil_back.m_compare);
         backState.failOp =
-            StencilOp2Vk(desc.depthStencil->stencilBack.failedOp);
-        backState.passOp = StencilOp2Vk(desc.depthStencil->stencilBack.passOp);
+            StencilOp2Vk(desc.m_depth_stencil->m_stencil_back.m_failed_op);
+        backState.passOp = StencilOp2Vk(desc.m_depth_stencil->m_stencil_back.m_pass_op);
         backState.depthFailOp =
-            StencilOp2Vk(desc.depthStencil->stencilBack.depthFailOp);
+            StencilOp2Vk(desc.m_depth_stencil->m_stencil_back.m_depth_fail_op);
         backState.reference = 0;
 
         depthStencilState.depthBoundsTestEnable = false;
         depthStencilState.depthWriteEnable =
-            desc.depthStencil->depthWriteEnabled;
+            desc.m_depth_stencil->m_depth_write_enabled;
         depthStencilState.depthTestEnable = true;
         depthStencilState.stencilTestEnable = false;
         depthStencilState.depthCompareOp =
-            CompareOp2Vk(desc.depthStencil->depthCompare);
+            CompareOp2Vk(desc.m_depth_stencil->m_depth_compare);
         depthStencilState.front = frontState;
         depthStencilState.back = backState;
 
@@ -208,7 +208,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     ci.pMultisampleState = &multisample;
     ci.pColorBlendState = &colorBlend;
     ci.pDynamicState = &dynState;
-    ci.layout = desc.layout.Impl().m_pipeline_layout;
+    ci.layout = desc.m_layout.Impl().m_pipeline_layout;
 
     VK_CALL(vkCreateGraphicsPipelines(dev.m_device, VK_NULL_HANDLE, 1, &ci,
                                       nullptr, &m_pipeline));

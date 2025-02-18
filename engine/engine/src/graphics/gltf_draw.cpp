@@ -53,7 +53,7 @@ void GLTFRenderPass::ApplyDrawCall(RenderPassEncoder& encoder, bool wireframe) {
         GLTFModelImpl* impl = model.GetImpl();
 
         for (auto& scene : impl->scenes) {
-            for (auto& node : scene.nodes) {
+            for (auto& node : scene.m_nodes) {
                 visitGPUMesh(encoder, *model.GetImpl(), *node);
             }
         }
@@ -84,85 +84,85 @@ GraphicsPipeline::Descriptor GLTFRenderPass::getPipelineDescTmpl(
     desc.m_shader_stages[ShaderStage::Vertex] = vertex_stage;
     desc.m_shader_stages[ShaderStage::Fragment] = frag_stage;
 
-    desc.primitive.topology = Topology::LineStrip;
-    desc.primitive.cullMode = CullMode::None;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.unclippedDepth = false;
-    desc.primitive.stripIndexFormat = StripIndexFormat::Uint32;
+    desc.m_primitive.m_topology = Topology::LineStrip;
+    desc.m_primitive.m_cull_mode = CullMode::None;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_unclipped_depth = false;
+    desc.m_primitive.m_strip_index_format = StripIndexFormat::Uint32;
 
     // input vertex state
     // Position
     {
         GraphicsPipeline::Descriptor::BufferState buffer_state;
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x3;
-        attr.offset = 0;
-        attr.shaderLocation = 0;
-        buffer_state.attributes.push_back(attr);
+        attr.m_format = VertexFormat::Float32x3;
+        attr.m_offset = 0;
+        attr.m_shader_location = 0;
+        buffer_state.m_attributes.push_back(attr);
 
-        buffer_state.arrayStride = sizeof(float) * 3;
-        buffer_state.stepMode =
+        buffer_state.m_array_stride = sizeof(float) * 3;
+        buffer_state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(buffer_state);
+        desc.m_vertex.m_buffers.push_back(buffer_state);
     }
 
     // UV
     {
         GraphicsPipeline::Descriptor::BufferState buffer_state;
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x2;
-        attr.offset = 0;
-        attr.shaderLocation = 1;
-        buffer_state.attributes.push_back(attr);
+        attr.m_format = VertexFormat::Float32x2;
+        attr.m_offset = 0;
+        attr.m_shader_location = 1;
+        buffer_state.m_attributes.push_back(attr);
 
-        buffer_state.arrayStride = sizeof(float) * 2;
-        buffer_state.stepMode =
+        buffer_state.m_array_stride = sizeof(float) * 2;
+        buffer_state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(buffer_state);
+        desc.m_vertex.m_buffers.push_back(buffer_state);
     }
 
     // normal
     {
         GraphicsPipeline::Descriptor::BufferState buffer_state;
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x3;
-        attr.offset = 0;
-        attr.shaderLocation = 2;
-        buffer_state.attributes.push_back(attr);
+        attr.m_format = VertexFormat::Float32x3;
+        attr.m_offset = 0;
+        attr.m_shader_location = 2;
+        buffer_state.m_attributes.push_back(attr);
 
-        buffer_state.arrayStride = sizeof(float) * 3;
-        buffer_state.stepMode =
+        buffer_state.m_array_stride = sizeof(float) * 3;
+        buffer_state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(buffer_state);
+        desc.m_vertex.m_buffers.push_back(buffer_state);
     }
 
     // tangent
     {
         GraphicsPipeline::Descriptor::BufferState buffer_state;
         GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-        attr.format = VertexFormat::Float32x4;
-        attr.offset = 0;
-        attr.shaderLocation = 3;
-        buffer_state.attributes.push_back(attr);
+        attr.m_format = VertexFormat::Float32x4;
+        attr.m_offset = 0;
+        attr.m_shader_location = 3;
+        buffer_state.m_attributes.push_back(attr);
 
-        buffer_state.arrayStride = sizeof(float) * 4;
-        buffer_state.stepMode =
+        buffer_state.m_array_stride = sizeof(float) * 4;
+        buffer_state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(buffer_state);
+        desc.m_vertex.m_buffers.push_back(buffer_state);
     }
 
     // blend state
     GraphicsPipeline::Descriptor::BlendState blend_state;
-    desc.blend_state.push_back(blend_state);
+    desc.m_blend_state.push_back(blend_state);
 
     {
         GraphicsPipeline::Descriptor::DepthStencilState depth_stencil_state;
-        depth_stencil_state.depthFormat = Format::D32_SFLOAT_S8_UINT;
-        desc.depthStencil = depth_stencil_state;
+        depth_stencil_state.m_depth_format = Format::D32_SFLOAT_S8_UINT;
+        desc.m_depth_stencil = depth_stencil_state;
     }
 
     desc.m_render_pass = render_pass;
-    desc.layout = layout;
+    desc.m_layout = layout;
 
     return desc;
 }
@@ -173,11 +173,11 @@ void GLTFRenderPass::initSolidPipeline(Device& device,
                                        RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc = getPipelineDescTmpl(
         vertex_shader, frag_shader, render_pass, m_pipeline_layout);
-    desc.subpass = 0;
-    desc.primitive.topology = Topology::TriangleList;
-    desc.primitive.cullMode = CullMode::Back;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.polygonMode = PolygonMode::Fill;
+    desc.m_subpass = 0;
+    desc.m_primitive.m_topology = Topology::TriangleList;
+    desc.m_primitive.m_cull_mode = CullMode::Back;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_polygon_mode = PolygonMode::Fill;
     m_solid_pipeline = device.CreateGraphicPipeline(desc);
 }
 
@@ -187,10 +187,10 @@ void GLTFRenderPass::initLineFramePipeline(Device& device,
                                            RenderPass& render_pass) {
     GraphicsPipeline::Descriptor desc = getPipelineDescTmpl(
         vertex_shader, frag_shader, render_pass, m_pipeline_layout);
-    desc.primitive.topology = Topology::TriangleList;
-    desc.primitive.cullMode = CullMode::None;
-    desc.primitive.frontFace = FrontFace::CCW;
-    desc.primitive.polygonMode = PolygonMode::Line;
+    desc.m_primitive.m_topology = Topology::TriangleList;
+    desc.m_primitive.m_cull_mode = CullMode::None;
+    desc.m_primitive.m_front_face = FrontFace::CCW;
+    desc.m_primitive.m_polygon_mode = PolygonMode::Line;
     m_line_frame_pipeline = device.CreateGraphicPipeline(desc);
 }
 
@@ -199,13 +199,13 @@ void GLTFRenderPass::initPipelineLayout(Device& device) {
 
     {
         PipelineLayout::Descriptor::PushConstantRange range;
-        range.offset = 0;
-        range.shader_stage = ShaderStage::Vertex;
-        range.size = sizeof(Mat44) * 2;
-        desc.push_contants.push_back(range);
+        range.m_offset = 0;
+        range.m_shader_stage = ShaderStage::Vertex;
+        range.m_size = sizeof(Mat44) * 2;
+        desc.m_push_contants.push_back(range);
     }
 
-    desc.layouts.push_back(m_bind_group_layout);
+    desc.m_layouts.push_back(m_bind_group_layout);
     m_pipeline_layout = device.CreatePipelineLayout(desc);
 }
 
@@ -214,90 +214,90 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Vertex;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::UniformBuffer;
-        desc.entries[0] = entry;
+        entry.m_shader_stage = ShaderStage::Vertex;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::UniformBuffer;
+        desc.m_entries[0] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::UniformBufferDynamic;
-        desc.entries[1] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::UniformBufferDynamic;
+        desc.m_entries[1] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::SampledImage;
-        desc.entries[2] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::SampledImage;
+        desc.m_entries[2] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::SampledImage;
-        desc.entries[3] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::SampledImage;
+        desc.m_entries[3] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::SampledImage;
-        desc.entries[4] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::SampledImage;
+        desc.m_entries[4] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::SampledImage;
-        desc.entries[5] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::SampledImage;
+        desc.m_entries[5] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::Sampler;
-        desc.entries[6] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::Sampler;
+        desc.m_entries[6] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::Sampler;
-        desc.entries[7] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::Sampler;
+        desc.m_entries[7] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::Sampler;
-        desc.entries[8] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::Sampler;
+        desc.m_entries[8] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::Sampler;
-        desc.entries[9] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::Sampler;
+        desc.m_entries[9] = entry;
     }
 
     {
         BindGroupLayout::Entry entry;
-        entry.shader_stage = ShaderStage::Fragment;
-        entry.arraySize = 1;
-        entry.type = BindGroupEntryType::UniformBuffer;
-        desc.entries[10] = entry;
+        entry.m_shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_type = BindGroupEntryType::UniformBuffer;
+        desc.m_entries[10] = entry;
     }
 
     m_bind_group_layout = device.CreateBindGroupLayout(desc);
@@ -305,50 +305,50 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
 
 void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
                                   GLTFModelImpl& model, GPUMesh& mesh) {
-    for (auto& prim : mesh.primitives) {
-        auto& mtl = model.materials[prim.material.value()];
+    for (auto& prim : mesh.m_primitives) {
+        auto& mtl = model.materials[prim.m_material.value()];
 
-        encoder.SetPushConstant(ShaderStage::Vertex, mesh.modelMat.Ptr(), 0,
+        encoder.SetPushConstant(ShaderStage::Vertex, mesh.m_model_mat.Ptr(), 0,
                                 sizeof(Mat44));
 
         encoder.SetBindGroup(0, mtl.GetImpl()->bindGroup);
 
         // position
-        auto& pos_buffer_view = prim.posBufView;
+        auto& pos_buffer_view = prim.m_pos_buf_view;
         encoder.BindVertexBuffer(
-            0, model.dataBuffers[pos_buffer_view.buffer.value()],
-            pos_buffer_view.offset);
+            0, model.dataBuffers[pos_buffer_view.m_buffer.value()],
+            pos_buffer_view.m_offset);
 
         // uv
-        auto& uv_buffer_view = prim.uvBufView;
+        auto& uv_buffer_view = prim.m_uv_buf_view;
         encoder.BindVertexBuffer(
-            1, model.dataBuffers[uv_buffer_view.buffer.value()],
-            uv_buffer_view.offset);
+            1, model.dataBuffers[uv_buffer_view.m_buffer.value()],
+            uv_buffer_view.m_offset);
 
         // normal
-        auto& normal_buffer_view = prim.normBufView;
+        auto& normal_buffer_view = prim.m_norm_buf_view;
         encoder.BindVertexBuffer(
-            2, model.dataBuffers[normal_buffer_view.buffer.value()],
-            normal_buffer_view.offset);
+            2, model.dataBuffers[normal_buffer_view.m_buffer.value()],
+            normal_buffer_view.m_offset);
 
         // tangent
-        auto& tangent_buffer_view = prim.tanBufView;
+        auto& tangent_buffer_view = prim.m_tan_buf_view;
         encoder.BindVertexBuffer(
-            3, model.dataBuffers[tangent_buffer_view.buffer.value()],
-            tangent_buffer_view.offset);
+            3, model.dataBuffers[tangent_buffer_view.m_buffer.value()],
+            tangent_buffer_view.m_offset);
 
-        if (prim.indicesBufView) {
-            auto& indices_buffer_view = prim.indicesBufView;
+        if (prim.m_indices_buf_view) {
+            auto& indices_buffer_view = prim.m_indices_buf_view;
             encoder.BindIndexBuffer(
-                model.dataBuffers[indices_buffer_view.buffer.value()],
-                prim.index_type, indices_buffer_view.offset);
-            encoder.DrawIndexed(indices_buffer_view.count, 1, 0, 0, 0);
+                model.dataBuffers[indices_buffer_view.m_buffer.value()],
+                prim.m_index_type, indices_buffer_view.m_offset);
+            encoder.DrawIndexed(indices_buffer_view.m_count, 1, 0, 0, 0);
         } else {
-            encoder.Draw(pos_buffer_view.count, 1, 0, 0);
+            encoder.Draw(pos_buffer_view.m_count, 1, 0, 0);
         }
     }
 
-    for (auto& child : mesh.children) {
+    for (auto& child : mesh.m_children) {
         visitGPUMesh(encoder, model, *child);
     }
 }

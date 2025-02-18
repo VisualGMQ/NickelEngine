@@ -46,9 +46,9 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
     auto size = accessor.count * sizeof(RequireT) *
                 tinygltf::GetNumComponentsInType(type);
     BufferView bufView;
-    bufView.offset = dst.size();
-    bufView.size = size;
-    bufView.count = accessor.count;
+    bufView.m_offset = dst.size();
+    bufView.m_size = size;
+    bufView.m_count = accessor.count;
 
     dst.resize(dst.size() + size);
     auto copySrc = buffer.data.data() + offset;
@@ -280,13 +280,13 @@ private:
             PBRParameters pbrParam;
 
             auto& colorFactor = mtl.pbrMetallicRoughness.baseColorFactor;
-            pbrParam.baseColor.r = colorFactor[0];
-            pbrParam.baseColor.g = colorFactor[1];
-            pbrParam.baseColor.b = colorFactor[2];
-            pbrParam.baseColor.a = colorFactor[3];
+            pbrParam.m_base_color.r = colorFactor[0];
+            pbrParam.m_base_color.g = colorFactor[1];
+            pbrParam.m_base_color.b = colorFactor[2];
+            pbrParam.m_base_color.a = colorFactor[3];
 
-            pbrParam.metalness = mtl.pbrMetallicRoughness.metallicFactor;
-            pbrParam.roughness = mtl.pbrMetallicRoughness.roughnessFactor;
+            pbrParam.m_metallic = mtl.pbrMetallicRoughness.metallicFactor;
+            pbrParam.m_roughness = mtl.pbrMetallicRoughness.roughnessFactor;
 
             memcpy(pbrParams.data() + pbr_parameter_offset, &pbrParam,
                    sizeof(PBRParameters));
@@ -384,10 +384,10 @@ private:
 
     Sampler createSampler(Device device, const tinygltf::Sampler& gltfSampler) {
         Sampler::Descriptor desc;
-        desc.minFilter = GLTFFilter2RHI(gltfSampler.minFilter);
-        desc.magFilter = GLTFFilter2RHI(gltfSampler.magFilter);
-        desc.addressModeU = GLTFWrapper2RHI(gltfSampler.wrapS);
-        desc.addressModeV = GLTFWrapper2RHI(gltfSampler.wrapT);
+        desc.m_min_filter = GLTFFilter2RHI(gltfSampler.minFilter);
+        desc.m_mag_filter = GLTFFilter2RHI(gltfSampler.magFilter);
+        desc.m_address_mode_u = GLTFWrapper2RHI(gltfSampler.wrapS);
+        desc.m_address_mode_v = GLTFWrapper2RHI(gltfSampler.wrapT);
         return device.CreateSampler(desc);
     }
 
@@ -399,49 +399,49 @@ private:
         // camera buffer
         {
             BindGroup::Entry entry;
-            entry.shader_stage = ShaderStage::Vertex;
-            entry.arraySize = 1;
+            entry.m_shader_stage = ShaderStage::Vertex;
+            entry.m_array_size = 1;
             BindGroup::BufferBinding binding;
-            binding.buffer = nickel::Context::GetInst()
+            binding.m_buffer = nickel::Context::GetInst()
                                  .GetGraphicsContext()
                                  .GetImpl()
                                  ->GetCommonResource()
                                  .m_camera_buffer;
-            binding.type = BindGroup::BufferBinding::Type::Uniform;
-            entry.binding.entry = binding;
+            binding.m_type = BindGroup::BufferBinding::Type::Uniform;
+            entry.m_binding.m_entry = binding;
 
-            desc.entries[0] = entry;
+            desc.m_entries[0] = entry;
         }
 
         // camera buffer
         {
             BindGroup::Entry entry;
-            entry.shader_stage = ShaderStage::Fragment;
-            entry.arraySize = 1;
+            entry.m_shader_stage = ShaderStage::Fragment;
+            entry.m_array_size = 1;
             BindGroup::BufferBinding binding;
-            binding.buffer = nickel::Context::GetInst()
+            binding.m_buffer = nickel::Context::GetInst()
                                  .GetGraphicsContext()
                                  .GetImpl()
                                  ->GetCommonResource()
                                  .m_view_buffer;
-            binding.type = BindGroup::BufferBinding::Type::Uniform;
-            entry.binding.entry = binding;
+            binding.m_type = BindGroup::BufferBinding::Type::Uniform;
+            entry.m_binding.m_entry = binding;
 
-            desc.entries[10] = entry;
+            desc.m_entries[10] = entry;
         }
 
         // pbr parameters uniform buffer
         {
             BindGroup::Entry entry;
-            entry.shader_stage = ShaderStage::Fragment;
-            entry.arraySize = 1;
+            entry.m_shader_stage = ShaderStage::Fragment;
+            entry.m_array_size = 1;
             BindGroup::BufferBinding binding;
-            binding.buffer = pbrParamsBuffer;
-            binding.type = BindGroup::BufferBinding::Type::DynamicUniform;
-            binding.offset = material.pbrParameters.offset;
-            entry.binding.entry = binding;
+            binding.m_buffer = pbrParamsBuffer;
+            binding.m_type = BindGroup::BufferBinding::Type::DynamicUniform;
+            binding.m_offset = material.pbrParameters.m_offset;
+            entry.m_binding.m_entry = binding;
 
-            desc.entries[1] = entry;
+            desc.m_entries[1] = entry;
         }
 
         pushTextureInfoBinding(desc, material.basicTexture, 2, 6);
@@ -462,34 +462,34 @@ private:
     void pushTextureBindingPoint(BindGroup::Descriptor& desc,
                                  const ImageView& view, uint32_t slot) {
         BindGroup::Entry entry;
-        entry.arraySize = 1;
-        entry.shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_shader_stage = ShaderStage::Fragment;
         BindGroup::ImageBinding binding;
-        binding.type = BindGroup::ImageBinding::Type::Image;
-        binding.view = view;
-        entry.binding.entry = binding;
-        desc.entries[slot] = entry;
+        binding.m_type = BindGroup::ImageBinding::Type::Image;
+        binding.m_view = view;
+        entry.m_binding.m_entry = binding;
+        desc.m_entries[slot] = entry;
     }
 
     void pushSamplerBindingPoint(BindGroup::Descriptor& desc,
                                  const Sampler& sampler, uint32_t slot) {
         BindGroup::Entry entry;
-        entry.arraySize = 1;
-        entry.shader_stage = ShaderStage::Fragment;
+        entry.m_array_size = 1;
+        entry.m_shader_stage = ShaderStage::Fragment;
         BindGroup::SamplerBinding binding;
-        binding.sampler = sampler;
-        entry.binding.entry = binding;
-        desc.entries[slot] = entry;
+        binding.m_sampler = sampler;
+        entry.m_binding.m_entry = binding;
+        desc.m_entries[slot] = entry;
     }
 
     void preorderNodes(Device device, const tinygltf::Node& node,
                        GLTFModelImpl& model, GPUMesh* parent, Scene& scene) {
         std::unique_ptr<GPUMesh> newNode = std::make_unique<GPUMesh>();
-        newNode->localModelMat = calcNodeTransform(node);
+        newNode->m_local_model_mat = calcNodeTransform(node);
         if (parent) {
-            newNode->modelMat = parent->modelMat * newNode->localModelMat;
+            newNode->m_model_mat = parent->m_model_mat * newNode->m_local_model_mat;
         } else {
-            newNode->modelMat = newNode->localModelMat;
+            newNode->m_model_mat = newNode->m_local_model_mat;
         }
 
         if (node.mesh != -1) {
@@ -499,7 +499,7 @@ private:
                 auto prim =
                     recordPrimInfo(data_buffer, model.dataBuffers.size(),
                                    gltfMesh.primitives[i]);
-                newNode->primitives.emplace_back(prim);
+                newNode->m_primitives.emplace_back(prim);
             }
             model.dataBuffers.emplace_back(
                 copyBuffer2GPU(device, data_buffer,
@@ -510,10 +510,10 @@ private:
         GPUMesh* final_parent_mesh{};
         if (parent) {
             final_parent_mesh =
-                parent->children.emplace_back(std::move(newNode)).get();
+                parent->m_children.emplace_back(std::move(newNode)).get();
         } else {
             final_parent_mesh =
-                scene.nodes.emplace_back(std::move(newNode)).get();
+                scene.m_nodes.emplace_back(std::move(newNode)).get();
         }
 
         for (auto child : node.children) {
@@ -530,7 +530,7 @@ private:
         auto& attrs = prim.attributes;
         if (auto it = attrs.find("POSITION"); it != attrs.end()) {
             auto& accessor = m_gltf_model.accessors[it->second];
-            primitive.posBufView =
+            primitive.m_pos_buf_view =
                 recordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                         buffer_idx, TINYGLTF_TYPE_VEC3);
         }
@@ -538,14 +538,14 @@ private:
         if (prim.indices != -1) {
             auto& accessor = m_gltf_model.accessors[prim.indices];
             if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                primitive.index_type = IndexType::Uint16;   
-            primitive.indicesBufView = recordBufferView<uint16_t>(
+                primitive.m_index_type = IndexType::Uint16;   
+            primitive.m_indices_buf_view = recordBufferView<uint16_t>(
                     m_gltf_model, accessor, data_buffer, buffer_idx,
                     TINYGLTF_TYPE_SCALAR);
             } else if (accessor.componentType ==
                        TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-                primitive.index_type = IndexType::Uint32;
-                primitive.indicesBufView = recordBufferView<uint32_t>(
+                primitive.m_index_type = IndexType::Uint32;
+                primitive.m_indices_buf_view = recordBufferView<uint32_t>(
                     m_gltf_model, accessor, data_buffer, buffer_idx,
                     TINYGLTF_TYPE_SCALAR);
             } else {
@@ -556,46 +556,46 @@ private:
         bool has_uv = true;
         if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
             auto& accessor = m_gltf_model.accessors[it->second];
-            primitive.uvBufView =
+            primitive.m_uv_buf_view =
                 recordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                         buffer_idx, TINYGLTF_TYPE_VEC2);
         } else {
             // some trivial data
-            primitive.uvBufView = primitive.posBufView;
+            primitive.m_uv_buf_view = primitive.m_pos_buf_view;
             has_uv = false;
         }
 
-        const BufferView& position_buffer_view = primitive.posBufView;
+        const BufferView& position_buffer_view = primitive.m_pos_buf_view;
 
         if (auto it = attrs.find("NORMAL"); it != attrs.end()) {
             auto& accessor = m_gltf_model.accessors[it->second];
 
-            primitive.normBufView =
+            primitive.m_norm_buf_view =
                 recordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                         buffer_idx, TINYGLTF_TYPE_VEC3);
         } else {
             size_t old_size = data_buffer.size();
-            uint32_t pos_count = position_buffer_view.count;
+            uint32_t pos_count = position_buffer_view.m_count;
             size_t size = pos_count * sizeof(Vec3);
             data_buffer.resize(data_buffer.size() + size, 0);
             Vec3* norm_ptr = (Vec3*)(data_buffer.data() + old_size);
 
             BufferView view;
-            view.count = pos_count;
-            view.size = size;
-            view.offset = old_size;
-            view.buffer = buffer_idx;
-            primitive.normBufView = view;
+            view.m_count = pos_count;
+            view.m_size = size;
+            view.m_offset = old_size;
+            view.m_buffer = buffer_idx;
+            primitive.m_norm_buf_view = view;
 
             auto posPtr =
-                (const Vec3*)(data_buffer.data() + position_buffer_view.offset);
-            if (primitive.indicesBufView) {
+                (const Vec3*)(data_buffer.data() + position_buffer_view.m_offset);
+            if (primitive.m_indices_buf_view) {
                 const BufferView& indices_buffer_view =
-                    primitive.indicesBufView;
+                    primitive.m_indices_buf_view;
                 auto indices_ptr =
-                    data_buffer.data() + indices_buffer_view.offset;
+                    data_buffer.data() + indices_buffer_view.m_offset;
 
-                for (int i = 0; i < indices_buffer_view.count / 3; i++) {
+                for (int i = 0; i < indices_buffer_view.m_count / 3; i++) {
                     auto idx1 = indices_ptr[i * 3];
                     auto idx2 = indices_ptr[i * 3 + 1];
                     auto idx3 = indices_ptr[i * 3 + 2];
@@ -609,7 +609,7 @@ private:
                     norm_ptr[idx3] = normal;
                 }
             } else {
-                for (int i = 0; i < position_buffer_view.count / 3; i++) {
+                for (int i = 0; i < position_buffer_view.m_count / 3; i++) {
                     auto pos1 = posPtr[i * 3];
                     auto pos2 = posPtr[i * 3 + 1];
                     auto pos3 = posPtr[i * 3 + 2];
@@ -624,40 +624,40 @@ private:
         if (auto it = attrs.find("TANGENT"); it != attrs.end()) {
             auto& accessor = m_gltf_model.accessors[it->second];
 
-            primitive.tanBufView =
+            primitive.m_tan_buf_view =
                 recordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                         buffer_idx, TINYGLTF_TYPE_VEC4);
         } else {
             size_t old_size = data_buffer.size();
-            uint32_t pos_count = position_buffer_view.count;
+            uint32_t pos_count = position_buffer_view.m_count;
             size_t size = pos_count * sizeof(Vec4);
             data_buffer.resize(data_buffer.size() + size, 0);
 
             BufferView view;
-            view.count = pos_count;
-            view.size = size;
-            view.offset = old_size;
-            view.buffer = buffer_idx;
-            primitive.tanBufView = view;
+            view.m_count = pos_count;
+            view.m_size = size;
+            view.m_offset = old_size;
+            view.m_buffer = buffer_idx;
+            primitive.m_tan_buf_view = view;
 
-            const BufferView& uv_buffer_view = primitive.uvBufView;
+            const BufferView& uv_buffer_view = primitive.m_uv_buf_view;
 
             auto posPtr =
-                (const Vec3*)(data_buffer.data() + position_buffer_view.offset);
+                (const Vec3*)(data_buffer.data() + position_buffer_view.m_offset);
             auto uvPtr =
-                (const Vec2*)(data_buffer.data() + uv_buffer_view.offset);
-            auto tanPtr = (Vec4*)(data_buffer.data() + view.offset);
-            if (primitive.indicesBufView) {
+                (const Vec2*)(data_buffer.data() + uv_buffer_view.m_offset);
+            auto tanPtr = (Vec4*)(data_buffer.data() + view.m_offset);
+            if (primitive.m_indices_buf_view) {
                 const BufferView& indices_buffer_view =
-                    primitive.indicesBufView;
+                    primitive.m_indices_buf_view;
                 auto indicesPtr = (const uint16_t*)(data_buffer.data() +
-                                                    indices_buffer_view.offset);
+                                                    indices_buffer_view.m_offset);
 
-                NICKEL_ASSERT(indices_buffer_view.count % 3 == 0,
+                NICKEL_ASSERT(indices_buffer_view.m_count % 3 == 0,
                               "indices can't be triangle list");
-                for (int i = 0; i < indices_buffer_view.count / 3; i++) {
+                for (int i = 0; i < indices_buffer_view.m_count / 3; i++) {
                     uint32_t idx1, idx2, idx3;
-                    switch (primitive.index_type) {
+                    switch (primitive.m_index_type) {
                         case IndexType::Uint16:
                             idx1 = *(indicesPtr + i * 3);
                             idx2 = *(indicesPtr + i * 3 + 1);
@@ -702,7 +702,7 @@ private:
             }
         }
 
-        primitive.material = prim.material;
+        primitive.m_material = prim.material;
 
         return primitive;
     }
@@ -751,7 +751,7 @@ private:
                                 uint32_t buffer_idx, int type) {
         BufferView view;
         view = CopyBufferFromGLTF<RequireT>(buffer, type, accessor, model);
-        view.buffer = buffer_idx;
+        view.m_buffer = buffer_idx;
         return view;
     }
 };

@@ -13,45 +13,45 @@ RenderPassImpl::RenderPassImpl(DeviceImpl& device,
     ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 
     std::vector<VkAttachmentDescription> attachments;
-    attachments.reserve(descriptor.attachments.size());
-    for (auto& attachment : descriptor.attachments) {
+    attachments.reserve(descriptor.m_attachments.size());
+    for (auto& attachment : descriptor.m_attachments) {
         VkAttachmentDescription desc{};
-        desc.format = Format2Vk(attachment.format);
-        desc.samples = static_cast<VkSampleCountFlagBits>(SampleCount2Vk(attachment.samples));
-        desc.finalLayout = ImageLayout2Vk(attachment.finalLayout);
-        desc.initialLayout = ImageLayout2Vk(attachment.initialLayout);
-        desc.loadOp = AttachmentLoadOp2Vk(attachment.loadOp);
-        desc.storeOp = AttachmentStoreOp2Vk(attachment.storeOp);
-        desc.stencilLoadOp = AttachmentLoadOp2Vk(attachment.stencilLoadOp);
-        desc.stencilStoreOp = AttachmentStoreOp2Vk(attachment.storeOp);
+        desc.format = Format2Vk(attachment.m_format);
+        desc.samples = static_cast<VkSampleCountFlagBits>(SampleCount2Vk(attachment.m_samples));
+        desc.finalLayout = ImageLayout2Vk(attachment.m_final_layout);
+        desc.initialLayout = ImageLayout2Vk(attachment.m_initial_layout);
+        desc.loadOp = AttachmentLoadOp2Vk(attachment.m_load_op);
+        desc.storeOp = AttachmentStoreOp2Vk(attachment.m_store_op);
+        desc.stencilLoadOp = AttachmentLoadOp2Vk(attachment.m_stencil_load_op);
+        desc.stencilStoreOp = AttachmentStoreOp2Vk(attachment.m_store_op);
         attachments.emplace_back(desc);
     }
 
     std::vector<VkSubpassDependency> dependencies;
-    dependencies.reserve(descriptor.dependencies.size());
-    for (auto& dependency : descriptor.dependencies) {
+    dependencies.reserve(descriptor.m_dependencies.size());
+    for (auto& dependency : descriptor.m_dependencies) {
         VkSubpassDependency dep{};
-        dep.dstSubpass = dependency.dstSubpass;
-        dep.srcSubpass = dependency.srcSubpass;
-        dep.dstAccessMask = Access2Vk(dependency.dstAccessMask);
-        dep.dstStageMask = PipelineStage2Vk(dependency.dstStageMask);
-        dep.srcAccessMask = Access2Vk(dependency.srcAccessMask);
-        dep.srcStageMask = PipelineStage2Vk(dependency.srcStageMask);
+        dep.dstSubpass = dependency.m_dst_subpass;
+        dep.srcSubpass = dependency.m_src_subpass;
+        dep.dstAccessMask = Access2Vk(dependency.m_dst_access_mask);
+        dep.dstStageMask = PipelineStage2Vk(dependency.m_dst_stage_mask);
+        dep.srcAccessMask = Access2Vk(dependency.m_src_access_mask);
+        dep.srcStageMask = PipelineStage2Vk(dependency.m_src_stage_mask);
         dependencies.emplace_back(dep);
     }
 
     std::vector<VkSubpassDescription> subpasses;
-    subpasses.reserve(descriptor.subpasses.size());
+    subpasses.reserve(descriptor.m_subpasses.size());
 
     size_t color_attachments_count = 0;
     size_t input_attachments_count = 0;
     size_t resolve_attachments_count = 0;
     size_t preserve_attachments_count = 0;
-    for (auto& subpass : descriptor.subpasses) {
-        color_attachments_count += subpass.colorAttachments.size();
-        input_attachments_count += subpass.inputAttachments.size();
-        resolve_attachments_count += subpass.resolveAttachments.size();
-        preserve_attachments_count += subpass.preserveAttachments.size();
+    for (auto& subpass : descriptor.m_subpasses) {
+        color_attachments_count += subpass.m_color_attachments.size();
+        input_attachments_count += subpass.m_input_attachments.size();
+        resolve_attachments_count += subpass.m_resolve_attachments.size();
+        preserve_attachments_count += subpass.m_preserve_attachments.size();
     }
     
     std::vector<VkAttachmentReference> color_attachments;
@@ -63,51 +63,51 @@ RenderPassImpl::RenderPassImpl(DeviceImpl& device,
     resolve_attachments.reserve(resolve_attachments_count);
     preserve_attachments.reserve(preserve_attachments_count);
 
-    for (auto& subpass : descriptor.subpasses) {
+    for (auto& subpass : descriptor.m_subpasses) {
         VkSubpassDescription sub{};
 
         sub.pColorAttachments =
             color_attachments.data() + color_attachments.size();
-        for (auto& attachment : subpass.colorAttachments) {
+        for (auto& attachment : subpass.m_color_attachments) {
             VkAttachmentReference att{};
-            att.attachment = attachment.attachment;
-            att.layout = ImageLayout2Vk(attachment.layout);
+            att.attachment = attachment.m_attachment;
+            att.layout = ImageLayout2Vk(attachment.m_layout);
             color_attachments.emplace_back(att);
         }
-        sub.colorAttachmentCount = subpass.colorAttachments.size();
+        sub.colorAttachmentCount = subpass.m_color_attachments.size();
 
         sub.pInputAttachments =
             input_attachments.data() + input_attachments.size();
-        for (auto& attachment : subpass.inputAttachments) {
+        for (auto& attachment : subpass.m_input_attachments) {
             VkAttachmentReference att{};
-            att.attachment = attachment.attachment;
-            att.layout = ImageLayout2Vk(attachment.layout);
+            att.attachment = attachment.m_attachment;
+            att.layout = ImageLayout2Vk(attachment.m_layout);
             input_attachments.emplace_back(att);
         }
-        sub.inputAttachmentCount = subpass.inputAttachments.size();
+        sub.inputAttachmentCount = subpass.m_input_attachments.size();
 
         sub.pResolveAttachments =
             resolve_attachments.data() + resolve_attachments.size();
-        for (auto& attachment : subpass.resolveAttachments) {
+        for (auto& attachment : subpass.m_resolve_attachments) {
             VkAttachmentReference att{};
-            att.attachment = attachment.attachment;
-            att.layout = ImageLayout2Vk(attachment.layout);
+            att.attachment = attachment.m_attachment;
+            att.layout = ImageLayout2Vk(attachment.m_layout);
             resolve_attachments.emplace_back(att);
         }
-        sub.preserveAttachmentCount = subpass.preserveAttachments.size();
+        sub.preserveAttachmentCount = subpass.m_preserve_attachments.size();
 
         VkAttachmentReference depthStencilAttachment{};
-        if (subpass.depthStencilAttachment) {
+        if (subpass.m_depth_stencil_attachment) {
             depthStencilAttachment.attachment =
-                subpass.depthStencilAttachment->attachment;
+                subpass.m_depth_stencil_attachment->m_attachment;
             depthStencilAttachment.layout =
-                ImageLayout2Vk(subpass.depthStencilAttachment->layout);
+                ImageLayout2Vk(subpass.m_depth_stencil_attachment->m_layout);
             sub.pDepthStencilAttachment = &depthStencilAttachment;
         }
 
         sub.pPreserveAttachments =
             preserve_attachments.data() + preserve_attachments.size();
-        for (auto& attachment : subpass.preserveAttachments) {
+        for (auto& attachment : subpass.m_preserve_attachments) {
             preserve_attachments.emplace_back(attachment);
         }
         sub.preserveAttachmentCount = preserve_attachments.size();

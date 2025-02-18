@@ -5,26 +5,26 @@
 
 namespace nickel::graphics {
 struct Primitive final {
-    std::string name;
-    BufferView posBufView;
-    BufferView normBufView;
-    BufferView tanBufView;
-    BufferView uvBufView;
-    BufferView colorBufView;
-    BufferView indicesBufView;
-    IndexType index_type;
-    std::optional<uint32_t> material;
+    std::string m_name;
+    BufferView m_pos_buf_view;
+    BufferView m_norm_buf_view;
+    BufferView m_tan_buf_view;
+    BufferView m_uv_buf_view;
+    BufferView m_color_buf_view;
+    BufferView m_indices_buf_view;
+    IndexType m_index_type;
+    std::optional<uint32_t> m_material;
 };
 
 struct GPUMesh final {
-    Mat44 localModelMat = Mat44::Identity();
-    Mat44 modelMat = Mat44::Identity();
-    std::vector<Primitive> primitives;
-    std::vector<std::unique_ptr<GPUMesh>> children;
+    Mat44 m_local_model_mat = Mat44::Identity();
+    Mat44 m_model_mat = Mat44::Identity();
+    std::vector<Primitive> m_primitives;
+    std::vector<std::unique_ptr<GPUMesh>> m_children;
 };
 
 struct Scene final {
-    std::vector<std::unique_ptr<GPUMesh>> nodes;
+    std::vector<std::unique_ptr<GPUMesh>> m_nodes;
 
     void updateTransform(const Transform&);
 

@@ -142,17 +142,17 @@ private:
         BindGroupLayout::Descriptor desc;
         {
             BindGroupLayout::Entry entry;
-            entry.shader_stage = ShaderStage::Vertex;
-            entry.type = BindGroupEntryType::UniformBuffer;
-            entry.arraySize = 1;
-            desc.entries[0] = std::move(entry);
+            entry.m_shader_stage = ShaderStage::Vertex;
+            entry.m_type = BindGroupEntryType::UniformBuffer;
+            entry.m_array_size = 1;
+            desc.m_entries[0] = std::move(entry);
         }
         {
             BindGroupLayout::Entry entry;
-            entry.shader_stage = ShaderStage::Fragment;
-            entry.type = BindGroupEntryType::CombinedImageSampler;
-            entry.arraySize = 1;
-            desc.entries[1] = std::move(entry);
+            entry.m_shader_stage = ShaderStage::Fragment;
+            entry.m_type = BindGroupEntryType::CombinedImageSampler;
+            entry.m_array_size = 1;
+            desc.m_entries[1] = std::move(entry);
         }
 
         m_bind_layout = device.CreateBindGroupLayout(desc);
@@ -162,24 +162,24 @@ private:
         BindGroup::Descriptor desc;
         {
             BindGroup::Entry entry;
-            entry.shader_stage = ShaderStage::Vertex;
+            entry.m_shader_stage = ShaderStage::Vertex;
             BindGroup::BufferBinding binding;
-            binding.buffer = m_mvp_buffer;
-            binding.type = BindGroup::BufferBinding::Type::Uniform;
-            entry.binding.entry = binding;
-            entry.arraySize = 1;
-            desc.entries[0] = entry;
+            binding.m_buffer = m_mvp_buffer;
+            binding.m_type = BindGroup::BufferBinding::Type::Uniform;
+            entry.m_binding.m_entry = binding;
+            entry.m_array_size = 1;
+            desc.m_entries[0] = entry;
         }
 
         {
             BindGroup::Entry entry;
-            entry.shader_stage = ShaderStage::Fragment;
+            entry.m_shader_stage = ShaderStage::Fragment;
             BindGroup::CombinedSamplerBinding binding;
-            binding.sampler = m_sampler;
-            binding.view = m_image_view;
-            entry.binding.entry = binding;
-            entry.arraySize = 1;
-            desc.entries[1] = entry;
+            binding.m_sampler = m_sampler;
+            binding.m_view = m_image_view;
+            entry.m_binding.m_entry = binding;
+            entry.m_array_size = 1;
+            desc.m_entries[1] = entry;
         }
 
         m_bind_group = m_bind_layout.RequireBindGroup(desc);
@@ -187,8 +187,8 @@ private:
 
     void createSampler(Device& device) {
         Sampler::Descriptor desc;
-        desc.minFilter = Filter::Nearest;
-        desc.magFilter = Filter::Nearest;
+        desc.m_min_filter = Filter::Nearest;
+        desc.m_mag_filter = Filter::Nearest;
         m_sampler = device.CreateSampler(desc);
     }
 
@@ -198,22 +198,22 @@ private:
             {
                 auto size = nickel::Context::GetInst().GetWindow().GetSize();
                 Image::Descriptor desc;
-                desc.imageType = ImageType::Dim2;
-                desc.extent.w = size.w;
-                desc.extent.h = size.h;
-                desc.extent.l = 1;
-                desc.format = Format::D32_SFLOAT_S8_UINT;
-                desc.usage = ImageUsage::DepthStencilAttachment;
-                desc.tiling = ImageTiling::Optimal;
+                desc.m_image_type = ImageType::Dim2;
+                desc.m_extent.w = size.w;
+                desc.m_extent.h = size.h;
+                desc.m_extent.l = 1;
+                desc.m_format = Format::D32_SFLOAT_S8_UINT;
+                desc.m_usage = ImageUsage::DepthStencilAttachment;
+                desc.m_tiling = ImageTiling::Optimal;
                 m_depth_images.emplace_back(device.CreateImage(desc));
             }
             {
                 ImageView::Descriptor view_desc;
-                view_desc.format = Format::D32_SFLOAT_S8_UINT;
-                view_desc.components = ComponentMapping::SwizzleIdentity;
-                view_desc.subresourceRange.aspectMask =
+                view_desc.m_format = Format::D32_SFLOAT_S8_UINT;
+                view_desc.m_components = ComponentMapping::SwizzleIdentity;
+                view_desc.m_subresource_range.m_aspect_mask =
                     nickel::Flags{ImageAspect::Depth} | ImageAspect::Stencil;
-                view_desc.viewType = ImageViewType::Dim2;
+                view_desc.m_view_type = ImageViewType::Dim2;
                 m_image_view = m_depth_images.back().CreateView(view_desc);
                 m_depth_image_views.emplace_back(m_image_view);
             }
@@ -233,15 +233,15 @@ private:
         // create image
         {
             Image::Descriptor desc;
-            desc.is_cube_map = true;
-            desc.imageType = ImageType::Dim2;
-            desc.extent.w = data[0].GetExtent().w;
-            desc.extent.h = data[0].GetExtent().h;
-            desc.extent.l = 1;
-            desc.arrayLayers = 6;
-            desc.format = Format::R8G8B8A8_UNORM;
-            desc.tiling = ImageTiling::Optimal;
-            desc.usage =
+            desc.m_is_cube_map = true;
+            desc.m_image_type = ImageType::Dim2;
+            desc.m_extent.w = data[0].GetExtent().w;
+            desc.m_extent.h = data[0].GetExtent().h;
+            desc.m_extent.l = 1;
+            desc.m_array_layers = 6;
+            desc.m_format = Format::R8G8B8A8_UNORM;
+            desc.m_tiling = ImageTiling::Optimal;
+            desc.m_usage =
                 nickel::Flags{ImageUsage::CopyDst} | ImageUsage::Sampled;
             m_image = device.CreateImage(desc);
         }
@@ -261,34 +261,34 @@ private:
         }
         buffer.Unmap();
 
-        // buffer data to image
+        // m_buffer data to image
         CommandEncoder encoder = device.CreateCommandEncoder();
         CopyEncoder copy = encoder.BeginCopy();
         CopyEncoder::BufferImageCopy copy_info;
-        copy_info.bufferOffset = 0;
-        copy_info.imageExtent.w = data[0].GetExtent().w;
-        copy_info.imageExtent.h = data[0].GetExtent().h;
-        copy_info.imageExtent.l = 1;
-        copy_info.bufferImageHeight = 0;
-        copy_info.bufferRowLength = 0;
-        copy_info.imageSubresource.aspectMask = ImageAspect::Color;
-        copy_info.imageSubresource.baseArrayLayer = 0;
-        copy_info.imageSubresource.layerCount = 6;
+        copy_info.m_buffer_offset = 0;
+        copy_info.m_image_extent.w = data[0].GetExtent().w;
+        copy_info.m_image_extent.h = data[0].GetExtent().h;
+        copy_info.m_image_extent.l = 1;
+        copy_info.m_buffer_image_height = 0;
+        copy_info.m_buffer_row_length = 0;
+        copy_info.m_image_subresource.m_aspect_mask = ImageAspect::Color;
+        copy_info.m_image_subresource.m_base_array_layer = 0;
+        copy_info.m_image_subresource.m_layer_count = 6;
         copy.CopyBufferToTexture(buffer, m_image, copy_info);
         copy.End();
         Command cmd = encoder.Finish();
         device.Submit(cmd, {}, {}, {});
         device.WaitIdle();
 
-        // create view
+        // create m_view
         {
             ImageView::Descriptor view_desc;
-            view_desc.format = Format::R8G8B8A8_UNORM;
-            view_desc.components = ComponentMapping::SwizzleIdentity;
-            view_desc.subresourceRange.aspectMask = ImageAspect::Color;
-            view_desc.subresourceRange.layerCount = 6;
-            view_desc.subresourceRange.baseArrayLayer = 0;
-            view_desc.viewType = ImageViewType::Cube;
+            view_desc.m_format = Format::R8G8B8A8_UNORM;
+            view_desc.m_components = ComponentMapping::SwizzleIdentity;
+            view_desc.m_subresource_range.m_aspect_mask = ImageAspect::Color;
+            view_desc.m_subresource_range.m_layer_count = 6;
+            view_desc.m_subresource_range.m_base_array_layer = 0;
+            view_desc.m_view_type = ImageViewType::Cube;
             m_image_view = m_image.CreateView(view_desc);
         }
     }
@@ -311,7 +311,7 @@ private:
 
     void createPipelineLayout(Device& device) {
         PipelineLayout::Descriptor desc;
-        desc.layouts.push_back(m_bind_layout);
+        desc.m_layouts.push_back(m_bind_layout);
         m_pipeline_layout = device.CreatePipelineLayout(desc);
     }
 
@@ -373,57 +373,57 @@ private:
 
         {
             RenderPass::Descriptor::AttachmentDescription attachment;
-            attachment.samples = SampleCount::Count1;
-            attachment.initialLayout = ImageLayout::Undefined;
-            attachment.finalLayout = ImageLayout::PresentSrcKHR;
-            attachment.loadOp = AttachmentLoadOp::Clear;
-            attachment.storeOp = AttachmentStoreOp::Store;
-            attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
-            attachment.stencilStoreOp = AttachmentStoreOp::DontCare;
-            attachment.format =
+            attachment.m_samples = SampleCount::Count1;
+            attachment.m_initial_layout = ImageLayout::Undefined;
+            attachment.m_final_layout = ImageLayout::PresentSrcKHR;
+            attachment.m_load_op = AttachmentLoadOp::Clear;
+            attachment.m_store_op = AttachmentStoreOp::Store;
+            attachment.m_stencil_load_op = AttachmentLoadOp::DontCare;
+            attachment.m_stencil_store_op = AttachmentStoreOp::DontCare;
+            attachment.m_format =
                 device.GetSwapchainImageInfo().m_surface_format.format;
-            desc.attachments.push_back(attachment);
+            desc.m_attachments.push_back(attachment);
         }
 
         {
             RenderPass::Descriptor::AttachmentDescription attachment;
-            attachment.samples = SampleCount::Count1;
-            attachment.initialLayout = ImageLayout::Undefined;
-            attachment.finalLayout = ImageLayout::DepthStencilAttachmentOptimal;
-            attachment.loadOp = AttachmentLoadOp::Clear;
-            attachment.storeOp = AttachmentStoreOp::Store;
-            attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
-            attachment.stencilStoreOp = AttachmentStoreOp::DontCare;
-            attachment.format = Format::D32_SFLOAT_S8_UINT;
-            desc.attachments.push_back(attachment);
+            attachment.m_samples = SampleCount::Count1;
+            attachment.m_initial_layout = ImageLayout::Undefined;
+            attachment.m_final_layout = ImageLayout::DepthStencilAttachmentOptimal;
+            attachment.m_load_op = AttachmentLoadOp::Clear;
+            attachment.m_store_op = AttachmentStoreOp::Store;
+            attachment.m_stencil_load_op = AttachmentLoadOp::DontCare;
+            attachment.m_stencil_store_op = AttachmentStoreOp::DontCare;
+            attachment.m_format = Format::D32_SFLOAT_S8_UINT;
+            desc.m_attachments.push_back(attachment);
         }
 
         RenderPass::Descriptor::SubpassDescription subpass;
 
         {
             RenderPass::Descriptor::AttachmentReference ref;
-            ref.attachment = 0;
-            ref.layout = ImageLayout::ColorAttachmentOptimal;
-            subpass.colorAttachments.push_back(ref);
+            ref.m_attachment = 0;
+            ref.m_layout = ImageLayout::ColorAttachmentOptimal;
+            subpass.m_color_attachments.push_back(ref);
         }
 
         {
             RenderPass::Descriptor::AttachmentReference ref;
-            ref.attachment = 1;
-            ref.layout = ImageLayout::DepthStencilAttachmentOptimal;
-            subpass.depthStencilAttachment = ref;
+            ref.m_attachment = 1;
+            ref.m_layout = ImageLayout::DepthStencilAttachmentOptimal;
+            subpass.m_depth_stencil_attachment = ref;
         }
-        desc.subpasses.push_back(subpass);
+        desc.m_subpasses.push_back(subpass);
 
         RenderPass::Descriptor::SubpassDependency deps;
-        deps.srcSubpass =
+        deps.m_src_subpass =
             RenderPass::Descriptor::SubpassDependency::ExternalSubpass;
-        deps.dstSubpass = 0;
-        deps.srcAccessMask = Access::None;
-        deps.dstAccessMask = Access::ColorAttachmentWrite;
-        deps.srcStageMask = PipelineStage::TopOfPipe;
-        deps.dstStageMask = PipelineStage::ColorAttachmentOutput;
-        desc.dependencies.push_back(deps);
+        deps.m_dst_subpass = 0;
+        deps.m_src_access_mask = Access::None;
+        deps.m_dst_access_mask = Access::ColorAttachmentWrite;
+        deps.m_src_stage_mask = PipelineStage::TopOfPipe;
+        deps.m_dst_stage_mask = PipelineStage::ColorAttachmentOutput;
+        desc.m_dependencies.push_back(deps);
 
         m_render_pass = device.CreateRenderPass(desc);
     }
@@ -431,7 +431,7 @@ private:
     void createPipeline(Device& device) {
         GraphicsPipeline::Descriptor desc;
         desc.m_render_pass = m_render_pass;
-        desc.layout = m_pipeline_layout;
+        desc.m_layout = m_pipeline_layout;
 
         auto vert_file_content =
             nickel::ReadWholeFile("./tests/render/skybox/vert.spv");
@@ -451,24 +451,24 @@ private:
         // vertex position
         {
             GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-            attr.shaderLocation = 0;
-            attr.format = VertexFormat::Float32x3;
-            attr.offset = 0;
-            state.attributes.push_back(attr);
+            attr.m_shader_location = 0;
+            attr.m_format = VertexFormat::Float32x3;
+            attr.m_offset = 0;
+            state.m_attributes.push_back(attr);
         }
 
-        state.arrayStride = sizeof(float) * 3;
-        state.stepMode =
+        state.m_array_stride = sizeof(float) * 3;
+        state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(state);
+        desc.m_vertex.m_buffers.push_back(state);
 
         GraphicsPipeline::Descriptor::BlendState blend_state;
-        desc.blend_state.push_back(blend_state);
+        desc.m_blend_state.push_back(blend_state);
 
         {
             GraphicsPipeline::Descriptor::DepthStencilState depth_stencil_state;
-            depth_stencil_state.depthFormat = Format::D32_SFLOAT_S8_UINT;
-            desc.depthStencil = depth_stencil_state;
+            depth_stencil_state.m_depth_format = Format::D32_SFLOAT_S8_UINT;
+            desc.m_depth_stencil = depth_stencil_state;
         }
 
         m_pipeline = device.CreateGraphicPipeline(desc);

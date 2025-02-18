@@ -11,8 +11,8 @@ PipelineLayoutImpl::PipelineLayoutImpl(DeviceImpl& device,
                                        const PipelineLayout::Descriptor& desc)
     : m_device{device} {
     std::vector<VkDescriptorSetLayout> set_layouts;
-    set_layouts.reserve(desc.layouts.size());
-    for (auto& layout : desc.layouts) {
+    set_layouts.reserve(desc.m_layouts.size());
+    for (auto& layout : desc.m_layouts) {
         set_layouts.push_back(layout.Impl().m_layout);
     }
 
@@ -22,11 +22,11 @@ PipelineLayoutImpl::PipelineLayoutImpl(DeviceImpl& device,
     ci.pSetLayouts = set_layouts.data();
 
     std::vector<VkPushConstantRange> push_constants;
-    for (auto& range : desc.push_contants) {
+    for (auto& range : desc.m_push_contants) {
         VkPushConstantRange r;
-        r.offset = range.offset;
-        r.size = range.size;
-        r.stageFlags = ShaderStage2Vk(range.shader_stage);
+        r.offset = range.m_offset;
+        r.size = range.m_size;
+        r.stageFlags = ShaderStage2Vk(range.m_shader_stage);
         push_constants.push_back(r);
     }
 

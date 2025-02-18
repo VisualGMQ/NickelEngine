@@ -26,7 +26,7 @@ public:
     std::vector<Semaphore> m_render_finish_sems;
     std::vector<Semaphore> m_imgui_render_finish_sems;
 
-    // some trivial images for default usage
+    // some trivial images for default m_usage
     ImageView m_white_image;
     ImageView m_black_image;
     ImageView m_default_normal_image;

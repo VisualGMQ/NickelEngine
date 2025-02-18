@@ -13,7 +13,7 @@ namespace nickel::graphics {
 DeviceImpl::DeviceImpl(const AdapterImpl& impl,
                        const SVector<uint32_t, 2>& window_size)
     : m_adapter{impl} {
-    m_queue_indices = chooseQueue(impl.m_phyDevice, impl.m_surface);
+    m_queue_indices = chooseQueue(impl.m_phy_device, impl.m_surface);
 
     if (!m_queue_indices) {
         LOGC("no graphics queue in your GPU");
@@ -43,12 +43,12 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
         VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME};
     std::vector<VkExtensionProperties> extension_props;
     uint32_t extensionCount = 0;
-    VK_CALL(vkEnumerateDeviceExtensionProperties(impl.m_phyDevice, nullptr,
+    VK_CALL(vkEnumerateDeviceExtensionProperties(impl.m_phy_device, nullptr,
                                                  &extensionCount, nullptr));
 
     extension_props.resize(extensionCount);
     VK_CALL(vkEnumerateDeviceExtensionProperties(
-        impl.m_phyDevice, nullptr, &extensionCount, extension_props.data()));
+        impl.m_phy_device, nullptr, &extensionCount, extension_props.data()));
 
     size_t required_extensions_size = requireExtensions.size();
 
@@ -75,12 +75,12 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     device_ci.enabledExtensionCount = extension_names.size();
 
     VkPhysicalDeviceFeatures features;
-    vkGetPhysicalDeviceFeatures(impl.m_phyDevice, &features);
+    vkGetPhysicalDeviceFeatures(impl.m_phy_device, &features);
 
     // features.geometryShader = true;
     device_ci.pEnabledFeatures = &features;
 
-    VK_CALL(vkCreateDevice(impl.m_phyDevice, &device_ci, nullptr, &m_device));
+    VK_CALL(vkCreateDevice(impl.m_phy_device, &device_ci, nullptr, &m_device));
 
     if (!m_device) {
         LOGC("failed to create vulkan device");
@@ -93,9 +93,9 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
                      &m_present_queue);
 
     m_image_info =
-        queryImageInfo(impl.m_phyDevice, window_size, impl.m_surface);
+        queryImageInfo(impl.m_phy_device, window_size, impl.m_surface);
     createCmdPools();
-    createSwapchain(impl.m_phyDevice, impl.m_surface);
+    createSwapchain(impl.m_phy_device, impl.m_surface);
 }
 
 DeviceImpl::QueueFamilyIndices DeviceImpl::chooseQueue(
@@ -276,7 +276,7 @@ void DeviceImpl::getAndCreateImageViews() {
             m_swapchain_image_views.push_back(
                 ImageView{m_image_view_allocator.Allocate(*this, view)});
         } else {
-            LOGC("create image view from swapchain image failed");
+            LOGC("create image m_view from swapchain image failed");
         }
     }
 
@@ -374,7 +374,7 @@ const SwapchainImageInfo& DeviceImpl::GetSwapchainImageInfo() const noexcept {
 
 Buffer DeviceImpl::CreateBuffer(const Buffer::Descriptor& desc) {
     return Buffer{
-        m_buffer_allocator.Allocate(*this, m_adapter.m_phyDevice, desc)};
+        m_buffer_allocator.Allocate(*this, m_adapter.m_phy_device, desc)};
 }
 
 Image DeviceImpl::CreateImage(const Image::Descriptor& desc) {

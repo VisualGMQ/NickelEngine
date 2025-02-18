@@ -59,22 +59,22 @@ void CommonResource::initDepthImages(Device& device,
         {
             auto size = window.GetSize();
             Image::Descriptor desc;
-            desc.imageType = ImageType::Dim2;
-            desc.extent.w = size.w;
-            desc.extent.h = size.h;
-            desc.extent.l = 1;
-            desc.format = Format::D32_SFLOAT_S8_UINT;
-            desc.usage = ImageUsage::DepthStencilAttachment;
-            desc.tiling = ImageTiling::Optimal;
+            desc.m_image_type = ImageType::Dim2;
+            desc.m_extent.w = size.w;
+            desc.m_extent.h = size.h;
+            desc.m_extent.l = 1;
+            desc.m_format = Format::D32_SFLOAT_S8_UINT;
+            desc.m_usage = ImageUsage::DepthStencilAttachment;
+            desc.m_tiling = ImageTiling::Optimal;
             m_depth_images.emplace_back(device.CreateImage(desc));
         }
         {
             ImageView::Descriptor view_desc;
-            view_desc.format = Format::D32_SFLOAT_S8_UINT;
-            view_desc.components = ComponentMapping::SwizzleIdentity;
-            view_desc.subresourceRange.aspectMask =
+            view_desc.m_format = Format::D32_SFLOAT_S8_UINT;
+            view_desc.m_components = ComponentMapping::SwizzleIdentity;
+            view_desc.m_subresource_range.m_aspect_mask =
                 Flags{ImageAspect::Depth} | ImageAspect::Stencil;
-            view_desc.viewType = ImageViewType::Dim2;
+            view_desc.m_view_type = ImageViewType::Dim2;
             m_depth_image_views.emplace_back(
                 m_depth_images.back().CreateView(view_desc));
         }
@@ -101,57 +101,57 @@ void CommonResource::initRenderPass(Device& device) {
 
     {
         RenderPass::Descriptor::AttachmentDescription attachment;
-        attachment.samples = SampleCount::Count1;
-        attachment.initialLayout = ImageLayout::Undefined;
-        attachment.finalLayout = ImageLayout::ColorAttachmentOptimal;
-        attachment.loadOp = AttachmentLoadOp::Clear;
-        attachment.storeOp = AttachmentStoreOp::Store;
-        attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
-        attachment.stencilStoreOp = AttachmentStoreOp::DontCare;
-        attachment.format =
+        attachment.m_samples = SampleCount::Count1;
+        attachment.m_initial_layout = ImageLayout::Undefined;
+        attachment.m_final_layout = ImageLayout::ColorAttachmentOptimal;
+        attachment.m_load_op = AttachmentLoadOp::Clear;
+        attachment.m_store_op = AttachmentStoreOp::Store;
+        attachment.m_stencil_load_op = AttachmentLoadOp::DontCare;
+        attachment.m_stencil_store_op = AttachmentStoreOp::DontCare;
+        attachment.m_format =
             device.GetSwapchainImageInfo().m_surface_format.format;
-        desc.attachments.push_back(attachment);
+        desc.m_attachments.push_back(attachment);
     }
 
     {
         RenderPass::Descriptor::AttachmentDescription attachment;
-        attachment.samples = SampleCount::Count1;
-        attachment.initialLayout = ImageLayout::Undefined;
-        attachment.finalLayout = ImageLayout::DepthStencilAttachmentOptimal;
-        attachment.loadOp = AttachmentLoadOp::Clear;
-        attachment.storeOp = AttachmentStoreOp::Store;
-        attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
-        attachment.stencilStoreOp = AttachmentStoreOp::DontCare;
-        attachment.format = Format::D32_SFLOAT_S8_UINT;
-        desc.attachments.push_back(attachment);
+        attachment.m_samples = SampleCount::Count1;
+        attachment.m_initial_layout = ImageLayout::Undefined;
+        attachment.m_final_layout = ImageLayout::DepthStencilAttachmentOptimal;
+        attachment.m_load_op = AttachmentLoadOp::Clear;
+        attachment.m_store_op = AttachmentStoreOp::Store;
+        attachment.m_stencil_load_op = AttachmentLoadOp::DontCare;
+        attachment.m_stencil_store_op = AttachmentStoreOp::DontCare;
+        attachment.m_format = Format::D32_SFLOAT_S8_UINT;
+        desc.m_attachments.push_back(attachment);
     }
 
     RenderPass::Descriptor::SubpassDescription subpass;
 
     {
         RenderPass::Descriptor::AttachmentReference ref;
-        ref.attachment = 0;
-        ref.layout = ImageLayout::ColorAttachmentOptimal;
-        subpass.colorAttachments.push_back(ref);
+        ref.m_attachment = 0;
+        ref.m_layout = ImageLayout::ColorAttachmentOptimal;
+        subpass.m_color_attachments.push_back(ref);
     }
 
     {
         RenderPass::Descriptor::AttachmentReference ref;
-        ref.attachment = 1;
-        ref.layout = ImageLayout::DepthStencilAttachmentOptimal;
-        subpass.depthStencilAttachment = ref;
+        ref.m_attachment = 1;
+        ref.m_layout = ImageLayout::DepthStencilAttachmentOptimal;
+        subpass.m_depth_stencil_attachment = ref;
     }
-    desc.subpasses.push_back(subpass);
+    desc.m_subpasses.push_back(subpass);
 
     RenderPass::Descriptor::SubpassDependency deps;
-    deps.srcSubpass =
+    deps.m_src_subpass =
         RenderPass::Descriptor::SubpassDependency::ExternalSubpass;
-    deps.dstSubpass = 0;
-    deps.srcAccessMask = Access::None;
-    deps.dstAccessMask = Access::ColorAttachmentWrite;
-    deps.srcStageMask = PipelineStage::TopOfPipe;
-    deps.dstStageMask = PipelineStage::ColorAttachmentOutput;
-    desc.dependencies.push_back(deps);
+    deps.m_dst_subpass = 0;
+    deps.m_src_access_mask = Access::None;
+    deps.m_dst_access_mask = Access::ColorAttachmentWrite;
+    deps.m_src_stage_mask = PipelineStage::TopOfPipe;
+    deps.m_dst_stage_mask = PipelineStage::ColorAttachmentOutput;
+    desc.m_dependencies.push_back(deps);
 
     m_render_pass = device.CreateRenderPass(desc);
 }
@@ -170,11 +170,11 @@ void CommonResource::initSyncObjects(Device& device) {
 void CommonResource::initDefaultResources(Device& device) {
     {
         Sampler::Descriptor desc;
-        desc.minFilter = Filter::Linear;
-        desc.magFilter = Filter::Linear;
-        desc.addressModeW = SamplerAddressMode::Repeat;
-        desc.addressModeU = SamplerAddressMode::Repeat;
-        desc.addressModeV = SamplerAddressMode::Repeat;
+        desc.m_min_filter = Filter::Linear;
+        desc.m_mag_filter = Filter::Linear;
+        desc.m_address_mode_w = SamplerAddressMode::Repeat;
+        desc.m_address_mode_u = SamplerAddressMode::Repeat;
+        desc.m_address_mode_v = SamplerAddressMode::Repeat;
         m_default_sampler = device.CreateSampler(desc);
     }
 
@@ -205,13 +205,13 @@ ImageView CommonResource::createPureColorImage(Device& device, uint32_t color) {
     Image image;
     {
         Image::Descriptor desc;
-        desc.imageType = ImageType::Dim2;
-        desc.extent.w = 1;
-        desc.extent.h = 1;
-        desc.extent.l = 1;
-        desc.format = Format::R8G8B8A8_UNORM;
-        desc.usage = Flags{ImageUsage::Sampled} | ImageUsage::CopyDst;
-        desc.tiling = ImageTiling::Optimal;
+        desc.m_image_type = ImageType::Dim2;
+        desc.m_extent.w = 1;
+        desc.m_extent.h = 1;
+        desc.m_extent.l = 1;
+        desc.m_format = Format::R8G8B8A8_UNORM;
+        desc.m_usage = Flags{ImageUsage::Sampled} | ImageUsage::CopyDst;
+        desc.m_tiling = ImageTiling::Optimal;
         image = device.CreateImage(desc);
     }
     {
@@ -228,13 +228,13 @@ ImageView CommonResource::createPureColorImage(Device& device, uint32_t color) {
         CommandEncoder encoder = device.CreateCommandEncoder();
         CopyEncoder copy = encoder.BeginCopy();
         CopyEncoder::BufferImageCopy copy_info;
-        copy_info.bufferOffset = 0;
-        copy_info.imageExtent.w = 1;
-        copy_info.imageExtent.h = 1;
-        copy_info.imageExtent.l = 1;
-        copy_info.bufferImageHeight = 0;
-        copy_info.bufferRowLength = 0;
-        copy_info.imageSubresource.aspectMask = ImageAspect::Color;
+        copy_info.m_buffer_offset = 0;
+        copy_info.m_image_extent.w = 1;
+        copy_info.m_image_extent.h = 1;
+        copy_info.m_image_extent.l = 1;
+        copy_info.m_buffer_image_height = 0;
+        copy_info.m_buffer_row_length = 0;
+        copy_info.m_image_subresource.m_aspect_mask = ImageAspect::Color;
         copy.CopyBufferToTexture(buffer, image, copy_info);
         copy.End();
         Command cmd = encoder.Finish();
@@ -243,10 +243,10 @@ ImageView CommonResource::createPureColorImage(Device& device, uint32_t color) {
     }
     {
         ImageView::Descriptor view_desc;
-        view_desc.format = Format::R8G8B8A8_UNORM;
-        view_desc.components = ComponentMapping::SwizzleIdentity;
-        view_desc.subresourceRange.aspectMask = Flags{ImageAspect::Color};
-        view_desc.viewType = ImageViewType::Dim2;
+        view_desc.m_format = Format::R8G8B8A8_UNORM;
+        view_desc.m_components = ComponentMapping::SwizzleIdentity;
+        view_desc.m_subresource_range.m_aspect_mask = Flags{ImageAspect::Color};
+        view_desc.m_view_type = ImageViewType::Dim2;
         return image.CreateView(view_desc);
     }
 }

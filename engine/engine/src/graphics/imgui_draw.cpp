@@ -34,7 +34,7 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
     ImGui_ImplSDL3_InitForVulkan(window.GetImpl().m_window);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = adapter.GetImpl().m_instance;
-    init_info.PhysicalDevice = adapter.GetImpl().m_phyDevice;
+    init_info.PhysicalDevice = adapter.GetImpl().m_phy_device;
     init_info.Device = impl.m_device;
     init_info.QueueFamily = impl.m_queue_indices.m_graphics_index.value();
     init_info.Queue = impl.m_graphics_queue;
@@ -191,10 +191,10 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
         vkCmdBeginRenderPass(cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    // Record dear imgui primitives into command buffer
+    // Record dear imgui primitives into command m_buffer
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
-    // Submit command buffer
+    // Submit command m_buffer
     vkCmdEndRenderPass(cmd);
     {
         VkPipelineStageFlags wait_stage =

@@ -11,7 +11,7 @@ constexpr uint32_t MaxDrawCallPerCmdBuf = 128;
 
 struct getDescriptorTypeHelper {
     VkDescriptorType operator()(const BindGroup::BufferBinding& binding) const {
-        switch (binding.type) {
+        switch (binding.m_type) {
             case BindGroup::BufferBinding::Type::Storage:
                 return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             case BindGroup::BufferBinding::Type::Uniform:
@@ -31,7 +31,7 @@ struct getDescriptorTypeHelper {
     }
 
     VkDescriptorType operator()(const BindGroup::ImageBinding& binding) const {
-        switch (binding.type) {
+        switch (binding.m_type) {
             case BindGroup::ImageBinding::Type::Image:
                 return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             case BindGroup::ImageBinding::Type::StorageImage:
@@ -49,14 +49,14 @@ struct getDescriptorTypeHelper {
 };
 
 VkDescriptorType getDescriptorType(const BindGroup::BindingPoint& entry) {
-    return std::visit(getDescriptorTypeHelper{}, entry.entry);
+    return std::visit(getDescriptorTypeHelper{}, entry.m_entry);
 }
 
 BindGroupLayoutImpl::BindGroupLayoutImpl(
     DeviceImpl& dev, const BindGroupLayout::Descriptor& desc)
     : m_device{dev} {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
-    for (auto&& [slot, entry] : desc.entries) {
+    for (auto&& [slot, entry] : desc.m_entries) {
         bindings.emplace_back(getBinding(slot, entry));
     }
 
@@ -79,9 +79,9 @@ VkDescriptorSetLayoutBinding BindGroupLayoutImpl::getBinding(
     VkDescriptorSetLayoutBinding binding{};
 
     binding.binding = slot;
-    binding.descriptorCount = entry.arraySize;
-    binding.stageFlags = ShaderStage2Vk(entry.shader_stage);
-    binding.descriptorType = BindGroupEntryType2Vk(entry.type);
+    binding.descriptorCount = entry.m_array_size;
+    binding.stageFlags = ShaderStage2Vk(entry.m_shader_stage);
+    binding.descriptorType = BindGroupEntryType2Vk(entry.m_type);
     return binding;
 }
 

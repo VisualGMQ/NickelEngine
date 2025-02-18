@@ -116,10 +116,10 @@ private:
     void createPipelineLayout(Device& device) {
         PipelineLayout::Descriptor desc;
         PipelineLayout::Descriptor::PushConstantRange push_constant;
-        push_constant.offset = 0;
-        push_constant.size = sizeof(float) * 3;
-        push_constant.shader_stage = ShaderStage::Fragment;
-        desc.push_contants.push_back(push_constant);
+        push_constant.m_offset = 0;
+        push_constant.m_size = sizeof(float) * 3;
+        push_constant.m_shader_stage = ShaderStage::Fragment;
+        desc.m_push_contants.push_back(push_constant);
         m_pipeline_layout = device.CreatePipelineLayout(desc);
     }
 
@@ -150,33 +150,33 @@ private:
     void createRenderPass(Device& device) {
         RenderPass::Descriptor desc;
         RenderPass::Descriptor::AttachmentDescription attachment;
-        attachment.samples = SampleCount::Count1;
-        attachment.initialLayout = ImageLayout::Undefined;
-        attachment.finalLayout = ImageLayout::PresentSrcKHR;
-        attachment.loadOp = AttachmentLoadOp::Clear;
-        attachment.storeOp = AttachmentStoreOp::Store;
-        attachment.stencilLoadOp = AttachmentLoadOp::DontCare;
-        attachment.stencilStoreOp = AttachmentStoreOp::DontCare;
-        attachment.format =
+        attachment.m_samples = SampleCount::Count1;
+        attachment.m_initial_layout = ImageLayout::Undefined;
+        attachment.m_final_layout = ImageLayout::PresentSrcKHR;
+        attachment.m_load_op = AttachmentLoadOp::Clear;
+        attachment.m_store_op = AttachmentStoreOp::Store;
+        attachment.m_stencil_load_op = AttachmentLoadOp::DontCare;
+        attachment.m_stencil_store_op = AttachmentStoreOp::DontCare;
+        attachment.m_format =
             device.GetSwapchainImageInfo().m_surface_format.format;
-        desc.attachments.push_back(attachment);
+        desc.m_attachments.push_back(attachment);
 
         RenderPass::Descriptor::SubpassDescription subpass;
         RenderPass::Descriptor::AttachmentReference ref;
-        ref.attachment = 0;
-        ref.layout = ImageLayout::ColorAttachmentOptimal;
-        subpass.colorAttachments.push_back(ref);
-        desc.subpasses.push_back(subpass);
+        ref.m_attachment = 0;
+        ref.m_layout = ImageLayout::ColorAttachmentOptimal;
+        subpass.m_color_attachments.push_back(ref);
+        desc.m_subpasses.push_back(subpass);
 
         RenderPass::Descriptor::SubpassDependency deps;
-        deps.srcSubpass =
+        deps.m_src_subpass =
             RenderPass::Descriptor::SubpassDependency::ExternalSubpass;
-        deps.dstSubpass = 0;
-        deps.srcAccessMask = Access::None;
-        deps.dstAccessMask = Access::ColorAttachmentWrite;
-        deps.srcStageMask = PipelineStage::TopOfPipe;
-        deps.dstStageMask = PipelineStage::ColorAttachmentOutput;
-        desc.dependencies.push_back(deps);
+        deps.m_dst_subpass = 0;
+        deps.m_src_access_mask = Access::None;
+        deps.m_dst_access_mask = Access::ColorAttachmentWrite;
+        deps.m_src_stage_mask = PipelineStage::TopOfPipe;
+        deps.m_dst_stage_mask = PipelineStage::ColorAttachmentOutput;
+        desc.m_dependencies.push_back(deps);
 
         m_render_pass = device.CreateRenderPass(desc);
     }
@@ -184,7 +184,7 @@ private:
     void createPipeline(Device& device) {
         GraphicsPipeline::Descriptor desc;
         desc.m_render_pass = m_render_pass;
-        desc.layout = m_pipeline_layout;
+        desc.m_layout = m_pipeline_layout;
 
         auto vert_file_content = nickel::ReadWholeFile(
             "./tests/render/colorful_rectangle2/vert.spv");
@@ -205,19 +205,19 @@ private:
         // vertex position
         {
             GraphicsPipeline::Descriptor::BufferState::Attribute attr;
-            attr.shaderLocation = 0;
-            attr.format = VertexFormat::Float32x2;
-            attr.offset = 0;
-            state.attributes.push_back(attr);
+            attr.m_shader_location = 0;
+            attr.m_format = VertexFormat::Float32x2;
+            attr.m_offset = 0;
+            state.m_attributes.push_back(attr);
         }
 
-        state.arrayStride = sizeof(float) * 2;
-        state.stepMode =
+        state.m_array_stride = sizeof(float) * 2;
+        state.m_step_mode =
             GraphicsPipeline::Descriptor::BufferState::StepMode::Vertex;
-        desc.vertex.buffers.push_back(state);
+        desc.m_vertex.m_buffers.push_back(state);
 
         GraphicsPipeline::Descriptor::BlendState blend_state;
-        desc.blend_state.push_back(blend_state);
+        desc.m_blend_state.push_back(blend_state);
 
         m_pipeline = device.CreateGraphicPipeline(desc);
     }
