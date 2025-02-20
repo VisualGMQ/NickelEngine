@@ -27,7 +27,25 @@ macro(attach_common_config_on_engine target_name)
     target_include_directories(${target_name} PUBLIC .)
     target_compile_features(${target_name} PUBLIC cxx_std_20)
     target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf
-        PhysXExtensions PhysX PhysXPvdSDK PhysXVehicle PhysXCharacterKinematic PhysXCooking PhysXCommon PhysXFoundation)
+        # PhysX
+        PhysXExtensions
+        PhysX
+        PhysXPvdSDK
+        PhysXVehicle
+        PhysXCharacterKinematic
+        PhysXCooking
+        PhysXCommon
+        PhysXFoundation
+        
+        # NvBlast
+        NvBlast::LowLevel
+        NvBlast::Globals
+        NvBlast::ExtShaders
+        NvBlast::ExtAssetUtils
+        NvBlast::ExtAuthoring
+        NvBlast::Tk
+        NvBlast::ExtStress
+        )
     target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui)
 
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp nickel/physics/internal/pch.hpp)

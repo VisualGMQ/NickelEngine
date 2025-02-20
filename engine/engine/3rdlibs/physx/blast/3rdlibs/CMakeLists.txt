@@ -1,0 +1,2 @@
+set(BOOST_MP_STANDALONE ON)
+add_subdirectory(multiprecision)

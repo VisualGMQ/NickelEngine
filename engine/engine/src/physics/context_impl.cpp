@@ -15,9 +15,12 @@ ContextImpl::ContextImpl() {
     if (!m_physics) {
         LOGC("Failed to create PxPhysics");
     }
+
+    m_blast_framework = NvBlastTkFrameworkCreate();
 }
 
 ContextImpl::~ContextImpl() {
+    m_blast_framework->release();
     m_physics->release();
     m_foundation->release();
 }
