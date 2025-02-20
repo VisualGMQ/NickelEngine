@@ -40,6 +40,8 @@
 
 #include <vector>
 #include <cmath>
+#include <fstream>
+#include <cstdio>
 
 using namespace Nv::Blast;
 using namespace nvidia;
