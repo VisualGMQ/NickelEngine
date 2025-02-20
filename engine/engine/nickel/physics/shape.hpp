@@ -1,5 +1,6 @@
 #pragma once
 #include "geometry.hpp"
+#include "nickel/common/transform.hpp"
 #include "nickel/physics/material.hpp"
 
 namespace nickel::physics {
@@ -18,6 +19,9 @@ public:
 
     void SetMaterials(std::span<Material> materials);
     void SetMaterial(Material& materials);
+    
+    void SetLocalPose(const Vec3&, const Quat&);
+    Transform GetLocalPose() const;
 
     void SetGeometry(const Geometry&);
 

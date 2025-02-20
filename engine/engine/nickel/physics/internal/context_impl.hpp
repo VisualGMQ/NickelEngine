@@ -1,10 +1,14 @@
 ﻿#pragma once
+#include "joint_impl.hpp"
 #include "nickel/common/assert.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/common/memory/memory.hpp"
 #include "nickel/physics/geometry.hpp"
 #include "nickel/physics/internal/material_impl.hpp"
 #include "nickel/physics/internal/pch.hpp"
+#include "nickel/physics/internal/rigidbody_impl.hpp"
+#include "nickel/physics/internal/scene_impl.hpp"
+#include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/material.hpp"
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
@@ -86,6 +90,7 @@ public:
     BlockMemoryAllocator<RigidActorImpl> m_rigid_actor_allocator;
     BlockMemoryAllocator<MaterialImpl> m_material_allocator;
     BlockMemoryAllocator<ShapeImpl> m_shape_allocator;
+    BlockMemoryAllocator<D6JointImpl> m_joint_allocator;
 
 private:
     physx::PxFoundation* m_foundation;

@@ -56,6 +56,14 @@ void Shape::SetMaterial(Material& mtl) {
     SetMaterials(std::span{&mtl, 1});
 }
 
+void Shape::SetLocalPose(const Vec3& p, const Quat& q) {
+    return m_impl->SetLocalPose(p, q);
+}
+
+Transform Shape::GetLocalPose() const {
+    return m_impl->GetLocalPose();
+}
+
 void Shape::SetGeometry(const Geometry& g) {
     m_impl->SetGeometry(g);
 }

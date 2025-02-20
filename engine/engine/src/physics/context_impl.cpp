@@ -35,6 +35,7 @@ ContextImpl::ContextImpl() {
 }
 
 ContextImpl::~ContextImpl() {
+    m_joint_allocator.FreeAll();
     m_material_allocator.FreeAll();
     m_shape_allocator.FreeAll();
     m_rigid_actor_allocator.FreeAll();
@@ -175,6 +176,7 @@ Scene ContextImpl::GetMainScene() {
 void ContextImpl::GC() {
     m_shape_allocator.GC();
     m_material_allocator.GC();
+    m_joint_allocator.GC();
     m_rigid_actor_allocator.GC();
     m_scene_allocator.GC();
 }

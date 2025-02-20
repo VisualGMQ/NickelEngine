@@ -3,6 +3,7 @@
 #include "nickel/physics/internal/context_impl.hpp"
 #include "nickel/physics/internal/geometry_converter.hpp"
 #include "nickel/physics/internal/material_impl.hpp"
+#include "nickel/physics/internal/util.hpp"
 
 namespace nickel::physics {
 
@@ -46,6 +47,14 @@ void ShapeImpl::SetGeometry(const Geometry& g) {
                 Geometry2PhysX(static_cast<const PlaneGeometry&>(g)));
             break;
     }
+}
+
+void ShapeImpl::SetLocalPose(const Vec3& p, const Quat& q) {
+    m_shape->setLocalPose({Vec3ToPhysX(p), QuatToPhysX(q)});
+}
+
+Transform ShapeImpl::GetLocalPose() const {
+    return TransformFromPhysX(m_shape->getLocalPose());
 }
 
 void ShapeImpl::DecRefcount() {

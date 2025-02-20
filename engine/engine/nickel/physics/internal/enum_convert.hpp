@@ -3,6 +3,7 @@
 #include "nickel/common/assert.hpp"
 #include "nickel/physics/enums.hpp"
 #include "nickel/physics/internal/pch.hpp"
+#include "nickel/physics/joint.hpp"
 
 namespace nickel::physics {
 
@@ -35,13 +36,39 @@ inline physx::PxCombineMode::Enum CombineMode2PhysX(CombineMode mode) {
 }
 
 inline RigidActorType RigidActorTypeFromPhysX(physx::PxActorType::Enum type) {
-    switch(type) {
+    switch (type) {
         CASE(physx::PxActorType::eRIGID_STATIC, RigidActorType::RigidStatic)
         CASE(physx::PxActorType::eRIGID_DYNAMIC, RigidActorType::RigidDynamic)
-        CASE(physx::PxActorType::eARTICULATION_LINK, RigidActorType::ArticulationLink)
-        CASE(physx::PxActorType::eDEFORMABLE_SURFACE, RigidActorType::DeformableSurface)
-        CASE(physx::PxActorType::eDEFORMABLE_VOLUME, RigidActorType::DeformableVolume)
-        CASE(physx::PxActorType::ePBD_PARTICLESYSTEM, RigidActorType::PbdParticleSystem)
+        CASE(physx::PxActorType::eARTICULATION_LINK,
+             RigidActorType::ArticulationLink)
+        CASE(physx::PxActorType::eDEFORMABLE_SURFACE,
+             RigidActorType::DeformableSurface)
+        CASE(physx::PxActorType::eDEFORMABLE_VOLUME,
+             RigidActorType::DeformableVolume)
+        CASE(physx::PxActorType::ePBD_PARTICLESYSTEM,
+             RigidActorType::PbdParticleSystem)
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline physx::PxD6Motion::Enum D6Motion2PhysX(D6Joint::Motion motion) {
+    switch (motion) {
+        CASE(D6Joint::Motion::Free, physx::PxD6Motion::eFREE);
+        CASE(D6Joint::Motion::Locked, physx::PxD6Motion::eLOCKED);
+        CASE(D6Joint::Motion::Limited, physx::PxD6Motion::eLIMITED);
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
+inline D6Joint::Motion D6MotionFromPhysX(physx::PxD6Motion::Enum motion) {
+    switch (motion) {
+        CASE(physx::PxD6Motion::eFREE, D6Joint::Motion::Free);
+        CASE(physx::PxD6Motion::eLOCKED, D6Joint::Motion::Locked);
+        CASE(physx::PxD6Motion::eLIMITED, D6Joint::Motion::Limited);
     }
 
     NICKEL_CANT_REACH();
