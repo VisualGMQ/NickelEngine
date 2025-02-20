@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "nickel/common/assert.hpp"
 #include "nickel/physics/internal/pch.hpp"
+#include "NvBlastTk.h"
 
 namespace nickel::physics {
 
@@ -55,6 +56,7 @@ private:
     physx::PxPhysics* m_physics; 
     PhysXErrorCallback m_error_callback;
     physx::PxDefaultAllocator m_allocator;
+    Nv::Blast::TkFramework* m_blast_framework;
 };
 
 }
