@@ -58,7 +58,7 @@ private:
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<graphics::Context> m_graphics_ctx;
     std::unique_ptr<StorageManager> m_storage_mgr;
-    physics::Context m_physics;
+    std::unique_ptr<physics::Context> m_physics;
 
     input::DeviceManager m_device_mgr;
     std::unique_ptr<graphics::TextureManager> m_texture_mgr;

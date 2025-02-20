@@ -30,6 +30,9 @@ Context::Context() {
     LOGI("init asset managers");
     m_gltf_mgr = std::make_unique<graphics::GLTFManager>();
     m_texture_mgr = std::make_unique<graphics::TextureManager>();
+
+    LOGI("init physics context");
+    m_physics = std::make_unique<physics::Context>();
 }
 
 Context::~Context() {
@@ -37,6 +40,9 @@ Context::~Context() {
         m_application->OnQuit();
     }
     m_application.reset();
+
+    LOGI("release physics context");
+    m_physics.reset();
 
     LOGI("release assets");
     m_gltf_mgr.reset();
@@ -143,9 +149,13 @@ void Context::Update() {
 
     GetDeviceManager().Update();
 
+    // TODO: use sub-step simulation
+    m_physics->Update(0.3);
+    
     m_gltf_mgr->Update();
     m_graphics_ctx->EndFrame();
     
+    m_physics->GC();
     m_gltf_mgr->GC();
     m_texture_mgr->GC();
 }
