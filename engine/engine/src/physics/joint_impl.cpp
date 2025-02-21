@@ -15,6 +15,14 @@ D6JointImpl::~D6JointImpl() {
     }
 }
 
+void D6JointImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_ctx->m_joint_allocator.MarkAsGarbage(this);
+    }
+}
+
 void D6JointImpl::SetXMotion(D6Joint::Motion motion) {
     m_joint->setMotion(physx::PxD6Axis::eX, D6Motion2PhysX(motion));
 }
@@ -103,11 +111,14 @@ void D6JointImpl::SetPyramidLimit(const D6Joint::PyramidLimit& limit) {
 void D6JointImpl::SetActors(const RigidActor& actor1, const Vec3& p1,
                             const Quat& q1, const RigidActor& actor2,
                             const Vec3& p2, const Quat& q2) {
+    SetActors(actor1, actor2);
+    SetActor0LocalPose(p1, q1);
+    SetActor1LocalPose(p2, q2);
+}
+
+void D6JointImpl::SetActors(const RigidActor& actor1,
+                            const RigidActor& actor2) {
     m_joint->setActors(actor1.GetImpl()->m_actor, actor2.GetImpl()->m_actor);
-    m_joint->setLocalPose(physx::PxJointActorIndex::eACTOR0,
-                          {Vec3ToPhysX(p1), QuatToPhysX(q1)});
-    m_joint->setLocalPose(physx::PxJointActorIndex::eACTOR1,
-                          {Vec3ToPhysX(p2), QuatToPhysX(q2)});
 }
 
 D6Joint::LinearLimit D6JointImpl::GetDistanceLimit() const {
@@ -192,6 +203,16 @@ void D6JointImpl::SetSlerpDrive(const D6Joint::Drive& d) {
     m_joint->setDrive(physx::PxD6Drive::eSLERP, D6JointDrive2PhysX(d));
 }
 
+void D6JointImpl::SetActor0LocalPose(const Vec3& p, const Quat& q) {
+    m_joint->setLocalPose(physx::PxJointActorIndex::eACTOR0,
+                          {Vec3ToPhysX(p), QuatToPhysX(q)});
+}
+
+void D6JointImpl::SetActor1LocalPose(const Vec3& p, const Quat& q) {
+    m_joint->setLocalPose(physx::PxJointActorIndex::eACTOR1,
+                          {Vec3ToPhysX(p), QuatToPhysX(q)});
+}
+
 D6Joint::Drive D6JointImpl::GetXDrive() const {
     return D6JointDriveFromPhysX(m_joint->getDrive(physx::PxD6Drive::eX));
 }
@@ -241,6 +262,59 @@ void D6JointImpl::SetBreakForce(float force, float torque) {
 
 void D6JointImpl::GetBreakForce(float& force, float& torque) const {
     m_joint->getBreakForce(force, torque);
+}
+
+bool D6JointImpl::CanBeBroken(bool enable) const {
+    return m_joint->getConstraintFlags() & physx::PxConstraintFlag::eBROKEN;
+}
+
+void D6JointImpl::EnableCollision(bool enable) {
+    m_joint->setConstraintFlag(physx::PxConstraintFlag::eCOLLISION_ENABLED,
+                               enable);
+}
+
+void D6JointImpl::EnableDriveLimitsAreForces(bool enable) {
+    m_joint->setConstraintFlag(
+        physx::PxConstraintFlag::eDRIVE_LIMITS_ARE_FORCES, enable);
+}
+
+void D6JointImpl::EnableExtendedLimits(bool enable) {
+    m_joint->setConstraintFlag(physx::PxConstraintFlag::eENABLE_EXTENDED_LIMITS,
+                               enable);
+}
+
+void D6JointImpl::DisableConstraint(bool disable) {
+    m_joint->setConstraintFlag(physx::PxConstraintFlag::eDISABLE_CONSTRAINT,
+                               disable);
+}
+
+void D6JointImpl::EnableAlwaysUpdate(bool enable) {
+    m_joint->setConstraintFlag(physx::PxConstraintFlag::eALWAYS_UPDATE, enable);
+}
+
+bool D6JointImpl::IsEnableCollision() const {
+    return m_joint->getConstraintFlags() &
+           physx::PxConstraintFlag::eCOLLISION_ENABLED;
+}
+
+bool D6JointImpl::IsEnableDriveLimitsAreForces() const {
+    return m_joint->getConstraintFlags() &
+           physx::PxConstraintFlag::eDRIVE_LIMITS_ARE_FORCES;
+}
+
+bool D6JointImpl::IsEnableExtendedLimits() const {
+    return m_joint->getConstraintFlags() &
+           physx::PxConstraintFlag::eENABLE_EXTENDED_LIMITS;
+}
+
+bool D6JointImpl::IsDisableConstraint() const {
+    return m_joint->getConstraintFlags() &
+           physx::PxConstraintFlag::eDISABLE_CONSTRAINT;
+}
+
+bool D6JointImpl::IsEnableAlwaysUpdate() const {
+    return m_joint->getConstraintFlags() &
+           physx::PxConstraintFlag::eALWAYS_UPDATE;
 }
 
 }  // namespace nickel::physics

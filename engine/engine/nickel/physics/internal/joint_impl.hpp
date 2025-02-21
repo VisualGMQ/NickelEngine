@@ -36,6 +36,8 @@ public:
     D6JointImpl(ContextImpl* ctx, physx::PxD6Joint*);
     ~D6JointImpl();
 
+    void DecRefcount() override;
+
     void SetXMotion(D6Joint::Motion);
     void SetYMotion(D6Joint::Motion);
     void SetZMotion(D6Joint::Motion);
@@ -54,8 +56,9 @@ public:
     void SetTwistLimit(const D6Joint::AngularLimit&);
     void SetSwingLimit(const D6Joint::LimitCone&);
     void SetPyramidLimit(const D6Joint::PyramidLimit&);
-    void SetActors(const RigidActor& actor1, const Vec3& p1, const Quat& q1,
-                   const RigidActor& actor2, const Vec3& p2, const Quat& q2);
+    void SetActors(const RigidActor& actor0, const Vec3& p0, const Quat& q0,
+                   const RigidActor& actor1, const Vec3& p1, const Quat& q1);
+    void SetActors(const RigidActor& actor1, const RigidActor& actor2);
 
     D6Joint::LinearLimit GetDistanceLimit() const;
     D6Joint::AngularLimit GetTwistLimit() const;
@@ -69,6 +72,9 @@ public:
     void SetSwingDrive(const D6Joint::Drive&);
     void SetTwistDrive(const D6Joint::Drive&);
     void SetSlerpDrive(const D6Joint::Drive&);
+
+    void SetActor0LocalPose(const Vec3& p, const Quat& q);
+    void SetActor1LocalPose(const Vec3& p, const Quat& q);
 
     D6Joint::Drive GetXDrive() const;
     D6Joint::Drive GetYDrive() const;
@@ -84,6 +90,18 @@ public:
 
     void SetBreakForce(float force, float torque);
     void GetBreakForce(float& force, float& torque) const;
+
+    void EnableCollision(bool enable);
+    void EnableDriveLimitsAreForces(bool enable);
+    void EnableExtendedLimits(bool enable);
+    void DisableConstraint(bool disable);
+    void EnableAlwaysUpdate(bool enable);
+    bool CanBeBroken(bool enable) const;
+    bool IsEnableCollision() const;
+    bool IsEnableDriveLimitsAreForces() const;
+    bool IsEnableExtendedLimits() const;
+    bool IsDisableConstraint() const;
+    bool IsEnableAlwaysUpdate() const;
 
     physx::PxD6Joint* m_joint{};
 

@@ -77,6 +77,10 @@ public:
     Shape CreateShape(const TriangleMeshGeometry&, const Material&);
     Shape CreateShape(const PlaneGeometry&, const Material&);
 
+    D6Joint CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
+                          const Quat& q0, const RigidActor& actor1,
+                          const Vec3& p1, const Quat& q1);
+
     void Update(float delta_time);
 
     Scene GetMainScene();

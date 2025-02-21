@@ -165,6 +165,20 @@ Shape ContextImpl::CreateShape(const PlaneGeometry& geom,
     return {};
 }
 
+D6Joint ContextImpl::CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
+                                   const Quat& q0, const RigidActor& actor1,
+                                   const Vec3& p1, const Quat& q1) {
+    physx::PxD6Joint* joint =
+        PxD6JointCreate(*m_physics, actor0.GetImpl()->m_actor,
+                        physx::PxTransform{Vec3ToPhysX(p0), QuatToPhysX(q0)},
+                        actor1.GetImpl()->m_actor,
+                        physx::PxTransform{Vec3ToPhysX(p1), QuatToPhysX(q1)});
+    if (joint) {
+        return m_joint_allocator.Allocate(this, joint);
+    }
+    return {};
+}
+
 void ContextImpl::Update(float delta_time) {
     m_main_scene->Simulate(delta_time);
 }
