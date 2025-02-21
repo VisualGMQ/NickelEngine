@@ -1,4 +1,5 @@
 ﻿#include "nickel/physics/internal/context_impl.hpp"
+#include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/geometry_converter.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/internal/scene_impl.hpp"

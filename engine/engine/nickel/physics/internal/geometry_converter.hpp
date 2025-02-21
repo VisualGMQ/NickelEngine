@@ -26,5 +26,30 @@ inline physx::PxTriangleMeshGeometry Geometry2PhysX(const TriangleMeshGeometry& 
     return physx::PxTriangleMeshGeometry{mesh.m_data.m_mesh};
 }
 
-
+inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g) {
+    physx::PxGeometryHolder holder;
+    switch (g.GetType()) {
+        case Geometry::Type::Box:
+            holder.storeAny(Geometry2PhysX(static_cast<const BoxGeometry&>(g)));
+            break;
+        case Geometry::Type::Sphere:
+            holder.storeAny(
+                Geometry2PhysX(static_cast<const SphereGeometry&>(g)));
+            break;
+        case Geometry::Type::Capsule:
+            holder.storeAny(
+                Geometry2PhysX(static_cast<const CapsuleGeometry&>(g)));
+            break;
+        case Geometry::Type::TriangleMesh:
+            holder.storeAny(
+                Geometry2PhysX(static_cast<const TriangleMeshGeometry&>(g)));
+            break;
+        case Geometry::Type::Plane:
+            holder.storeAny(
+                Geometry2PhysX(static_cast<const PlaneGeometry&>(g)));
+            break;
+    }
+    return holder;
 }
+
+}  // namespace nickel::physics

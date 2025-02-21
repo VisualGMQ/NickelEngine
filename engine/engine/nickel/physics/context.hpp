@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/common/flags.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/material.hpp"
 #include "nickel/physics/rigidbody.hpp"

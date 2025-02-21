@@ -1,9 +1,11 @@
 ﻿#pragma once
-#include "joint_impl.hpp"
+#include "NvBlastTk.h"
 #include "nickel/common/assert.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/common/memory/memory.hpp"
+#include "nickel/physics/context.hpp"
 #include "nickel/physics/geometry.hpp"
+#include "nickel/physics/internal/joint_impl.hpp"
 #include "nickel/physics/internal/material_impl.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/internal/rigidbody_impl.hpp"
@@ -13,10 +15,6 @@
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
 #include "nickel/physics/shape.hpp"
-#include "nickel/physics/internal/rigidbody_impl.hpp"
-#include "nickel/physics/internal/shape_impl.hpp"
-#include "nickel/physics/internal/scene_impl.hpp"
-#include "NvBlastTk.h"
 
 namespace nickel::physics {
 
@@ -101,7 +99,7 @@ private:
     PhysXErrorCallback m_error_callback;
     physx::PxDefaultAllocator m_allocator;
     physx::PxDefaultCpuDispatcher* m_cpu_dispatcher;
-    
+
     SceneImpl* m_main_scene;
     Nv::Blast::TkFramework* m_blast_framework;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nickel/common/assert.hpp"
+#include "nickel/common/flags.hpp"
 #include "nickel/physics/enums.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/joint.hpp"
@@ -75,6 +76,44 @@ inline D6Joint::Motion D6MotionFromPhysX(physx::PxD6Motion::Enum motion) {
     return {};
 }
 
+#define TRY_SET_BIT(src, dst) \
+    if (flags & (src)) bits |= (dst);
+
+inline physx::PxHitFlags HitFlag2PhysX(Flags<HitFlag> flags) {
+    physx::PxHitFlags bits{};
+    TRY_SET_BIT(HitFlag::Normal, physx::PxHitFlag::eNORMAL);
+    TRY_SET_BIT(HitFlag::Position, physx::PxHitFlag::ePOSITION);
+    TRY_SET_BIT(HitFlag::AnyHit, physx::PxHitFlag::eANY_HIT);
+    TRY_SET_BIT(HitFlag::FaceIndex, physx::PxHitFlag::eFACE_INDEX);
+    TRY_SET_BIT(HitFlag::MeshMultile, physx::PxHitFlag::eMESH_MULTIPLE);
+    TRY_SET_BIT(HitFlag::PreciseSweep, physx::PxHitFlag::ePRECISE_SWEEP);
+    TRY_SET_BIT(HitFlag::UV, physx::PxHitFlag::eUV);
+    TRY_SET_BIT(HitFlag::MeshBothSides, physx::PxHitFlag::eMESH_BOTH_SIDES);
+    TRY_SET_BIT(HitFlag::MeshMultile, physx::PxHitFlag::eMESH_MULTIPLE);
+    TRY_SET_BIT(HitFlag::MTD, physx::PxHitFlag::eMTD);
+    TRY_SET_BIT(HitFlag::AssumeNoInitialOverlap,
+                physx::PxHitFlag::eASSUME_NO_INITIAL_OVERLAP);
+    return bits;
+}
+
+inline Flags<HitFlag> HitFlagFromPhysX(physx::PxHitFlags flags) {
+    Flags<HitFlag> bits{};
+    TRY_SET_BIT(physx::PxHitFlag::eNORMAL, HitFlag::Normal);
+    TRY_SET_BIT(physx::PxHitFlag::ePOSITION, HitFlag::Position);
+    TRY_SET_BIT(physx::PxHitFlag::eANY_HIT, HitFlag::AnyHit);
+    TRY_SET_BIT(physx::PxHitFlag::eFACE_INDEX, HitFlag::FaceIndex);
+    TRY_SET_BIT(physx::PxHitFlag::eMESH_MULTIPLE, HitFlag::MeshMultile);
+    TRY_SET_BIT(physx::PxHitFlag::ePRECISE_SWEEP, HitFlag::PreciseSweep);
+    TRY_SET_BIT(physx::PxHitFlag::eUV, HitFlag::UV);
+    TRY_SET_BIT(physx::PxHitFlag::eMESH_BOTH_SIDES, HitFlag::MeshBothSides);
+    TRY_SET_BIT(physx::PxHitFlag::eMESH_MULTIPLE, HitFlag::MeshMultile);
+    TRY_SET_BIT(physx::PxHitFlag::eMTD, HitFlag::MTD);
+    TRY_SET_BIT(physx::PxHitFlag::eASSUME_NO_INITIAL_OVERLAP,
+                HitFlag::AssumeNoInitialOverlap);
+    return bits;
+}
+
+#undef TRY_SET_BIT
 #undef CASE
 
 }  // namespace nickel::physics

@@ -25,28 +25,8 @@ void ShapeImpl::SetMaterial(Material& mtl) {
 }
 
 void ShapeImpl::SetGeometry(const Geometry& g) {
-    switch (g.GetType()) {
-        case Geometry::Type::Box:
-            m_shape->setGeometry(
-                Geometry2PhysX(static_cast<const BoxGeometry&>(g)));
-            break;
-        case Geometry::Type::Sphere:
-            m_shape->setGeometry(
-                Geometry2PhysX(static_cast<const SphereGeometry&>(g)));
-            break;
-        case Geometry::Type::Capsule:
-            m_shape->setGeometry(
-                Geometry2PhysX(static_cast<const CapsuleGeometry&>(g)));
-            break;
-        case Geometry::Type::TriangleMesh:
-            m_shape->setGeometry(
-                Geometry2PhysX(static_cast<const TriangleMeshGeometry&>(g)));
-            break;
-        case Geometry::Type::Plane:
-            m_shape->setGeometry(
-                Geometry2PhysX(static_cast<const PlaneGeometry&>(g)));
-            break;
-    }
+    auto holder = Geometry2PhysX(g);
+    m_shape->setGeometry(holder.any());
 }
 
 void ShapeImpl::SetLocalPose(const Vec3& p, const Quat& q) {
