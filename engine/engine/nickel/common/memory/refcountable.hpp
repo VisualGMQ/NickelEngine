@@ -7,7 +7,7 @@ public:
     RefCountable();
     virtual ~RefCountable() = default;
     uint32_t Refcount() const noexcept;
-    void IncRefcount();
+    virtual void IncRefcount();
     virtual void DecRefcount();
     bool IsAlive() const noexcept;
 

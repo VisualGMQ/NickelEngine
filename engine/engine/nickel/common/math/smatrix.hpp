@@ -1,6 +1,8 @@
 #pragma once
 
 #include "nickel/common/math/algorithm.hpp"
+#include "spdlog/spdlog.h"
+#include "spdlog/fmt/ostr.h"
 #include <cassert>
 #include <concepts>
 
@@ -84,6 +86,19 @@ public:
     constexpr size_t RowNum() const noexcept { return Len; }
 };
 
+template <typename Derive, typename ElemType, size_t Len>
+requires std::is_standard_layout_v<ElemType>
+std::ostream& operator<<(std::ostream& o,
+                         const SVectorBase<Derive, ElemType, Len>& v) {
+    o << "Vec{";
+    for (size_t i = 0; i < Len; ++i) {
+        o << v[i] << ",";
+    }
+    o << "}";
+
+    return o;
+}
+
 template <typename T, size_t Len>
 class SVector : public SVectorBase<SVector<T, Len>, T, Len> {
 public:
@@ -145,7 +160,7 @@ public:
     static SVector UNIT_X;
     static SVector UNIT_Y;
     static SVector UNIT_Z;
-    
+
     using ElemType = T;
     static constexpr size_t ElemCount = 3;
 
@@ -199,17 +214,11 @@ public:
         ElemType w, a;
     };
 
-    SVector()
-        : x{ElemType{}}, y{ElemType{}}, z{ElemType{}}, w{ElemType{}} {
-    }
+    SVector() : x{ElemType{}}, y{ElemType{}}, z{ElemType{}}, w{ElemType{}} {}
 
-    SVector(T x, T y, T z, T w)
-        : x{x}, y{y}, z{z}, w{w} {
-    }
+    SVector(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
 
-    explicit SVector(T value)
-        : x{value}, y{value}, z{value}, w{value} {
-    }
+    explicit SVector(T value) : x{value}, y{value}, z{value}, w{value} {}
 };
 
 // operations
@@ -284,7 +293,7 @@ std::ostream& operator<<(std::ostream& o, const SVector<T, Len>& view) {
 // matrix
 
 template <typename T, size_t Col, size_t Row>
-    requires std::is_standard_layout_v<T>
+requires std::is_standard_layout_v<T>
 class SMatrix {
 public:
     using ElemType = T;
@@ -307,7 +316,7 @@ public:
     }
 
     template <typename U>
-        requires std::convertible_to<U, ElemType>
+    requires std::convertible_to<U, ElemType>
     static SMatrix FillWith(U elem) {
         SMatrix m;
         m.Fill(elem);
@@ -329,7 +338,7 @@ public:
     }
 
     template <typename... Ts>
-        requires(std::convertible_to<Ts, ElemType> && ...)
+    requires(std::convertible_to<Ts, ElemType> && ...)
     static SMatrix Diag(Ts... elems) {
         SMatrix m;
         m.Diagonal(elems...);
@@ -338,13 +347,9 @@ public:
 
     SMatrix() = default;
 
-    SMatrix(const SMatrix& o)
-        : data_{o.data_} {
-    }
+    SMatrix(const SMatrix& o) : data_{o.data_} {}
 
-    SMatrix(SMatrix&& o) noexcept
-        : data_{o.data_} {
-    }
+    SMatrix(SMatrix&& o) noexcept : data_{o.data_} {}
 
     SMatrix& operator=(SMatrix&& o) noexcept {
         if (&o != this) {
@@ -388,8 +393,7 @@ public:
     }
 
     template <typename... Ts>
-        requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >=
-                 1)
+    requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >= 1)
     void SetValuesFromRow(Ts... elems) {
         ElemType datas[] = {static_cast<ElemType>(elems)...};
         for (int i = 0; i < std::min(sizeof...(elems), ElemCount()); i++) {
@@ -400,8 +404,7 @@ public:
     }
 
     template <typename... Ts>
-        requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >=
-                 1)
+    requires((std::convertible_to<Ts, ElemType> && ...) && sizeof...(Ts) >= 1)
     void SetValuesFromCol(Ts... elems) {
         ElemType datas[] = {static_cast<ElemType>(elems)...};
         auto ptr = Ptr();
@@ -549,4 +552,4 @@ template <typename T, size_t Col, size_t Row>
 float Det(const SMatrix<T, Col, Row> m) {
     return Det<T, true>(m);
 }
-} // namespace nickel
+}  // namespace nickel
