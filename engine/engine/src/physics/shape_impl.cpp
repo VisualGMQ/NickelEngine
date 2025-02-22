@@ -8,7 +8,7 @@
 namespace nickel::physics {
 
 ShapeImpl::ShapeImpl(ContextImpl* ctx, physx::PxShape* shape)
-    : m_shape{shape}, m_ctx{ctx} {}
+    : m_ctx{ctx}, m_shape{shape} {}
 
 void ShapeImpl::SetMaterials(std::span<Material> materials) {
     std::vector<physx::PxMaterial*> mtls;
@@ -43,6 +43,17 @@ void ShapeImpl::DecRefcount() {
     if (Refcount() == 0) {
         m_ctx->m_shape_allocator.MarkAsGarbage(this);
     }
+}
+
+ShapeImplConst::ShapeImplConst(ContextImpl* ctx, const physx::PxShape* shape)
+    : ShapeImpl{ctx, const_cast<physx::PxShape*>(shape)} {}
+
+void ShapeImplConst::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
+    } 
 }
 
 }  // namespace nickel::physics

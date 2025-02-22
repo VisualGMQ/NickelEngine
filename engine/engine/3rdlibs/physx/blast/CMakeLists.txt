@@ -36,6 +36,7 @@ endfunction()
 add_library(NvBlast_LowLevel STATIC)
 blast_sdklib_standrad_setup(NvBlast_LowLevel lowlevel)
 target_include_directories(NvBlast_LowLevel PUBLIC include/shared/NvFoundation)
+set_target_properties(NvBlast_LowLevel PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::LowLevel ALIAS NvBlast_LowLevel)
 
 add_library(NvBlast_Globals STATIC)
@@ -45,6 +46,7 @@ target_include_directories(NvBlast_Globals PUBLIC
     source/shared/NsFoundation/include
     include/shared/NvFoundation
 )
+set_target_properties(NvBlast_Globals PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::Globals ALIAS NvBlast_Globals)
 
 add_library(NvBlast_ExtShaders STATIC)
@@ -56,6 +58,7 @@ target_include_directories(NvBlast_ExtShaders PUBLIC
     include/shared/NvFoundation
     source/shared/NsFoundation/include
 )
+set_target_properties(NvBlast_ExtShaders PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::ExtShaders ALIAS NvBlast_ExtShaders)
 
 add_library(NvBlast_ExtAssetUtils STATIC)
@@ -65,6 +68,7 @@ target_include_directories(NvBlast_ExtAssetUtils PUBLIC
     include/globals
     include/shared/NvFoundation
 )
+set_target_properties(NvBlast_ExtAssetUtils PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::ExtAssetUtils ALIAS NvBlast_ExtAssetUtils)
 
 add_library(NvBlast_ExtAuthoring STATIC)
@@ -88,6 +92,7 @@ target_include_directories(NvBlast_ExtAuthoring PUBLIC
     include/shared/NvFoundation
     source/shared/NsFoundation/include
 )
+set_target_properties(NvBlast_ExtAuthoring PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::ExtAuthoring ALIAS NvBlast_ExtAuthoring)
 
 add_library(NvBlast_Tk STATIC)
@@ -102,6 +107,7 @@ target_include_directories(NvBlast_Tk PUBLIC
     source/shared/NsFileBuffer/include
     source/shared/NvTask/include
 )
+set_target_properties(NvBlast_Tk PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::Tk ALIAS NvBlast_Tk)
 
 add_library(NvBlast_ExtStress STATIC)
@@ -118,4 +124,5 @@ target_include_directories(NvBlast_ExtStress PUBLIC
 if (LINUX)
     target_compile_options(NvBlast_ExtStress PRIVATE "-march=haswell")
 endif()
+set_target_properties(NvBlast_ExtStress PROPERTIES FOLDER 3rdlibs/NvBlast)
 add_library(NvBlast::ExtStress ALIAS NvBlast_ExtStress)

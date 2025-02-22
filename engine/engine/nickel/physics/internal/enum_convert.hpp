@@ -113,6 +113,32 @@ inline Flags<HitFlag> HitFlagFromPhysX(physx::PxHitFlags flags) {
     return bits;
 }
 
+inline physx::PxQueryFlags QueryFlags2PhysX(Flags<QueryFlag> flags) {
+    physx::PxQueryFlags bits;
+    TRY_SET_BIT(QueryFlag::Static, physx::PxQueryFlag::eSTATIC);
+    TRY_SET_BIT(QueryFlag::Dynamic, physx::PxQueryFlag::eDYNAMIC);
+    TRY_SET_BIT(QueryFlag::AnyHit, physx::PxQueryFlag::eANY_HIT);
+    TRY_SET_BIT(QueryFlag::NoBlock, physx::PxQueryFlag::eNO_BLOCK);
+    TRY_SET_BIT(QueryFlag::PostFilter, physx::PxQueryFlag::ePOSTFILTER);
+    TRY_SET_BIT(QueryFlag::PreFilter, physx::PxQueryFlag::ePREFILTER);
+    TRY_SET_BIT(QueryFlag::DisableHardcodedFilter,
+                physx::PxQueryFlag::eDISABLE_HARDCODED_FILTER);
+    TRY_SET_BIT(QueryFlag::BatchQueryLegacyBehaviour,
+                physx::PxQueryFlag::eBATCH_QUERY_LEGACY_BEHAVIOUR);
+    return bits;
+}
+
+inline physx::PxQueryHitType::Enum QueryHitType2PhysX(QueryHitType flags) {
+    switch (flags) {
+        CASE(QueryHitType::None, physx::PxQueryHitType::eNONE);
+        CASE(QueryHitType::Block, physx::PxQueryHitType::eBLOCK);
+        CASE(QueryHitType::Touch, physx::PxQueryHitType::eTOUCH);
+    }
+
+    NICKEL_CANT_REACH();
+    return {};
+}
+
 #undef TRY_SET_BIT
 #undef CASE
 

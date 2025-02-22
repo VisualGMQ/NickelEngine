@@ -15,6 +15,7 @@ GeomRaycastHit GeomRaycastHitFromPhysX(const physx::PxGeomRaycastHit& hit) {
     result.m_normal = Vec3FromPhysX(hit.normal);
     result.m_position = Vec3FromPhysX(hit.position);
     result.m_flags = HitFlagFromPhysX(hit.flags);
+    result.m_face_index = hit.faceIndex;
     return result;
 }
 
@@ -24,6 +25,7 @@ GeomSweepHit GeomSweepHitFromPhysX(const physx::PxGeomSweepHit& hit) {
     result.m_normal = Vec3FromPhysX(hit.normal);
     result.m_position = Vec3FromPhysX(hit.position);
     result.m_flags = HitFlagFromPhysX(hit.flags);
+    result.m_face_index = hit.faceIndex;
     return result;
 }
 

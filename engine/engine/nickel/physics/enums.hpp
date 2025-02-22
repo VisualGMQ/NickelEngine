@@ -1,6 +1,7 @@
 #pragma once
 
 namespace nickel::physics {
+
 enum class ForceMode {
     Force,
     Acceleration,
@@ -32,4 +33,22 @@ enum class HitFlag {
     FaceIndex = 1 << 9,
     Default = Position | Normal | FaceIndex,
 };
+
+enum class QueryFlag {
+    Static = 1 << 0,
+    Dynamic = 1 << 1,
+    PreFilter = 1 << 2,
+    PostFilter = 1 << 3,
+    AnyHit = 1 << 4,
+    NoBlock = 1 << 5,
+    BatchQueryLegacyBehaviour = 1 << 6,
+    DisableHardcodedFilter = 1 << 7,
+};
+
+enum class QueryHitType {
+    None,
+    Touch,
+    Block,
+};
+
 }  // namespace nickel::physics

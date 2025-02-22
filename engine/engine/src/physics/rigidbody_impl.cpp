@@ -61,11 +61,11 @@ bool RigidActorImpl::IsEnableSimulation() {
 }
 
 void RigidActorImpl::AttachShape(const Shape& shape) {
-    m_actor->attachShape(*shape.m_impl->m_shape);
+    m_actor->attachShape(*shape.GetImpl()->m_shape);
 }
 
 void RigidActorImpl::DetachShape(const Shape& shape) {
-    m_actor->detachShape(*shape.m_impl->m_shape);
+    m_actor->detachShape(*shape.GetImpl()->m_shape);
 }
 
 physx::PxRigidStatic* RigidStaticImpl::getUnderlying() {
@@ -260,6 +260,18 @@ physx::PxRigidDynamic* RigidDynamicImpl::getUnderlying() {
 
 const physx::PxRigidDynamic* RigidDynamicImpl::getUnderlying() const {
     return static_cast<physx::PxRigidDynamic*>(m_actor);
+}
+
+RigidActorConstImpl::RigidActorConstImpl(ContextImpl* impl,
+                                         const physx::PxRigidActor* actor)
+    : RigidActorImpl(impl, const_cast<physx::PxRigidActor*>(actor)) {}
+
+void RigidActorConstImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_ctx->m_rigid_actor_const_allocator.MarkAsGarbage(this);
+    }
 }
 
 }  // namespace nickel::physics

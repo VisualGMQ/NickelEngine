@@ -39,7 +39,9 @@ ContextImpl::~ContextImpl() {
     m_joint_allocator.FreeAll();
     m_material_allocator.FreeAll();
     m_shape_allocator.FreeAll();
+    m_shape_const_allocator.FreeAll();
     m_rigid_actor_allocator.FreeAll();
+    m_rigid_actor_const_allocator.FreeAll();
     m_scene_allocator.FreeAll();
     m_blast_framework->release();
     m_physics->release();
@@ -190,9 +192,11 @@ Scene ContextImpl::GetMainScene() {
 
 void ContextImpl::GC() {
     m_shape_allocator.GC();
+    m_shape_const_allocator.GC();
     m_material_allocator.GC();
     m_joint_allocator.GC();
     m_rigid_actor_allocator.GC();
+    m_rigid_actor_const_allocator.GC();
     m_scene_allocator.GC();
 }
 

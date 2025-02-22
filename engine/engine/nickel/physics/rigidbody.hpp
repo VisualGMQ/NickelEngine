@@ -6,6 +6,7 @@
 namespace nickel::physics {
 
 class RigidActorImpl;
+class RigidActorConstImpl;
 class RigidDynamicImpl;
 class RigidStaticImpl;
 
@@ -103,5 +104,27 @@ private:
     RigidDynamicImpl* getUnderlyingImpl();
     const RigidDynamicImpl* getUnderlyingImpl() const;
 };
+
+class RigidActorConst {
+public:
+    RigidActorConst() = default;
+    RigidActorConst(RigidActorConstImpl*);
+    RigidActorConst(const RigidActorConst&);
+    RigidActorConst(RigidActorConst&&) noexcept;
+    RigidActorConst& operator=(const RigidActorConst&);
+    RigidActorConst& operator=(RigidActorConst&&) noexcept;
+    virtual ~RigidActorConst();
+
+    Transform GetGlobalTransform() const;
+
+    uint32_t GetShapeNum() const;
+
+    RigidActorConstImpl* GetImpl();
+    const RigidActorConstImpl* GetImpl() const;
+
+private:
+    RigidActorConstImpl* m_impl{};
+};
+
 
 }  // namespace nickel::physics

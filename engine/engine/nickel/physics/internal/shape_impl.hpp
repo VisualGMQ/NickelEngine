@@ -9,10 +9,17 @@
 namespace nickel::physics {
 
 class ContextImpl;
+class ShapeImpl;
+class ShapeImplConst;
 
-class ShapeImpl: public RefCountable {
+class ShapeImpl : public RefCountable {
 public:
+    ShapeImpl() = default;
     ShapeImpl(ContextImpl* ctx, physx::PxShape* shape);
+    virtual ~ShapeImpl() = default;
+
+    void DecRefcount() override;
+
     void SetMaterials(std::span<Material> materials);
     void SetMaterial(Material& materials);
 
@@ -21,12 +28,20 @@ public:
     void SetLocalPose(const Vec3&, const Quat&);
     Transform GetLocalPose() const;
 
-    void DecRefcount() override;
-
     physx::PxShape* m_shape{};
 
-private:
+protected:
     ContextImpl* m_ctx{};
 };
 
-}
+class ShapeImplConst : protected ShapeImpl {
+public:
+    ShapeImplConst() = default;
+    ShapeImplConst(ContextImpl* ctx, const physx::PxShape* shape);
+
+    using ShapeImpl::GetLocalPose;
+    using ShapeImpl::IncRefcount;
+    void DecRefcount() override;
+};
+
+}  // namespace nickel::physics

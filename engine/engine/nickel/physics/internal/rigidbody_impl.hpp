@@ -99,4 +99,18 @@ private:
     const physx::PxRigidDynamic* getUnderlying() const;
 };
 
+class RigidActorConstImpl : protected RigidActorImpl{
+public:
+    RigidActorConstImpl() = default;
+    RigidActorConstImpl(ContextImpl*, const physx::PxRigidActor*);
+
+    using RefCountable::IncRefcount;
+    void DecRefcount() override;
+
+    using RigidActorImpl::GetType;
+    using RigidActorImpl::GetGlobalTransform;
+    using RigidActorImpl::GetShapeNum;
+};
+
+
 }  // namespace nickel::physics

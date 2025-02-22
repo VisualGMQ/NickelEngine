@@ -68,4 +68,67 @@ void Shape::SetGeometry(const Geometry& g) {
     m_impl->SetGeometry(g);
 }
 
+ShapeImpl* Shape::GetImpl() {
+    return m_impl;
+}
+
+const ShapeImpl* Shape::GetImpl() const {
+    return m_impl;
+}
+
+ShapeConst::ShapeConst(ShapeImplConst* impl) : m_impl{impl} {}
+
+ShapeConst::ShapeConst(const ShapeConst& o) : m_impl{o.m_impl} {
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
+}
+
+ShapeConst::ShapeConst(ShapeConst&& o) noexcept : m_impl{o.m_impl} {
+    o.m_impl = nullptr;
+}
+
+ShapeConst& ShapeConst::operator=(const ShapeConst& o) {
+    if (&o != this) {
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
+        m_impl = o.m_impl;
+        if (m_impl) {
+            m_impl->IncRefcount();
+        }
+    }
+
+    return *this;
+}
+
+ShapeConst& ShapeConst::operator=(ShapeConst&& o) noexcept {
+    if (&o != this) {
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
+        m_impl = o.m_impl;
+        o.m_impl = nullptr;
+    }
+    return *this;
+}
+
+ShapeConst::~ShapeConst() {
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
+Transform ShapeConst::GetLocalPose() const {
+    return m_impl->GetLocalPose();
+}
+
+ShapeImplConst* ShapeConst::GetImpl() {
+    return m_impl;
+}
+
+const ShapeImplConst* ShapeConst::GetImpl() const {
+    return m_impl;
+}
+
 }  // namespace nickel::physics
