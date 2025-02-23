@@ -441,12 +441,12 @@ private:
     void preorderNodes(Device device, const tinygltf::Node& node,
                        GLTFModelImpl& model, GPUMesh* parent, Scene& scene) {
         std::unique_ptr<GPUMesh> newNode = std::make_unique<GPUMesh>();
-        newNode->m_local_model_mat = calcNodeTransform(node);
+        newNode->m_name = node.name;
+        newNode->m_transform = calcNodeTransform(node);
         if (parent) {
-            newNode->m_model_mat =
-                parent->m_model_mat * newNode->m_local_model_mat;
+            newNode->m_global_transform = parent->m_global_transform * newNode->m_transform;
         } else {
-            newNode->m_model_mat = newNode->m_local_model_mat;
+            newNode->m_global_transform = newNode->m_transform;
         }
 
         if (node.mesh != -1) {
@@ -666,7 +666,7 @@ private:
         return primitive;
     }
 
-    Mat44 calcNodeTransform(const tinygltf::Node& node) {
+    Transform calcNodeTransform(const tinygltf::Node& node) {
         auto cvtMat = [](const std::vector<double>& datas) {
             Mat44 mat;
             for (int i = 0; i < datas.size(); i++) {
@@ -674,33 +674,29 @@ private:
             }
             return mat;
         };
-
-        auto m = Mat44::Identity();
+        
         if (!node.matrix.empty()) {
-            m = cvtMat(node.matrix);
-        } else if (!node.scale.empty() || !node.translation.empty() ||
-                   !node.rotation.empty()) {
-            m = Mat44::Identity();
-            if (!node.scale.empty()) {
-                m = CreateScale(
-                        Vec3(node.scale[0], node.scale[1], node.scale[2])) *
-                    m;
-            }
-            if (!node.rotation.empty()) {
-                m = Quat(node.rotation[0], node.rotation[1], node.rotation[2],
-                         node.rotation[3])
-                        .ToMat() *
-                    m;
-            }
-            if (!node.translation.empty()) {
-                m = CreateTranslation(Vec3(node.translation[0],
-                                           node.translation[1],
-                                           node.translation[2])) *
-                    m;
-            }
+            Mat44 mat;
+            mat = cvtMat(node.matrix);
+            // TODO: calculate SRT from matrix;
+            return {};
         }
 
-        return m;
+        Transform transform;
+
+        transform.p = node.translation.empty()
+                          ? Vec3{}
+                          : Vec3(node.translation[0], node.translation[1],
+                                 node.translation[2]);
+        transform.q = node.rotation.empty()
+                          ? Quat{}
+                          : Quat(node.rotation[0], node.rotation[1],
+                                 node.rotation[2], node.rotation[3]);
+        transform.scale =
+            node.scale.empty()
+                ? Vec3{1, 1, 1}
+                : Vec3(node.scale[0], node.scale[1], node.scale[2]);
+        return transform;
     }
 
     template <typename RequireT>

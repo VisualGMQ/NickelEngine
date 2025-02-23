@@ -5,7 +5,6 @@
 
 namespace nickel::graphics {
 struct Primitive final {
-    std::string m_name;
     BufferView m_pos_buf_view;
     BufferView m_norm_buf_view;
     BufferView m_tan_buf_view;
@@ -17,10 +16,18 @@ struct Primitive final {
 };
 
 struct GPUMesh final {
-    Mat44 m_local_model_mat = Mat44::Identity();
-    Mat44 m_model_mat = Mat44::Identity();
+    friend class GLTFLoader;
+    friend class Scene;
+    
+    std::string m_name;
+    Transform m_transform;
     std::vector<Primitive> m_primitives;
     std::vector<std::unique_ptr<GPUMesh>> m_children;
+
+    Mat44 GetModelMat() const;
+    
+private:
+    Transform m_global_transform;
 };
 
 struct Scene final {
@@ -29,6 +36,6 @@ struct Scene final {
     void updateTransform(const Transform&);
 
 private:
-    void preorderGPUMesh(const Mat44& parent_mat, GPUMesh& mesh);
+    void preorderGPUMesh(const Transform& parent_transform, GPUMesh& mesh);
 };
 }

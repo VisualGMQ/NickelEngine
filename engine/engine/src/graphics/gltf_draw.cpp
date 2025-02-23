@@ -308,8 +308,8 @@ void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
     for (auto& prim : mesh.m_primitives) {
         auto& mtl = model.materials[prim.m_material.value()];
 
-        encoder.SetPushConstant(ShaderStage::Vertex, mesh.m_model_mat.Ptr(), 0,
-                                sizeof(Mat44));
+        encoder.SetPushConstant(ShaderStage::Vertex, mesh.GetModelMat().Ptr(),
+                                0, sizeof(Mat44));
 
         encoder.SetBindGroup(0, mtl.GetImpl()->bindGroup);
 

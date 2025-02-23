@@ -2,18 +2,22 @@
 
 namespace nickel::graphics {
 
+Mat44 GPUMesh::GetModelMat() const {
+    return CreateTranslation(m_global_transform.p) *
+           m_global_transform.q.ToMat();
+}
+
 void Scene::updateTransform(const Transform& transform) {
-    auto mat = transform.ToMat();
     for (auto& mesh : m_nodes) {
-        preorderGPUMesh(mat, *mesh);
+        preorderGPUMesh(transform, *mesh);
     }
 }
 
-void Scene::preorderGPUMesh(const Mat44& parent_mat, GPUMesh& mesh) {
-    mesh.m_model_mat = parent_mat * mesh.m_local_model_mat;
+void Scene::preorderGPUMesh(const Transform& parent_transform, GPUMesh& mesh) {
+    mesh.m_global_transform = parent_transform * mesh.m_transform;
 
     for (auto& child : mesh.m_children) {
-        preorderGPUMesh(mesh.m_model_mat, *child);
+        preorderGPUMesh(mesh.m_global_transform, *child);
     }
 }
 

@@ -3,8 +3,8 @@
 namespace nickel {
 
 Transform& Transform::operator*=(const Transform& o) {
-    p = o.p + o.q * o.scale * p;
-    q = o.q * q;
+    p = p + q * (scale * o.p);
+    q = q * o.q;
     return *this;
 }
 
