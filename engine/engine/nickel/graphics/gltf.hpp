@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "nickel/common/math/math.hpp"
-#include "nickel/common/memory/memory.hpp"
 #include "nickel/fs/path.hpp"
 
 namespace nickel::graphics {
