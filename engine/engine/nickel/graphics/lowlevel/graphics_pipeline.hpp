@@ -10,7 +10,7 @@ namespace nickel::graphics {
 
 class GraphicsPipelineImpl;
 
-class NICKEL_API GraphicsPipeline {
+class NICKEL_API GraphicsPipeline: public ImplWrapper<GraphicsPipelineImpl> {
 public:
     struct Descriptor {
         struct ShaderStage {
@@ -101,22 +101,7 @@ public:
         RenderPass m_render_pass;
     };
 
-    GraphicsPipeline() = default;
-    explicit GraphicsPipeline(GraphicsPipelineImpl*);
-    GraphicsPipeline(const GraphicsPipeline&);
-    GraphicsPipeline(GraphicsPipeline&&) noexcept;
-    GraphicsPipeline& operator=(const GraphicsPipeline&) noexcept;
-    GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
-    ~GraphicsPipeline();
-
-    const GraphicsPipelineImpl& Impl() const noexcept;
-    GraphicsPipelineImpl& Impl() noexcept;
-
-    operator bool() const noexcept;
-    void Release();
-
-private:
-    GraphicsPipelineImpl* m_impl{};
+    using ImplWrapper::ImplWrapper;
 };
 
 }  // namespace nickel::graphics

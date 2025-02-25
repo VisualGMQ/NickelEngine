@@ -1,20 +1,15 @@
 #pragma once
+#include "nickel/common/impl_wrapper.hpp"
 #include "nickel/physics/enums.hpp"
 
 namespace nickel::physics {
 
 class MaterialImpl;
 
-class Material {
+class Material: public ImplWrapper<MaterialImpl> {
 public:
-    Material() = default;
-    Material(MaterialImpl*);
-    Material(const Material&);
-    Material(Material&&) noexcept;
-    Material& operator=(const Material&);
-    Material& operator=(Material&&) noexcept;
-    ~Material();
-
+    using ImplWrapper::ImplWrapper;
+    
     void SetDynamicFriction(float friction);
     void SetStaticFriction(float friction);
     void SetRestitution(float);
@@ -28,12 +23,6 @@ public:
     void SetFrictionCombineMode(CombineMode);
     void SetRestitutionCombineMode(CombineMode);
     void SetDampingCombineMode(CombineMode);
-
-    MaterialImpl* GetImpl();
-    const MaterialImpl* GetImpl() const;
-
-private:
-    MaterialImpl* m_impl{};
 };
 
 }  // namespace nickel::physics

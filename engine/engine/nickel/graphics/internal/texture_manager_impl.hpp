@@ -13,9 +13,12 @@ public:
     Texture Find(const Path& filename);
     void GC();
 
+    void RemoveTexture(TextureImpl* texture);
+
+    BlockMemoryAllocator<TextureImpl> m_allocator;
+
 private:
-    std::unordered_map<Path, Texture> m_textures;
-    BlockMemoryAllocator<TextureImpl> m_texture_allocator;
+    std::unordered_map<Path, TextureImpl*> m_textures;
 };
 
 }  // namespace nickel::graphics

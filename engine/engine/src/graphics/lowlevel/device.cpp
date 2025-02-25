@@ -1,7 +1,5 @@
 ﻿#include "nickel/graphics/lowlevel/device.hpp"
-#include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/lowlevel/internal/device_impl.hpp"
-#include "nickel/internal/pch.hpp"
 
 namespace nickel::graphics {
 

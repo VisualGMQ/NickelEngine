@@ -1,6 +1,7 @@
 #pragma once
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/flags.hpp"
+#include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/smatrix.hpp"
 #include "nickel/graphics/lowlevel/enums.hpp"
 
@@ -9,7 +10,7 @@ namespace nickel::graphics {
 class ImageViewImpl;
 class Image;
 
-class NICKEL_API ImageView {
+class NICKEL_API ImageView: public ImplWrapper<ImageViewImpl> {
 public:
     struct Descriptor {
         struct ImageSubresourceRange {
@@ -26,28 +27,14 @@ public:
         ImageSubresourceRange m_subresource_range;
     };
 
-    ImageView() = default;
-    explicit ImageView(ImageViewImpl*);
-    ImageView(const ImageView&);
-    ImageView(ImageView&&) noexcept;
-    ImageView& operator=(const ImageView&) noexcept;
-    ImageView& operator=(ImageView&&) noexcept;
-    ~ImageView();
+    using ImplWrapper::ImplWrapper;
+
     Image GetImage() const;
-
-    const ImageViewImpl& Impl() const noexcept;
-    ImageViewImpl& Impl() noexcept;
-
-    operator bool() const noexcept;
-    void Release();
-
-private:
-    ImageViewImpl* m_impl{};
 };
 
 class ImageImpl;
 
-class NICKEL_API Image {
+class NICKEL_API Image: public ImplWrapper<ImageImpl> {
 public:
     struct Descriptor {
         bool m_is_cube_map = false;
@@ -63,26 +50,12 @@ public:
         ImageLayout m_initial_layout = ImageLayout::Undefined;
     };
 
-    Image() = default;
-    explicit Image(ImageImpl*);
-    Image(const Image&);
-    Image(Image&&) noexcept;
-    Image& operator=(const Image&) noexcept;
-    Image& operator=(Image&&) noexcept;
+    using ImplWrapper::ImplWrapper;
+
     ImageView CreateView(const ImageView::Descriptor&);
-    ~Image();
     
     SVector<uint32_t, 3> Extent() const;
     uint32_t MipLevelCount() const;
-
-    const ImageImpl& Impl() const noexcept;
-    ImageImpl& Impl() noexcept;
-
-    operator bool() const noexcept;
-    void Release();
-
-private:
-    ImageImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

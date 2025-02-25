@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "nickel/common/memory/refcountable.hpp"
+#include "nickel/internal/pch.hpp"
 
 namespace nickel::graphics {
 

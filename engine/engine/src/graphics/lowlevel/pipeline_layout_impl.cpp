@@ -13,7 +13,7 @@ PipelineLayoutImpl::PipelineLayoutImpl(DeviceImpl& device,
     std::vector<VkDescriptorSetLayout> set_layouts;
     set_layouts.reserve(desc.m_layouts.size());
     for (auto& layout : desc.m_layouts) {
-        set_layouts.push_back(layout.Impl().m_layout);
+        set_layouts.push_back(layout.GetImpl()->m_layout);
     }
 
     VkPipelineLayoutCreateInfo ci{};

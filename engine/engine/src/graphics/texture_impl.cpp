@@ -5,8 +5,9 @@
 #include "nickel/graphics/lowlevel/internal/image_impl.hpp"
 
 namespace nickel::graphics {
-TextureImpl::TextureImpl(Device device,
-                         const Path& filename, Format format) {
+TextureImpl::TextureImpl(TextureManagerImpl* mgr, Device device,
+                         const Path& filename, Format format)
+    : m_mgr{mgr} {
     ImageRawData raw_data{filename};
     if (!raw_data) {
         return;
@@ -68,4 +69,12 @@ SVector<uint32_t, 2> TextureImpl::Extent() const {
     auto extent = m_image.Extent();
     return {extent.w, extent.h};
 }
+
+void TextureImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_mgr->RemoveTexture(this);
+    }
 }
+}  // namespace nickel::graphics

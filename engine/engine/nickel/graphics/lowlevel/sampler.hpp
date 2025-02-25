@@ -1,12 +1,13 @@
 #pragma once
-#include "nickel/graphics/lowlevel/enums.hpp"
 #include "nickel/common/dllexport.hpp"
+#include "nickel/common/impl_wrapper.hpp"
+#include "nickel/graphics/lowlevel/enums.hpp"
 
 namespace nickel::graphics {
 
 class SamplerImpl;
 
-class NICKEL_API Sampler {
+class NICKEL_API Sampler: public ImplWrapper<SamplerImpl> {
 public:
     struct Descriptor {
         Filter m_mag_filter = Filter::Linear;
@@ -26,22 +27,7 @@ public:
         bool m_unnormalized_coordinates = false;
     };
 
-    Sampler() = default;
-    explicit Sampler(SamplerImpl*);
-    Sampler(const Sampler&);
-    Sampler(Sampler&&) noexcept;
-    Sampler& operator=(const Sampler&) noexcept;
-    Sampler& operator=(Sampler&&) noexcept;
-    ~Sampler();
-
-    const SamplerImpl& Impl() const noexcept;
-    SamplerImpl& Impl() noexcept;
-
-    operator bool() const noexcept;
-    void Release();
-    
-private:
-    SamplerImpl* m_impl{};
+    using ImplWrapper::ImplWrapper;
 };
 
 }  // namespace nickel::graphics

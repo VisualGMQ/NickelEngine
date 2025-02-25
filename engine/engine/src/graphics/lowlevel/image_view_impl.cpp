@@ -12,7 +12,7 @@ ImageViewImpl::ImageViewImpl(DeviceImpl& dev, const Image& image,
     VkImageViewCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     ci.format = Format2Vk(desc.m_format);
-    ci.image = image.Impl().m_image;
+    ci.image = image.GetImpl()->m_image;
     ci.viewType = ImageViewType2Vk(desc.m_view_type);
     VkImageSubresourceRange range{};
     range.aspectMask = ImageAspect2Vk(desc.m_subresource_range.m_aspect_mask);

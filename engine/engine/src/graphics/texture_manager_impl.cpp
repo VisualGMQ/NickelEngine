@@ -1,5 +1,4 @@
 ﻿#include "nickel/graphics/internal/texture_manager_impl.hpp"
-#include "nickel/graphics/texture.hpp"
 #include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
@@ -9,10 +8,11 @@ Texture TextureManagerImpl::Load(const Path& filename, Format format) {
         return {};
     }
 
-    auto impl = m_texture_allocator.Allocate(
-        nickel::Context::GetInst().GetGPUAdapter().GetDevice(), filename,
-        format);
-    auto result = m_textures.emplace(filename, impl);
+    auto result = m_textures.emplace(
+        filename,
+        m_allocator.Allocate(
+            this, nickel::Context::GetInst().GetGPUAdapter().GetDevice(),
+            filename, format));
     if (!result.second) {
         LOGE("texture emplace construct failed");
         return {};
@@ -29,7 +29,16 @@ Texture TextureManagerImpl::Find(const Path& filename) {
 }
 
 void TextureManagerImpl::GC() {
-    // TODO: remove texture from manager
-    m_texture_allocator.GC();
+    m_allocator.GC();
 }
+
+void TextureManagerImpl::RemoveTexture(TextureImpl* texture) {
+    for (auto it = m_textures.begin(); it != m_textures.end(); ++it) {
+        if (it->second == texture) {
+            m_textures.erase(it);
+            return;
+        }
+    }
+}
+
 }  // namespace nickel::graphics

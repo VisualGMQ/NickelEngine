@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/rigidbody.hpp"
 
@@ -6,7 +7,7 @@ namespace nickel::physics {
 
 class D6JointImpl;
 
-class D6Joint {
+class D6Joint : public ImplWrapper<D6JointImpl> {
 public:
     enum class Motion {
         Free,
@@ -49,13 +50,7 @@ public:
         bool m_is_acceleration = false;
     };
 
-    D6Joint() = default;
-    D6Joint(D6JointImpl*);
-    D6Joint(const D6Joint&);
-    D6Joint(D6Joint&&) noexcept;
-    D6Joint& operator=(const D6Joint&);
-    D6Joint& operator=(D6Joint&&) noexcept;
-    ~D6Joint();
+    using ImplWrapper::ImplWrapper;
 
     void SetXMotion(Motion);
     void SetYMotion(Motion);
@@ -78,13 +73,13 @@ public:
     void SetActors(const RigidActor& actor1, const Vec3& p1, const Quat& q1,
                    const RigidActor& actor2, const Vec3& p2, const Quat& q2);
     void SetActors(const RigidActor& actor1, const RigidActor& actor2);
-    
+
     LinearLimit GetDistanceLimit() const;
     AngularLimit GetTwistLimit() const;
     LimitCone GetSwingLimit() const;
     PyramidLimit GetPyramidLimit() const;
     std::tuple<RigidActor, RigidActor> GetActors();
-    
+
     void SetActor0LocalPose(const Vec3& p, const Quat& q);
     void SetActor1LocalPose(const Vec3& p, const Quat& q);
 
@@ -121,9 +116,6 @@ public:
     bool IsEnableExtendedLimits() const;
     bool IsDisableConstraint() const;
     bool IsEnableAlwaysUpdate() const;
-
-private:
-    D6JointImpl* m_impl{};
 };
 
 }  // namespace nickel::physics

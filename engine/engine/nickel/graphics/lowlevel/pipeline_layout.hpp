@@ -6,7 +6,7 @@ namespace nickel::graphics {
 
 class PipelineLayoutImpl;
 
-class NICKEL_API PipelineLayout {
+class NICKEL_API PipelineLayout: public ImplWrapper<PipelineLayoutImpl> {
 public:
     struct Descriptor {
         struct PushConstantRange {
@@ -19,22 +19,7 @@ public:
         std::vector<PushConstantRange> m_push_contants;
     };
 
-    PipelineLayout() = default;
-    explicit PipelineLayout(PipelineLayoutImpl*);
-    PipelineLayout(const PipelineLayout&);
-    PipelineLayout(PipelineLayout&&) noexcept;
-    PipelineLayout& operator=(const PipelineLayout&) noexcept;
-    PipelineLayout& operator=(PipelineLayout&&) noexcept;
-    ~PipelineLayout();
-
-    const PipelineLayoutImpl& Impl() const noexcept;
-    PipelineLayoutImpl& Impl() noexcept;
-
-    operator bool() const noexcept;
-    void Release();
-
-private:
-    PipelineLayoutImpl* m_impl{};
+    using ImplWrapper::ImplWrapper;
 };
 
 }  // namespace nickel::graphics

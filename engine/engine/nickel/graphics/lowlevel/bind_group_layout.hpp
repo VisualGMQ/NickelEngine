@@ -8,7 +8,7 @@ namespace nickel::graphics {
 
 class BindGroupLayoutImpl;
 
-class NICKEL_API BindGroupLayout final {
+class NICKEL_API BindGroupLayout final: public ImplWrapper<BindGroupLayoutImpl> {
 public:
     struct Entry final {
         BindGroupEntryType m_type;
@@ -20,23 +20,9 @@ public:
         std::unordered_map<uint32_t, Entry> m_entries;
     };
 
-    BindGroupLayout() = default;
-    explicit BindGroupLayout(BindGroupLayoutImpl*);
-    BindGroupLayout(const BindGroupLayout&);
-    BindGroupLayout(BindGroupLayout&&) noexcept;
-    BindGroupLayout& operator=(const BindGroupLayout&) noexcept;
-    BindGroupLayout& operator=(BindGroupLayout&&) noexcept;
-    ~BindGroupLayout();
-
-    const BindGroupLayoutImpl& Impl() const noexcept;
-    BindGroupLayoutImpl& Impl() noexcept;
+    using ImplWrapper::ImplWrapper;
 
     BindGroup RequireBindGroup(const BindGroup::Descriptor& desc);
-
-    void Release();
-
-private:
-    BindGroupLayoutImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

@@ -1,9 +1,6 @@
 #pragma once
-#include "common_resource.hpp"
+#include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
-#include "nickel/graphics/lowlevel/bind_group_layout.hpp"
-#include "nickel/graphics/lowlevel/graphics_pipeline.hpp"
-#include "nickel/graphics/lowlevel/render_pass.hpp"
 #include "nickel/video/window.hpp"
 
 namespace nickel::graphics {
@@ -16,7 +13,7 @@ public:
     void Begin();
     void End(Device device, CommonResource&, uint32_t cur_frame);
     void PrepareForRender();
-    
+
 private:
     VkDevice m_device;
     VkRenderPass m_render_pass;
@@ -32,4 +29,4 @@ private:
     void renderImGui(Device, CommonResource&, int cur_frame_idx);
 };
 
-}
+}  // namespace nickel::graphics
