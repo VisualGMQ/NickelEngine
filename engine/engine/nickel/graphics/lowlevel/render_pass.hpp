@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/flags.hpp"
+#include "nickel/common/impl_wrapper.hpp"
 #include "nickel/graphics/lowlevel/enums.hpp"
 #include <optional>
 
@@ -8,7 +9,7 @@ namespace nickel::graphics {
 
 class RenderPassImpl;
 
-class NICKEL_API RenderPass final {
+class NICKEL_API RenderPass final: public ImplWrapper<RenderPassImpl> {
 public:
     struct Descriptor {
         struct SubpassDependency {
@@ -53,22 +54,7 @@ public:
         std::vector<SubpassDependency> m_dependencies;
     };
 
-    RenderPass() = default;
-    explicit RenderPass(RenderPassImpl*);
-    RenderPass(const RenderPass&);
-    RenderPass(RenderPass&&) noexcept;
-    RenderPass& operator=(const RenderPass&) noexcept;
-    RenderPass& operator=(RenderPass&&) noexcept;
-    ~RenderPass();
-
-    const RenderPassImpl& Impl() const noexcept;
-    RenderPassImpl& Impl() noexcept;
-
-    operator bool() const noexcept;
-    void Release();
-
-private:
-    RenderPassImpl* m_impl{};
+    using ImplWrapper::ImplWrapper;
 };
 
 }  // namespace nickel::graphics

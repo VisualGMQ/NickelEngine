@@ -4,45 +4,6 @@
 
 namespace nickel::physics {
 
-RigidActor::RigidActor(RigidActorImpl* impl) : m_impl{impl} {}
-
-RigidActor::RigidActor(const RigidActor& o) : m_impl{o.m_impl} {
-    if (m_impl) {
-        m_impl->IncRefcount();
-    }
-}
-
-RigidActor::RigidActor(RigidActor&& o) noexcept : m_impl{o.m_impl} {
-    o.m_impl = nullptr;
-}
-
-RigidActor& RigidActor::operator=(const RigidActor& o) {
-    if (&o != this) {
-        if (m_impl) {
-            m_impl->DecRefcount();
-        }
-        m_impl = o.m_impl;
-        if (m_impl) {
-            m_impl->IncRefcount();
-        }
-    }
-    return *this;
-}
-
-RigidActor& RigidActor::operator=(RigidActor&& o) noexcept {
-    if (&o != this) {
-        m_impl = o.m_impl;
-        o.m_impl = nullptr;
-    }
-    return *this;
-}
-
-RigidActor::~RigidActor() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
-}
-
 uint32_t RigidActor::GetShapeNum() const {
     return m_impl->GetShapeNum();
 }
@@ -78,14 +39,6 @@ void RigidActor::AttachShape(const Shape& shape) {
 
 void RigidActor::DetachShape(const Shape& shape) {
     m_impl->DetachShape(shape);
-}
-
-RigidActorImpl* RigidActor::GetImpl() {
-    return m_impl;
-}
-
-const RigidActorImpl* RigidActor::GetImpl() const {
-    return m_impl;
 }
 
 RigidStaticImpl* RigidStatic::getUnderlyingImpl() {
@@ -265,60 +218,12 @@ const RigidDynamicImpl* RigidDynamic::getUnderlyingImpl() const {
     return static_cast<const RigidDynamicImpl*>(RigidActor::GetImpl());
 }
 
-RigidActorConst::RigidActorConst(RigidActorConstImpl* impl) : m_impl{impl} {}
-
-RigidActorConst::RigidActorConst(const RigidActorConst& o) : m_impl{o.m_impl} {
-    if (m_impl) {
-        m_impl->IncRefcount();
-    }
-}
-
-RigidActorConst::RigidActorConst(RigidActorConst&& o) noexcept
-    : m_impl{o.m_impl} {
-    o.m_impl = nullptr;
-}
-
-RigidActorConst& RigidActorConst::operator=(const RigidActorConst& o) {
-    if (&o != this) {
-        if (m_impl) {
-            m_impl->DecRefcount();
-        }
-        m_impl = o.m_impl;
-        if (m_impl) {
-            m_impl->IncRefcount();
-        }
-    }
-    return *this;
-}
-
-RigidActorConst& RigidActorConst::operator=(RigidActorConst&& o) noexcept {
-    if (&o != this) {
-        m_impl = o.m_impl;
-        o.m_impl = nullptr;
-    }
-    return *this;
-}
-
-RigidActorConst::~RigidActorConst() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
-}
-
 Transform RigidActorConst::GetGlobalTransform() const {
     return m_impl->GetGlobalTransform();
 }
 
 uint32_t RigidActorConst::GetShapeNum() const {
     return m_impl->GetShapeNum();
-}
-
-RigidActorConstImpl* RigidActorConst::GetImpl() {
-    return m_impl;
-}
-
-const RigidActorConstImpl* RigidActorConst::GetImpl() const {
-    return m_impl;
 }
 
 }  // namespace nickel::physics

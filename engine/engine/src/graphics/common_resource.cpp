@@ -189,7 +189,9 @@ void CommonResource::initCameraBuffer(Device& device) {
         desc.m_memory_type = MemoryType::Coherence;
         desc.m_size = sizeof(Mat44);
         desc.m_usage = BufferUsage::Uniform;
+        Buffer buffer = device.CreateBuffer(desc);
         m_camera_buffer = device.CreateBuffer(desc);
+        Buffer buffer2 = device.CreateBuffer(desc);
     }
 
     {

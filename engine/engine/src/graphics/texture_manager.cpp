@@ -1,5 +1,4 @@
 ﻿#include "nickel/graphics/texture_manager.hpp"
-
 #include "nickel/graphics/internal/texture_manager_impl.hpp"
 #include "nickel/graphics/texture.hpp"
 

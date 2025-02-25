@@ -18,25 +18,26 @@ struct RenderPassEncoder::ApplyRenderCmd {
 
     void operator()(const BindGraphicsPipelineCmd& cmd) {
         vkCmdBindPipeline(m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          cmd.m_pipeline.Impl().m_pipeline);
+                          cmd.m_pipeline.GetImpl()->m_pipeline);
         m_pipeline = &cmd.m_pipeline;
     }
 
     void operator()(const BindVertexBufferCmd& cmd) {
         VkDeviceSize device_size = cmd.m_offset;
         vkCmdBindVertexBuffers(m_cmd.m_cmd, cmd.m_slot, 1,
-                               &cmd.m_buffer.Impl().m_buffer, &device_size);
+                               &cmd.m_buffer.GetImpl()->m_buffer, &device_size);
     }
 
     void operator()(const BindIndexBufferCmd& cmd) {
-        vkCmdBindIndexBuffer(m_cmd.m_cmd, cmd.m_buffer.Impl().m_buffer,
+        vkCmdBindIndexBuffer(m_cmd.m_cmd, cmd.m_buffer.GetImpl()->m_buffer,
                              cmd.m_offset, IndexType2Vk(cmd.m_index_type));
     }
 
     void operator()(const SetPushConstantCmd& cmd) {
-        vkCmdPushConstants(m_cmd.m_cmd,
-                           m_pipeline->Impl().m_layout.Impl().m_pipeline_layout,
-                           cmd.m_stage, cmd.m_offset, cmd.m_size, cmd.m_data);
+        vkCmdPushConstants(
+            m_cmd.m_cmd,
+            m_pipeline->GetImpl()->m_layout.GetImpl()->m_pipeline_layout,
+            cmd.m_stage, cmd.m_offset, cmd.m_size, cmd.m_data);
     }
 
     void operator()(const DrawCmd& cmd) {
@@ -86,8 +87,8 @@ struct RenderPassEncoder::ApplyRenderCmd {
 
         vkCmdPushDescriptorSetKHR(
             m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            m_pipeline->Impl().m_layout.Impl().m_pipeline_layout, cmd.m_set,
-            write_infos.size(), write_infos.data());
+            m_pipeline->GetImpl()->m_layout.GetImpl()->m_pipeline_layout,
+            cmd.m_set, write_infos.size(), write_infos.data());
     }
 
 private:
@@ -201,7 +202,10 @@ void RenderPassEncoder::SetViewport(float x, float y, float width, float height,
 
 void RenderPassEncoder::SetScissor(int32_t x, int32_t y, uint32_t width,
                                    uint32_t height) {
-    SetScissorCmd cmd{{x, y}, {width, height}};
+    SetScissorCmd cmd{
+        {    x,      y},
+        {width, height}
+    };
     m_record_cmds.push_back(cmd);
 }
 
@@ -232,11 +236,11 @@ void RenderPassEncoder::transferImageLayoutInBindGroup(
         auto& bind_entry = entry.m_binding.m_entry;
         ImageImpl* image_impl{};
         if (auto binding = std::get_if<BindGroup::ImageBinding>(&bind_entry)) {
-            image_impl = &binding->m_view.GetImage().Impl();
+            image_impl = binding->m_view.GetImage().GetImpl();
         }
         if (auto binding =
                 std::get_if<BindGroup::CombinedSamplerBinding>(&bind_entry)) {
-            image_impl = &binding->m_view.GetImage().Impl();
+            image_impl = binding->m_view.GetImage().GetImpl();
         }
 
         if (!image_impl) {
@@ -324,10 +328,10 @@ void RenderPassEncoder::beginRenderPass() {
 
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_info.renderPass =
-        m_render_pass_info.m_render_pass.Impl().m_render_pass;
+        m_render_pass_info.m_render_pass.GetImpl()->m_render_pass;
     render_pass_info.pClearValues = values.data();
     render_pass_info.clearValueCount = values.size();
-    render_pass_info.framebuffer = m_render_pass_info.m_fbo.Impl().m_fbo;
+    render_pass_info.framebuffer = m_render_pass_info.m_fbo.GetImpl()->m_fbo;
 
     auto& render_area = m_render_pass_info.m_render_area;
     render_pass_info.renderArea.offset.x = render_area.position.x;
@@ -356,7 +360,8 @@ CopyEncoder CommandEncoder::BeginCopy() {
 void CopyEncoder::CopyBufferToBuffer(const Buffer& src, uint64_t src_offset,
                                      const Buffer& dst, uint64_t dst_offset,
                                      uint64_t size) {
-    copyBufferToBuffer(src.Impl(), src_offset, dst.Impl(), dst_offset, size);
+    copyBufferToBuffer(*src.GetImpl(), src_offset, *dst.GetImpl(), dst_offset,
+                       size);
 }
 
 void CopyEncoder::copyBufferToBuffer(const BufferImpl& src, uint64_t srcOffset,
@@ -388,15 +393,15 @@ void CopyEncoder::End() {
     for (auto& copy_cmd : m_image_copies) {
         auto& subresource = copy_cmd.m_copy.m_image_subresource;
         // TODO: more precious range
-        for (size_t i = subresource.m_base_array_layer; i < subresource.m_layer_count;
-             i++) {
-            auto layout = m_cmd.QueryImageLayout(&copy_cmd.m_dst.Impl(), i);
+        for (size_t i = subresource.m_base_array_layer;
+             i < subresource.m_layer_count; i++) {
+            auto layout = m_cmd.QueryImageLayout(copy_cmd.m_dst.GetImpl(), i);
             if (!layout) {
-                layout = ImageLayout2Vk(copy_cmd.m_dst.Impl().m_layouts[i]);
+                layout = ImageLayout2Vk(copy_cmd.m_dst.GetImpl()->m_layouts[i]);
             }
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.image = copy_cmd.m_dst.Impl().m_image;
+            barrier.image = copy_cmd.m_dst.GetImpl()->m_image;
             barrier.oldLayout = layout.value();
             barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             barrier.srcAccessMask = 0;
@@ -408,11 +413,12 @@ void CopyEncoder::End() {
             barrier.subresourceRange.levelCount = subresource.m_mip_level_count;
             barrier.subresourceRange.baseArrayLayer =
                 subresource.m_base_array_layer;
-            barrier.subresourceRange.baseMipLevel = subresource.m_base_mip_level;
+            barrier.subresourceRange.baseMipLevel =
+                subresource.m_base_mip_level;
             vkCmdPipelineBarrier(m_cmd.m_cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                  VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr,
                                  0, nullptr, 1, &barrier);
-            m_cmd.AddLayoutTransition(&copy_cmd.m_dst.Impl(),
+            m_cmd.AddLayoutTransition(copy_cmd.m_dst.GetImpl(),
                                       ImageLayout::TransferDstOptimal, i);
         }
 
@@ -435,8 +441,8 @@ void CopyEncoder::End() {
         copy.imageExtent.height = copy_cmd.m_copy.m_image_extent.h;
         copy.imageExtent.depth = copy_cmd.m_copy.m_image_extent.l;
 
-        vkCmdCopyBufferToImage(m_cmd.m_cmd, copy_cmd.m_src.Impl().m_buffer,
-                               copy_cmd.m_dst.Impl().m_image,
+        vkCmdCopyBufferToImage(m_cmd.m_cmd, copy_cmd.m_src.GetImpl()->m_buffer,
+                               copy_cmd.m_dst.GetImpl()->m_image,
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
         m_cmd.m_flags |= CommandEncoderImpl::Flag::Transfer;

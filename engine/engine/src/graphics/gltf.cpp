@@ -4,7 +4,6 @@
 #include "nickel/graphics/gltf_draw.hpp"
 #include "nickel/graphics/internal/context_impl.hpp"
 #include "nickel/graphics/internal/material3d_impl.hpp"
-#include "nickel/graphics/internal/texture_impl.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/material.hpp"
 #include "nickel/graphics/mesh.hpp"
@@ -12,6 +11,8 @@
 #include "nickel/nickel.hpp"
 
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
+#include "nickel/graphics/internal/texture_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/image_view_impl.hpp"
 #include "tiny_gltf.h"
 
 namespace nickel::graphics {
@@ -142,44 +143,6 @@ inline std::string ParseURI2Path(std::string_view str) {
     return path;
 }
 
-GLTFModel::GLTFModel(GLTFModelImpl* impl) : m_impl{impl} {}
-
-GLTFModel::GLTFModel(const GLTFModel& o) noexcept : m_impl{o.m_impl} {
-    if (m_impl) {
-        m_impl->IncRefcount();
-    }
-}
-
-GLTFModel::GLTFModel(GLTFModel&& o) noexcept : m_impl{o.m_impl} {
-    o.m_impl = nullptr;
-}
-
-GLTFModel& GLTFModel::operator=(const GLTFModel& o) noexcept {
-    if (&o != this) {
-        m_impl = o.m_impl;
-        m_impl->IncRefcount();
-    }
-    return *this;
-}
-
-GLTFModel& GLTFModel::operator=(GLTFModel&& o) noexcept {
-    if (&o != this) {
-        m_impl = o.m_impl;
-        o.m_impl = nullptr;
-    }
-    return *this;
-}
-
-GLTFModel::~GLTFModel() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
-}
-
-GLTFModel::operator bool() const {
-    return m_impl;
-}
-
 void GLTFModel::Move(const Vec3& offset) {
     m_impl->Move(offset);
 }
@@ -206,14 +169,6 @@ void GLTFModel::RotateTo(const Quat& q) {
 
 void GLTFModel::UpdateTransform() {
     m_impl->UpdateTransform();
-}
-
-const GLTFModelImpl* GLTFModel::GetImpl() const {
-    return m_impl;
-}
-
-GLTFModelImpl* GLTFModel::GetImpl() {
-    return m_impl;
 }
 
 struct GLTFLoader {
@@ -357,7 +312,8 @@ private:
         Material3DImpl::TextureInfo texture_info;
         auto& info = m_gltf_model.textures[idx];
         if (info.source != -1) {
-            texture_info.image = model.textures[info.source].GetImpl().m_view;
+            texture_info.image =
+                model.textures[info.source].GetImpl()->m_view;
             if (info.sampler != -1) {
                 texture_info.sampler = model.samplers[info.sampler];
             } else {
@@ -403,10 +359,10 @@ private:
             entry.m_array_size = 1;
             BindGroup::BufferBinding binding;
             binding.m_buffer = nickel::Context::GetInst()
-                                 .GetGraphicsContext()
-                                 .GetImpl()
-                                 ->GetCommonResource()
-                                 .m_camera_buffer;
+                                   .GetGraphicsContext()
+                                   .GetImpl()
+                                   ->GetCommonResource()
+                                   .m_camera_buffer;
             binding.m_type = BindGroup::BufferBinding::Type::Uniform;
             entry.m_binding.m_entry = binding;
 
@@ -420,10 +376,10 @@ private:
             entry.m_array_size = 1;
             BindGroup::BufferBinding binding;
             binding.m_buffer = nickel::Context::GetInst()
-                                 .GetGraphicsContext()
-                                 .GetImpl()
-                                 ->GetCommonResource()
-                                 .m_view_buffer;
+                                   .GetGraphicsContext()
+                                   .GetImpl()
+                                   ->GetCommonResource()
+                                   .m_view_buffer;
             binding.m_type = BindGroup::BufferBinding::Type::Uniform;
             entry.m_binding.m_entry = binding;
 
@@ -487,7 +443,8 @@ private:
         std::unique_ptr<GPUMesh> newNode = std::make_unique<GPUMesh>();
         newNode->m_local_model_mat = calcNodeTransform(node);
         if (parent) {
-            newNode->m_model_mat = parent->m_model_mat * newNode->m_local_model_mat;
+            newNode->m_model_mat =
+                parent->m_model_mat * newNode->m_local_model_mat;
         } else {
             newNode->m_model_mat = newNode->m_local_model_mat;
         }
@@ -537,9 +494,10 @@ private:
 
         if (prim.indices != -1) {
             auto& accessor = m_gltf_model.accessors[prim.indices];
-            if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                primitive.m_index_type = IndexType::Uint16;   
-            primitive.m_indices_buf_view = recordBufferView<uint16_t>(
+            if (accessor.componentType ==
+                TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+                primitive.m_index_type = IndexType::Uint16;
+                primitive.m_indices_buf_view = recordBufferView<uint16_t>(
                     m_gltf_model, accessor, data_buffer, buffer_idx,
                     TINYGLTF_TYPE_SCALAR);
             } else if (accessor.componentType ==
@@ -587,8 +545,8 @@ private:
             view.m_buffer = buffer_idx;
             primitive.m_norm_buf_view = view;
 
-            auto posPtr =
-                (const Vec3*)(data_buffer.data() + position_buffer_view.m_offset);
+            auto posPtr = (const Vec3*)(data_buffer.data() +
+                                        position_buffer_view.m_offset);
             if (primitive.m_indices_buf_view) {
                 const BufferView& indices_buffer_view =
                     primitive.m_indices_buf_view;
@@ -642,16 +600,17 @@ private:
 
             const BufferView& uv_buffer_view = primitive.m_uv_buf_view;
 
-            auto posPtr =
-                (const Vec3*)(data_buffer.data() + position_buffer_view.m_offset);
+            auto posPtr = (const Vec3*)(data_buffer.data() +
+                                        position_buffer_view.m_offset);
             auto uvPtr =
                 (const Vec2*)(data_buffer.data() + uv_buffer_view.m_offset);
             auto tanPtr = (Vec4*)(data_buffer.data() + view.m_offset);
             if (primitive.m_indices_buf_view) {
                 const BufferView& indices_buffer_view =
                     primitive.m_indices_buf_view;
-                auto indicesPtr = (const uint16_t*)(data_buffer.data() +
-                                                    indices_buffer_view.m_offset);
+                auto indicesPtr =
+                    (const uint16_t*)(data_buffer.data() +
+                                      indices_buffer_view.m_offset);
 
                 NICKEL_ASSERT(indices_buffer_view.m_count % 3 == 0,
                               "indices can't be triangle list");

@@ -15,7 +15,7 @@ FramebufferImpl::FramebufferImpl(DeviceImpl& dev,
     attachments.reserve(desc.m_views.size());
 
     for (auto& view : desc.m_views) {
-        attachments.push_back(view.Impl().m_view);
+        attachments.push_back(view.GetImpl()->m_view);
     }
 
     VkFramebufferCreateInfo ci{};
@@ -25,7 +25,7 @@ FramebufferImpl::FramebufferImpl(DeviceImpl& dev,
     ci.layers = desc.m_extent.l;
     ci.attachmentCount = attachments.size();
     ci.pAttachments = attachments.data();
-    ci.renderPass = desc.m_render_pass.Impl().m_render_pass;
+    ci.renderPass = desc.m_render_pass.GetImpl()->m_render_pass;
 
     VK_CALL(vkCreateFramebuffer(dev.m_device, &ci, nullptr, &m_fbo));
 

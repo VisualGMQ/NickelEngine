@@ -22,7 +22,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
             shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             shader_stage.stage = static_cast<VkShaderStageFlagBits>(ShaderStage2Vk(stage));
             shader_stage.pName = module.m_entry_name.c_str();
-            shader_stage.module = module.m_module.Impl().m_module;
+            shader_stage.module = module.m_module.GetImpl()->m_module;
             stage_ci_list.push_back(shader_stage);
         }
 
@@ -199,7 +199,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
 
     // create pipeline
     ci.pDepthStencilState = &depthStencilState;
-    ci.renderPass = desc.m_render_pass.Impl().m_render_pass;
+    ci.renderPass = desc.m_render_pass.GetImpl()->m_render_pass;
     ci.pVertexInputState = &vertexInput;
     ci.pInputAssemblyState = &inputAsm;
     ci.pTessellationState = nullptr;
@@ -208,7 +208,7 @@ GraphicsPipelineImpl::GraphicsPipelineImpl(
     ci.pMultisampleState = &multisample;
     ci.pColorBlendState = &colorBlend;
     ci.pDynamicState = &dynState;
-    ci.layout = desc.m_layout.Impl().m_pipeline_layout;
+    ci.layout = desc.m_layout.GetImpl()->m_pipeline_layout;
 
     VK_CALL(vkCreateGraphicsPipelines(dev.m_device, VK_NULL_HANDLE, 1, &ci,
                                       nullptr, &m_pipeline));

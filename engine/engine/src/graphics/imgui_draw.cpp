@@ -56,7 +56,7 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
 
 ImGuiRenderPass::~ImGuiRenderPass() {
     vkDeviceWaitIdle(m_device);
-    
+
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
@@ -68,7 +68,6 @@ ImGuiRenderPass::~ImGuiRenderPass() {
     vkDestroyRenderPass(m_device, m_render_pass, nullptr);
     VK_CALL(vkResetCommandPool(m_device, m_cmd_pool, 0));
     vkDestroyCommandPool(m_device, m_cmd_pool, nullptr);
-
 }
 
 void ImGuiRenderPass::Begin() {
@@ -156,7 +155,7 @@ void ImGuiRenderPass::initFramebuffers(const Device& device) {
         info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         info.renderPass = m_render_pass;
         info.attachmentCount = 1;
-        info.pAttachments = &view.Impl().m_view;
+        info.pAttachments = &view.GetImpl()->m_view;
         info.width = device.GetSwapchainImageInfo().m_extent.w;
         info.height = device.GetSwapchainImageInfo().m_extent.h;
         info.layers = 1;
@@ -203,21 +202,21 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.waitSemaphoreCount = 1;
         info.pWaitSemaphores =
-            &res.GetRenderFinishSemaphore(cur_frame_idx).Impl().m_semaphore;
+            &res.GetRenderFinishSemaphore(cur_frame_idx).GetImpl()->m_semaphore;
         info.pWaitDstStageMask = &wait_stage;
         info.commandBufferCount = 1;
         info.pCommandBuffers = &cmd;
         info.signalSemaphoreCount = 1;
         info.pSignalSemaphores =
             &res.GetImGuiRenderFinishSemaphore(cur_frame_idx)
-                 .Impl()
-                 .m_semaphore;
+                 .GetImpl()
+                 ->m_semaphore;
 
         VK_CALL(vkEndCommandBuffer(cmd));
         VK_CALL(vkQueueSubmit(device.Impl().m_graphics_queue, 1, &info,
-                              res.GetFence(cur_frame_idx).Impl().m_fence));
+                              res.GetFence(cur_frame_idx).GetImpl()->m_fence));
     }
-    
+
     encoder.GetImpl().PendingDelete();
 }
 

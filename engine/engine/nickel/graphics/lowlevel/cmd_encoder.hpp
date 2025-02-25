@@ -1,16 +1,15 @@
 ﻿#pragma once
-#include "nickel/graphics/lowlevel/framebuffer.hpp"
-#include "nickel/graphics/lowlevel/bind_group.hpp"
-#include "nickel/graphics/lowlevel/buffer.hpp"
-#include "nickel/graphics/lowlevel/cmd.hpp"
-#include "nickel/graphics/lowlevel/graphics_pipeline.hpp"
-#include "nickel/graphics/lowlevel/image.hpp"
 #include "nickel/common/dllexport.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/common/math/smatrix.hpp"
-#include <span>
-
 #include "nickel/common/memory/memory.hpp"
+#include "nickel/graphics/lowlevel/bind_group.hpp"
+#include "nickel/graphics/lowlevel/buffer.hpp"
+#include "nickel/graphics/lowlevel/cmd.hpp"
+#include "nickel/graphics/lowlevel/framebuffer.hpp"
+#include "nickel/graphics/lowlevel/graphics_pipeline.hpp"
+#include "nickel/graphics/lowlevel/image.hpp"
+#include <span>
 
 namespace nickel::graphics {
 
@@ -81,11 +80,14 @@ private:
 
     struct SetPushConstantCmd {
         Flags<ShaderStage> m_stage;
-        char m_data[128]{}; // NOTE: temporary store datas
+        char m_data[128]{};  // NOTE: temporary store datas
         uint32_t m_offset{};
         uint32_t m_size{};
 
-        operator bool() const noexcept { return m_size != 0;; }
+        operator bool() const noexcept {
+            return m_size != 0;
+            ;
+        }
     };
 
     struct BindVertexBufferCmd {
@@ -209,9 +211,9 @@ public:
     explicit CommandEncoder(CommandEncoderImpl& cmd);
 
     CopyEncoder BeginCopy();
-    RenderPassEncoder BeginRenderPass(
-        const RenderPass&, const Framebuffer& fbo, const Rect& render_area,
-        std::span<ClearValue> clear_values);
+    RenderPassEncoder BeginRenderPass(const RenderPass&, const Framebuffer& fbo,
+                                      const Rect& render_area,
+                                      std::span<ClearValue> clear_values);
 
     Command Finish();
 

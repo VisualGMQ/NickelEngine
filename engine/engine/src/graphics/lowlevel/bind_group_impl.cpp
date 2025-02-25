@@ -58,7 +58,7 @@ struct WriteDescriptorHelper final {
         : m_slot{slot}, m_write_info{write_info} {}
 
     void operator()(const BindGroup::BufferBinding& binding) const {
-        if (binding.m_buffer.Impl().Size() == 0) {
+        if (binding.m_buffer.GetImpl()->Size() == 0) {
             LOGW("m_buffer m_binding m_size == 0");
             return;
         }
@@ -67,14 +67,15 @@ struct WriteDescriptorHelper final {
 
         VkDescriptorBufferInfo buffer_info{};
 
-        auto& buffer_impl = binding.m_buffer.Impl();
-        buffer_info.buffer = buffer_impl.m_buffer;
+        auto buffer_impl = binding.m_buffer.GetImpl();
+        buffer_info.buffer = buffer_impl->m_buffer;
         buffer_info.offset = binding.m_offset ? binding.m_offset.value() : 0;
         buffer_info.range =
-            binding.m_size ? binding.m_size.value() : buffer_impl.Size();
+            binding.m_size ? binding.m_size.value() : buffer_impl->Size();
 
         write_info.descriptorCount = 1;
-        write_info.descriptorType = cvtBufferType2DescriptorType(binding.m_type);
+        write_info.descriptorType =
+            cvtBufferType2DescriptorType(binding.m_type);
         write_info.dstSet = VK_NULL_HANDLE;
         write_info.dstArrayElement = 0;
         write_info.pBufferInfo = &m_write_info.RecordBufferInfo(buffer_info);
@@ -88,7 +89,7 @@ struct WriteDescriptorHelper final {
         write_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
         VkDescriptorImageInfo image_info{};
-        image_info.sampler = binding.m_sampler.Impl().m_sampler;
+        image_info.sampler = binding.m_sampler.GetImpl()->m_sampler;
 
         write_info.descriptorCount = 1;
         write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);
@@ -105,7 +106,7 @@ struct WriteDescriptorHelper final {
         write_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
         VkDescriptorImageInfo image_info{};
-        image_info.imageView = binding.m_view.Impl().m_view;
+        image_info.imageView = binding.m_view.GetImpl()->m_view;
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         write_info.descriptorCount = 1;
@@ -123,9 +124,9 @@ struct WriteDescriptorHelper final {
         write_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
         VkDescriptorImageInfo image_info{};
-        image_info.imageView = binding.m_view.Impl().m_view;
+        image_info.imageView = binding.m_view.GetImpl()->m_view;
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_info.sampler = binding.m_sampler.Impl().m_sampler;
+        image_info.sampler = binding.m_sampler.GetImpl()->m_sampler;
 
         write_info.descriptorCount = 1;
         write_info.pImageInfo = &m_write_info.RecordImageInfo(image_info);

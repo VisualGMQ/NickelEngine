@@ -7,6 +7,7 @@
 #include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
 #include "nickel/graphics/lowlevel/internal/fence_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/vk_call.hpp"
+#include "nickel/graphics/lowlevel/internal/semaphore_impl.hpp"
 
 namespace nickel::graphics {
 
@@ -444,11 +445,11 @@ void DeviceImpl::Submit(Command& cmd, std::span<Semaphore> wait_sems,
     std::vector<VkSemaphore> signal, wait;
     for (auto sem : wait_sems) {
         NICKEL_CONTINUE_IF_FALSE(sem);
-        wait.push_back(sem.Impl().m_semaphore);
+        wait.push_back(sem.GetImpl()->m_semaphore);
     }
     for (auto sem : signal_sems) {
         NICKEL_CONTINUE_IF_FALSE(sem);
-        signal.push_back(sem.Impl().m_semaphore);
+        signal.push_back(sem.GetImpl()->m_semaphore);
     }
 
     info.pWaitDstStageMask = &waitDstStage;
@@ -458,7 +459,7 @@ void DeviceImpl::Submit(Command& cmd, std::span<Semaphore> wait_sems,
     info.waitSemaphoreCount = wait.size();
 
     VK_CALL(vkQueueSubmit(m_graphics_queue, 1, &info,
-                          fence ? fence.Impl().m_fence : VK_NULL_HANDLE));
+                          fence ? fence.GetImpl()->m_fence : VK_NULL_HANDLE));
 
     cmd.Impl().ApplyLayoutTransitions();
 }
@@ -474,7 +475,7 @@ uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex(
 
     for (auto fence : fences) {
         NICKEL_CONTINUE_IF_FALSE(fence);
-        vk_fences.push_back(fence.Impl().m_fence);
+        vk_fences.push_back(fence.GetImpl()->m_fence);
     }
 
     VK_CALL(vkWaitForFences(m_device, vk_fences.size(), vk_fences.data(), true,
@@ -483,7 +484,7 @@ uint32_t DeviceImpl::WaitAndAcquireSwapchainImageIndex(
     m_cmd_pools[m_cur_frame]->Reset();
 
     vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX,
-                          sem ? sem.Impl().m_semaphore : VK_NULL_HANDLE,
+                          sem ? sem.GetImpl()->m_semaphore : VK_NULL_HANDLE,
                           VK_NULL_HANDLE, &m_cur_swapchain_image_index);
 
     return m_cur_swapchain_image_index;
@@ -505,7 +506,7 @@ void DeviceImpl::Present(std::span<Semaphore> semaphores) {
     std::vector<VkSemaphore> vk_sems;
     vk_sems.reserve(semaphores.size());
     for (auto& semaphore : semaphores) {
-        vk_sems.push_back(semaphore.Impl().m_semaphore);
+        vk_sems.push_back(semaphore.GetImpl()->m_semaphore);
     }
 
     VkPresentInfoKHR info{};

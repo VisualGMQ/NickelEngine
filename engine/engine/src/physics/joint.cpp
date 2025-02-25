@@ -4,48 +4,6 @@
 
 namespace nickel::physics {
 
-D6Joint::D6Joint(D6JointImpl* impl) : m_impl{impl} {}
-
-D6Joint::D6Joint(const D6Joint& o) : m_impl{o.m_impl} {
-    if (m_impl) {
-        m_impl->IncRefcount();
-    }
-}
-
-D6Joint::D6Joint(D6Joint&& o) noexcept : m_impl{o.m_impl} {
-    o.m_impl = nullptr;
-}
-
-D6Joint& D6Joint::operator=(const D6Joint& o) {
-    if (&o != this) {
-        if (m_impl) {
-            m_impl->DecRefcount();
-        }
-        m_impl = o.m_impl;
-        if (m_impl) {
-            m_impl->IncRefcount();
-        }
-    }
-    return *this;
-}
-
-D6Joint& D6Joint::operator=(D6Joint&& o) noexcept {
-    if (&o != this) {
-        if (o.m_impl) {
-            o.m_impl->DecRefcount();
-        }
-        m_impl = o.m_impl;
-        o.m_impl = nullptr;
-    }
-    return *this;
-}
-
-D6Joint::~D6Joint() {
-    if (m_impl) {
-        m_impl->DecRefcount();
-    }
-}
-
 void D6Joint::SetXMotion(Motion motion) {
     m_impl->SetXMotion(motion);
 }

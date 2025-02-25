@@ -10,16 +10,10 @@ class RigidActorConstImpl;
 class RigidDynamicImpl;
 class RigidStaticImpl;
 
-class RigidActor {
+class RigidActor: public ImplWrapper<RigidActorImpl> {
 public:
-    RigidActor() = default;
-    RigidActor(RigidActorImpl*);
-    RigidActor(const RigidActor&);
-    RigidActor(RigidActor&&) noexcept;
-    RigidActor& operator=(const RigidActor&);
-    RigidActor& operator=(RigidActor&&) noexcept;
-    virtual ~RigidActor();
-
+    using ImplWrapper::ImplWrapper;
+    
     void SetGlobalTransform(const Vec3& position, const Quat& rotation);
     Transform GetGlobalTransform() const;
 
@@ -31,12 +25,6 @@ public:
     void AttachShape(const Shape& shape);
     void DetachShape(const Shape& shape);
     uint32_t GetShapeNum() const;
-
-    RigidActorImpl* GetImpl();
-    const RigidActorImpl* GetImpl() const;
-
-private:
-    RigidActorImpl* m_impl{};
 };
 
 class RigidStatic : public RigidActor {
@@ -105,25 +93,13 @@ private:
     const RigidDynamicImpl* getUnderlyingImpl() const;
 };
 
-class RigidActorConst {
+class RigidActorConst: public ImplWrapper<RigidActorConstImpl> {
 public:
-    RigidActorConst() = default;
-    RigidActorConst(RigidActorConstImpl*);
-    RigidActorConst(const RigidActorConst&);
-    RigidActorConst(RigidActorConst&&) noexcept;
-    RigidActorConst& operator=(const RigidActorConst&);
-    RigidActorConst& operator=(RigidActorConst&&) noexcept;
-    virtual ~RigidActorConst();
-
+    using ImplWrapper::ImplWrapper;
+    
     Transform GetGlobalTransform() const;
 
     uint32_t GetShapeNum() const;
-
-    RigidActorConstImpl* GetImpl();
-    const RigidActorConstImpl* GetImpl() const;
-
-private:
-    RigidActorConstImpl* m_impl{};
 };
 
 

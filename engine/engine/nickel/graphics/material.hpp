@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "nickel/graphics/lowlevel/bind_group.hpp"
 #include "nickel/common/math/math.hpp"
+#include "nickel/graphics/lowlevel/bind_group.hpp"
 
 namespace nickel::graphics {
 struct BufferView {
@@ -22,18 +22,7 @@ struct PBRParameters {
 
 class Material3DImpl;
 
-struct Material3D final {
-    Material3D(Material3DImpl* impl);
-    Material3D(const Material3D&) noexcept;
-    Material3D(Material3D&&) noexcept;
-    Material3D& operator=(Material3D&&) noexcept;
-    Material3D& operator=(const Material3D&) noexcept;
-    ~Material3D();
-
-    Material3DImpl* GetImpl();
-    const Material3DImpl* GetImpl() const;
-
-private:
-    Material3DImpl* m_impl{};
+struct Material3D final : public ImplWrapper<Material3DImpl> {
+    using ImplWrapper::ImplWrapper;
 };
-}
+}  // namespace nickel::graphics

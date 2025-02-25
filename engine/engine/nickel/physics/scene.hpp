@@ -67,21 +67,11 @@ struct QueryFilterCallback {
                                     const RigidActorConst&) = 0;
 };
 
-class Scene {
+class Scene: public ImplWrapper<SceneImpl> {
 public:
-    Scene(SceneImpl*);
-    Scene(const Scene&);
-    Scene(Scene&&) noexcept;
-    Scene& operator=(const Scene&);
-    Scene& operator=(Scene&&) noexcept;
-    ~Scene();
-
+    using ImplWrapper::ImplWrapper;
+    
     void Simulate(float delta_time) const;
-
-    operator bool() const;
-
-    const SceneImpl* GetImpl() const;
-    SceneImpl* GetImpl();
 
     bool Raycast(const Vec3& origin, const Vec3& unit_dir, float distance,
                  RaycastHitCallback& hit_callback,
@@ -99,9 +89,6 @@ public:
                  OverlapHitCallback& hit_callback,
                  const QueryFilterData& filter_data,
                  QueryFilterCallback* filter_callback = nullptr);
-
-private:
-    SceneImpl* m_impl{};
 };
 
 }  // namespace nickel::physics

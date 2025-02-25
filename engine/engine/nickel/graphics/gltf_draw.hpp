@@ -1,5 +1,5 @@
 #pragma once
-#include "mesh.hpp"
+#include "nickel/graphics/mesh.hpp"
 #include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/graphics/lowlevel/device.hpp"

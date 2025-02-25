@@ -194,7 +194,7 @@ void BufferImpl::BuffData(void* data, size_t size, size_t offset) {
 
     CommandEncoder encoder = m_device.CreateCommandEncoder();
     CopyEncoder copy_encoder = encoder.BeginCopy();
-    copy_encoder.copyBufferToBuffer(buffer.Impl(), 0, *this, offset, size);
+    copy_encoder.copyBufferToBuffer(*buffer.GetImpl(), 0, *this, offset, size);
     copy_encoder.End();
     Command cmd = encoder.Finish();
 
