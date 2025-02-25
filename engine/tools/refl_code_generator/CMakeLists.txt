@@ -1,0 +1,4 @@
+add_executable(refl_code_generator)
+target_sources(refl_code_generator PRIVATE main.cpp)
+target_compile_features(refl_code_generator PRIVATE cxx_std_20)
+target_link_libraries(refl_code_generator PRIVATE tree-sitter tree-sitter-cpp tree-sitter-cpp_c_binding)

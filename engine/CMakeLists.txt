@@ -6,6 +6,7 @@ project(NickelEngine
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(NICKEL_TESTS "build tests" OFF)
+option(NICKEL_TOOLS "build tools" ON)
 
 set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -20,6 +21,10 @@ include(cmake/target_category_helper.cmake)
 include(cmake/compile_shader.cmake)
 
 add_subdirectory(engine)
+
+if (NICKEL_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 if (NICKEL_TESTS)
     enable_testing()
