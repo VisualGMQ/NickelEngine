@@ -17,7 +17,15 @@ NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.c
 
 ## How To Build
 
-使用CMake进行编译（非安卓平台在`engine`目录下执行：）
+需要`Python3`
+
+先安装`Python3`依赖库：
+
+```bash
+pip install -r .\tools\cpp_parser\requirements.txt
+```
+
+然后使用CMake进行编译（非安卓平台在`engine`目录下执行：）
 
 ```bash
 cmake --preset=default

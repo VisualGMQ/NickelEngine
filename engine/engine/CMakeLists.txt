@@ -91,3 +91,12 @@ else()
 endif()
 
 add_subdirectory(main_entry)
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+add_custom_command(TARGET ${NICKEL_ENGINE_NAME}
+    PRE_BUILD
+    COMMAND Python3::Interpreter tools/refl_code_generator/parser.py
+    COMMENT "parser cpp headers and generate reflection codes..."
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    VERBATIM)
