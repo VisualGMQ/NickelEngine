@@ -13,7 +13,7 @@ public:
     Transform m_transform;
 
     physics::RigidActor m_rigid_actor;
-    graphics::GPUMesh m_model;
+    graphics::Mesh m_model;
 
 private:
     Transform m_global_transform;

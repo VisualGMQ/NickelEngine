@@ -15,27 +15,22 @@ struct Primitive final {
     std::optional<uint32_t> m_material;
 };
 
-struct GPUMesh final {
+struct Mesh final {
     friend class GLTFLoader;
-    friend class Scene;
-    
+    friend class GLTFModelImpl;
+
     std::string m_name;
     Transform m_transform;
     std::vector<Primitive> m_primitives;
-    std::vector<std::unique_ptr<GPUMesh>> m_children;
+    std::vector<std::unique_ptr<Mesh>> m_children;
 
     Mat44 GetModelMat() const;
-    
+
 private:
     Transform m_global_transform;
-};
-
-struct Scene final {
-    std::vector<std::unique_ptr<GPUMesh>> m_nodes;
 
     void updateTransform(const Transform&);
-
-private:
-    void preorderGPUMesh(const Transform& parent_transform, GPUMesh& mesh);
+    void preorderGPUMesh(const Transform& parent_transform, Mesh& mesh);
 };
-}
+
+}  // namespace nickel::graphics

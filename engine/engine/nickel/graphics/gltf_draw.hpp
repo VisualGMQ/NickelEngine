@@ -38,7 +38,7 @@ private:
     void initBindGroupLayout(Device& device);
 
     void visitGPUMesh(RenderPassEncoder& encoder, GLTFModelImpl& model,
-                      GPUMesh& mesh);
+                      Mesh& mesh);
 };
 
 }  // namespace nickel::graphics

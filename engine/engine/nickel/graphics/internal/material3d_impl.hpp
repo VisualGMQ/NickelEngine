@@ -6,6 +6,8 @@
 
 namespace nickel::graphics {
 
+class GLTFManagerImpl;
+
 class Material3DImpl : public RefCountable {
 public:
     struct TextureInfo {
@@ -22,11 +24,16 @@ public:
     TextureInfo occlusionTexture;
     BindGroup bindGroup;
 
-    Material3DImpl() = default;
+    Material3DImpl(GLTFManagerImpl*);
     Material3DImpl(Material3D&&) = delete;
     Material3DImpl& operator=(Material3DImpl&&) = delete;
     Material3DImpl(const Material3DImpl&) = delete;
     Material3DImpl& operator=(const Material3DImpl&) = delete;
+
+    void DecRefcount() override;
+
+private:
+    GLTFManagerImpl* m_mgr;
 };
 
 }  // namespace nickel::graphics

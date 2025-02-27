@@ -39,7 +39,6 @@ public:
     
 private:
     nickel::graphics::GLTFModel m_model;
-    nickel::graphics::GLTFModel m_model2;
 
     void logicUpdate() {
         auto& ctx = nickel::Context::GetInst();

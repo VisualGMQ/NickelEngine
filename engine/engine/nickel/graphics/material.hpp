@@ -14,7 +14,7 @@ struct BufferView {
     }
 };
 
-struct PBRParameters {
+struct alignas(sizeof(float)) PBRParameters {
     Vec4 m_base_color;
     float m_metallic = 1.0f;
     float m_roughness = 1.0f;

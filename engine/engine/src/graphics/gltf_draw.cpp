@@ -52,11 +52,7 @@ void GLTFRenderPass::ApplyDrawCall(RenderPassEncoder& encoder, bool wireframe) {
     for (auto& model : m_models) {
         GLTFModelImpl* impl = model.GetImpl();
 
-        for (auto& scene : impl->scenes) {
-            for (auto& node : scene.m_nodes) {
-                visitGPUMesh(encoder, *model.GetImpl(), *node);
-            }
-        }
+        visitGPUMesh(encoder, *model.GetImpl(), *impl->m_mesh);
     }
 }
 
@@ -304,9 +300,10 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
 }
 
 void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
-                                  GLTFModelImpl& model, GPUMesh& mesh) {
+                                  GLTFModelImpl& model, Mesh& mesh) {
+    auto& gpu_resource = model.m_resource.GetImpl()->m_gpu_resource;
     for (auto& prim : mesh.m_primitives) {
-        auto& mtl = model.materials[prim.m_material.value()];
+        auto& mtl = gpu_resource.materials[prim.m_material.value()];
 
         encoder.SetPushConstant(ShaderStage::Vertex, mesh.GetModelMat().Ptr(),
                                 0, sizeof(Mat44));
@@ -316,31 +313,31 @@ void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
         // position
         auto& pos_buffer_view = prim.m_pos_buf_view;
         encoder.BindVertexBuffer(
-            0, model.dataBuffers[pos_buffer_view.m_buffer.value()],
+            0, gpu_resource.dataBuffers[pos_buffer_view.m_buffer.value()],
             pos_buffer_view.m_offset);
 
         // uv
         auto& uv_buffer_view = prim.m_uv_buf_view;
         encoder.BindVertexBuffer(
-            1, model.dataBuffers[uv_buffer_view.m_buffer.value()],
+            1, gpu_resource.dataBuffers[uv_buffer_view.m_buffer.value()],
             uv_buffer_view.m_offset);
 
         // normal
         auto& normal_buffer_view = prim.m_norm_buf_view;
         encoder.BindVertexBuffer(
-            2, model.dataBuffers[normal_buffer_view.m_buffer.value()],
+            2, gpu_resource.dataBuffers[normal_buffer_view.m_buffer.value()],
             normal_buffer_view.m_offset);
 
         // tangent
         auto& tangent_buffer_view = prim.m_tan_buf_view;
         encoder.BindVertexBuffer(
-            3, model.dataBuffers[tangent_buffer_view.m_buffer.value()],
+            3, gpu_resource.dataBuffers[tangent_buffer_view.m_buffer.value()],
             tangent_buffer_view.m_offset);
 
         if (prim.m_indices_buf_view) {
             auto& indices_buffer_view = prim.m_indices_buf_view;
             encoder.BindIndexBuffer(
-                model.dataBuffers[indices_buffer_view.m_buffer.value()],
+                gpu_resource.dataBuffers[indices_buffer_view.m_buffer.value()],
                 prim.m_index_type, indices_buffer_view.m_offset);
             encoder.DrawIndexed(indices_buffer_view.m_count, 1, 0, 0, 0);
         } else {
