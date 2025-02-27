@@ -52,7 +52,8 @@ bool GLTFManagerImpl::Load(const Path& filename,
         } else {
             root_model_impl->m_name = gltf_model.scenes[0].name;
         }
-        m_models[pure_filename.ToString()] = root_model;
+        m_models[pure_filename.ToString()] = root_model_impl;
+        return true;
     } else {
         for (auto& mesh : load_data.m_meshes) {
             GLTFModelImpl* model = m_model_allocator.Allocate(this);
@@ -68,9 +69,6 @@ bool GLTFManagerImpl::Load(const Path& filename,
         }
         return true;
     }
-
-    LOGE("{} load failed");
-    return false;
 }
 
 GLTFModel GLTFManagerImpl::Find(const std::string& name) {
@@ -89,7 +87,7 @@ void GLTFManagerImpl::GC() {
 
 void GLTFManagerImpl::Remove(GLTFModelImpl& impl) {
     for (auto it = m_models.begin(); it != m_models.end(); it++) {
-        if (it->second.GetImpl() == &impl) {
+        if (it->second == &impl) {
             m_models.erase(it);
             return;
         }
@@ -103,8 +101,8 @@ void GLTFManagerImpl::preorderNode(const tinygltf::Model& gltf_model,
                                    GLTFModelImpl& parent_model) {
     GLTFModelImpl* model = m_model_allocator.Allocate(this);
     model->m_name = gltf_node.name;
+    model->m_transform = calcNodeTransform(gltf_node);
     if (gltf_node.mesh != -1) {
-        model->m_transform = calcNodeTransform(gltf_node);
         model->m_mesh = meshes[gltf_node.mesh];
         model->m_resource = resource;
     }

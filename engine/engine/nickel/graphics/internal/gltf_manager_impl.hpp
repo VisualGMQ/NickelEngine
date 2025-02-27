@@ -17,7 +17,7 @@ public:
     void GC();
     void Remove(GLTFModelImpl&);
 
-    std::unordered_map<std::string, GLTFModel> m_models;
+    std::unordered_map<std::string, GLTFModelImpl*> m_models;
 
     BlockMemoryAllocator<GLTFModelResourceImpl> m_model_resource_allocator;
     BlockMemoryAllocator<GLTFModelImpl> m_model_allocator;
