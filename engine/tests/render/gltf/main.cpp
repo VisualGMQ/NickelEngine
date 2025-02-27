@@ -16,7 +16,9 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-        m_model = mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        // m_model
+        mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        m_model = mgr.Find("CesiumMilkTruck");
     }
 
     void OnUpdate() override {
@@ -24,7 +26,7 @@ public:
         drawGrid();
         
         auto& ctx = nickel::Context::GetInst();
-        ctx.GetGraphicsContext().DrawModel(m_model);
+        ctx.GetGraphicsContext().DrawModel({}, m_model);
 
         
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();

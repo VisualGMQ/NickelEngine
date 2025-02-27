@@ -26,7 +26,7 @@ public:
     void SetClearColor(const Color& color);
     void SetDepthClearValue(float depth, uint32_t stencil);
 
-    void DrawModel(const GLTFModel& model);
+    void DrawModel(const Transform& transform, const GLTFModel& model);
 
     void EnableWireFrame(bool enable) const;
 

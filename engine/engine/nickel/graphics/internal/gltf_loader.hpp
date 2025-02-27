@@ -1,6 +1,6 @@
 #pragma once
-#include "nickel/graphics/internal/material3d_impl.hpp"
 #include "nickel/graphics/gltf.hpp"
+#include "nickel/graphics/internal/material3d_impl.hpp"
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/nickel.hpp"
 #include "tiny_gltf.h"
@@ -133,16 +133,22 @@ inline std::string ParseURI2Path(std::string_view str) {
     return path;
 }
 
+struct GLTFLoadData {
+    GLTFModelResource m_resource;
+    std::vector<Mesh> m_meshes;
+};
+
 class GLTFLoader {
 public:
-    GLTFModel Load(const Path& filename, const Adapter& adapter,
-                   GLTFManagerImpl& mgr);
+    explicit GLTFLoader(const tinygltf::Model& model);
+    GLTFLoadData Load(const Path& filename, const Adapter& adapter,
+                      GLTFManagerImpl& mgr);
 
 private:
-    tinygltf::Model m_gltf_model;
+    const tinygltf::Model& m_gltf_model;
 
-    GLTFModel loadGLTF(const Path& filename, const Adapter& adapter,
-                       GLTFManagerImpl& mgr, TextureManager& texture_mgr);
+    GLTFLoadData loadGLTF(const Path& filename, const Adapter& adapter,
+                          GLTFManagerImpl& mgr, TextureManager& texture_mgr);
 
     Material3DImpl::TextureInfo parseTextureInfo(int idx,
                                                  GLTFModelResourceImpl& model);
@@ -175,8 +181,8 @@ private:
     void pushSamplerBindingPoint(BindGroup::Descriptor& desc,
                                  const Sampler& sampler, uint32_t slot);
 
-    void preorderNodes(Device device, const tinygltf::Node& node,
-                       GLTFModelResourceImpl& model, Mesh* parent);
+    Mesh createMesh(Device device, const tinygltf::Mesh& node,
+                    GLTFManagerImpl* mgr, GLTFModelResourceImpl& model);
 
     Primitive recordPrimInfo(std::vector<unsigned char>& data_buffer,
                              uint32_t buffer_idx,
@@ -194,6 +200,9 @@ private:
         view.m_buffer = buffer_idx;
         return view;
     }
+
+    void cherryPickMeshNodes(Mesh& mesh,
+                             std::vector<std::unique_ptr<Mesh>>& out_meshes);
 };
 
 }  // namespace nickel::graphics

@@ -18,30 +18,18 @@ private:
 
 class GLTFModelImpl final : public RefCountable {
 public:
-    GLTFModelImpl(GLTFManagerImpl* mgr, GLTFModelResource&& resource,
-                  std::unique_ptr<Mesh>&& mesh);
-
-    void Move(const Vec3& offset);
-    void Scale(const Vec3& delta);
-    void Rotate(const Quat& delta);
-
-    void MoveTo(const Vec3& position);
-    void ScaleTo(const Vec3& scale);
-    void RotateTo(const Quat& q);
-
-    void UpdateTransform();
+    GLTFModelImpl(GLTFManagerImpl* mgr);
 
     void DecRefcount() override;
 
-    // TODO remove unique_ptr
-    std::unique_ptr<Mesh> m_mesh;
+    std::string m_name;
+    Mat44 m_transform = Mat44::Identity();
+    Mesh m_mesh;
+    std::vector<GLTFModel> m_children;
     GLTFModelResource m_resource;
 
 private:
-    bool m_should_update_transform{false};
     GLTFManagerImpl* m_mgr{};
-
-    void tryUpdateSceneTransform();
 };
 
 }  // namespace nickel::graphics

@@ -115,10 +115,11 @@ void ContextImpl::DrawTriangleList(std::span<Vertex> vertices,
     m_primitive_draw.DrawTriangleList(vertices, indices);
 }
 
-void ContextImpl::DrawModel(const GLTFModel& model) {
+void ContextImpl::DrawModel(const Transform& transform,
+                            const GLTFModel& model) {
     NICKEL_RETURN_IF_FALSE(ShouldRender());
-    
-    m_gltf_draw.RenderModel(model);
+
+    m_gltf_draw.RenderModel(transform, model);
 }
 
 void ContextImpl::SetClearColor(const Color& color) {

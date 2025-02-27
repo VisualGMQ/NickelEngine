@@ -4,32 +4,29 @@
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/graphics/internal/material3d_impl.hpp"
+#include "nickel/graphics/internal/mesh_impl.hpp"
 #include "nickel/graphics/internal/texture_impl.hpp"
 
 namespace nickel::graphics {
 
-GLTFModel GLTFLoader::Load(const Path& filename, const Adapter& adapter,
-                           GLTFManagerImpl& gltf_manager) {
+GLTFLoader::GLTFLoader(const tinygltf::Model& model) : m_gltf_model{model} {}
+
+GLTFLoadData GLTFLoader::Load(const Path& filename, const Adapter& adapter,
+                              GLTFManagerImpl& gltf_manager) {
     return loadGLTF(filename, adapter, gltf_manager,
                     nickel::Context::GetInst().GetTextureManager());
 }
 
-GLTFModel GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
-                               GLTFManagerImpl& gltf_manager,
-                               TextureManager& texture_mgr) {
+GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
+                                  GLTFManagerImpl& gltf_manager,
+                                  TextureManager& texture_mgr) {
     Device device = adapter.GetDevice();
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
-    if (!loader.LoadASCIIFromFile(&m_gltf_model, &err, &warn,
-                                  filename.ToString())) {
-        LOGE("load model from {} failed: \n\terr: {}\n\twarn: {}", filename,
-             err, warn);
-        return {};
-    }
 
     Path root_dir = filename.ParentPath();
-
-    GLTFModelResourceImpl* resource = gltf_manager.m_model_resource_allocator.Allocate(&gltf_manager);
+    GLTFLoadData load_data;
+    load_data.m_resource =
+        gltf_manager.m_model_resource_allocator.Allocate(&gltf_manager);
+    GLTFModelResourceImpl* resource = load_data.m_resource.GetImpl();
     resource->m_gpu_resource.textures.reserve(m_gltf_model.images.size());
     resource->m_gpu_resource.materials.reserve(m_gltf_model.materials.size());
 
@@ -64,7 +61,8 @@ GLTFModel GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
         resource->m_cpu_data.pbr_parameters.resize(pbr_parameter_offset +
                                                    pbr_parameter_size);
 
-        Material3DImpl* mtl3d = gltf_manager.m_mtl_allocator.Allocate(&gltf_manager);
+        Material3DImpl* mtl3d =
+            gltf_manager.m_mtl_allocator.Allocate(&gltf_manager);
 
         PBRParameters pbrParam;
 
@@ -129,14 +127,12 @@ GLTFModel GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
                 .GetBindGroupLayout());
     }
 
-    // NOTE: currently we only load the first scene
-    std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
-    for (auto& n : m_gltf_model.scenes[0].nodes) {
-        preorderNodes(device, m_gltf_model.nodes[n], *resource, mesh.get());
+    load_data.m_meshes.reserve(m_gltf_model.meshes.size());
+    for (auto& m : m_gltf_model.meshes) {
+        Mesh mesh = createMesh(device, m, &gltf_manager, *resource);
+        load_data.m_meshes.push_back(mesh);
     }
-
-    return GLTFModel{gltf_manager.m_model_allocator.Allocate(
-        &gltf_manager, GLTFModelResource{resource}, std::move(mesh))};
+    return load_data;
 }
 
 Material3DImpl::TextureInfo GLTFLoader::parseTextureInfo(
@@ -262,46 +258,26 @@ void GLTFLoader::pushSamplerBindingPoint(BindGroup::Descriptor& desc,
     desc.m_entries[slot] = entry;
 }
 
-void GLTFLoader::preorderNodes(Device device, const tinygltf::Node& node,
-                               GLTFModelResourceImpl& model, Mesh* parent) {
-    std::unique_ptr<Mesh> newNode = std::make_unique<Mesh>();
-    newNode->m_name = node.name;
-    newNode->m_transform = calcNodeTransform(node);
-    if (parent) {
-        newNode->m_global_transform =
-            parent->m_global_transform * newNode->m_transform;
-    } else {
-        newNode->m_global_transform = newNode->m_transform;
-    }
+Mesh GLTFLoader::createMesh(Device device, const tinygltf::Mesh& gltf_mesh,
+                            GLTFManagerImpl* mgr,
+                            GLTFModelResourceImpl& model) {
+    MeshImpl* newNode = mgr->m_mesh_allocator.Allocate(mgr);
+    newNode->m_name = gltf_mesh.name;
 
-    if (node.mesh != -1) {
-        std::vector<unsigned char> data_buffer;
-        auto& gltfMesh = m_gltf_model.meshes[node.mesh];
-        for (uint32_t i = 0; i < gltfMesh.primitives.size(); i++) {
-            auto prim = recordPrimInfo(data_buffer,
-                                       model.m_cpu_data.data_buffers.size(),
-                                       gltfMesh.primitives[i]);
-            newNode->m_primitives.emplace_back(prim);
-        }
-        model.m_cpu_data.data_buffers.push_back(data_buffer);
-        model.m_gpu_resource.dataBuffers.emplace_back(copyBuffer2GPU(
-            device, std::span{model.m_cpu_data.data_buffers.back()},
-            Flags{BufferUsage::Index} | BufferUsage::CopyDst |
-                BufferUsage::Vertex));
+    std::vector<unsigned char> data_buffer;
+    for (uint32_t i = 0; i < gltf_mesh.primitives.size(); i++) {
+        auto prim =
+            recordPrimInfo(data_buffer, model.m_cpu_data.data_buffers.size(),
+                           gltf_mesh.primitives[i]);
+        newNode->m_primitives.emplace_back(prim);
     }
+    model.m_cpu_data.data_buffers.push_back(data_buffer);
+    model.m_gpu_resource.dataBuffers.emplace_back(
+        copyBuffer2GPU(device, std::span{model.m_cpu_data.data_buffers.back()},
+                       Flags{BufferUsage::Index} | BufferUsage::CopyDst |
+                           BufferUsage::Vertex));
 
-    Mesh* final_parent_mesh{};
-    if (parent) {
-        final_parent_mesh =
-            parent->m_children.emplace_back(std::move(newNode)).get();
-    } else {
-        final_parent_mesh = newNode.get();
-    }
-
-    for (auto child : node.children) {
-        preorderNodes(device, m_gltf_model.nodes[child], model,
-                      final_parent_mesh);
-    }
+    return newNode;
 }
 
 Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,

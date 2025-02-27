@@ -15,22 +15,10 @@ struct Primitive final {
     std::optional<uint32_t> m_material;
 };
 
-struct Mesh final {
-    friend class GLTFLoader;
-    friend class GLTFModelImpl;
+struct MeshImpl;
 
-    std::string m_name;
-    Transform m_transform;
-    std::vector<Primitive> m_primitives;
-    std::vector<std::unique_ptr<Mesh>> m_children;
-
-    Mat44 GetModelMat() const;
-
-private:
-    Transform m_global_transform;
-
-    void updateTransform(const Transform&);
-    void preorderGPUMesh(const Transform& parent_transform, Mesh& mesh);
+struct Mesh final : public ImplWrapper<MeshImpl> {
+    using ImplWrapper::ImplWrapper;
 };
 
 }  // namespace nickel::graphics

@@ -4,6 +4,7 @@
 #include "nickel/common/macro.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/graphics/internal/material3d_impl.hpp"
+#include "nickel/graphics/internal/mesh_impl.hpp"
 #include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
@@ -31,10 +32,11 @@ GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res) {
                           res.m_render_pass);
 }
 
-void GLTFRenderPass::RenderModel(const GLTFModel& model) {
+void GLTFRenderPass::RenderModel(const Transform& transform,
+                                 const GLTFModel& model) {
     NICKEL_RETURN_IF_FALSE(model);
-    
-    m_models.push_back(model);
+
+    m_models.push_back({transform, model});
 }
 
 void GLTFRenderPass::ApplyDrawCall(RenderPassEncoder& encoder, bool wireframe) {
@@ -49,10 +51,9 @@ void GLTFRenderPass::ApplyDrawCall(RenderPassEncoder& encoder, bool wireframe) {
     encoder.SetPushConstant(ShaderStage::Vertex, camera.GetView().Ptr(),
                             sizeof(Mat44), sizeof(Mat44));
 
-    for (auto& model : m_models) {
+    for (auto& [transform, model] : m_models) {
         GLTFModelImpl* impl = model.GetImpl();
-
-        visitGPUMesh(encoder, *model.GetImpl(), *impl->m_mesh);
+        visitGPUMesh(encoder, transform.ToMat(), *impl);
     }
 }
 
@@ -300,53 +301,60 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
 }
 
 void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
-                                  GLTFModelImpl& model, Mesh& mesh) {
+                                  const Mat44& transform,
+                                  GLTFModelImpl& model) {
+    Mat44 model_mat = transform * model.m_transform;
     auto& gpu_resource = model.m_resource.GetImpl()->m_gpu_resource;
-    for (auto& prim : mesh.m_primitives) {
-        auto& mtl = gpu_resource.materials[prim.m_material.value()];
+    if (model.m_mesh) {
+        for (auto& prim : model.m_mesh.GetImpl()->m_primitives) {
+            auto& mtl = gpu_resource.materials[prim.m_material.value()];
 
-        encoder.SetPushConstant(ShaderStage::Vertex, mesh.GetModelMat().Ptr(),
-                                0, sizeof(Mat44));
+            encoder.SetPushConstant(ShaderStage::Vertex, model_mat.Ptr(), 0,
+                                    sizeof(Mat44));
 
-        encoder.SetBindGroup(0, mtl.GetImpl()->bindGroup);
+            encoder.SetBindGroup(0, mtl.GetImpl()->bindGroup);
 
-        // position
-        auto& pos_buffer_view = prim.m_pos_buf_view;
-        encoder.BindVertexBuffer(
-            0, gpu_resource.dataBuffers[pos_buffer_view.m_buffer.value()],
-            pos_buffer_view.m_offset);
+            // position
+            auto& pos_buffer_view = prim.m_pos_buf_view;
+            encoder.BindVertexBuffer(
+                0, gpu_resource.dataBuffers[pos_buffer_view.m_buffer.value()],
+                pos_buffer_view.m_offset);
 
-        // uv
-        auto& uv_buffer_view = prim.m_uv_buf_view;
-        encoder.BindVertexBuffer(
-            1, gpu_resource.dataBuffers[uv_buffer_view.m_buffer.value()],
-            uv_buffer_view.m_offset);
+            // uv
+            auto& uv_buffer_view = prim.m_uv_buf_view;
+            encoder.BindVertexBuffer(
+                1, gpu_resource.dataBuffers[uv_buffer_view.m_buffer.value()],
+                uv_buffer_view.m_offset);
 
-        // normal
-        auto& normal_buffer_view = prim.m_norm_buf_view;
-        encoder.BindVertexBuffer(
-            2, gpu_resource.dataBuffers[normal_buffer_view.m_buffer.value()],
-            normal_buffer_view.m_offset);
+            // normal
+            auto& normal_buffer_view = prim.m_norm_buf_view;
+            encoder.BindVertexBuffer(
+                2,
+                gpu_resource.dataBuffers[normal_buffer_view.m_buffer.value()],
+                normal_buffer_view.m_offset);
 
-        // tangent
-        auto& tangent_buffer_view = prim.m_tan_buf_view;
-        encoder.BindVertexBuffer(
-            3, gpu_resource.dataBuffers[tangent_buffer_view.m_buffer.value()],
-            tangent_buffer_view.m_offset);
+            // tangent
+            auto& tangent_buffer_view = prim.m_tan_buf_view;
+            encoder.BindVertexBuffer(
+                3,
+                gpu_resource.dataBuffers[tangent_buffer_view.m_buffer.value()],
+                tangent_buffer_view.m_offset);
 
-        if (prim.m_indices_buf_view) {
-            auto& indices_buffer_view = prim.m_indices_buf_view;
-            encoder.BindIndexBuffer(
-                gpu_resource.dataBuffers[indices_buffer_view.m_buffer.value()],
-                prim.m_index_type, indices_buffer_view.m_offset);
-            encoder.DrawIndexed(indices_buffer_view.m_count, 1, 0, 0, 0);
-        } else {
-            encoder.Draw(pos_buffer_view.m_count, 1, 0, 0);
+            if (prim.m_indices_buf_view) {
+                auto& indices_buffer_view = prim.m_indices_buf_view;
+                encoder.BindIndexBuffer(
+                    gpu_resource
+                        .dataBuffers[indices_buffer_view.m_buffer.value()],
+                    prim.m_index_type, indices_buffer_view.m_offset);
+                encoder.DrawIndexed(indices_buffer_view.m_count, 1, 0, 0, 0);
+            } else {
+                encoder.Draw(pos_buffer_view.m_count, 1, 0, 0);
+            }
         }
     }
 
-    for (auto& child : mesh.m_children) {
-        visitGPUMesh(encoder, model, *child);
+    for (auto& child : model.m_children) {
+        visitGPUMesh(encoder, model_mat, *child.GetImpl());
     }
 }
 

@@ -1,9 +1,9 @@
 #pragma once
-#include "nickel/graphics/mesh.hpp"
 #include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/graphics/lowlevel/device.hpp"
 #include "nickel/graphics/lowlevel/graphics_pipeline.hpp"
+#include "nickel/graphics/mesh.hpp"
 
 namespace nickel::graphics {
 
@@ -11,7 +11,7 @@ class GLTFRenderPass {
 public:
     GLTFRenderPass(Device device, CommonResource&);
 
-    void RenderModel(const GLTFModel&);
+    void RenderModel(const Transform&, const GLTFModel&);
     void ApplyDrawCall(RenderPassEncoder&, bool wireframe);
     bool NeedDraw() const noexcept;
 
@@ -20,11 +20,16 @@ public:
     BindGroupLayout GetBindGroupLayout();
 
 private:
+    struct GLTFModelData {
+        Transform m_transform;
+        GLTFModel m_model;
+    };
+
     GraphicsPipeline m_solid_pipeline;
     GraphicsPipeline m_line_frame_pipeline;
     PipelineLayout m_pipeline_layout;
     BindGroupLayout m_bind_group_layout;
-    std::vector<GLTFModel> m_models;
+    std::vector<GLTFModelData> m_models;
 
     GraphicsPipeline::Descriptor getPipelineDescTmpl(
         ShaderModule& vertex_shader, ShaderModule& frag_shader,
@@ -37,8 +42,8 @@ private:
     void initPipelineLayout(Device& device);
     void initBindGroupLayout(Device& device);
 
-    void visitGPUMesh(RenderPassEncoder& encoder, GLTFModelImpl& model,
-                      Mesh& mesh);
+    void visitGPUMesh(RenderPassEncoder& encoder, const Mat44& transform,
+                      GLTFModelImpl& model);
 };
 
 }  // namespace nickel::graphics

@@ -16,7 +16,8 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-        m_model = mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+         mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        m_model = mgr.Find("CesiumMilkTruck");
     }
 
     void OnUpdate() override {
@@ -26,7 +27,7 @@ public:
 
         auto& ctx = nickel::Context::GetInst();
 
-        ctx.GetGraphicsContext().DrawModel(m_model);
+        ctx.GetGraphicsContext().DrawModel({}, m_model);
         
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
@@ -46,13 +47,6 @@ private:
         auto& mouse = ctx.GetDeviceManager().GetMouse();
 
         NICKEL_RETURN_IF_FALSE(!mouse.IsRelativeMode());
-        
-        if (keyboard.GetKey(nickel::input::Key::W).IsPressing()) {
-            m_model.Move(nickel::Vec3{0, 0, 0.01});
-        }
-        if (keyboard.GetKey(nickel::input::Key::S).IsPressing()) {
-            m_model.Move(nickel::Vec3{0, 0, -0.01});
-        }
     }
     
     void updateCamera() {

@@ -22,7 +22,7 @@ public:
     void DrawLineStrip(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
                           std::span<uint32_t> indices);
-    void DrawModel(const GLTFModel& model);
+    void DrawModel(const Transform& transform, const GLTFModel& model);
 
     void SetClearColor(const Color& color);
     void SetDepthClearValue(float depth, uint32_t stencil);

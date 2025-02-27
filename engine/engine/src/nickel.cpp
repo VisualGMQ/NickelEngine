@@ -152,7 +152,6 @@ void Context::Update() {
     // TODO: use sub-step simulation
     m_physics->Update(0.3);
     
-    m_gltf_mgr->Update();
     m_graphics_ctx->EndFrame();
     
     m_physics->GC();
