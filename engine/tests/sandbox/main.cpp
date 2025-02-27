@@ -16,8 +16,27 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-         mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
-        m_model = mgr.Find("CesiumMilkTruck");
+        mgr.Load(
+            "tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        auto& root_go = ctx.GetCurrentLevel().GetRootGO();
+
+        {
+            nickel::GameObject go;
+            go.m_model = mgr.Find("CesiumMilkTruck");
+            auto& physics_ctx = ctx.GetPhysicsContext();
+            go.m_rigid_actor = nickel::physics::RigidActor{
+                physics_ctx.CreateRigidDynamic(nickel::Vec3{}, nickel::Quat{})};
+            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
+            auto shape = physics_ctx.CreateShape(
+                nickel::physics::BoxGeometry{
+                    nickel::Vec3{1.5, 1.5, 3}
+            },
+                material);
+            shape.SetLocalPose({0, 1.5, 0}, {});
+            go.m_rigid_actor.AttachShape(shape);
+            physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
+            root_go.m_children.push_back(go);
+        }
     }
 
     void OnUpdate() override {
@@ -28,7 +47,7 @@ public:
         auto& ctx = nickel::Context::GetInst();
 
         ctx.GetGraphicsContext().DrawModel({}, m_model);
-        
+
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
         if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
@@ -37,7 +56,7 @@ public:
 
         ImGui::ShowDemoWindow();
     }
-    
+
 private:
     nickel::graphics::GLTFModel m_model;
 
@@ -47,8 +66,23 @@ private:
         auto& mouse = ctx.GetDeviceManager().GetMouse();
 
         NICKEL_RETURN_IF_FALSE(!mouse.IsRelativeMode());
+
+        nickel::GameObject& go =
+            ctx.GetCurrentLevel().GetRootGO().m_children[0];
+        if (keyboard.GetKey(nickel::input::Key::W).IsPressing()) {
+            go.m_transform.p.z += 0.005f;
+        }
+        if (keyboard.GetKey(nickel::input::Key::S).IsPressing()) {
+            go.m_transform.p.z -= 0.005f;
+        }
+        if (keyboard.GetKey(nickel::input::Key::A).IsPressing()) {
+            go.m_transform.p.x += 0.005f;
+        }
+        if (keyboard.GetKey(nickel::input::Key::D).IsPressing()) {
+            go.m_transform.p.x -= 0.005f;
+        }
     }
-    
+
     void updateCamera() {
         auto& ctx = nickel::Context::GetInst();
         nickel::FlyCamera& camera =
@@ -109,7 +143,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(i, 0, -HalfLineNum),
                                          color}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
 
         for (int i = -HalfLineNum; i <= HalfLineNum; i++) {
@@ -122,7 +156,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(-HalfLineNum, 0, i),
                                          color}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
 
         // draw axis
@@ -133,7 +167,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(HalfLineNum, 0, 0),
                                          nickel::Color{1, 0, 0, 1}}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
         {
             nickel::graphics::Vertex vertices[] = {
@@ -142,7 +176,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(0, HalfLineNum, 0),
                                          nickel::Color{0, 1, 0, 1}}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
         {
             nickel::graphics::Vertex vertices[] = {
@@ -151,7 +185,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(0, 0, HalfLineNum),
                                          nickel::Color{0, 0, 1, 1}}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
     }
 };

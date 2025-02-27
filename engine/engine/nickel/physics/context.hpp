@@ -28,6 +28,8 @@ public:
     Shape CreateShape(const TriangleMeshGeometry&, const Material&);
     Shape CreateShape(const PlaneGeometry&, const Material&);
 
+    Scene GetMainScene();
+
     void Update(float delta_time);
     void GC();
 

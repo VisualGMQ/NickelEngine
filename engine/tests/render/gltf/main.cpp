@@ -102,7 +102,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(i, 0, -HalfLineNum),
                                          color}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
 
         for (int i = -HalfLineNum; i <= HalfLineNum; i++) {
@@ -115,7 +115,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(-HalfLineNum, 0, i),
                                          color}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
 
         // draw axis
@@ -126,7 +126,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(HalfLineNum, 0, 0),
                                          nickel::Color{1, 0, 0, 1}}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
         {
             nickel::graphics::Vertex vertices[] = {
@@ -135,7 +135,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(0, HalfLineNum, 0),
                                          nickel::Color{0, 1, 0, 1}}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
         {
             nickel::graphics::Vertex vertices[] = {
@@ -144,7 +144,7 @@ private:
                 nickel::graphics::Vertex{nickel::Vec3(0, 0, HalfLineNum),
                                          nickel::Color{0, 0, 1, 1}}
             };
-            ctx.DrawLineStrip(vertices);
+            ctx.DrawLineList(vertices);
         }
     }
 };

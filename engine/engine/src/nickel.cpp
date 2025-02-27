@@ -33,6 +33,12 @@ Context::Context() {
 
     LOGI("init physics context");
     m_physics = std::make_unique<physics::Context>();
+
+    LOGI("init debug drawer");
+    m_debug_drawer = std::make_unique<graphics::DebugDrawer>();
+
+    LOGI("init game level");
+    m_level = std::make_unique<Level>();
 }
 
 Context::~Context() {
@@ -40,6 +46,11 @@ Context::~Context() {
         m_application->OnQuit();
     }
     m_application.reset();
+
+    m_level.reset();
+
+    LOGI("release debug drawer");
+    m_debug_drawer.reset();
 
     LOGI("release physics context");
     m_physics.reset();
@@ -131,6 +142,30 @@ graphics::GLTFManager& Context::GetGLTFManager() {
     return *m_gltf_mgr;
 }
 
+Level& Context::GetCurrentLevel() {
+    return *m_level;
+}
+
+const Level& Context::GetCurrentLevel() const {
+    return *m_level;
+}
+
+const graphics::DebugDrawer& Context::GetDebugDrawer() const {
+    return *m_debug_drawer;
+}
+
+graphics::DebugDrawer& Context::GetDebugDrawer() {
+    return *m_debug_drawer;
+}
+
+physics::Context& Context::GetPhysicsContext() {
+    return *m_physics;
+}
+
+const physics::Context& Context::GetPhysicsContext() const {
+    return *m_physics;
+}
+
 Camera& Context::GetCamera() {
     return *m_camera;
 }
@@ -146,14 +181,15 @@ void Context::Update() {
     if (app) {
         app->OnUpdate();
     }
+    m_level->Update();
 
     GetDeviceManager().Update();
 
     // TODO: use sub-step simulation
-    m_physics->Update(0.3);
-    
+    m_physics->Update(0.0001);
+
     m_graphics_ctx->EndFrame();
-    
+
     m_physics->GC();
     m_gltf_mgr->GC();
     m_texture_mgr->GC();

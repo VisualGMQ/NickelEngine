@@ -53,6 +53,10 @@ Shape Context::CreateShape(const PlaneGeometry& g, const Material& mtl) {
     return m_impl->CreateShape(g, mtl);
 }
 
+Scene Context::GetMainScene() {
+    return m_impl->GetMainScene();
+}
+
 void Context::Update(float delta_time) {
     m_impl->Update(delta_time);
 }

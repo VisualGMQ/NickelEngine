@@ -123,7 +123,7 @@ void PrimitiveRenderPass::ApplyDrawCall(RenderPassEncoder& encoder,
     m_triangle_indices_buffer.m_elem_count = 0;
 }
 
-void PrimitiveRenderPass::DrawLineStrip(std::span<Vertex> vertices) {
+void PrimitiveRenderPass::DrawLineList(std::span<Vertex> vertices) {
     NICKEL_ASSERT(vertices.size() % 2 == 0);
 
     size_t size = vertices.size() * sizeof(Vertex);

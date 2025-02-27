@@ -93,7 +93,7 @@ public:
     BlockMemoryAllocator<RigidActorConstImpl> m_rigid_actor_const_allocator;
     BlockMemoryAllocator<MaterialImpl> m_material_allocator;
     BlockMemoryAllocator<ShapeImpl> m_shape_allocator;
-    BlockMemoryAllocator<ShapeImplConst> m_shape_const_allocator;
+    BlockMemoryAllocator<ShapeConstImpl> m_shape_const_allocator;
     BlockMemoryAllocator<D6JointImpl> m_joint_allocator;
 
 private:

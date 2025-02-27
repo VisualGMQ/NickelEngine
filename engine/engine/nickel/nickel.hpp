@@ -10,9 +10,11 @@
 #include "nickel/video/window.hpp"
 
 #include "imgui.h"
+#include "misc/Level.hpp"
 #include "misc/cpp/imgui_stdlib.h"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/physics/context.hpp"
+#include "nickel/graphics/debug_draw.hpp"
 
 union SDL_Event;
 
@@ -44,6 +46,12 @@ public:
     const graphics::TextureManager& GetTextureManager() const;
     const graphics::GLTFManager& GetGLTFManager() const;
     graphics::GLTFManager& GetGLTFManager();
+    Level& GetCurrentLevel();
+    const Level& GetCurrentLevel() const;
+    const graphics::DebugDrawer& GetDebugDrawer() const;
+    graphics::DebugDrawer& GetDebugDrawer();
+    physics::Context& GetPhysicsContext();
+    const physics::Context& GetPhysicsContext() const;
     Camera& GetCamera();
 
     void EnableRender(bool);
@@ -59,10 +67,12 @@ private:
     std::unique_ptr<graphics::Context> m_graphics_ctx;
     std::unique_ptr<StorageManager> m_storage_mgr;
     std::unique_ptr<physics::Context> m_physics;
+    std::unique_ptr<graphics::DebugDrawer> m_debug_drawer;
 
     input::DeviceManager m_device_mgr;
     std::unique_ptr<graphics::TextureManager> m_texture_mgr;
     std::unique_ptr<graphics::GLTFManager> m_gltf_mgr;
+    std::unique_ptr<Level> m_level;
 
     void initCamera() {
         auto window_size = m_window->GetSize();

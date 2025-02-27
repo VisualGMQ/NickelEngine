@@ -29,8 +29,8 @@ void Context::EndFrame() {
     m_impl->EndFrame();
 }
 
-void Context::DrawLineStrip(std::span<Vertex> vertices) {
-    m_impl->DrawLineStrip(vertices);
+void Context::DrawLineList(std::span<Vertex> vertices) {
+    m_impl->DrawLineList(vertices);
 }
 
 void Context::DrawTriangleList(std::span<Vertex> vertices,

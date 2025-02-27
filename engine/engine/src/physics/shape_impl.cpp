@@ -8,7 +8,11 @@
 namespace nickel::physics {
 
 ShapeImpl::ShapeImpl(ContextImpl* ctx, physx::PxShape* shape)
-    : m_ctx{ctx}, m_shape{shape} {}
+    : m_ctx{ctx}, m_shape{shape} {
+    if (shape) {
+        shape->acquireReference();
+    }
+}
 
 void ShapeImpl::SetMaterials(std::span<Material> materials) {
     std::vector<physx::PxMaterial*> mtls;
@@ -30,30 +34,54 @@ void ShapeImpl::SetGeometry(const Geometry& g) {
 }
 
 void ShapeImpl::SetLocalPose(const Vec3& p, const Quat& q) {
-    m_shape->setLocalPose({Vec3ToPhysX(p), QuatToPhysX(q)});
+    if (m_shape->getReferenceCount() > 1) {
+        // very ugly hack
+        m_shape->release();
+        m_shape->setLocalPose({Vec3ToPhysX(p), QuatToPhysX(q)});
+        m_shape->acquireReference();
+    }
 }
 
 Transform ShapeImpl::GetLocalPose() const {
     return TransformFromPhysX(m_shape->getLocalPose());
 }
 
-void ShapeImpl::DecRefcount() {
-    RefCountable::DecRefcount();
-
-    if (Refcount() == 0) {
-        m_ctx->m_shape_allocator.MarkAsGarbage(this);
+void ShapeImpl::IncRefcount() {
+    if (m_shape) {
+        m_shape->acquireReference();
     }
 }
 
-ShapeImplConst::ShapeImplConst(ContextImpl* ctx, const physx::PxShape* shape)
+void ShapeImpl::DecRefcount() {
+    if (m_shape) {
+        auto refcount = m_shape->getReferenceCount();
+        m_shape->release();
+        if (refcount == 1) {
+            m_shape = nullptr;
+            m_ctx->m_shape_allocator.MarkAsGarbage(this);
+        }
+    }
+}
+
+uint32_t ShapeImpl::Refcount() {
+    if (m_shape) {
+        return m_shape->getReferenceCount();
+    }
+    return 0;
+}
+
+ShapeConstImpl::ShapeConstImpl(ContextImpl* ctx, const physx::PxShape* shape)
     : ShapeImpl{ctx, const_cast<physx::PxShape*>(shape)} {}
 
-void ShapeImplConst::DecRefcount() {
-    RefCountable::DecRefcount();
-
-    if (Refcount() == 0) {
-        m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
-    } 
+void ShapeConstImpl::DecRefcount() {
+    if (m_shape) {
+        auto refcount = m_shape->getReferenceCount();
+        m_shape->release();
+        if (refcount == 1) {
+            m_shape = nullptr;
+            m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
+        }
+    }
 }
 
 }  // namespace nickel::physics

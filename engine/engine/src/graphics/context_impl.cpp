@@ -102,10 +102,10 @@ void ContextImpl::EndFrame() {
                            device.GetSwapchainImageInfo().m_image_count;
 }
 
-void ContextImpl::DrawLineStrip(std::span<Vertex> vertices) {
+void ContextImpl::DrawLineList(std::span<Vertex> vertices) {
     NICKEL_RETURN_IF_FALSE(ShouldRender());
 
-    m_primitive_draw.DrawLineStrip(vertices);
+    m_primitive_draw.DrawLineList(vertices);
 }
 
 void ContextImpl::DrawTriangleList(std::span<Vertex> vertices,

@@ -24,7 +24,7 @@ ContextImpl::ContextImpl() {
     physx::PxSceneDesc desc{m_tolerances_scale};
     desc.gravity = Vec3ToPhysX(Vec3{0, -9.8f, 0});
     desc.frictionType = physx::PxFrictionType::ePATCH;
-    desc.solverType = physx::PxSolverType::eTGS;
+    desc.solverType = physx::PxSolverType::ePGS;
     desc.filterShader = physx::PxDefaultSimulationFilterShader;
 
     m_cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(4);
@@ -187,6 +187,7 @@ void ContextImpl::Update(float delta_time) {
 }
 
 Scene ContextImpl::GetMainScene() {
+    m_main_scene->IncRefcount();
     return Scene{m_main_scene};
 }
 

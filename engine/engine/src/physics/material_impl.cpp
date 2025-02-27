@@ -6,10 +6,16 @@
 namespace nickel::physics {
 
 MaterialImpl::MaterialImpl(ContextImpl* ctx, physx::PxMaterial* mtl)
-    : m_ctx{ctx}, m_mtl{mtl} {}
+    : m_ctx{ctx}, m_mtl{mtl} {
+    if (m_mtl) {
+        m_mtl->acquireReference();
+    }
+}
 
 MaterialImpl::~MaterialImpl() {
-    m_mtl->release();
+    if (m_mtl) {
+        m_mtl->release();
+    }
 }
 
 void MaterialImpl::IncRefcount() {
@@ -20,11 +26,12 @@ void MaterialImpl::IncRefcount() {
 
 void MaterialImpl::DecRefcount() {
     if (m_mtl) {
+        auto refcount = m_mtl->getReferenceCount();
         m_mtl->release();
-    }
-
-    if (Refcount() == 0) {
-        m_ctx->m_material_allocator.MarkAsGarbage(this);
+        if (refcount == 1) {
+            m_mtl = nullptr;
+            m_ctx->m_material_allocator.MarkAsGarbage(this);
+        }
     }
 }
 

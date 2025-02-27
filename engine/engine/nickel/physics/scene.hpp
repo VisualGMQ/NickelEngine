@@ -71,6 +71,7 @@ class Scene: public ImplWrapper<SceneImpl> {
 public:
     using ImplWrapper::ImplWrapper;
     
+    void AddRigidActor(RigidActor&);
     void Simulate(float delta_time) const;
 
     bool Raycast(const Vec3& origin, const Vec3& unit_dir, float distance,

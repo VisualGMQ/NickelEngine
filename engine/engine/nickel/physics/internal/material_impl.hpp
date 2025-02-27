@@ -1,6 +1,5 @@
 #pragma once
 
-#include "nickel/common/memory/refcountable.hpp"
 #include "nickel/physics/enums.hpp"
 #include "nickel/physics/internal/pch.hpp"
 
@@ -32,7 +31,7 @@ public:
     void setDampingCombineMode(CombineMode);
 
     physx::PxMaterial* m_mtl{};
-    
+
 private:
     ContextImpl* m_ctx{};
 };

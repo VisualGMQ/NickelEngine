@@ -9,9 +9,9 @@ inline physx::PxSphereGeometry Geometry2PhysX(const SphereGeometry& sphere) {
 }
 
 inline physx::PxBoxGeometry Geometry2PhysX(const BoxGeometry& box) {
-    return physx::PxBoxGeometry{box.m_half_extents.w * 0.5f,
-                                box.m_half_extents.h * 0.5f,
-                                box.m_half_extents.l * 0.5f};
+    return physx::PxBoxGeometry{box.m_half_extents.w,
+                                box.m_half_extents.h,
+                                box.m_half_extents.l};
 }
 
 inline physx::PxCapsuleGeometry Geometry2PhysX(const CapsuleGeometry& c) {

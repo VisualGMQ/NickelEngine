@@ -126,7 +126,7 @@ public:
                  const QueryFilterData& filter_data,
                  QueryFilterCallback* filter_callback = nullptr);
 
-    physx::PxScene* m_scene;
+    physx::PxScene* m_scene{};
 
 private:
     ContextImpl* m_ctx;

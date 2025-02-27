@@ -32,6 +32,19 @@ uint32_t RigidActorImpl::GetShapeNum() const {
     return m_actor->getNbShapes();
 }
 
+std::vector<Shape> RigidActorImpl::GetShapes() const {
+    std::vector<physx::PxShape*> physx_shapes;
+    physx_shapes.resize(m_actor->getNbShapes());
+    m_actor->getShapes(physx_shapes.data(), physx_shapes.size());
+
+    std::vector<Shape> shapes;
+    shapes.reserve(physx_shapes.size());
+    for (auto shape : physx_shapes) {
+        shapes.push_back(m_ctx->m_shape_allocator.Allocate(m_ctx, shape));
+    }
+    return shapes;
+}
+
 void RigidActorImpl::SetGlobalTransform(const Vec3& position,
                                         const Quat& rotation) {
     m_actor->setGlobalPose(

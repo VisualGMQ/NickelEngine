@@ -19,7 +19,7 @@ public:
     void BeginFrame();
     void EndFrame();
 
-    void DrawLineStrip(std::span<Vertex> vertices);
+    void DrawLineList(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
                           std::span<uint32_t> indices);
     void DrawModel(const Transform& transform, const GLTFModel& model);
