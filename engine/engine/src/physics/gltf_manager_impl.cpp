@@ -1,4 +1,5 @@
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
+#include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/internal/gltf_loader.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/graphics/internal/mesh_impl.hpp"
@@ -6,9 +7,40 @@
 
 namespace nickel::graphics {
 
+GLTFManagerImpl::GLTFManagerImpl(Device device, CommonResource* res)
+    : m_common_resource{res} {
+    {
+        Buffer::Descriptor desc;
+        desc.m_memory_type = MemoryType::GPULocal;
+        desc.m_usage = BufferUsage::Uniform;
+        desc.m_size = sizeof(PBRParameters);
+        PBRParameters param;
+        param.m_base_color = Vec4(1, 1, 1, 1);
+        param.m_metallic = 0.3;
+        param.m_roughness = 0.3;
+        m_default_pbr_param_buffer = device.CreateBuffer(desc);
+        m_default_pbr_param_buffer.BuffData(&param, sizeof(param), 0);
+    }
+
+    {
+        Material3D::Descriptor desc;
+        desc.basicTexture.image = res->m_white_image;
+        desc.basicTexture.sampler = res->m_default_sampler;
+        desc.normalTexture.image = res->m_default_normal_image;
+        desc.normalTexture.sampler = res->m_default_sampler;
+        desc.occlusionTexture.image = res->m_white_image;
+        desc.occlusionTexture.sampler = res->m_default_sampler;
+        desc.pbr_param_buffer = m_default_pbr_param_buffer;
+        desc.pbrParameters.m_offset = 0;
+        desc.pbrParameters.m_size = sizeof(PBRParameters);
+        desc.pbrParameters.m_count = 1;
+        m_default_material = m_mtl_allocator.Allocate(this, desc, layout);
+    }
+}
+
 GLTFManagerImpl::~GLTFManagerImpl() {
     m_models.clear();
-    
+
     m_model_allocator.FreeAll();
     m_mesh_allocator.FreeAll();
     m_model_resource_allocator.FreeAll();
@@ -37,6 +69,9 @@ bool GLTFManagerImpl::Load(const Path& filename,
         filename, nickel::Context::GetInst().GetGPUAdapter(), *this);
 
     Path pure_filename = filename.Filename().ReplaceExtension("");
+    Path parent_dir = filename.ParentPath();
+    std::string final_name = (parent_dir / pure_filename).ToString();
+    std::replace(final_name.begin(), final_name.end(), '\\', '/');
     if (load_config.m_combine_mesh) {
         // TODO: currently we only load one scene
         GLTFModel root_model = m_model_allocator.Allocate(this);
@@ -52,15 +87,14 @@ bool GLTFManagerImpl::Load(const Path& filename,
         } else {
             root_model_impl->m_name = gltf_model.scenes[0].name;
         }
-        m_models[pure_filename.ToString()] = root_model_impl;
+        m_models[final_name] = root_model_impl;
         return true;
     } else {
         for (auto& mesh : load_data.m_meshes) {
             GLTFModelImpl* model = m_model_allocator.Allocate(this);
             model->m_mesh = mesh;
             model->m_resource = load_data.m_resource;
-            model->m_name =
-                pure_filename.ToString() + "." + mesh.GetImpl()->m_name;
+            model->m_name = final_name + "." + mesh.GetImpl()->m_name;
             m_models[model->m_name] = model;
 
             if (m_models.contains(model->m_name)) {
@@ -101,7 +135,7 @@ void GLTFManagerImpl::preorderNode(const tinygltf::Model& gltf_model,
                                    GLTFModelImpl& parent_model) {
     GLTFModelImpl* model = m_model_allocator.Allocate(this);
     model->m_name = gltf_node.name;
-    model->m_transform = calcNodeTransform(gltf_node);
+    model->m_transform = CalcNodeTransform(gltf_node);
     if (gltf_node.mesh != -1) {
         model->m_mesh = meshes[gltf_node.mesh];
         model->m_resource = resource;
@@ -112,41 +146,6 @@ void GLTFManagerImpl::preorderNode(const tinygltf::Model& gltf_model,
         preorderNode(gltf_model, gltf_model.nodes[child], resource, meshes,
                      *parent_model.m_children.back().GetImpl());
     }
-}
-
-Mat44 GLTFManagerImpl::calcNodeTransform(const tinygltf::Node& node) {
-    auto cvtMat = [](const std::vector<double>& datas) {
-        Mat44 mat;
-        for (int i = 0; i < datas.size(); i++) {
-            mat.Ptr()[i] = datas[i];
-        }
-        return mat;
-    };
-
-    auto m = Mat44::Identity();
-    if (!node.matrix.empty()) {
-        m = cvtMat(node.matrix);
-    } else if (!node.scale.empty() || !node.translation.empty() ||
-               !node.rotation.empty()) {
-        m = Mat44::Identity();
-        if (!node.scale.empty()) {
-            m = CreateScale(Vec3(node.scale[0], node.scale[1], node.scale[2])) *
-                m;
-        }
-        if (!node.rotation.empty()) {
-            m = Quat(node.rotation[0], node.rotation[1], node.rotation[2],
-                     node.rotation[3])
-                    .ToMat() *
-                m;
-        }
-        if (!node.translation.empty()) {
-            m = CreateTranslation(Vec3(node.translation[0], node.translation[1],
-                                       node.translation[2])) *
-                m;
-        }
-    }
-
-    return m;
 }
 
 }  // namespace nickel::graphics

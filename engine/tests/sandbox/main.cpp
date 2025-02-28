@@ -18,11 +18,12 @@ public:
         auto& mgr = ctx.GetGLTFManager();
         mgr.Load(
             "tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        mgr.Load("engine/assets/models/unit_box/unit_box.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         {
             nickel::GameObject go;
-            go.m_model = mgr.Find("CesiumMilkTruck");
+            go.m_model = mgr.Find("engine/assets/models/unit_box/unit_box");
             auto& physics_ctx = ctx.GetPhysicsContext();
             go.m_rigid_actor = nickel::physics::RigidActor{
                 physics_ctx.CreateRigidDynamic(nickel::Vec3{}, nickel::Quat{})};
@@ -37,6 +38,13 @@ public:
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.push_back(go);
         }
+        {
+            nickel::GameObject go;
+            go.m_model =
+                mgr.Find("engine/assets/models/unit_box/unit_box.gltf");
+            go.m_transform.p = nickel::Vec3{3, 0, 0};
+            root_go.m_children.push_back(go);
+        }
     }
 
     void OnUpdate() override {
@@ -45,8 +53,6 @@ public:
         drawGrid();
 
         auto& ctx = nickel::Context::GetInst();
-
-        ctx.GetGraphicsContext().DrawModel({}, m_model);
 
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
@@ -58,8 +64,6 @@ public:
     }
 
 private:
-    nickel::graphics::GLTFModel m_model;
-
     void logicUpdate() {
         auto& ctx = nickel::Context::GetInst();
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();

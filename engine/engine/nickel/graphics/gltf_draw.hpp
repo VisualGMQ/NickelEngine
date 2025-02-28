@@ -24,7 +24,6 @@ private:
         Transform m_transform;
         GLTFModel m_model;
     };
-
     GraphicsPipeline m_solid_pipeline;
     GraphicsPipeline m_line_frame_pipeline;
     PipelineLayout m_pipeline_layout;

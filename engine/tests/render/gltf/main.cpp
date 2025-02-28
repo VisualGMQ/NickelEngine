@@ -18,7 +18,7 @@ public:
         auto& mgr = ctx.GetGLTFManager();
         // m_model
         mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
-        m_model = mgr.Find("CesiumMilkTruck");
+        m_model = mgr.Find("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck");
     }
 
     void OnUpdate() override {

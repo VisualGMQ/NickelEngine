@@ -24,5 +24,21 @@ class Material3DImpl;
 
 struct Material3D final : public ImplWrapper<Material3DImpl> {
     using ImplWrapper::ImplWrapper;
+
+    struct TextureInfo {
+        ImageView image;
+        Sampler sampler;
+
+        operator bool() const { return image && sampler; }
+    };
+
+    struct Descriptor {
+        BufferView pbrParameters;
+        Buffer pbr_param_buffer;
+        TextureInfo basicTexture;
+        TextureInfo normalTexture;
+        TextureInfo metalicRoughnessTexture;
+        TextureInfo occlusionTexture;
+    };
 };
 }  // namespace nickel::graphics

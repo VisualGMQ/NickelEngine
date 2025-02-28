@@ -1,6 +1,7 @@
 #pragma once
 #include "nickel/common/memory/refcountable.hpp"
 #include "nickel/graphics/gltf.hpp"
+#include "nickel/graphics/mesh.hpp"
 
 namespace nickel::graphics {
 

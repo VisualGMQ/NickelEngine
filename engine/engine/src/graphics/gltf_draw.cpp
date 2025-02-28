@@ -9,7 +9,8 @@
 
 namespace nickel::graphics {
 
-GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res) {
+GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res)
+    : m_common_res{res} {
     initBindGroupLayout(device);
     initPipelineLayout(device);
 
@@ -307,7 +308,9 @@ void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
     auto& gpu_resource = model.m_resource.GetImpl()->m_gpu_resource;
     if (model.m_mesh) {
         for (auto& prim : model.m_mesh.GetImpl()->m_primitives) {
-            auto& mtl = gpu_resource.materials[prim.m_material.value()];
+            auto& mtl = prim.m_material
+                            ? gpu_resource.materials[prim.m_material.value()]
+                            : m_default_material;
 
             encoder.SetPushConstant(ShaderStage::Vertex, model_mat.Ptr(), 0,
                                     sizeof(Mat44));

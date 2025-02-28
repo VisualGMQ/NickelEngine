@@ -1,11 +1,13 @@
 #pragma once
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/graphics/internal/material3d_impl.hpp"
+#include "nickel/graphics/mesh.hpp"
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/nickel.hpp"
 #include "tiny_gltf.h"
 
 namespace nickel::graphics {
+class GLTFRenderPass;
 
 template <typename SrcT, typename DstT>
 void ConvertRangeData(const SrcT* src, DstT* dst, size_t blockCount,
@@ -86,6 +88,17 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
     return bufView;
 }
 
+template <typename RequireT>
+BufferView RecordBufferView(const tinygltf::Model& model,
+                            const tinygltf::Accessor& accessor,
+                            std::vector<unsigned char>& buffer,
+                            uint32_t buffer_idx, int type) {
+    BufferView view;
+    view = CopyBufferFromGLTF<RequireT>(buffer, type, accessor, model);
+    view.m_buffer = buffer_idx;
+    return view;
+}
+
 inline Filter GLTFFilter2RHI(int type) {
     switch (type) {
         case TINYGLTF_TEXTURE_FILTER_LINEAR:
@@ -133,6 +146,41 @@ inline std::string ParseURI2Path(std::string_view str) {
     return path;
 }
 
+inline Mat44 CalcNodeTransform(const tinygltf::Node& node) {
+    auto cvtMat = [](const std::vector<double>& datas) {
+        Mat44 mat;
+        for (int i = 0; i < datas.size(); i++) {
+            mat.Ptr()[i] = datas[i];
+        }
+        return mat;
+    };
+
+    auto m = Mat44::Identity();
+    if (!node.matrix.empty()) {
+        m = cvtMat(node.matrix);
+    } else if (!node.scale.empty() || !node.translation.empty() ||
+               !node.rotation.empty()) {
+        m = Mat44::Identity();
+        if (!node.scale.empty()) {
+            m = CreateScale(Vec3(node.scale[0], node.scale[1], node.scale[2])) *
+                m;
+        }
+        if (!node.rotation.empty()) {
+            m = Quat(node.rotation[0], node.rotation[1], node.rotation[2],
+                     node.rotation[3])
+                    .ToMat() *
+                m;
+        }
+        if (!node.translation.empty()) {
+            m = CreateTranslation(Vec3(node.translation[0], node.translation[1],
+                                       node.translation[2])) *
+                m;
+        }
+    }
+
+    return m;
+}
+
 struct GLTFLoadData {
     GLTFModelResource m_resource;
     std::vector<Mesh> m_meshes;
@@ -148,7 +196,9 @@ private:
     const tinygltf::Model& m_gltf_model;
 
     GLTFLoadData loadGLTF(const Path& filename, const Adapter& adapter,
-                          GLTFManagerImpl& mgr, TextureManager& texture_mgr);
+                          GLTFManagerImpl& mgr,
+                          GLTFRenderPass& render_pass,
+                          TextureManager& texture_mgr);
 
     Material3DImpl::TextureInfo parseTextureInfo(int idx,
                                                  GLTFModelResourceImpl& model);
@@ -167,42 +217,12 @@ private:
 
     Sampler createSampler(Device device, const tinygltf::Sampler& gltfSampler);
 
-    BindGroup createBindGroup(Buffer pbrParamsBuffer,
-                              const Material3DImpl& material,
-                              BindGroupLayout layout);
-
-    void pushTextureInfoBinding(BindGroup::Descriptor& desc,
-                                const Material3DImpl::TextureInfo& info,
-                                uint32_t image_slot, uint32_t sampler_slot);
-
-    void pushTextureBindingPoint(BindGroup::Descriptor& desc,
-                                 const ImageView& view, uint32_t slot);
-
-    void pushSamplerBindingPoint(BindGroup::Descriptor& desc,
-                                 const Sampler& sampler, uint32_t slot);
-
     Mesh createMesh(Device device, const tinygltf::Mesh& node,
                     GLTFManagerImpl* mgr, GLTFModelResourceImpl& model);
 
     Primitive recordPrimInfo(std::vector<unsigned char>& data_buffer,
                              uint32_t buffer_idx,
                              const tinygltf::Primitive& prim);
-
-    Transform calcNodeTransform(const tinygltf::Node& node);
-
-    template <typename RequireT>
-    BufferView recordBufferView(const tinygltf::Model& model,
-                                const tinygltf::Accessor& accessor,
-                                std::vector<unsigned char>& buffer,
-                                uint32_t buffer_idx, int type) {
-        BufferView view;
-        view = CopyBufferFromGLTF<RequireT>(buffer, type, accessor, model);
-        view.m_buffer = buffer_idx;
-        return view;
-    }
-
-    void cherryPickMeshNodes(Mesh& mesh,
-                             std::vector<std::unique_ptr<Mesh>>& out_meshes);
 };
 
 }  // namespace nickel::graphics

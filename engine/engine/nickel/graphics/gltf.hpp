@@ -1,14 +1,16 @@
 ﻿#pragma once
 #include "nickel/common/impl_wrapper.hpp"
-#include "nickel/common/math/math.hpp"
-#include "nickel/common/memory/memory.hpp"
 #include "nickel/fs/path.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/lowlevel/buffer.hpp"
 #include "nickel/graphics/lowlevel/sampler.hpp"
 #include "nickel/graphics/material.hpp"
-#include "nickel/graphics/mesh.hpp"
 #include "nickel/graphics/texture.hpp"
+
+namespace tinygltf {
+class Model;
+class Node;
+}  // namespace tinygltf
 
 namespace nickel::graphics {
 
@@ -57,5 +59,19 @@ private:
     std::unique_ptr<GLTFManagerImpl> m_impl;
 };
 
+struct GLTFVertexData {
+    std::vector<Vec3> m_positions;
+    std::vector<uint32_t> m_indices;
+};
+
+class GLTFVertexDataLoader {
+public:
+    GLTFVertexData Load(const Path& path, const std::string& node_name);
+    GLTFVertexData Load(const tinygltf::Model&, const std::string& node_name);
+
+    bool parseNode(const tinygltf::Model& model, const tinygltf::Node& node,
+                   const std::string& name, GLTFVertexData& out_data,
+                   const Mat44& parent_mat, Mat44& out_mat);
+};
 
 }  // namespace nickel::graphics

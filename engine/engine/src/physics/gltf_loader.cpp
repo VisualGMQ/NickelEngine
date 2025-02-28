@@ -14,11 +14,16 @@ GLTFLoader::GLTFLoader(const tinygltf::Model& model) : m_gltf_model{model} {}
 GLTFLoadData GLTFLoader::Load(const Path& filename, const Adapter& adapter,
                               GLTFManagerImpl& gltf_manager) {
     return loadGLTF(filename, adapter, gltf_manager,
+                    nickel::Context::GetInst()
+                        .GetGraphicsContext()
+                        .GetImpl()
+                        ->GetGLTFRenderPass(),
                     nickel::Context::GetInst().GetTextureManager());
 }
 
 GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
                                   GLTFManagerImpl& gltf_manager,
+                                  GLTFRenderPass& render_pass,
                                   TextureManager& texture_mgr) {
     Device device = adapter.GetDevice();
 
@@ -48,10 +53,13 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
                            .GetImpl()
                            ->GetCommonResource();
 
+    std::vector<Material3D::Descriptor> mtl_desces;
+
     // load material
     for (auto& mtl : m_gltf_model.materials) {
         // Material3D material;
         auto align = adapter.GetLimits().min_uniform_buffer_offset_alignment;
+        Material3D::Descriptor desc;
 
         uint32_t pbr_parameter_offset =
             std::ceil(resource->m_cpu_data.pbr_parameters.size() /
@@ -60,9 +68,9 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
         uint32_t pbr_parameter_size = sizeof(PBRParameters);
         resource->m_cpu_data.pbr_parameters.resize(pbr_parameter_offset +
                                                    pbr_parameter_size);
-
-        Material3DImpl* mtl3d =
-            gltf_manager.m_mtl_allocator.Allocate(&gltf_manager);
+        desc.pbrParameters.m_count = 1;
+        desc.pbrParameters.m_offset = pbr_parameter_offset;
+        desc.pbrParameters.m_size = pbr_parameter_size;
 
         PBRParameters pbrParam;
 
@@ -81,50 +89,46 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
 
         if (auto idx = mtl.pbrMetallicRoughness.baseColorTexture.index;
             idx != -1) {
-            mtl3d->basicTexture = parseTextureInfo(idx, *resource);
+            desc.basicTexture = parseTextureInfo(idx, *resource);
         } else {
-            mtl3d->basicTexture.sampler = common_res.m_default_sampler;
-            mtl3d->basicTexture.image = common_res.m_white_image;
+            desc.basicTexture.sampler = common_res.m_default_sampler;
+            desc.basicTexture.image = common_res.m_white_image;
         }
 
         if (auto idx = mtl.pbrMetallicRoughness.metallicRoughnessTexture.index;
             idx != -1) {
-            mtl3d->metalicRoughnessTexture = parseTextureInfo(idx, *resource);
+            desc.metalicRoughnessTexture = parseTextureInfo(idx, *resource);
         } else {
-            mtl3d->metalicRoughnessTexture.sampler =
-                common_res.m_default_sampler;
-            mtl3d->metalicRoughnessTexture.image = common_res.m_black_image;
+            desc.metalicRoughnessTexture.sampler = common_res.m_default_sampler;
+            desc.metalicRoughnessTexture.image = common_res.m_black_image;
         }
 
         if (auto idx = mtl.normalTexture.index; idx != -1) {
-            mtl3d->normalTexture = parseTextureInfo(idx, *resource);
+            desc.normalTexture = parseTextureInfo(idx, *resource);
         } else {
-            mtl3d->normalTexture.sampler = common_res.m_default_sampler;
-            mtl3d->normalTexture.image = common_res.m_default_normal_image;
+            desc.normalTexture.sampler = common_res.m_default_sampler;
+            desc.normalTexture.image = common_res.m_default_normal_image;
         }
 
         if (auto idx = mtl.occlusionTexture.index; idx != -1) {
-            mtl3d->occlusionTexture = parseTextureInfo(idx, *resource);
+            desc.occlusionTexture = parseTextureInfo(idx, *resource);
         } else {
-            mtl3d->occlusionTexture.sampler = common_res.m_default_sampler;
-            mtl3d->occlusionTexture.image = common_res.m_white_image;
+            desc.occlusionTexture.sampler = common_res.m_default_sampler;
+            desc.occlusionTexture.image = common_res.m_white_image;
         }
 
-        resource->m_gpu_resource.materials.push_back(Material3D{mtl3d});
+        mtl_desces.push_back(std::move(desc));
     }
 
     resource->m_gpu_resource.pbr_parameter_buffer =
         copyBuffer2GPU(device, std::span{resource->m_cpu_data.pbr_parameters},
                        Flags{BufferUsage::Uniform} | BufferUsage::CopyDst);
 
-    for (auto& material : resource->m_gpu_resource.materials) {
-        material.GetImpl()->bindGroup = createBindGroup(
-            resource->m_gpu_resource.pbr_parameter_buffer, *material.GetImpl(),
-            nickel::Context::GetInst()
-                .GetGraphicsContext()
-                .GetImpl()
-                ->GetGLTFRenderPass()
-                .GetBindGroupLayout());
+    for (auto& desc : mtl_desces) {
+        desc.pbr_param_buffer = resource->m_gpu_resource.pbr_parameter_buffer;
+        resource->m_gpu_resource.materials.push_back(
+            Material3D{gltf_manager.m_mtl_allocator.Allocate(
+                gltf_manager, desc, render_pass.GetBindGroupLayout())});
     }
 
     load_data.m_meshes.reserve(m_gltf_model.meshes.size());
@@ -135,9 +139,9 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
     return load_data;
 }
 
-Material3DImpl::TextureInfo GLTFLoader::parseTextureInfo(
+Material3D::TextureInfo GLTFLoader::parseTextureInfo(
     int idx, GLTFModelResourceImpl& model) {
-    Material3DImpl::TextureInfo texture_info;
+    Material3D::TextureInfo texture_info;
     auto& info = m_gltf_model.textures[idx];
     if (info.source != -1) {
         texture_info.image =
@@ -163,99 +167,6 @@ Sampler GLTFLoader::createSampler(Device device,
     desc.m_address_mode_u = GLTFWrapper2RHI(gltfSampler.wrapS);
     desc.m_address_mode_v = GLTFWrapper2RHI(gltfSampler.wrapT);
     return device.CreateSampler(desc);
-}
-
-BindGroup GLTFLoader::createBindGroup(Buffer pbrParamsBuffer,
-                                      const Material3DImpl& material,
-                                      BindGroupLayout layout) {
-    BindGroup::Descriptor desc;
-
-    // camera buffer
-    {
-        BindGroup::Entry entry;
-        entry.m_shader_stage = ShaderStage::Vertex;
-        entry.m_array_size = 1;
-        BindGroup::BufferBinding binding;
-        binding.m_buffer = nickel::Context::GetInst()
-                               .GetGraphicsContext()
-                               .GetImpl()
-                               ->GetCommonResource()
-                               .m_camera_buffer;
-        binding.m_type = BindGroup::BufferBinding::Type::Uniform;
-        entry.m_binding.m_entry = binding;
-
-        desc.m_entries[0] = entry;
-    }
-
-    // camera buffer
-    {
-        BindGroup::Entry entry;
-        entry.m_shader_stage = ShaderStage::Fragment;
-        entry.m_array_size = 1;
-        BindGroup::BufferBinding binding;
-        binding.m_buffer = nickel::Context::GetInst()
-                               .GetGraphicsContext()
-                               .GetImpl()
-                               ->GetCommonResource()
-                               .m_view_buffer;
-        binding.m_type = BindGroup::BufferBinding::Type::Uniform;
-        entry.m_binding.m_entry = binding;
-
-        desc.m_entries[10] = entry;
-    }
-
-    // pbr parameters uniform buffer
-    {
-        BindGroup::Entry entry;
-        entry.m_shader_stage = ShaderStage::Fragment;
-        entry.m_array_size = 1;
-        BindGroup::BufferBinding binding;
-        binding.m_buffer = pbrParamsBuffer;
-        binding.m_type = BindGroup::BufferBinding::Type::DynamicUniform;
-        binding.m_offset = material.pbrParameters.m_offset;
-        entry.m_binding.m_entry = binding;
-
-        desc.m_entries[1] = entry;
-    }
-
-    pushTextureInfoBinding(desc, material.basicTexture, 2, 6);
-    pushTextureInfoBinding(desc, material.normalTexture, 3, 7);
-    pushTextureInfoBinding(desc, material.metalicRoughnessTexture, 4, 8);
-    pushTextureInfoBinding(desc, material.occlusionTexture, 5, 9);
-
-    return layout.RequireBindGroup(desc);
-}
-
-void GLTFLoader::pushTextureInfoBinding(BindGroup::Descriptor& desc,
-                                        const Material3DImpl::TextureInfo& info,
-                                        uint32_t image_slot,
-                                        uint32_t sampler_slot) {
-    pushTextureBindingPoint(desc, info.image, image_slot);
-    pushSamplerBindingPoint(desc, info.sampler, sampler_slot);
-}
-
-void GLTFLoader::pushTextureBindingPoint(BindGroup::Descriptor& desc,
-                                         const ImageView& view, uint32_t slot) {
-    BindGroup::Entry entry;
-    entry.m_array_size = 1;
-    entry.m_shader_stage = ShaderStage::Fragment;
-    BindGroup::ImageBinding binding;
-    binding.m_type = BindGroup::ImageBinding::Type::Image;
-    binding.m_view = view;
-    entry.m_binding.m_entry = binding;
-    desc.m_entries[slot] = entry;
-}
-
-void GLTFLoader::pushSamplerBindingPoint(BindGroup::Descriptor& desc,
-                                         const Sampler& sampler,
-                                         uint32_t slot) {
-    BindGroup::Entry entry;
-    entry.m_array_size = 1;
-    entry.m_shader_stage = ShaderStage::Fragment;
-    BindGroup::SamplerBinding binding;
-    binding.m_sampler = sampler;
-    entry.m_binding.m_entry = binding;
-    desc.m_entries[slot] = entry;
 }
 
 Mesh GLTFLoader::createMesh(Device device, const tinygltf::Mesh& gltf_mesh,
@@ -289,7 +200,7 @@ Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,
     if (auto it = attrs.find("POSITION"); it != attrs.end()) {
         auto& accessor = m_gltf_model.accessors[it->second];
         primitive.m_pos_buf_view =
-            recordBufferView<float>(m_gltf_model, accessor, data_buffer,
+            RecordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                     buffer_idx, TINYGLTF_TYPE_VEC3);
     }
 
@@ -298,13 +209,13 @@ Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,
         if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
             primitive.m_index_type = IndexType::Uint16;
             primitive.m_indices_buf_view =
-                recordBufferView<uint16_t>(m_gltf_model, accessor, data_buffer,
+                RecordBufferView<uint16_t>(m_gltf_model, accessor, data_buffer,
                                            buffer_idx, TINYGLTF_TYPE_SCALAR);
         } else if (accessor.componentType ==
                    TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
             primitive.m_index_type = IndexType::Uint32;
             primitive.m_indices_buf_view =
-                recordBufferView<uint32_t>(m_gltf_model, accessor, data_buffer,
+                RecordBufferView<uint32_t>(m_gltf_model, accessor, data_buffer,
                                            buffer_idx, TINYGLTF_TYPE_SCALAR);
         } else {
             NICKEL_CANT_REACH();
@@ -315,7 +226,7 @@ Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,
     if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
         auto& accessor = m_gltf_model.accessors[it->second];
         primitive.m_uv_buf_view =
-            recordBufferView<float>(m_gltf_model, accessor, data_buffer,
+            RecordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                     buffer_idx, TINYGLTF_TYPE_VEC2);
     } else {
         // some trivial data
@@ -329,7 +240,7 @@ Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,
         auto& accessor = m_gltf_model.accessors[it->second];
 
         primitive.m_norm_buf_view =
-            recordBufferView<float>(m_gltf_model, accessor, data_buffer,
+            RecordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                     buffer_idx, TINYGLTF_TYPE_VEC3);
     } else {
         size_t old_size = data_buffer.size();
@@ -383,7 +294,7 @@ Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,
         auto& accessor = m_gltf_model.accessors[it->second];
 
         primitive.m_tan_buf_view =
-            recordBufferView<float>(m_gltf_model, accessor, data_buffer,
+            RecordBufferView<float>(m_gltf_model, accessor, data_buffer,
                                     buffer_idx, TINYGLTF_TYPE_VEC4);
     } else {
         size_t old_size = data_buffer.size();
@@ -460,41 +371,11 @@ Primitive GLTFLoader::recordPrimInfo(std::vector<unsigned char>& data_buffer,
         }
     }
 
-    primitive.m_material = prim.material;
-
-    return primitive;
-}
-
-Transform GLTFLoader::calcNodeTransform(const tinygltf::Node& node) {
-    auto cvtMat = [](const std::vector<double>& datas) {
-        Mat44 mat;
-        for (int i = 0; i < datas.size(); i++) {
-            mat.Ptr()[i] = datas[i];
-        }
-        return mat;
-    };
-
-    if (!node.matrix.empty()) {
-        Mat44 mat;
-        mat = cvtMat(node.matrix);
-        // TODO: calculate SRT from matrix;
-        return {};
+    if (prim.material != -1) {
+        primitive.m_material = prim.material;
     }
 
-    Transform transform;
-
-    transform.p = node.translation.empty()
-                      ? Vec3{}
-                      : Vec3(node.translation[0], node.translation[1],
-                             node.translation[2]);
-    transform.q = node.rotation.empty()
-                      ? Quat{}
-                      : Quat(node.rotation[0], node.rotation[1],
-                             node.rotation[2], node.rotation[3]);
-    transform.scale = node.scale.empty()
-                          ? Vec3{1, 1, 1}
-                          : Vec3(node.scale[0], node.scale[1], node.scale[2]);
-    return transform;
+    return primitive;
 }
 
 }  // namespace nickel::graphics

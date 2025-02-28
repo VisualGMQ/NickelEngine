@@ -51,6 +51,28 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                                      physics::Vec3FromPhysX(box.halfExtents),
                                      global_transform.q, Color{0, 1, 0, 1});
             } break;
+            case physx::PxGeometryType::eTRIANGLEMESH: {
+                auto& triangle_mesh = holder.triangleMesh();
+                auto mesh = triangle_mesh.triangleMesh;
+                std::vector<Vec3> vertices;
+                vertices.resize(mesh->getNbVertices());
+                for (int i = 0; i < mesh->getNbVertices(); i++) {
+                    Vec3 p = physics::Vec3FromPhysX(mesh->getVertices()[i]);
+                    p = (global_transform *
+                         Transform{
+                             p,
+                             physics::Vec3FromPhysX(triangle_mesh.scale.scale),
+                             physics::QuatFromPhysX(
+                                 triangle_mesh.scale.rotation)})
+                            .p;
+                    vertices[i] = p;
+                }
+                debug_drawer.DrawTriangleMesh(
+                    std::span(vertices),
+                    std::span((uint32_t*)mesh->getTriangles(),
+                              mesh->getNbTriangles()),
+                    Color{0, 1, 0, 1});
+            }
             case physx::PxGeometryType::eSPHERE:
             case physx::PxGeometryType::ePLANE:
             case physx::PxGeometryType::eCAPSULE:
@@ -58,11 +80,8 @@ void Level::debugDrawRigidActor(const GameObject& go) {
             case physx::PxGeometryType::eCONVEXMESH:
             case physx::PxGeometryType::ePARTICLESYSTEM:
             case physx::PxGeometryType::eTETRAHEDRONMESH:
-            case physx::PxGeometryType::eTRIANGLEMESH:
             case physx::PxGeometryType::eHEIGHTFIELD:
-            case physx::PxGeometryType::eCUSTOM:
-            case physx::PxGeometryType::eGEOMETRY_COUNT:
-            case physx::PxGeometryType::eINVALID:
+            default:
                 NICKEL_CANT_REACH();
                 break;
         }
