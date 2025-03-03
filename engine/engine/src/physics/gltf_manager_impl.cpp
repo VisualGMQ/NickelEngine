@@ -1,5 +1,6 @@
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
 #include "nickel/graphics/common_resource.hpp"
+#include "nickel/graphics/gltf_draw.hpp"
 #include "nickel/graphics/internal/gltf_loader.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/graphics/internal/mesh_impl.hpp"
@@ -7,12 +8,12 @@
 
 namespace nickel::graphics {
 
-GLTFManagerImpl::GLTFManagerImpl(Device device, CommonResource* res)
-    : m_common_resource{res} {
+GLTFManagerImpl::GLTFManagerImpl(Device device, CommonResource& res,
+                                 GLTFRenderPass& gltf_render_pass) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::GPULocal;
-        desc.m_usage = BufferUsage::Uniform;
+        desc.m_usage = Flags{BufferUsage::Uniform} | BufferUsage::CopyDst;
         desc.m_size = sizeof(PBRParameters);
         PBRParameters param;
         param.m_base_color = Vec4(1, 1, 1, 1);
@@ -24,17 +25,21 @@ GLTFManagerImpl::GLTFManagerImpl(Device device, CommonResource* res)
 
     {
         Material3D::Descriptor desc;
-        desc.basicTexture.image = res->m_white_image;
-        desc.basicTexture.sampler = res->m_default_sampler;
-        desc.normalTexture.image = res->m_default_normal_image;
-        desc.normalTexture.sampler = res->m_default_sampler;
-        desc.occlusionTexture.image = res->m_white_image;
-        desc.occlusionTexture.sampler = res->m_default_sampler;
+        desc.basicTexture.image = res.m_white_image;
+        desc.basicTexture.sampler = res.m_default_sampler;
+        desc.normalTexture.image = res.m_default_normal_image;
+        desc.normalTexture.sampler = res.m_default_sampler;
+        desc.occlusionTexture.image = res.m_white_image;
+        desc.occlusionTexture.sampler = res.m_default_sampler;
+        desc.metalicRoughnessTexture.image = res.m_black_image;
+        desc.metalicRoughnessTexture.sampler = res.m_default_sampler;
         desc.pbr_param_buffer = m_default_pbr_param_buffer;
         desc.pbrParameters.m_offset = 0;
         desc.pbrParameters.m_size = sizeof(PBRParameters);
         desc.pbrParameters.m_count = 1;
-        m_default_material = m_mtl_allocator.Allocate(this, desc, layout);
+        m_default_material = m_mtl_allocator.Allocate(
+            this, desc, res.m_camera_buffer, res.m_view_buffer,
+            gltf_render_pass.GetBindGroupLayout());
     }
 }
 

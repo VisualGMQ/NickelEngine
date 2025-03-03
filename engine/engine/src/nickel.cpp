@@ -1,5 +1,6 @@
 ﻿#include "nickel/nickel.hpp"
 
+#include "nickel/graphics/internal/context_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/device_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
@@ -28,7 +29,10 @@ Context::Context() {
         *m_graphics_adapter, *m_window, *m_storage_mgr);
 
     LOGI("init asset managers");
-    m_gltf_mgr = std::make_unique<graphics::GLTFManager>();
+    m_gltf_mgr = std::make_unique<graphics::GLTFManager>(
+        m_graphics_adapter->GetDevice(),
+        m_graphics_ctx->GetImpl()->GetCommonResource(),
+        m_graphics_ctx->GetImpl()->GetGLTFRenderPass());
     m_texture_mgr = std::make_unique<graphics::TextureManager>();
 
     LOGI("init physics context");

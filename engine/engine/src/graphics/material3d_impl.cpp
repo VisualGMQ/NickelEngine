@@ -6,7 +6,8 @@ namespace nickel::graphics {
 
 Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
                                const Material3D::Descriptor& mtl_desc,
-                               BindGroupLayout& layout)
+                               Buffer& camera_buffer, Buffer& view_buffer,
+                               BindGroupLayout layout)
     : m_mgr{mgr} {
     BindGroup::Descriptor desc;
 
@@ -16,11 +17,7 @@ Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
         entry.m_shader_stage = ShaderStage::Vertex;
         entry.m_array_size = 1;
         BindGroup::BufferBinding binding;
-        binding.m_buffer = nickel::Context::GetInst()
-                               .GetGraphicsContext()
-                               .GetImpl()
-                               ->GetCommonResource()
-                               .m_camera_buffer;
+        binding.m_buffer = camera_buffer;
         binding.m_type = BindGroup::BufferBinding::Type::Uniform;
         entry.m_binding.m_entry = binding;
 
@@ -33,11 +30,7 @@ Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
         entry.m_shader_stage = ShaderStage::Fragment;
         entry.m_array_size = 1;
         BindGroup::BufferBinding binding;
-        binding.m_buffer = nickel::Context::GetInst()
-                               .GetGraphicsContext()
-                               .GetImpl()
-                               ->GetCommonResource()
-                               .m_view_buffer;
+        binding.m_buffer = view_buffer;
         binding.m_type = BindGroup::BufferBinding::Type::Uniform;
         entry.m_binding.m_entry = binding;
 

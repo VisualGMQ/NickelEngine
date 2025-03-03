@@ -7,10 +7,11 @@
 
 namespace nickel::graphics {
 class CommonResource;
+class GLTFRenderPass;
 
 class GLTFManagerImpl {
 public:
-    explicit GLTFManagerImpl(Device device, CommonResource*);
+    explicit GLTFManagerImpl(Device device, CommonResource&, GLTFRenderPass&);
     ~GLTFManagerImpl();
 
     bool Load(const Path&, const GLTFLoadConfig& load_config);
@@ -29,8 +30,6 @@ public:
     Buffer m_default_pbr_param_buffer;
 
 private:
-    CommonResource* m_common_resource;
-    
     void preorderNode(const tinygltf::Model& gltf_model,
                       const tinygltf::Node& node,
                       const GLTFModelResource& resource, std::span<Mesh> meshes,

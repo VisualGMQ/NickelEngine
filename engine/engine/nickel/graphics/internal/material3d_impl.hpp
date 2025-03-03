@@ -14,7 +14,8 @@ public:
     BindGroup bindGroup;
 
     Material3DImpl(GLTFManagerImpl*, const Material3D::Descriptor&,
-                   BindGroupLayout& layout);
+                   Buffer& camera_buffer, Buffer& view_buffer,
+                   BindGroupLayout layout);
     Material3DImpl(Material3D&&) = delete;
     Material3DImpl& operator=(Material3DImpl&&) = delete;
     Material3DImpl(const Material3DImpl&) = delete;

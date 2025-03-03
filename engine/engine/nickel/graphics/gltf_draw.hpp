@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/common/transform.hpp"
 #include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/graphics/lowlevel/device.hpp"

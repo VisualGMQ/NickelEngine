@@ -4,13 +4,14 @@
 
 namespace nickel::graphics {
 struct BufferView {
-    std::optional<uint32_t> m_buffer;
+    Buffer m_buffer;
     uint32_t m_offset{};
     uint64_t m_size{};
     uint32_t m_count{};
+    uint32_t m_stride{};
 
     operator bool() const noexcept {
-        return m_buffer && m_size > 0 && m_count > 0;
+        return m_buffer && m_size > 0 && m_count > 0 && m_stride > 0;
     }
 };
 

@@ -9,8 +9,7 @@
 
 namespace nickel::graphics {
 
-GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res)
-    : m_common_res{res} {
+GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res) {
     initBindGroupLayout(device);
     initPipelineLayout(device);
 
@@ -305,12 +304,9 @@ void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
                                   const Mat44& transform,
                                   GLTFModelImpl& model) {
     Mat44 model_mat = transform * model.m_transform;
-    auto& gpu_resource = model.m_resource.GetImpl()->m_gpu_resource;
     if (model.m_mesh) {
         for (auto& prim : model.m_mesh.GetImpl()->m_primitives) {
-            auto& mtl = prim.m_material
-                            ? gpu_resource.materials[prim.m_material.value()]
-                            : m_default_material;
+            auto& mtl = prim.m_material;
 
             encoder.SetPushConstant(ShaderStage::Vertex, model_mat.Ptr(), 0,
                                     sizeof(Mat44));
@@ -319,36 +315,29 @@ void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
 
             // position
             auto& pos_buffer_view = prim.m_pos_buf_view;
-            encoder.BindVertexBuffer(
-                0, gpu_resource.dataBuffers[pos_buffer_view.m_buffer.value()],
-                pos_buffer_view.m_offset);
+            encoder.BindVertexBuffer(0, pos_buffer_view.m_buffer,
+                                     pos_buffer_view.m_offset);
 
             // uv
             auto& uv_buffer_view = prim.m_uv_buf_view;
-            encoder.BindVertexBuffer(
-                1, gpu_resource.dataBuffers[uv_buffer_view.m_buffer.value()],
-                uv_buffer_view.m_offset);
+            encoder.BindVertexBuffer(1, uv_buffer_view.m_buffer,
+                                     uv_buffer_view.m_offset);
 
             // normal
             auto& normal_buffer_view = prim.m_norm_buf_view;
-            encoder.BindVertexBuffer(
-                2,
-                gpu_resource.dataBuffers[normal_buffer_view.m_buffer.value()],
-                normal_buffer_view.m_offset);
+            encoder.BindVertexBuffer(2, normal_buffer_view.m_buffer,
+                                     normal_buffer_view.m_offset);
 
             // tangent
             auto& tangent_buffer_view = prim.m_tan_buf_view;
-            encoder.BindVertexBuffer(
-                3,
-                gpu_resource.dataBuffers[tangent_buffer_view.m_buffer.value()],
-                tangent_buffer_view.m_offset);
+            encoder.BindVertexBuffer(3, tangent_buffer_view.m_buffer,
+                                     tangent_buffer_view.m_offset);
 
             if (prim.m_indices_buf_view) {
                 auto& indices_buffer_view = prim.m_indices_buf_view;
-                encoder.BindIndexBuffer(
-                    gpu_resource
-                        .dataBuffers[indices_buffer_view.m_buffer.value()],
-                    prim.m_index_type, indices_buffer_view.m_offset);
+                encoder.BindIndexBuffer(indices_buffer_view.m_buffer,
+                                        prim.m_index_type,
+                                        indices_buffer_view.m_offset);
                 encoder.DrawIndexed(indices_buffer_view.m_count, 1, 0, 0, 0);
             } else {
                 encoder.Draw(pos_buffer_view.m_count, 1, 0, 0);

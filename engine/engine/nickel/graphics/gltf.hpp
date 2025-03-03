@@ -14,14 +14,6 @@ class Node;
 
 namespace nickel::graphics {
 
-struct GLTFGPUResource {
-    Buffer pbr_parameter_buffer;
-    std::vector<Buffer> dataBuffers;
-    std::vector<Texture> textures;
-    std::vector<Sampler> samplers;
-    std::vector<Material3D> materials;
-};
-
 struct GLTFCPUData {
     std::vector<PBRParameters> pbr_parameters;
     std::vector<std::vector<unsigned char>> data_buffers;
@@ -46,9 +38,13 @@ struct GLTFLoadConfig {
     bool m_combine_mesh = true;
 };
 
+class CommonResource;
+class GLTFRenderPass;
+
 class GLTFManager {
 public:
-    GLTFManager();
+    GLTFManager(Device device, CommonResource& res,
+                GLTFRenderPass& render_pass);
     ~GLTFManager();
 
     bool Load(const Path&, const GLTFLoadConfig& = {});

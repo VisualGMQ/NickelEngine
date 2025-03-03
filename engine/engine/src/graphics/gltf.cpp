@@ -20,7 +20,9 @@ void GLTFManager::GC() {
     m_impl->GC();
 }
 
-GLTFManager::GLTFManager() : m_impl{std::make_unique<GLTFManagerImpl>()} {}
+GLTFManager::GLTFManager(Device device, CommonResource& res,
+                         GLTFRenderPass& render_pass)
+    : m_impl{std::make_unique<GLTFManagerImpl>(device, res, render_pass)} {}
 
 GLTFManager::~GLTFManager() {}
 

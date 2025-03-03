@@ -8,7 +8,6 @@ namespace nickel::graphics {
 struct GLTFModelResourceImpl : public RefCountable {
     explicit GLTFModelResourceImpl(GLTFManagerImpl* mgr);
 
-    GLTFGPUResource m_gpu_resource;
     GLTFCPUData m_cpu_data;
 
     void DecRefcount() override;

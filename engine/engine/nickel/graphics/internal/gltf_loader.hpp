@@ -92,10 +92,9 @@ template <typename RequireT>
 BufferView RecordBufferView(const tinygltf::Model& model,
                             const tinygltf::Accessor& accessor,
                             std::vector<unsigned char>& buffer,
-                            uint32_t buffer_idx, int type) {
+                            int type) {
     BufferView view;
     view = CopyBufferFromGLTF<RequireT>(buffer, type, accessor, model);
-    view.m_buffer = buffer_idx;
     return view;
 }
 
@@ -196,33 +195,33 @@ private:
     const tinygltf::Model& m_gltf_model;
 
     GLTFLoadData loadGLTF(const Path& filename, const Adapter& adapter,
-                          GLTFManagerImpl& mgr,
+                          GLTFManagerImpl& gltf_manager,
                           GLTFRenderPass& render_pass,
-                          TextureManager& texture_mgr);
+                          TextureManager& texture_mgr,
+                          CommonResource& common_res);
 
-    Material3DImpl::TextureInfo parseTextureInfo(int idx,
-                                                 GLTFModelResourceImpl& model);
+    Material3D::TextureInfo parseTextureInfo(int idx,
+                                             std::vector<Texture>& textures,
+                                             ImageView& default_texture,
+                                             std::vector<Sampler>& samplers,
+                                             Sampler& default_sampler);
 
-    template <typename T>
-    Buffer copyBuffer2GPU(Device device, std::span<T> src,
-                          Flags<BufferUsage> usage) {
-        Buffer::Descriptor desc;
-        desc.m_usage = usage;
-        desc.m_memory_type = MemoryType::GPULocal;
-        desc.m_size = src.size();
-        auto buffer = device.CreateBuffer(desc);
-        buffer.BuffData((void*)src.data(), desc.m_size, 0);
-        return buffer;
-    }
-
+    
     Sampler createSampler(Device device, const tinygltf::Sampler& gltfSampler);
 
-    Mesh createMesh(Device device, const tinygltf::Mesh& node,
-                    GLTFManagerImpl* mgr, GLTFModelResourceImpl& model);
+    Mesh createMesh(Device device, const tinygltf::Mesh& gltf_mesh,
+                    GLTFManagerImpl* mgr, GLTFModelResourceImpl& model,
+                    std::unordered_map<uint32_t, Buffer> data_buffers,
+                    std::vector<unsigned char>& generated_data_buffer,
+                    std::vector<Material3D>& materials,
+                    Material3DImpl& default_material);
 
-    Primitive recordPrimInfo(std::vector<unsigned char>& data_buffer,
-                             uint32_t buffer_idx,
-                             const tinygltf::Primitive& prim);
+    Primitive recordPrimInfo(Device& device,
+                             std::unordered_map<uint32_t, Buffer>& data_buffers,
+                             std::vector<unsigned char>& generated_data_buffer,
+                             const tinygltf::Primitive& prim,
+                             std::vector<Material3D>& materials,
+                             Material3DImpl& default_material) const;
 };
 
 }  // namespace nickel::graphics
