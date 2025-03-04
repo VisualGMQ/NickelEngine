@@ -122,7 +122,7 @@ TriangleMesh ContextImpl::CreateTriangleMesh(const Vec3* vertices,
         case physx::PxTriangleMeshCookingResult::eFAILURE:
             LOGE("cook triangle mesh faild: failure");
             break;
-        default:
+        default:;
     }
 
     physx::PxDefaultMemoryInputData readBuffer(writeBuffer.getData(),
