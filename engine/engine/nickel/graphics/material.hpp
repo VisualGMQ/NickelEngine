@@ -8,14 +8,13 @@ struct BufferView {
     uint32_t m_offset{};
     uint64_t m_size{};
     uint32_t m_count{};
-    uint32_t m_stride{};
 
     operator bool() const noexcept {
-        return m_buffer && m_size > 0 && m_count > 0 && m_stride > 0;
+        return m_buffer && m_size > 0 && m_count > 0;
     }
 };
 
-struct alignas(sizeof(float)) PBRParameters {
+struct PBRParameters {
     Vec4 m_base_color;
     float m_metallic = 1.0f;
     float m_roughness = 1.0f;

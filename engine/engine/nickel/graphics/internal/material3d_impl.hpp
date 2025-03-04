@@ -11,7 +11,7 @@ class GLTFManagerImpl;
 
 class Material3DImpl : public RefCountable {
 public:
-    BindGroup bindGroup;
+    BindGroup m_bind_group;
 
     Material3DImpl(GLTFManagerImpl*, const Material3D::Descriptor&,
                    Buffer& camera_buffer, Buffer& view_buffer,

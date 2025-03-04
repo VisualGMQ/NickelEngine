@@ -29,14 +29,25 @@ void ConvertRangeData(const SrcT* src, DstT* dst, size_t blockCount,
     }
 }
 
-template <typename RequireT>
+/**
+ * @brief Copy gltf buffer to custom buffer. It will convert data from
+ * `accessor.type` to `type`, and for single element in type, copy
+ * `accessor.componentType` to RequireT
+ *
+ * @tparam ComponentType the component type you want
+ * @param dst copy destination
+ * @param type TINYGLTF_TYPE_XXX, the destination type you want
+ * @param accessor
+ * @param model model
+ */
+template <typename ComponentType>
 BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
                               const tinygltf::Accessor& accessor,
                               const tinygltf::Model& model) {
     auto& view = model.bufferViews[accessor.bufferView];
     auto& buffer = model.buffers[view.buffer];
-    auto offset = accessor.byteOffset + view.byteOffset;
-    auto size = accessor.count * sizeof(RequireT) *
+    auto src_offset = accessor.byteOffset + view.byteOffset;
+    auto size = accessor.count * sizeof(ComponentType) *
                 tinygltf::GetNumComponentsInType(type);
     BufferView bufView;
     bufView.m_offset = dst.size();
@@ -44,41 +55,44 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
     bufView.m_count = accessor.count;
 
     dst.resize(dst.size() + size);
-    auto copySrc = buffer.data.data() + offset;
+    auto copySrc = buffer.data.data() + src_offset;
     auto dstSrc = dst.data() + dst.size() - size;
     auto srcComponentNum = tinygltf::GetNumComponentsInType(accessor.type);
     auto dstComponentNum = tinygltf::GetNumComponentsInType(type);
     switch (accessor.componentType) {
         case TINYGLTF_COMPONENT_TYPE_FLOAT:
-            ConvertRangeData((const float*)copySrc, (RequireT*)dstSrc,
+            ConvertRangeData((const float*)copySrc, (ComponentType*)dstSrc,
                              accessor.count, dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_DOUBLE:
-            ConvertRangeData((const double*)copySrc, (RequireT*)dstSrc,
+            ConvertRangeData((const double*)copySrc, (ComponentType*)dstSrc,
                              accessor.count, dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-            ConvertRangeData((const unsigned int*)copySrc, (RequireT*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData((const unsigned int*)copySrc,
+                             (ComponentType*)dstSrc, accessor.count,
+                             dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-            ConvertRangeData((const unsigned short*)copySrc, (RequireT*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData((const unsigned short*)copySrc,
+                             (ComponentType*)dstSrc, accessor.count,
+                             dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-            ConvertRangeData((const unsigned char*)copySrc, (RequireT*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData((const unsigned char*)copySrc,
+                             (ComponentType*)dstSrc, accessor.count,
+                             dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_INT:
-            ConvertRangeData((const int*)copySrc, (RequireT*)dstSrc,
+            ConvertRangeData((const int*)copySrc, (ComponentType*)dstSrc,
                              accessor.count, dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_SHORT:
-            ConvertRangeData((const short*)copySrc, (RequireT*)dstSrc,
+            ConvertRangeData((const short*)copySrc, (ComponentType*)dstSrc,
                              accessor.count, dstComponentNum, srcComponentNum);
             break;
         case TINYGLTF_COMPONENT_TYPE_BYTE:
-            ConvertRangeData((const char*)copySrc, (RequireT*)dstSrc,
+            ConvertRangeData((const char*)copySrc, (ComponentType*)dstSrc,
                              accessor.count, dstComponentNum, srcComponentNum);
             break;
         default:
@@ -91,8 +105,7 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
 template <typename RequireT>
 BufferView RecordBufferView(const tinygltf::Model& model,
                             const tinygltf::Accessor& accessor,
-                            std::vector<unsigned char>& buffer,
-                            int type) {
+                            std::vector<unsigned char>& buffer, int type) {
     BufferView view;
     view = CopyBufferFromGLTF<RequireT>(buffer, type, accessor, model);
     return view;
@@ -206,22 +219,30 @@ private:
                                              std::vector<Sampler>& samplers,
                                              Sampler& default_sampler);
 
-    
     Sampler createSampler(Device device, const tinygltf::Sampler& gltfSampler);
 
-    Mesh createMesh(Device device, const tinygltf::Mesh& gltf_mesh,
-                    GLTFManagerImpl* mgr, GLTFModelResourceImpl& model,
-                    std::unordered_map<uint32_t, Buffer> data_buffers,
-                    std::vector<unsigned char>& generated_data_buffer,
+    Mesh createMesh(const tinygltf::Mesh& gltf_mesh, GLTFManagerImpl* mgr,
+                    std::vector<unsigned char>& vertex_buffer,
+                    const std::vector<BufferView>& accessors,
                     std::vector<Material3D>& materials,
-                    Material3DImpl& default_material);
+                    Material3DImpl& default_material) const;
 
-    Primitive recordPrimInfo(Device& device,
-                             std::unordered_map<uint32_t, Buffer>& data_buffers,
-                             std::vector<unsigned char>& generated_data_buffer,
+    Primitive recordPrimInfo(std::vector<unsigned char>& vertex_buffer,
+                             const std::vector<BufferView>& buffer_views,
                              const tinygltf::Primitive& prim,
                              std::vector<Material3D>& materials,
                              Material3DImpl& default_material) const;
+
+    std::vector<Texture> loadTextures(const Path& root_dir,
+                                      TextureManager& texture_mgr);
+    std::vector<Sampler> loadSamplers(Device& device);
+    std::vector<Material3D> loadMaterials(
+        const Adapter& adapter, GLTFManagerImpl& gltf_mgr,
+        GLTFRenderPass& render_pass, std::vector<PBRParameters>& pbr_parameters,
+        std::vector<unsigned char>& data_buffer, std::vector<Texture>& textures,
+        std::vector<Sampler>& samplers, CommonResource& common_res);
+    std::vector<BufferView> loadVertexBuffer(
+        std::vector<unsigned char>& out_buffer) const;
 };
 
 }  // namespace nickel::graphics

@@ -289,6 +289,7 @@ void GLTFRenderPass::initBindGroupLayout(Device& device) {
         desc.m_entries[9] = entry;
     }
 
+    // view buffer
     {
         BindGroupLayout::Entry entry;
         entry.m_shader_stage = ShaderStage::Fragment;
@@ -311,7 +312,7 @@ void GLTFRenderPass::visitGPUMesh(RenderPassEncoder& encoder,
             encoder.SetPushConstant(ShaderStage::Vertex, model_mat.Ptr(), 0,
                                     sizeof(Mat44));
 
-            encoder.SetBindGroup(0, mtl.GetImpl()->bindGroup);
+            encoder.SetBindGroup(0, mtl.GetImpl()->m_bind_group);
 
             // position
             auto& pos_buffer_view = prim.m_pos_buf_view;

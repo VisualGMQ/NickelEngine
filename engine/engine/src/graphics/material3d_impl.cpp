@@ -24,7 +24,7 @@ Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
         desc.m_entries[0] = entry;
     }
 
-    // camera buffer
+    // view buffer
     {
         BindGroup::Entry entry;
         entry.m_shader_stage = ShaderStage::Fragment;
@@ -46,6 +46,7 @@ Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
         binding.m_buffer = mtl_desc.pbr_param_buffer;
         binding.m_type = BindGroup::BufferBinding::Type::DynamicUniform;
         binding.m_offset = mtl_desc.pbrParameters.m_offset;
+        binding.m_size = mtl_desc.pbrParameters.m_size;
         entry.m_binding.m_entry = binding;
 
         desc.m_entries[1] = entry;
@@ -56,7 +57,7 @@ Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
     pushTextureInfoBinding(desc, mtl_desc.metalicRoughnessTexture, 4, 8);
     pushTextureInfoBinding(desc, mtl_desc.occlusionTexture, 5, 9);
 
-    layout.RequireBindGroup(desc);
+    m_bind_group = layout.RequireBindGroup(desc);
 }
 
 void Material3DImpl::pushTextureInfoBinding(BindGroup::Descriptor& desc,

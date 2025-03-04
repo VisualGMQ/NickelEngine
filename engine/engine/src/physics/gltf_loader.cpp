@@ -2,10 +2,11 @@
 
 #include "nickel/graphics/internal/context_impl.hpp"
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
-#include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/graphics/internal/material3d_impl.hpp"
 #include "nickel/graphics/internal/mesh_impl.hpp"
 #include "nickel/graphics/internal/texture_impl.hpp"
+
+#include <numeric>
 
 namespace nickel::graphics {
 
@@ -20,7 +21,6 @@ static Buffer copyBuffer2GPU(Device device, std::span<T> src,
     buffer.BuffData((void*)src.data(), desc.m_size, 0);
     return buffer;
 }
-
 
 GLTFLoader::GLTFLoader(const tinygltf::Model& model) : m_gltf_model{model} {}
 
@@ -50,86 +50,34 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
         gltf_manager.m_model_resource_allocator.Allocate(&gltf_manager);
     GLTFModelResourceImpl* resource = load_data.m_resource.GetImpl();
 
-    std::vector<Texture> textures;
-    textures.reserve(m_gltf_model.images.size());
+    size_t totle_buffer_size = std::accumulate(
+        m_gltf_model.buffers.begin(), m_gltf_model.buffers.end(), 0,
+        [&](size_t acc, const tinygltf::Buffer& buffer) {
+            return acc + buffer.data.size();
+        });
+    std::vector<unsigned char> buffer;
+    buffer.reserve(totle_buffer_size);
 
-    std::vector<Material3D> materials;
-    materials.reserve(m_gltf_model.materials.size());
+    std::vector<BufferView> buffer_accessors;
+    buffer_accessors.reserve(m_gltf_model.accessors.size());
 
-    std::vector<Sampler> samplers;
-    samplers.reserve(m_gltf_model.samplers.size());
-
-    // load images
-    for (int i = 0; i < m_gltf_model.images.size(); i++) {
-        auto& image = m_gltf_model.images[i];
-        textures.push_back(texture_mgr.Load(
-            root_dir / Path{ParseURI2Path(image.uri)}, Format::R8G8B8A8_UNORM));
-    }
-
-    // load samplers
-    for (auto& sampler : m_gltf_model.samplers) {
-        samplers.emplace_back(createSampler(device, sampler));
-    }
+    auto textures = loadTextures(root_dir, texture_mgr);
+    auto samplers = loadSamplers(device);
 
     std::vector<Material3D::Descriptor> mtl_desces;
 
-    // load material
-    for (auto& mtl : m_gltf_model.materials) {
-        // Material3D material;
-        auto align = adapter.GetLimits().min_uniform_buffer_offset_alignment;
-        Material3D::Descriptor desc;
+    std::vector<unsigned char> pbr_parameter_buffer;
 
-        uint32_t pbr_parameter_offset =
-            std::ceil(resource->m_cpu_data.pbr_parameters.size() /
-                      (float)align) *
-            align;
-        uint32_t pbr_parameter_size = sizeof(PBRParameters);
-        resource->m_cpu_data.pbr_parameters.resize(pbr_parameter_offset +
-                                                   pbr_parameter_size);
-        desc.pbrParameters.m_count = 1;
-        desc.pbrParameters.m_offset = pbr_parameter_offset;
-        desc.pbrParameters.m_size = pbr_parameter_size;
+    auto materials = loadMaterials(
+        adapter, gltf_manager, render_pass, resource->m_cpu_data.pbr_parameters,
+        pbr_parameter_buffer, textures, samplers, common_res);
 
-        PBRParameters pbrParam;
-
-        auto& colorFactor = mtl.pbrMetallicRoughness.baseColorFactor;
-        pbrParam.m_base_color.r = colorFactor[0];
-        pbrParam.m_base_color.g = colorFactor[1];
-        pbrParam.m_base_color.b = colorFactor[2];
-        pbrParam.m_base_color.a = colorFactor[3];
-
-        pbrParam.m_metallic = mtl.pbrMetallicRoughness.metallicFactor;
-        pbrParam.m_roughness = mtl.pbrMetallicRoughness.roughnessFactor;
-
-        memcpy(
-            resource->m_cpu_data.pbr_parameters.data() + pbr_parameter_offset,
-            &pbrParam, sizeof(PBRParameters));
-
-        desc.basicTexture = parseTextureInfo(
-            mtl.pbrMetallicRoughness.baseColorTexture.index, textures,
-            common_res.m_default_image, samplers, common_res.m_default_sampler);
-
-        desc.metalicRoughnessTexture = parseTextureInfo(
-            mtl.pbrMetallicRoughness.metallicRoughnessTexture.index, textures,
-            common_res.m_default_image, samplers, common_res.m_default_sampler);
-
-        desc.normalTexture = parseTextureInfo(
-            mtl.normalTexture.index, textures, common_res.m_default_image,
-            samplers, common_res.m_default_sampler);
-
-        desc.occlusionTexture = parseTextureInfo(
-            mtl.occlusionTexture.index, textures, common_res.m_default_image,
-            samplers, common_res.m_default_sampler);
-
-        mtl_desces.push_back(std::move(desc));
-    }
-
-    Buffer pbr_parameter_buffer =
-        copyBuffer2GPU(device, std::span{resource->m_cpu_data.pbr_parameters},
+    Buffer gpu_pbr_parameter_buffer =
+        copyBuffer2GPU(device, std::span{pbr_parameter_buffer},
                        Flags{BufferUsage::Uniform} | BufferUsage::CopyDst);
 
     for (auto& desc : mtl_desces) {
-        desc.pbr_param_buffer = pbr_parameter_buffer;
+        desc.pbr_param_buffer = gpu_pbr_parameter_buffer;
         materials.push_back(Material3D{gltf_manager.m_mtl_allocator.Allocate(
             &gltf_manager, desc, common_res.m_camera_buffer,
             common_res.m_view_buffer, render_pass.GetBindGroupLayout())});
@@ -137,14 +85,33 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
 
     load_data.m_meshes.reserve(m_gltf_model.meshes.size());
 
-    std::unordered_map<uint32_t, Buffer> data_buffers;
-    std::vector<unsigned char> generated_data_buffer;
+    auto accessors = loadVertexBuffer(resource->m_cpu_data.vertex_buffer);
+
     for (auto& m : m_gltf_model.meshes) {
         Mesh mesh =
-            createMesh(device, m, &gltf_manager, *resource, data_buffers,
-                       generated_data_buffer, materials, *gltf_manager.m_default_material);
+            createMesh(m, &gltf_manager, resource->m_cpu_data.vertex_buffer,
+                       accessors, materials, *gltf_manager.m_default_material);
         load_data.m_meshes.push_back(mesh);
     }
+
+    // TODO: split index buffer from whole buffer
+    Buffer gpu_vertex_buffer = copyBuffer2GPU(
+        device, std::span{resource->m_cpu_data.vertex_buffer},
+        Flags{BufferUsage::Vertex} | BufferUsage::CopyDst | BufferUsage::Index);
+
+    for (auto& m : load_data.m_meshes) {
+        for (auto& prim : m.GetImpl()->m_primitives) {
+            if (prim.m_indices_buf_view.m_size > 0) {
+                prim.m_indices_buf_view.m_buffer = gpu_vertex_buffer;
+            }
+            prim.m_norm_buf_view.m_buffer = gpu_vertex_buffer;
+            prim.m_pos_buf_view.m_buffer = gpu_vertex_buffer;
+            prim.m_tan_buf_view.m_buffer = gpu_vertex_buffer;
+            prim.m_uv_buf_view.m_buffer = gpu_vertex_buffer;
+        }
+    }
+
+    load_data.m_resource = resource;
 
     return load_data;
 }
@@ -153,7 +120,8 @@ Material3D::TextureInfo GLTFLoader::parseTextureInfo(
     int idx, std::vector<Texture>& textures, ImageView& default_texture,
     std::vector<Sampler>& samplers, Sampler& default_sampler) {
     Material3D::TextureInfo texture_info;
-    const tinygltf::Texture* info = idx == -1 ? nullptr : &m_gltf_model.textures[idx];
+    const tinygltf::Texture* info =
+        idx == -1 ? nullptr : &m_gltf_model.textures[idx];
     if (info && info->source != -1) {
         texture_info.image = textures[info->source].GetImpl()->m_view;
     } else {
@@ -201,84 +169,34 @@ int ComponentType2GLTF() {
     }
 }
 
-template <typename ComponentType>
-BufferView recordPrimComponentInfo(
-    const tinygltf::Model& model, Device& device,
-    const tinygltf::Accessor& accessor,
-    std::unordered_map<uint32_t, Buffer>& data_buffers) {
-    NICKEL_ASSERT(accessor.componentType ==
-                  ComponentType2GLTF<ComponentType>());
-    auto gltf_buffer_idx = model.bufferViews[accessor.bufferView].buffer;
-    if (!data_buffers.contains(gltf_buffer_idx)) {
-        auto& gltf_buffer = model.buffers[gltf_buffer_idx];
-        // TODO: not all buffer need Index usage
-        data_buffers[gltf_buffer_idx] =
-            copyBuffer2GPU(device, std::span{gltf_buffer.data},
-                           Flags{BufferUsage::Index} | BufferUsage::CopyDst |
-                               BufferUsage::Vertex);
-    }
-    Buffer& buffer = data_buffers[gltf_buffer_idx];
-    const tinygltf::BufferView& gltf_buffer_view =
-        model.bufferViews[accessor.bufferView];
-    auto offset = accessor.byteOffset + gltf_buffer_view.byteOffset;
-    auto size = accessor.count * sizeof(ComponentType) *
-                tinygltf::GetNumComponentsInType(accessor.type);
-    BufferView buffer_view;
-    buffer_view.m_buffer = buffer;
-    buffer_view.m_offset = offset;
-    buffer_view.m_size = size;
-    buffer_view.m_count = accessor.count;
-    buffer_view.m_stride = gltf_buffer_view.byteStride == 0
-                               ? sizeof(ComponentType)
-                               : gltf_buffer_view.byteStride;
-    return buffer_view;
-}
-
-Mesh GLTFLoader::createMesh(Device device, const tinygltf::Mesh& gltf_mesh,
-                            GLTFManagerImpl* mgr, GLTFModelResourceImpl& model,
-                            std::unordered_map<uint32_t, Buffer> data_buffers,
-                            std::vector<unsigned char>& generated_data_buffer,
+Mesh GLTFLoader::createMesh(const tinygltf::Mesh& gltf_mesh,
+                            GLTFManagerImpl* mgr,
+                            std::vector<unsigned char>& vertex_buffer,
+                            const std::vector<BufferView>& accessors,
                             std::vector<Material3D>& materials,
-                            Material3DImpl& default_material) {
+                            Material3DImpl& default_material) const {
     MeshImpl* newNode = mgr->m_mesh_allocator.Allocate(mgr);
     newNode->m_name = gltf_mesh.name;
 
     for (auto& primitive : gltf_mesh.primitives) {
-        auto prim = recordPrimInfo(device, data_buffers, generated_data_buffer,
-                                   primitive, materials, default_material);
+        auto prim = recordPrimInfo(vertex_buffer, accessors, primitive,
+                                   materials, default_material);
         newNode->m_primitives.emplace_back(prim);
-    }
-
-    // TODO: load cpu data
-    // model.m_cpu_data.data_buffers.push_back(data_buffer);
-    Buffer gpu_generated_data_buffer = copyBuffer2GPU(
-        device, std::span{generated_data_buffer},
-        Flags{BufferUsage::Index} | BufferUsage::CopyDst | BufferUsage::Vertex);
-
-    for (auto& primitive : newNode->m_primitives) {
-        if (!primitive.m_norm_buf_view.m_buffer) {
-            primitive.m_norm_buf_view.m_buffer = gpu_generated_data_buffer;
-        }
-        if (!primitive.m_tan_buf_view.m_buffer) {
-            primitive.m_tan_buf_view.m_buffer = gpu_generated_data_buffer;
-        }
     }
 
     return newNode;
 }
 
 Primitive GLTFLoader::recordPrimInfo(
-    Device& device, std::unordered_map<uint32_t, Buffer>& data_buffers,
-    std::vector<unsigned char>& generated_data_buffer,
+    std::vector<unsigned char>& vertex_buffer,
+    const std::vector<BufferView>& buffer_views,
     const tinygltf::Primitive& prim, std::vector<Material3D>& materials,
     Material3DImpl& default_material) const {
     Primitive primitive;
 
     auto& attrs = prim.attributes;
     if (auto it = attrs.find("POSITION"); it != attrs.end()) {
-        primitive.m_pos_buf_view = recordPrimComponentInfo<float>(
-            m_gltf_model, device, m_gltf_model.accessors[it->second],
-            data_buffers);
+        primitive.m_pos_buf_view = buffer_views[it->second];
     }
 
     if (prim.indices != -1) {
@@ -286,26 +204,18 @@ Primitive GLTFLoader::recordPrimInfo(
 
         if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
             primitive.m_index_type = IndexType::Uint16;
-
-            primitive.m_indices_buf_view = recordPrimComponentInfo<uint16_t>(
-                m_gltf_model, device, accessor, data_buffers);
         } else if (accessor.componentType ==
                    TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
             primitive.m_index_type = IndexType::Uint32;
-
-            primitive.m_indices_buf_view = recordPrimComponentInfo<uint32_t>(
-                m_gltf_model, device, accessor, data_buffers);
         } else {
             NICKEL_CANT_REACH();
         }
+        primitive.m_indices_buf_view = buffer_views[prim.indices];
     }
 
     bool has_uv = true;
     if (auto it = attrs.find("TEXCOORD_0"); it != attrs.end()) {
-        auto& accessor = m_gltf_model.accessors[it->second];
-
-        primitive.m_uv_buf_view = recordPrimComponentInfo<float>(
-            m_gltf_model, device, accessor, data_buffers);
+        primitive.m_uv_buf_view = buffer_views[it->second];
     } else {
         // some trivial data
         primitive.m_uv_buf_view = primitive.m_pos_buf_view;
@@ -315,16 +225,13 @@ Primitive GLTFLoader::recordPrimInfo(
     const BufferView& position_buffer_view = primitive.m_pos_buf_view;
 
     if (auto it = attrs.find("NORMAL"); it != attrs.end()) {
-        auto& accessor = m_gltf_model.accessors[it->second];
-
-        primitive.m_norm_buf_view = recordPrimComponentInfo<float>(
-            m_gltf_model, device, accessor, data_buffers);
+        primitive.m_norm_buf_view = buffer_views[it->second];
     } else {
-        size_t old_size = generated_data_buffer.size();
+        size_t old_size = vertex_buffer.size();
         uint32_t pos_count = position_buffer_view.m_count;
         size_t size = pos_count * sizeof(Vec3);
-        generated_data_buffer.resize(generated_data_buffer.size() + size, 0);
-        Vec3* norm_ptr = (Vec3*)(generated_data_buffer.data() + old_size);
+        vertex_buffer.resize(vertex_buffer.size() + size, 0);
+        Vec3* norm_ptr = (Vec3*)(vertex_buffer.data() + old_size);
 
         BufferView view;
         view.m_count = pos_count;
@@ -332,13 +239,13 @@ Primitive GLTFLoader::recordPrimInfo(
         view.m_offset = old_size;
         primitive.m_norm_buf_view = view;
 
-        auto posPtr = (const Vec3*)(generated_data_buffer.data() +
-                                    position_buffer_view.m_offset);
+        auto posPtr =
+            (const Vec3*)(vertex_buffer.data() + position_buffer_view.m_offset);
         if (primitive.m_indices_buf_view) {
             const BufferView& indices_buffer_view =
                 primitive.m_indices_buf_view;
             auto indices_ptr =
-                generated_data_buffer.data() + indices_buffer_view.m_offset;
+                vertex_buffer.data() + indices_buffer_view.m_offset;
 
             for (int i = 0; i < indices_buffer_view.m_count / 3; i++) {
                 auto idx1 = indices_ptr[i * 3];
@@ -367,15 +274,12 @@ Primitive GLTFLoader::recordPrimInfo(
     }
 
     if (auto it = attrs.find("TANGENT"); it != attrs.end()) {
-        auto& accessor = m_gltf_model.accessors[it->second];
-
-        primitive.m_tan_buf_view = recordPrimComponentInfo<float>(
-            m_gltf_model, device, accessor, data_buffers);
+        primitive.m_tan_buf_view = buffer_views[it->second];
     } else {
-        size_t old_size = generated_data_buffer.size();
+        size_t old_size = vertex_buffer.size();
         uint32_t pos_count = position_buffer_view.m_count;
         size_t size = pos_count * sizeof(Vec4);
-        generated_data_buffer.resize(generated_data_buffer.size() + size, 0);
+        vertex_buffer.resize(vertex_buffer.size() + size, 0);
 
         BufferView view;
         view.m_count = pos_count;
@@ -385,19 +289,19 @@ Primitive GLTFLoader::recordPrimInfo(
 
         const BufferView& uv_buffer_view = primitive.m_uv_buf_view;
 
-        auto posPtr = (const Vec3*)(generated_data_buffer.data() +
-                                    position_buffer_view.m_offset);
-        auto uvPtr = (const Vec2*)(generated_data_buffer.data() +
-                                   uv_buffer_view.m_offset);
-        auto tanPtr = (Vec4*)(generated_data_buffer.data() + view.m_offset);
-        if (primitive.m_indices_buf_view) {
+        auto posPtr =
+            (const Vec3*)(vertex_buffer.data() + position_buffer_view.m_offset);
+        auto uvPtr =
+            (const Vec2*)(vertex_buffer.data() + uv_buffer_view.m_offset);
+        auto tanPtr = (Vec4*)(vertex_buffer.data() + view.m_offset);
+
+        if (primitive.m_indices_buf_view.m_size > 0) {
             const BufferView& indices_buffer_view =
                 primitive.m_indices_buf_view;
-            auto indicesPtr = (const uint16_t*)(generated_data_buffer.data() +
+            auto indicesPtr = (const uint16_t*)(vertex_buffer.data() +
                                                 indices_buffer_view.m_offset);
-
             NICKEL_ASSERT(indices_buffer_view.m_count % 3 == 0,
-                          "indices can't be triangle list");
+                          "indices must be triangle list");
             for (int i = 0; i < indices_buffer_view.m_count / 3; i++) {
                 uint32_t idx1, idx2, idx3;
                 switch (primitive.m_index_type) {
@@ -441,16 +345,202 @@ Primitive GLTFLoader::recordPrimInfo(
                 *(tanPtr + idx3) = tangent;
             }
         } else {
-            // TODO:
+            NICKEL_ASSERT(primitive.m_pos_buf_view.m_count % 3 == 0,
+                          "vertices must be triangle list");
+            for (int i = 0; i < primitive.m_pos_buf_view.m_count / 3; i++) {
+                uint32_t idx1 = i * 3, idx2 = i * 3 + 1, idx3 = i * 3 + 2;
+                auto uv1 = *(uvPtr + idx1);
+                auto uv2 = *(uvPtr + idx2);
+                auto uv3 = *(uvPtr + idx3);
+
+                auto pos1 = *(posPtr + idx1);
+                auto pos2 = *(posPtr + idx2);
+                auto pos3 = *(posPtr + idx3);
+
+                Vec4 tangent;
+
+                if (!has_uv ||
+                    (uv1 == Vec2{} && uv2 == Vec2{} && uv3 == Vec2{})) {
+                    auto t = Normalize(pos2 - pos1);
+                    tangent.x = t.x;
+                    tangent.y = t.y;
+                    tangent.z = t.z;
+                    tangent.w = 1;
+                } else {
+                    auto [tan, _] =
+                        GetNormalMapTB(pos1, pos2, pos3, uv1, uv2, uv3);
+
+                    tangent = Vec4{tan.x, tan.y, tan.z, 1};
+                }
+                *(tanPtr + idx1) = tangent;
+                *(tanPtr + idx2) = tangent;
+                *(tanPtr + idx3) = tangent;
+            }
         }
     }
 
     default_material.IncRefcount();
     Material3D mtl{&default_material};
-    primitive.m_material =
-        prim.material != -1 ? materials[prim.material] : mtl;
+    primitive.m_material = prim.material != -1 ? materials[prim.material] : mtl;
 
     return primitive;
+}
+
+std::vector<Texture> GLTFLoader::loadTextures(const Path& root_dir,
+                                              TextureManager& texture_mgr) {
+    std::vector<Texture> textures;
+    textures.reserve(m_gltf_model.images.size());
+    for (int i = 0; i < m_gltf_model.images.size(); i++) {
+        auto& image = m_gltf_model.images[i];
+        textures.emplace_back(texture_mgr.Load(
+            root_dir / Path{ParseURI2Path(image.uri)}, Format::R8G8B8A8_UNORM));
+    }
+    return textures;
+}
+
+std::vector<Sampler> GLTFLoader::loadSamplers(Device& device) {
+    std::vector<Sampler> samplers;
+    for (auto& sampler : m_gltf_model.samplers) {
+        Sampler::Descriptor desc;
+        desc.m_min_filter = GLTFFilter2RHI(sampler.minFilter);
+        desc.m_mag_filter = GLTFFilter2RHI(sampler.magFilter);
+        desc.m_address_mode_u = GLTFWrapper2RHI(sampler.wrapS);
+        desc.m_address_mode_v = GLTFWrapper2RHI(sampler.wrapT);
+        samplers.emplace_back(device.CreateSampler(desc));
+    }
+    return samplers;
+}
+
+std::vector<Material3D> GLTFLoader::loadMaterials(
+    const Adapter& adapter, GLTFManagerImpl& gltf_mgr,
+    GLTFRenderPass& render_pass, std::vector<PBRParameters>& pbr_parameters,
+    std::vector<unsigned char>& data_buffer, std::vector<Texture>& textures,
+    std::vector<Sampler>& samplers, CommonResource& common_res) {
+    NICKEL_ASSERT(pbr_parameters.empty());
+
+    std::vector<Material3D::Descriptor> mtl_desces;
+    std::vector<Material3D> materials;
+
+    // load material
+    for (auto& mtl : m_gltf_model.materials) {
+        // Material3D material;
+        auto align = adapter.GetLimits().min_uniform_buffer_offset_alignment;
+        Material3D::Descriptor desc;
+
+        uint32_t pbr_parameter_offset =
+            std::ceil(data_buffer.size() / (float)align) * align;
+        uint32_t pbr_parameter_size = sizeof(PBRParameters);
+        data_buffer.resize(pbr_parameter_offset + pbr_parameter_size);
+        desc.pbrParameters.m_count = 1;
+        desc.pbrParameters.m_offset = pbr_parameter_offset;
+        desc.pbrParameters.m_size = pbr_parameter_size;
+
+        PBRParameters pbr_param;
+
+        auto& colorFactor = mtl.pbrMetallicRoughness.baseColorFactor;
+        pbr_param.m_base_color.r = colorFactor[0];
+        pbr_param.m_base_color.g = colorFactor[1];
+        pbr_param.m_base_color.b = colorFactor[2];
+        pbr_param.m_base_color.a = colorFactor[3];
+
+        pbr_param.m_metallic = mtl.pbrMetallicRoughness.metallicFactor;
+        pbr_param.m_roughness = mtl.pbrMetallicRoughness.roughnessFactor;
+
+        memcpy(data_buffer.data() + pbr_parameter_offset, &pbr_param,
+               sizeof(PBRParameters));
+
+        desc.basicTexture = parseTextureInfo(
+            mtl.pbrMetallicRoughness.baseColorTexture.index, textures,
+            common_res.m_default_image, samplers, common_res.m_default_sampler);
+
+        desc.metalicRoughnessTexture = parseTextureInfo(
+            mtl.pbrMetallicRoughness.metallicRoughnessTexture.index, textures,
+            common_res.m_white_image, samplers, common_res.m_default_sampler);
+
+        desc.normalTexture =
+            parseTextureInfo(mtl.normalTexture.index, textures,
+                             common_res.m_default_normal_image, samplers,
+                             common_res.m_default_sampler);
+
+        desc.occlusionTexture = parseTextureInfo(
+            mtl.occlusionTexture.index, textures, common_res.m_white_image,
+            samplers, common_res.m_default_sampler);
+
+        mtl_desces.push_back(std::move(desc));
+        pbr_parameters.push_back(pbr_param);
+    }
+
+    Buffer pbr_parameter_buffer =
+        copyBuffer2GPU(adapter.GetDevice(), std::span{data_buffer},
+                       Flags{BufferUsage::Uniform} | BufferUsage::CopyDst);
+
+    for (auto& desc : mtl_desces) {
+        desc.pbr_param_buffer = pbr_parameter_buffer;
+        materials.push_back(Material3D{gltf_mgr.m_mtl_allocator.Allocate(
+            &gltf_mgr, desc, common_res.m_camera_buffer,
+            common_res.m_view_buffer, render_pass.GetBindGroupLayout())});
+    }
+
+    return materials;
+}
+
+std::vector<BufferView> GLTFLoader::loadVertexBuffer(
+    std::vector<unsigned char>& out_buffer) const {
+    NICKEL_ASSERT(out_buffer.empty());
+
+    size_t reserve_size = 0;
+    for (int i = 0; i < m_gltf_model.accessors.size(); i++) {
+        auto& accessor = m_gltf_model.accessors[i];
+        reserve_size +=
+            m_gltf_model.bufferViews[accessor.bufferView].byteLength;
+    }
+
+    std::vector<BufferView> views;
+    views.reserve(m_gltf_model.accessors.size());
+    out_buffer.reserve(reserve_size);
+
+    for (auto& accessor : m_gltf_model.accessors) {
+        BufferView buffer_view;
+        switch (accessor.componentType) {
+            case TINYGLTF_COMPONENT_TYPE_INT:
+                buffer_view = CopyBufferFromGLTF<int>(out_buffer, accessor.type,
+                                                      accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_BYTE:
+                buffer_view = CopyBufferFromGLTF<char>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                buffer_view = CopyBufferFromGLTF<float>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+                buffer_view = CopyBufferFromGLTF<double>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_SHORT:
+                buffer_view = CopyBufferFromGLTF<short>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                buffer_view = CopyBufferFromGLTF<uint32_t>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                buffer_view = CopyBufferFromGLTF<uint16_t>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                buffer_view = CopyBufferFromGLTF<uint8_t>(
+                    out_buffer, accessor.type, accessor, m_gltf_model);
+                break;
+            default:
+                NICKEL_CANT_REACH();
+        }
+        views.push_back(buffer_view);
+    }
+
+    return views;
 }
 
 }  // namespace nickel::graphics

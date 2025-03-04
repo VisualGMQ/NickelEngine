@@ -16,9 +16,10 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-        // m_model
         mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
         m_model = mgr.Find("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck");
+        // mgr.Load("tests/render/gltf/assets/Box/Box.gltf");
+        // m_model = mgr.Find("tests/render/gltf/assets/Box/Box");
     }
 
     void OnUpdate() override {

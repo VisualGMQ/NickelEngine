@@ -16,7 +16,7 @@ namespace nickel::graphics {
 
 struct GLTFCPUData {
     std::vector<PBRParameters> pbr_parameters;
-    std::vector<std::vector<unsigned char>> data_buffers;
+    std::vector<unsigned char> vertex_buffer;
 };
 
 struct GLTFModelResourceImpl;
