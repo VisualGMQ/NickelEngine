@@ -112,6 +112,18 @@ TriangleMesh ContextImpl::CreateTriangleMesh(const Vec3* vertices,
     if (!status) {
         return NULL;
     }
+    switch (result) {
+        case physx::PxTriangleMeshCookingResult::eLARGE_TRIANGLE:
+            LOGW("cook triangle mesh faild: large triangle");
+            break;
+        case physx::PxTriangleMeshCookingResult::eEMPTY_MESH:
+            LOGE("cook triangle mesh faild: empty mesh");
+            break;
+        case physx::PxTriangleMeshCookingResult::eFAILURE:
+            LOGE("cook triangle mesh faild: failure");
+            break;
+        default:
+    }
 
     physx::PxDefaultMemoryInputData readBuffer(writeBuffer.getData(),
                                                writeBuffer.getSize());

@@ -78,7 +78,7 @@ bool GLTFManagerImpl::Load(const Path& filename,
     std::string final_name = (parent_dir / pure_filename).ToString();
     std::replace(final_name.begin(), final_name.end(), '\\', '/');
     if (load_config.m_combine_mesh) {
-        // TODO: currently we only load one scene
+        // NOTE: currently we only load one scene
         GLTFModel root_model = m_model_allocator.Allocate(this);
         GLTFModelImpl* root_model_impl = root_model.GetImpl();
         for (auto& node : gltf_model.scenes[0].nodes) {
@@ -93,7 +93,6 @@ bool GLTFManagerImpl::Load(const Path& filename,
             root_model_impl->m_name = gltf_model.scenes[0].name;
         }
         m_models[final_name] = root_model_impl;
-        return true;
     } else {
         for (auto& mesh : load_data.m_meshes) {
             GLTFModelImpl* model = m_model_allocator.Allocate(this);
@@ -106,8 +105,8 @@ bool GLTFManagerImpl::Load(const Path& filename,
                 LOGE("model {} already loaded", model->m_name);
             }
         }
-        return true;
     }
+    return true;
 }
 
 GLTFModel GLTFManagerImpl::Find(const std::string& name) {
