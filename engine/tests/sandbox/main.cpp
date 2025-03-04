@@ -19,6 +19,7 @@ public:
         mgr.Load(
             "tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
         mgr.Load("engine/assets/models/unit_box/unit_box.gltf");
+        mgr.Load("engine/assets/models/unit_sphere/unit_sphere.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         {
@@ -41,7 +42,7 @@ public:
         {
             nickel::GameObject go;
             go.m_model =
-                mgr.Find("engine/assets/models/unit_box/unit_box.gltf");
+                mgr.Find("engine/assets/models/unit_sphere/unit_sphere.gltf");
             go.m_transform.p = nickel::Vec3{3, 0, 0};
             root_go.m_children.push_back(go);
         }

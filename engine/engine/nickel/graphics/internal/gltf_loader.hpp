@@ -223,15 +223,22 @@ private:
 
     Mesh createMesh(const tinygltf::Mesh& gltf_mesh, GLTFManagerImpl* mgr,
                     std::vector<unsigned char>& vertex_buffer,
+                    std::vector<unsigned char>& indices_buffer,
                     const std::vector<BufferView>& accessors,
                     std::vector<Material3D>& materials,
                     Material3DImpl& default_material) const;
 
     Primitive recordPrimInfo(std::vector<unsigned char>& vertex_buffer,
+                             std::vector<unsigned char>& indices_buffer,
                              const std::vector<BufferView>& buffer_views,
                              const tinygltf::Primitive& prim,
                              std::vector<Material3D>& materials,
                              Material3DImpl& default_material) const;
+
+    void analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
+                              std::set<uint32_t>& out_index_accessors,
+                              size_t& out_vertex_buffer_size,
+                              size_t& out_index_buffer_size);
 
     std::vector<Texture> loadTextures(const Path& root_dir,
                                       TextureManager& texture_mgr);
@@ -242,7 +249,10 @@ private:
         std::vector<unsigned char>& data_buffer, std::vector<Texture>& textures,
         std::vector<Sampler>& samplers, CommonResource& common_res);
     std::vector<BufferView> loadVertexBuffer(
-        std::vector<unsigned char>& out_buffer) const;
+        std::vector<unsigned char>& out_vertex_buffer,
+        std::vector<unsigned char>& out_index_buffer,
+        const std::set<uint32_t>& vertex_accessor,
+        const std::set<uint32_t>& index_accessor) const;
 };
 
 }  // namespace nickel::graphics
