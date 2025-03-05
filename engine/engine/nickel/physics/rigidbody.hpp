@@ -13,7 +13,7 @@ class RigidStaticImpl;
 class RigidActor: public ImplWrapper<RigidActorImpl> {
 public:
     using ImplWrapper::ImplWrapper;
-    
+
     void SetGlobalTransform(const Vec3& position, const Quat& rotation);
     Transform GetGlobalTransform() const;
 
@@ -25,11 +25,14 @@ public:
     void AttachShape(const Shape& shape);
     void DetachShape(const Shape& shape);
     uint32_t GetShapeNum() const;
+    std::vector<Shape> GetShapes() const;
 };
 
 class RigidStatic : public RigidActor {
 public:
     using RigidActor::RigidActor;
+    
+    operator RigidActor();
 
 private:
     RigidStaticImpl* getUnderlyingImpl();
@@ -39,6 +42,8 @@ private:
 class RigidDynamic : public RigidActor {
 public:
     using RigidActor::RigidActor;
+
+    operator RigidActor();
 
     void SetKinematicTarget(const Vec3& force, const Quat& q);
     void EnableKinematic(bool enable);

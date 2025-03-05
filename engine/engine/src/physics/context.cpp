@@ -25,12 +25,13 @@ RigidDynamic Context::CreateRigidDynamic(const Vec3& p, const Quat& q) {
     return m_impl->CreateRigidDynamic(p, q);
 }
 
-TriangleMesh Context::CreateTriangleMesh(const Vec3* vertices,
-                                         uint32_t vertex_count,
-                                         const uint32_t* indices,
-                                         uint32_t index_count) {
-    return m_impl->CreateTriangleMesh(vertices, vertex_count, indices,
-                                      index_count);
+TriangleMesh Context::CreateTriangleMesh(std::span<const Vec3> vertices,
+                                         std::span<const uint32_t> indices) {
+    return m_impl->CreateTriangleMesh(vertices, indices);
+}
+
+ConvexMesh Context::CreateConvexMesh(std::span<const Vec3> vertices) {
+    return m_impl->CreateConvexMesh(vertices);
 }
 
 Shape Context::CreateShape(const SphereGeometry& g, const Material& mtl) {
@@ -49,8 +50,16 @@ Shape Context::CreateShape(const TriangleMeshGeometry& g, const Material& mtl) {
     return m_impl->CreateShape(g, mtl);
 }
 
+Shape Context::CreateShape(const ConvexMeshGeometry& g, const Material& mtl) {
+    return m_impl->CreateShape(g, mtl);
+}
+
 Shape Context::CreateShape(const PlaneGeometry& g, const Material& mtl) {
     return m_impl->CreateShape(g, mtl);
+}
+
+Scene Context::GetMainScene() {
+    return m_impl->GetMainScene();
 }
 
 void Context::Update(float delta_time) {

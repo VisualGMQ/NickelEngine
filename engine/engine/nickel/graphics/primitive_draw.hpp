@@ -20,7 +20,7 @@ public:
     void Begin();
     void UploadData2GPU(Device& device);
     void ApplyDrawCall(RenderPassEncoder&, bool wireframe);
-    void DrawLineStrip(std::span<Vertex> vertices);
+    void DrawLineList(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
                           std::span<uint32_t> indices);
 

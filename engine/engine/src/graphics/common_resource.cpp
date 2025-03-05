@@ -179,6 +179,7 @@ void CommonResource::initDefaultResources(Device& device) {
     }
 
     m_white_image = createPureColorImage(device, 0xFFFFFFFF);
+    m_default_image = m_white_image;
     m_black_image = createPureColorImage(device, 0xFF000000);
     m_default_normal_image = createPureColorImage(device, 0xFFFF8080);
 }

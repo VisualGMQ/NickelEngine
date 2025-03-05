@@ -5,13 +5,22 @@
 
 namespace nickel::physics {
 class ShapeImpl;
-class ShapeImplConst;
+class ShapeConstImpl;
 class ContextImpl;
 
-class Shape: public ImplWrapper<ShapeImpl> {
+class Shape {
 public:
-    using ImplWrapper::ImplWrapper;
-    
+    Shape() = default;
+    Shape(ShapeImpl* impl);
+    Shape(const Shape& o);
+    Shape(Shape&& o) noexcept;
+    Shape& operator=(const Shape& other);
+    Shape& operator=(Shape&& other) noexcept;
+    ~Shape();
+
+    const ShapeImpl* GetImpl() const;
+    ShapeImpl* GetImpl();
+
     void SetMaterials(std::span<Material> materials);
     void SetMaterial(Material& materials);
 
@@ -19,13 +28,28 @@ public:
     Transform GetLocalPose() const;
 
     void SetGeometry(const Geometry&);
+
+private:
+    ShapeImpl* m_impl{};
 };
 
-class ShapeConst: public ImplWrapper<ShapeImplConst> {
+class ShapeConst {
 public:
-    using ImplWrapper::ImplWrapper;
+    ShapeConst() = default;
+    ShapeConst(ShapeConstImpl* impl);
+    ShapeConst(const ShapeConst& o);
+    ShapeConst(ShapeConst&& o) noexcept;
+    ShapeConst& operator=(const ShapeConst& other);
+    ShapeConst& operator=(ShapeConst&& other) noexcept;
+    ~ShapeConst();
+    
+    const ShapeConstImpl* GetImpl() const;
+    ShapeConstImpl* GetImpl();
     
     Transform GetLocalPose() const;
+
+private:
+    ShapeConstImpl* m_impl{};
 };
 
 }  // namespace nickel::physics

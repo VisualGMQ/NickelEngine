@@ -28,6 +28,7 @@ public:
 
     // some trivial images for default m_usage
     ImageView m_white_image;
+    ImageView m_default_image;
     ImageView m_black_image;
     ImageView m_default_normal_image;
     Sampler m_default_sampler;

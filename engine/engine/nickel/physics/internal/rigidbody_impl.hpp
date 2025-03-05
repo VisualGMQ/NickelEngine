@@ -30,6 +30,7 @@ public:
     void AttachShape(const Shape& shape);
     void DetachShape(const Shape& shape);
     uint32_t GetShapeNum() const;
+    std::vector<Shape> GetShapes() const;
 
     physx::PxRigidActor* m_actor{};
 

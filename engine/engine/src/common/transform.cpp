@@ -3,8 +3,9 @@
 namespace nickel {
 
 Transform& Transform::operator*=(const Transform& o) {
-    p = o.p + o.q * o.scale * p;
-    q = o.q * q;
+    p = p + q * (scale * o.p);
+    q = q * o.q;
+    scale = scale * o.scale;
     return *this;
 }
 
@@ -15,6 +16,7 @@ Transform Transform::RelatedBy(const Transform& parent) const {
     Quat inv_q = parent.q.Inverse();
     result.q = q * inv_q;
     result.p = inv_q * ((p - parent.p) / parent.scale);
+    result.scale = scale / parent.scale;
     return result;
 }
 

@@ -3,6 +3,10 @@
 
 namespace nickel::physics {
 
+void Scene::AddRigidActor(RigidActor& actor) {
+    return m_impl->AddRigidActor(actor);
+}
+
 void Scene::Simulate(float delta_time) const {
     m_impl->Simulate(delta_time);
 }

@@ -66,13 +66,15 @@ public:
                             float restitution);
     RigidStatic CreateRigidStatic(const Vec3& p, const Quat& q);
     RigidDynamic CreateRigidDynamic(const Vec3& p, const Quat& q);
-    TriangleMesh CreateTriangleMesh(const Vec3* vertices, uint32_t vertex_count,
-                                    const uint32_t* indices,
-                                    uint32_t index_count);
+    TriangleMesh CreateTriangleMesh(std::span<const Vec3> vertices,
+                                    std::span<const uint32_t> indices);
+    ConvexMesh CreateConvexMesh(std::span<const Vec3> vertices);
+    
     Shape CreateShape(const SphereGeometry&, const Material&);
     Shape CreateShape(const BoxGeometry&, const Material&);
     Shape CreateShape(const CapsuleGeometry&, const Material&);
     Shape CreateShape(const TriangleMeshGeometry&, const Material&);
+    Shape CreateShape(const ConvexMeshGeometry&, const Material&);
     Shape CreateShape(const PlaneGeometry&, const Material&);
 
     D6Joint CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
@@ -93,7 +95,7 @@ public:
     BlockMemoryAllocator<RigidActorConstImpl> m_rigid_actor_const_allocator;
     BlockMemoryAllocator<MaterialImpl> m_material_allocator;
     BlockMemoryAllocator<ShapeImpl> m_shape_allocator;
-    BlockMemoryAllocator<ShapeImplConst> m_shape_const_allocator;
+    BlockMemoryAllocator<ShapeConstImpl> m_shape_const_allocator;
     BlockMemoryAllocator<D6JointImpl> m_joint_allocator;
 
 private:

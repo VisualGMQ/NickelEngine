@@ -3,13 +3,20 @@
 namespace nickel {
 
 Path::Path(const std::string& path)
-    : m_path{path, std::filesystem::path::generic_format} {}
+    : m_path{path, std::filesystem::path::generic_format} {
+}
+
+Path::Path(const std::filesystem::path& path)
+    : m_path{path, std::filesystem::path::generic_format} {
+}
 
 Path::Path(const char* path)
-    : m_path{path, std::filesystem::path::generic_format} {}
+    : m_path{path, std::filesystem::path::generic_format} {
+}
 
 Path::Path(std::string_view path)
-    : m_path{path, std::filesystem::path::generic_format} {}
+    : m_path{path, std::filesystem::path::generic_format} {
+}
 
 void Path::Clear() {
     m_path.clear();
@@ -114,9 +121,6 @@ Path Path::Filename() const {
 Path Path::Extension() const {
     return Path{m_path.extension()};
 }
-
-Path::Path(const std::filesystem::path& path)
-    : m_path{path, std::filesystem::path::generic_format} {}
 
 std::ostream& operator<<(std::ostream& os, const Path& path) {
     os << path.ToString();

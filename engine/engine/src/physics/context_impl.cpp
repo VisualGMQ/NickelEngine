@@ -24,7 +24,7 @@ ContextImpl::ContextImpl() {
     physx::PxSceneDesc desc{m_tolerances_scale};
     desc.gravity = Vec3ToPhysX(Vec3{0, -9.8f, 0});
     desc.frictionType = physx::PxFrictionType::ePATCH;
-    desc.solverType = physx::PxSolverType::eTGS;
+    desc.solverType = physx::PxSolverType::ePGS;
     desc.filterShader = physx::PxDefaultSimulationFilterShader;
 
     m_cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(4);
@@ -91,18 +91,16 @@ RigidDynamic ContextImpl::CreateRigidDynamic(const Vec3& p, const Quat& q) {
         this, static_cast<physx::PxRigidActor*>(rigid));
 }
 
-TriangleMesh ContextImpl::CreateTriangleMesh(const Vec3* vertices,
-                                             uint32_t vertex_count,
-                                             const uint32_t* indices,
-                                             uint32_t index_count) {
+TriangleMesh ContextImpl::CreateTriangleMesh(
+    std::span<const Vec3> vertices, std::span<const uint32_t> indices) {
     physx::PxTriangleMeshDesc meshDesc;
-    meshDesc.points.count = vertex_count;
+    meshDesc.points.count = vertices.size();
     meshDesc.points.stride = sizeof(physx::PxVec3);
-    meshDesc.points.data = vertices;
+    meshDesc.points.data = vertices.data();
 
-    meshDesc.triangles.count = index_count;
+    meshDesc.triangles.count = indices.size();
     meshDesc.triangles.stride = 3 * sizeof(physx::PxU32);
-    meshDesc.triangles.data = indices;
+    meshDesc.triangles.data = indices.data();
 
     physx::PxCookingParams params(m_tolerances_scale);
 
@@ -112,10 +110,58 @@ TriangleMesh ContextImpl::CreateTriangleMesh(const Vec3* vertices,
     if (!status) {
         return NULL;
     }
+    switch (result) {
+        case physx::PxTriangleMeshCookingResult::eLARGE_TRIANGLE:
+            LOGW("cook triangle mesh faild: large triangle");
+            break;
+        case physx::PxTriangleMeshCookingResult::eEMPTY_MESH:
+            LOGE("cook triangle mesh faild: empty mesh");
+            break;
+        case physx::PxTriangleMeshCookingResult::eFAILURE:
+            LOGE("cook triangle mesh faild: failure");
+            break;
+        default:;
+    }
 
     physx::PxDefaultMemoryInputData readBuffer(writeBuffer.getData(),
                                                writeBuffer.getSize());
     return m_physics->createTriangleMesh(readBuffer);
+}
+
+ConvexMesh ContextImpl::CreateConvexMesh(std::span<const Vec3> vertices) {
+    physx::PxConvexMeshDesc convexDesc;
+    convexDesc.points.count = 5;
+    convexDesc.points.stride = sizeof(physx::PxVec3);
+    convexDesc.points.data = vertices.data();
+    convexDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+
+    physx::PxTolerancesScale scale;
+    physx::PxCookingParams params(scale);
+
+    physx::PxDefaultMemoryOutputStream buf;
+    physx::PxConvexMeshCookingResult::Enum result;
+    bool status = PxCookConvexMesh(params, convexDesc, buf, &result);
+    if (!status) {
+        return NULL;
+    }
+    switch (result) {
+        case physx::PxConvexMeshCookingResult::eZERO_AREA_TEST_FAILED:
+            LOGE("cook convex mesh faild: zero area");
+            break;
+        case physx::PxConvexMeshCookingResult::ePOLYGONS_LIMIT_REACHED:
+            LOGE("cook convex mesh faild: limit reached");
+            break;
+        case physx::PxConvexMeshCookingResult::eFAILURE:
+            LOGE("cook convex mesh faild: failure");
+            break;
+        case physx::PxConvexMeshCookingResult::eNON_GPU_COMPATIBLE:
+            LOGE("cook convex mesh faild: non gpu compatible");
+            break;
+        default:;
+    }
+
+    physx::PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+    return m_physics->createConvexMesh(input);
 }
 
 Shape ContextImpl::CreateShape(const SphereGeometry& geom,
@@ -150,8 +196,20 @@ Shape ContextImpl::CreateShape(const CapsuleGeometry& geom,
 
 Shape ContextImpl::CreateShape(const TriangleMeshGeometry& geom,
                                const Material& material) {
-    physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
-                                                   *material.GetImpl()->m_mtl);
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),
+        *material.GetImpl()->m_mtl);
+    if (shape) {
+        return Shape{m_shape_allocator.Allocate(this, shape)};
+    }
+    return {};
+}
+
+Shape ContextImpl::CreateShape(const ConvexMeshGeometry& geom,
+                               const Material& material) {
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),
+        *material.GetImpl()->m_mtl);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }
@@ -187,6 +245,7 @@ void ContextImpl::Update(float delta_time) {
 }
 
 Scene ContextImpl::GetMainScene() {
+    m_main_scene->IncRefcount();
     return Scene{m_main_scene};
 }
 

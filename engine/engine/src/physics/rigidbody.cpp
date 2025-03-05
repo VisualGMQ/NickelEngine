@@ -8,6 +8,14 @@ uint32_t RigidActor::GetShapeNum() const {
     return m_impl->GetShapeNum();
 }
 
+std::vector<Shape> RigidActor::GetShapes() const {
+    return m_impl->GetShapes();
+}
+
+RigidStatic::operator RigidActor() {
+    return RigidActor{static_cast<const RigidActor&>(*this)};
+}
+
 void RigidActor::SetGlobalTransform(const Vec3& position,
                                     const Quat& rotation) {
     m_impl->SetGlobalTransform(position, rotation);
@@ -47,6 +55,10 @@ RigidStaticImpl* RigidStatic::getUnderlyingImpl() {
 
 const RigidStaticImpl* RigidStatic::getUnderlyingImpl() const {
     return static_cast<const RigidStaticImpl*>(GetImpl());
+}
+
+RigidDynamic::operator RigidActor() {
+    return RigidActor{static_cast<const RigidActor&>(*this)};
 }
 
 void RigidDynamic::SetKinematicTarget(const Vec3& force, const Quat& q) {

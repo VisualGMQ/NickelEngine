@@ -6,10 +6,16 @@ namespace nickel::physics {
 
 class MaterialImpl;
 
-class Material: public ImplWrapper<MaterialImpl> {
+class Material {
 public:
-    using ImplWrapper::ImplWrapper;
-    
+    Material() = default;
+    Material(MaterialImpl* impl);
+    Material(const Material& o);
+    Material(Material&& o) noexcept;
+    Material& operator=(const Material& other);
+    Material& operator=(Material&& other) noexcept;
+    ~Material();
+
     void SetDynamicFriction(float friction);
     void SetStaticFriction(float friction);
     void SetRestitution(float);
@@ -23,6 +29,12 @@ public:
     void SetFrictionCombineMode(CombineMode);
     void SetRestitutionCombineMode(CombineMode);
     void SetDampingCombineMode(CombineMode);
+
+    MaterialImpl* GetImpl();
+    const MaterialImpl* GetImpl() const;
+
+private:
+    MaterialImpl* m_impl{};
 };
 
 }  // namespace nickel::physics

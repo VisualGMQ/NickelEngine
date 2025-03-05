@@ -4,6 +4,48 @@
 
 namespace nickel::physics {
 
+Material::Material(MaterialImpl* impl) : m_impl{impl} {}
+
+Material::Material(const Material& o) : m_impl{o.m_impl} {
+    if (o.m_impl) {
+        o.m_impl->IncRefcount();
+    }
+}
+
+Material::Material(Material&& o) noexcept : m_impl{o.m_impl} {
+    o.m_impl = nullptr;
+}
+
+Material& Material::operator=(const Material& o) {
+    if (&o != this) {
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
+        m_impl = o.m_impl;
+        if (o.m_impl) {
+            o.m_impl->IncRefcount();
+        }
+    }
+    return *this;
+}
+
+Material& Material::operator=(Material&& o) noexcept {
+    if (&o != this) {
+        if (m_impl) {
+            m_impl->DecRefcount();
+        }
+        m_impl = o.m_impl;
+        o.m_impl = nullptr;
+    }
+    return *this;
+}
+
+Material::~Material() {
+    if (m_impl) {
+        m_impl->DecRefcount();
+    }
+}
+
 void Material::SetDynamicFriction(float friction) {
     m_impl->SetDynamicFriction(friction);
 }
@@ -46,6 +88,14 @@ void Material::SetRestitutionCombineMode(CombineMode mode) {
 
 void Material::SetDampingCombineMode(CombineMode mode) {
     m_impl->setDampingCombineMode(mode);
+}
+
+MaterialImpl* Material::GetImpl() {
+    return m_impl;
+}
+
+const MaterialImpl* Material::GetImpl() const {
+    return m_impl;
 }
 
 }  // namespace nickel::physics

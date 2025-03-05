@@ -19,14 +19,18 @@ public:
     RigidStatic CreateRigidStatic(const Vec3& p, const Quat& q);
     RigidDynamic CreateRigidDynamic(const Vec3& p, const Quat& q);
 
-    TriangleMesh CreateTriangleMesh(const Vec3* vertices, uint32_t vertex_count,
-                                    const uint32_t* indices,
-                                    uint32_t index_count);
+    TriangleMesh CreateTriangleMesh(std::span<const Vec3> vertices,
+                                    std::span<const uint32_t> indices);
+    
+    ConvexMesh CreateConvexMesh(std::span<const Vec3> vertices);
     Shape CreateShape(const SphereGeometry&, const Material&);
     Shape CreateShape(const BoxGeometry&, const Material&);
     Shape CreateShape(const CapsuleGeometry&, const Material&);
     Shape CreateShape(const TriangleMeshGeometry&, const Material&);
+    Shape CreateShape(const ConvexMeshGeometry &, const Material&);
     Shape CreateShape(const PlaneGeometry&, const Material&);
+
+    Scene GetMainScene();
 
     void Update(float delta_time);
     void GC();
