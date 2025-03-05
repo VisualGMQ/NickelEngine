@@ -5,6 +5,7 @@
 #include "nickel/physics/internal/rigidbody_impl.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/internal/util.hpp"
+#include "nickel/physics/internal/cct_impl.hpp"
 
 namespace nickel::physics {
 
@@ -139,9 +140,19 @@ SceneImpl::SceneImpl(const std::string& name, ContextImpl* ctx,
                      physx::PxScene* scene)
     : m_scene{scene}, m_ctx{ctx} {
     scene->setName(name.c_str());
+
+    m_cct_manager = PxCreateControllerManager(*scene);
+    if (!m_cct_manager) {
+        LOGE("physics cct create failed");
+    }
 }
 
 SceneImpl::~SceneImpl() {
+    m_capsule_controller_allocator.FreeAll();
+
+    if (m_cct_manager) {
+        m_cct_manager->release();
+    }
     if (m_scene) {
         m_scene->release();
     }
@@ -238,6 +249,19 @@ bool SceneImpl::Overlap(const Geometry& geometry, const Vec3& p, const Quat& q,
     }
 
     return has_touch;
+}
+
+void SceneImpl::EnableCCTOverlapRecoveryModule(bool enable) {
+    m_cct_manager->setOverlapRecoveryModule(enable);
+}
+
+void SceneImpl::GC() {
+    m_capsule_controller_allocator.GC();
+}
+
+CapsuleController SceneImpl::CreateCapsuleController(
+    const CapsuleController::Descriptor& desc) {
+    return m_capsule_controller_allocator.Allocate(*m_cct_manager, *this, desc);
 }
 
 }  // namespace nickel::physics

@@ -90,6 +90,9 @@ public:
                  OverlapHitCallback& hit_callback,
                  const QueryFilterData& filter_data,
                  QueryFilterCallback* filter_callback = nullptr);
+    void EnableCCTOverlapRecoveryModule(bool enable);
+
+    void GC();
 };
 
 }  // namespace nickel::physics

@@ -17,37 +17,61 @@ public:
 
         auto& mgr = ctx.GetGLTFManager();
         mgr.Load(
-            "tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
+            "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        mgr.Load(
+            "engine/assets/models/ReciprocatingSaw/ReciprocatingSaw.gltf");
         mgr.Load("engine/assets/models/unit_box/unit_box.gltf");
         mgr.Load("engine/assets/models/unit_sphere/unit_sphere.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
+        // create car
         {
             nickel::GameObject go;
-            go.m_model = mgr.Find("engine/assets/models/unit_sphere/unit_sphere");
+            go.m_name = "car";
+            go.m_model = mgr.Find("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
             auto& physics_ctx = ctx.GetPhysicsContext();
             go.m_rigid_actor = nickel::physics::RigidActor{
-                physics_ctx.CreateRigidDynamic(nickel::Vec3{}, nickel::Quat{})};
+                physics_ctx.CreateRigidDynamic(nickel::Vec3{3, 0, 0}, nickel::Quat{})};
             auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
-            auto loader = nickel::graphics::GLTFVertexDataLoader{};
-            auto vertices = loader.Load("engine/assets/models/unit_box/unit_box.gltf");
-            auto triangle_mesh = physics_ctx.CreateTriangleMesh(vertices[0].m_points, vertices[0].m_indices);
             auto shape = physics_ctx.CreateShape(
-                nickel::physics::TriangleMeshGeometry{
-                    triangle_mesh, vertices[0].m_transform.q,
-                    vertices[0].m_transform.scale},
+                nickel::physics::BoxGeometry{nickel::Vec3{1.2, 1.2, 2.2}},
                 material);
             shape.SetLocalPose({0, 1.5, 0}, {});
-            ((nickel::physics::RigidDynamic*)&go.m_rigid_actor)->EnableKinematic(true);
+            go.m_rigid_actor.AttachShape(shape);
+            physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
+            root_go.m_children.push_back(go);
+        }
+        //  create plane
+        {
+            nickel::GameObject go;
+            go.m_name = "plane";
+            auto& physics_ctx = ctx.GetPhysicsContext();
+            go.m_rigid_actor = nickel::physics::RigidActor{physics_ctx.CreateRigidStatic(
+                    nickel::Vec3{}, nickel::Quat::Create(nickel::Vec3{0, 0, 1},
+                                                         nickel::Degrees{90}))};
+            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
+            auto shape = physics_ctx.CreateShape(
+                nickel::physics::PlaneGeometry{}, material);
             go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.push_back(go);
         }
         {
             nickel::GameObject go;
+            go.m_name = "saw";
             go.m_model =
-                mgr.Find("engine/assets/models/unit_sphere/unit_sphere.gltf");
-            go.m_transform.p = nickel::Vec3{3, 0, 0};
+                mgr.Find("engine/assets/models/ReciprocatingSaw/ReciprocatingSaw");
+            go.m_transform.scale = nickel::Vec3{0.01};
+            auto& physics_ctx = ctx.GetPhysicsContext();
+            go.m_rigid_actor =
+                nickel::physics::RigidActor{physics_ctx.CreateRigidStatic(
+                    nickel::Vec3{}, nickel::Quat::Create(nickel::Vec3{1, 0, 0},
+                                                         nickel::Degrees{90}))};
+            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
+            auto shape = physics_ctx.CreateShape(
+                nickel::physics::BoxGeometry{nickel::Vec3{1, 1, 1}}, material);
+            go.m_rigid_actor.AttachShape(shape);
+            physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.push_back(go);
         }
     }
@@ -73,22 +97,43 @@ private:
         auto& ctx = nickel::Context::GetInst();
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
+        auto& camera = (nickel::FlyCamera&)ctx.GetCamera();
 
-        NICKEL_RETURN_IF_FALSE(!mouse.IsRelativeMode());
+        // nickel::GameObject& go =
+        //     ctx.GetCurrentLevel().GetRootGO().m_children[0];
+        // if (keyboard.GetKey(nickel::input::Key::W).IsPressing()) {
+        //     go.m_transform.p.z += 0.005f;
+        // }
+        // if (keyboard.GetKey(nickel::input::Key::S).IsPressing()) {
+        //     go.m_transform.p.z -= 0.005f;
+        // }
+        // if (keyboard.GetKey(nickel::input::Key::A).IsPressing()) {
+        //     go.m_transform.p.x += 0.005f;
+        // }
+        // if (keyboard.GetKey(nickel::input::Key::D).IsPressing()) {
+        //     go.m_transform.p.x -= 0.005f;
+        // }
 
-        nickel::GameObject& go =
-            ctx.GetCurrentLevel().GetRootGO().m_children[0];
-        if (keyboard.GetKey(nickel::input::Key::W).IsPressing()) {
-            go.m_transform.p.z += 0.005f;
-        }
-        if (keyboard.GetKey(nickel::input::Key::S).IsPressing()) {
-            go.m_transform.p.z -= 0.005f;
-        }
-        if (keyboard.GetKey(nickel::input::Key::A).IsPressing()) {
-            go.m_transform.p.x += 0.005f;
-        }
-        if (keyboard.GetKey(nickel::input::Key::D).IsPressing()) {
-            go.m_transform.p.x -= 0.005f;
+        // create ball
+        if (keyboard.GetKey(nickel::input::Key::Space).IsPressed()) {
+            auto& mgr = ctx.GetGLTFManager();
+            nickel::GameObject ball_go;
+            ball_go.m_transform.scale = nickel::Vec3{0.3};
+            ball_go.m_name = "ball";
+            ball_go.m_model = mgr.Find(
+                "engine/assets/models/unit_sphere/unit_sphere");
+            auto& physics_ctx = ctx.GetPhysicsContext();
+            ball_go.m_rigid_actor =
+                nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
+                    camera.GetPosition(), nickel::Quat{})};
+            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
+            auto shape = physics_ctx.CreateShape(
+                nickel::physics::SphereGeometry{0.3}, material);
+            ball_go.m_rigid_actor.AttachShape(shape);
+            physics_ctx.GetMainScene().AddRigidActor(ball_go.m_rigid_actor);
+            auto& root_go = ctx.GetCurrentLevel().GetRootGO();
+            root_go.m_children.push_back(ball_go);
+            static_cast<nickel::physics::RigidDynamic&>(ball_go.m_rigid_actor).AddForce(camera.GetForward() * 20, nickel::physics::ForceMode::Impulse);
         }
     }
 

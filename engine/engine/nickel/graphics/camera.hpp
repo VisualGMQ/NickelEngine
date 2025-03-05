@@ -33,6 +33,8 @@ public:
     void AddPitch(Radians value);
     Radians GetYaw() const;
     Radians GetPitch() const;
+    Vec3 GetForward() const;
+    Vec3 GetUp() const;
 
     void Move(const Vec3& offset);
     void MoveTo(const Vec3& pos);

@@ -13,10 +13,12 @@ void Level::Update() {
 void Level::preorderGO(GameObject* parent, GameObject& go) {
     go.UpdateGlobalTransform(parent ? parent->GetGlobalTransform()
                                     : Transform{});
-    Transform global_transform = go.GetGlobalTransform();
+    Transform render_transform = go.GetGlobalTransform();
 
     if (go.m_rigid_actor) {
         go.m_global_transform = go.m_rigid_actor.GetGlobalTransform();
+        // NOTE: hack back render scale
+        go.m_global_transform.scale = render_transform.scale;
         go.m_transform =
             parent
                 ? go.m_global_transform.RelatedBy(parent->GetGlobalTransform())
@@ -25,7 +27,7 @@ void Level::preorderGO(GameObject* parent, GameObject& go) {
     }
 
     if (go.m_model) {
-        Context::GetInst().GetGraphicsContext().DrawModel(global_transform,
+        Context::GetInst().GetGraphicsContext().DrawModel(go.m_global_transform,
                                                           go.m_model);
     }
 
@@ -122,7 +124,7 @@ void Level::debugDrawRigidActor(const GameObject& go) {
             case physx::PxGeometryType::eTETRAHEDRONMESH:
             case physx::PxGeometryType::eHEIGHTFIELD:
             default:
-                NICKEL_CANT_REACH();
+                // NICKEL_CANT_REACH();
                 break;
         }
     }

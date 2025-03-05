@@ -37,4 +37,12 @@ bool Scene::Overlap(const Geometry& geometry, const Vec3& p, const Quat& q,
                            filter_callback);
 }
 
+void Scene::EnableCCTOverlapRecoveryModule(bool enable) {
+    m_impl->EnableCCTOverlapRecoveryModule(enable);
+}
+
+void Scene::GC() {
+    m_impl->GC();
+}
+
 }  // namespace nickel::physics
