@@ -85,8 +85,11 @@ bool GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
                           accessor.componentType ==
                               TINYGLTF_COMPONENT_TYPE_FLOAT);
 
-            ConvertRangeData((Vec3*)(buffer.data.data() + offset),
-                             vertex_data.m_points.data(), accessor.count, 1, 1);
+            ConvertRangeData<Vec3>(
+                buffer.data.data() + offset, vertex_data.m_points.data(),
+                accessor.count, 1,
+                buffer_view.byteStride == 0 ? sizeof(Vec3)
+                                            : buffer_view.byteStride);
         }
 
         if (prim.indices != -1) {
@@ -96,16 +99,23 @@ bool GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
             uint32_t offset = buffer_view.byteOffset + accessor.byteOffset;
             vertex_data.m_indices.resize(vertex_data.m_indices.size() +
                                          accessor.count);
+            size_t stride =
+                buffer_view.byteStride == 0
+                    ? tinygltf::GetComponentSizeInBytes(
+                          accessor.componentType) *
+                          tinygltf::GetNumComponentsInType(accessor.type)
+                    : buffer_view.byteStride;
             if (accessor.componentType ==
                 TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                ConvertRangeData((uint16_t*)(buffer.data.data() + offset),
-                                 vertex_data.m_indices.data(), accessor.count,
-                                 1, 1);
+                ConvertRangeData<uint16_t>(buffer.data.data() + offset,
+                                           vertex_data.m_indices.data(),
+                                           accessor.count, 1, stride);
             } else if (accessor.componentType ==
                        TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-                ConvertRangeData((uint32_t*)(buffer.data.data() + offset),
-                                 vertex_data.m_indices.data(), accessor.count,
-                                 1, 1);
+                ConvertRangeData<uint32_t>(buffer.data.data() + offset,
+                                           vertex_data.m_indices.data(),
+                                           accessor.count, 1, stride);
+
             } else {
                 NICKEL_CANT_REACH();
             }

@@ -10,21 +10,21 @@ namespace nickel::graphics {
 class GLTFRenderPass;
 
 template <typename SrcT, typename DstT>
-void ConvertRangeData(const SrcT* src, DstT* dst, size_t blockCount,
+void ConvertRangeData(const unsigned char* src, DstT* dst, size_t blockCount,
                       size_t elemCount, size_t stride) {
     static_assert(std::is_convertible_v<SrcT, DstT>);
     size_t eCount = 0;
+    const unsigned char* src_start_ptr = src;
     while (blockCount > 0) {
         if (eCount < elemCount) {
-            *(dst++) = *(src++);
-        } else if (eCount < stride) {
-            ++src;
-        }
-        eCount++;
-
-        if (eCount >= stride) {
-            blockCount--;
+            *(dst++) = *(SrcT*)src;
+            src += sizeof(SrcT);
+            eCount++;
+        } else {
+            blockCount --;
             eCount = 0;
+            src = src_start_ptr + stride;
+            src_start_ptr = src;
         }
     }
 }
@@ -58,42 +58,46 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
     auto copySrc = buffer.data.data() + src_offset;
     auto dstSrc = dst.data() + dst.size() - size;
     auto srcComponentNum = tinygltf::GetNumComponentsInType(accessor.type);
+    size_t stride = view.byteStride == 0
+                        ? srcComponentNum * tinygltf::GetComponentSizeInBytes(
+                                                accessor.componentType)
+                        : view.byteStride;
     auto dstComponentNum = tinygltf::GetNumComponentsInType(type);
     switch (accessor.componentType) {
         case TINYGLTF_COMPONENT_TYPE_FLOAT:
-            ConvertRangeData((const float*)copySrc, (ComponentType*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData<float>(copySrc, (ComponentType*)dstSrc,
+                                    accessor.count, dstComponentNum, stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_DOUBLE:
-            ConvertRangeData((const double*)copySrc, (ComponentType*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData<double>(copySrc, (ComponentType*)dstSrc,
+                                     accessor.count, dstComponentNum, stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-            ConvertRangeData((const unsigned int*)copySrc,
-                             (ComponentType*)dstSrc, accessor.count,
-                             dstComponentNum, srcComponentNum);
+            ConvertRangeData<unsigned int>(copySrc, (ComponentType*)dstSrc,
+                                           accessor.count, dstComponentNum,
+                                           stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-            ConvertRangeData((const unsigned short*)copySrc,
-                             (ComponentType*)dstSrc, accessor.count,
-                             dstComponentNum, srcComponentNum);
+            ConvertRangeData<unsigned short>(copySrc, (ComponentType*)dstSrc,
+                                             accessor.count, dstComponentNum,
+                                             stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-            ConvertRangeData((const unsigned char*)copySrc,
-                             (ComponentType*)dstSrc, accessor.count,
-                             dstComponentNum, srcComponentNum);
+            ConvertRangeData<unsigned char>(copySrc, (ComponentType*)dstSrc,
+                                            accessor.count, dstComponentNum,
+                                            stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_INT:
-            ConvertRangeData((const int*)copySrc, (ComponentType*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData<int>(copySrc, (ComponentType*)dstSrc,
+                                  accessor.count, dstComponentNum, stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_SHORT:
-            ConvertRangeData((const short*)copySrc, (ComponentType*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData<short>(copySrc, (ComponentType*)dstSrc,
+                                    accessor.count, dstComponentNum, stride);
             break;
         case TINYGLTF_COMPONENT_TYPE_BYTE:
-            ConvertRangeData((const char*)copySrc, (ComponentType*)dstSrc,
-                             accessor.count, dstComponentNum, srcComponentNum);
+            ConvertRangeData<char>(copySrc, (ComponentType*)dstSrc,
+                                   accessor.count, dstComponentNum, stride);
             break;
         default:
             NICKEL_CANT_REACH();
