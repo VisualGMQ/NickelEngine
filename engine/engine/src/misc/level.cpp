@@ -67,11 +67,21 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                             .p;
                     vertices[i] = p;
                 }
-                debug_drawer.DrawTriangleMesh(
-                    std::span(vertices),
-                    std::span((uint32_t*)mesh->getTriangles(),
-                              mesh->getNbTriangles()),
-                    Color{0, 1, 0, 1});
+                if (mesh->getTriangleMeshFlags() |
+                    physx::PxTriangleMeshFlag::e16_BIT_INDICES) {
+                    debug_drawer.DrawTriangleMesh(
+                        std::span(vertices),
+                        std::span((uint16_t*)mesh->getTriangles(),
+                                  mesh->getNbTriangles() * 3),
+                        Color{0, 1, 0, 1});
+                } else {
+                    debug_drawer.DrawTriangleMesh(
+                        std::span(vertices),
+                        std::span((uint32_t*)mesh->getTriangles(),
+                                  mesh->getNbTriangles() * 3),
+                        Color{0, 1, 0, 1});
+                }
+                break;
             }
             case physx::PxGeometryType::eSPHERE:
             case physx::PxGeometryType::ePLANE:

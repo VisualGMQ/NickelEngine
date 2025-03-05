@@ -25,12 +25,9 @@ RigidDynamic Context::CreateRigidDynamic(const Vec3& p, const Quat& q) {
     return m_impl->CreateRigidDynamic(p, q);
 }
 
-TriangleMesh Context::CreateTriangleMesh(const Vec3* vertices,
-                                         uint32_t vertex_count,
-                                         const uint32_t* indices,
-                                         uint32_t index_count) {
-    return m_impl->CreateTriangleMesh(vertices, vertex_count, indices,
-                                      index_count);
+TriangleMesh Context::CreateTriangleMesh(std::span<const Vec3> vertices,
+                                         std::span<const uint32_t> indices) {
+    return m_impl->CreateTriangleMesh(vertices, indices);
 }
 
 Shape Context::CreateShape(const SphereGeometry& g, const Material& mtl) {

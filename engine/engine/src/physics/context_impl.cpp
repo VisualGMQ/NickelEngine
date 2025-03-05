@@ -91,18 +91,16 @@ RigidDynamic ContextImpl::CreateRigidDynamic(const Vec3& p, const Quat& q) {
         this, static_cast<physx::PxRigidActor*>(rigid));
 }
 
-TriangleMesh ContextImpl::CreateTriangleMesh(const Vec3* vertices,
-                                             uint32_t vertex_count,
-                                             const uint32_t* indices,
-                                             uint32_t index_count) {
+TriangleMesh ContextImpl::CreateTriangleMesh(
+    std::span<const Vec3> vertices, std::span<const uint32_t> indices) {
     physx::PxTriangleMeshDesc meshDesc;
-    meshDesc.points.count = vertex_count;
+    meshDesc.points.count = vertices.size();
     meshDesc.points.stride = sizeof(physx::PxVec3);
-    meshDesc.points.data = vertices;
+    meshDesc.points.data = vertices.data();
 
-    meshDesc.triangles.count = index_count;
+    meshDesc.triangles.count = indices.size();
     meshDesc.triangles.stride = 3 * sizeof(physx::PxU32);
-    meshDesc.triangles.data = indices;
+    meshDesc.triangles.data = indices.data();
 
     physx::PxCookingParams params(m_tolerances_scale);
 

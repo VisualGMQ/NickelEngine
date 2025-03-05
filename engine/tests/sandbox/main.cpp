@@ -24,17 +24,17 @@ public:
 
         {
             nickel::GameObject go;
-            go.m_model = mgr.Find("engine/assets/models/unit_box/unit_box");
+            go.m_model = mgr.Find("engine/assets/models/unit_sphere/unit_sphere");
             auto& physics_ctx = ctx.GetPhysicsContext();
             go.m_rigid_actor = nickel::physics::RigidActor{
                 physics_ctx.CreateRigidDynamic(nickel::Vec3{}, nickel::Quat{})};
             auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
-            auto shape = physics_ctx.CreateShape(
-                nickel::physics::BoxGeometry{
-                    nickel::Vec3{1.5, 1.5, 3}
-            },
-                material);
+            auto loader = nickel::graphics::GLTFVertexDataLoader{};
+            auto vertices = loader.Load("engine/assets/models/unit_box/unit_box.gltf");
+            auto triangle_mesh = physics_ctx.CreateTriangleMesh(vertices[0].m_positions, vertices[0].m_indices);
+            auto shape = physics_ctx.CreateShape(nickel::physics::TriangleMeshGeometry{triangle_mesh}, material);
             shape.SetLocalPose({0, 1.5, 0}, {});
+            ((nickel::physics::RigidDynamic*)&go.m_rigid_actor)->EnableKinematic(true);
             go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.push_back(go);

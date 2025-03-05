@@ -41,6 +41,9 @@ void PrimitiveRenderPass::Begin() {
     m_triangle_vertex_buffer.m_cpu.MapAsync();
     m_triangle_vertex_buffer.m_ptr =
         static_cast<char*>(m_triangle_vertex_buffer.m_cpu.GetMappedRange());
+    m_triangle_indices_buffer.m_cpu.MapAsync();
+    m_triangle_indices_buffer.m_ptr =
+        static_cast<char*>(m_triangle_indices_buffer.m_cpu.GetMappedRange());
 }
 
 void PrimitiveRenderPass::UploadData2GPU(Device& device) {
@@ -48,6 +51,8 @@ void PrimitiveRenderPass::UploadData2GPU(Device& device) {
     m_line_vertex_buffer.m_ptr = nullptr;
     m_triangle_vertex_buffer.m_cpu.Unmap();
     m_triangle_vertex_buffer.m_ptr = nullptr;
+    m_triangle_indices_buffer.m_cpu.Unmap();
+    m_triangle_indices_buffer.m_ptr = nullptr;
 
     if (m_line_vertex_buffer.m_elem_count > 0) {
         CommandEncoder encoder = device.CreateCommandEncoder();
@@ -235,7 +240,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::CPULocal;
         desc.m_size = sizeof(Vertex) * MaxLineNum;
-        desc.m_usage = BufferUsage::CopySrc;
+        desc.m_usage = Flags{BufferUsage::CopySrc};
 
         m_line_vertex_buffer.m_cpu = device.CreateBuffer(desc);
     }
@@ -271,11 +276,11 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
 void PrimitiveRenderPass::initIndicesBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
-        desc.m_memory_type = MemoryType::GPULocal;
+        desc.m_memory_type = MemoryType::CPULocal;
         desc.m_size = sizeof(uint32_t) * 3 * MaxTriangleNum;
         desc.m_usage = BufferUsage::CopySrc;
 
-        m_triangle_indices_buffer.m_gpu = device.CreateBuffer(desc);
+        m_triangle_indices_buffer.m_cpu = device.CreateBuffer(desc);
     }
 
     {
@@ -284,7 +289,7 @@ void PrimitiveRenderPass::initIndicesBuffer(Device& device) {
         desc.m_size = sizeof(uint32_t) * 3 * MaxTriangleNum;
         desc.m_usage = Flags{BufferUsage::Index} | BufferUsage::CopyDst;
 
-        m_triangle_indices_buffer.m_cpu = device.CreateBuffer(desc);
+        m_triangle_indices_buffer.m_gpu = device.CreateBuffer(desc);
     }
 }
 

@@ -58,9 +58,10 @@ private:
 };
 
 struct GLTFVertexData {
+    std::string m_name;
+    Transform m_transform;
     std::vector<Vec3> m_positions;
     std::vector<uint32_t> m_indices;
-    Transform m_transform;
 };
 
 struct GLTFVertexDataLoadConfig {
@@ -69,12 +70,13 @@ struct GLTFVertexDataLoadConfig {
 
 class GLTFVertexDataLoader {
 public:
-    std::vector<GLTFVertexData> Load(const Path& path, const std::string& node_name);
-    std::vector<GLTFVertexData> Load(const tinygltf::Model&, const std::string& node_name);
+    std::vector<GLTFVertexData> Load(const Path& path);
+    std::vector<GLTFVertexData> Load(const tinygltf::Model&);
 
     bool parseNode(const tinygltf::Model& model, const tinygltf::Node& node,
-                   const std::string& name, GLTFVertexData& out_data,
-                   const Mat44& parent_mat, Mat44& out_mat);
+                   const Transform& parent_transform,
+                   std::vector<GLTFVertexData>& result);
+    Transform calcNodeTransform(const tinygltf::Node& node);
 };
 
 }  // namespace nickel::graphics

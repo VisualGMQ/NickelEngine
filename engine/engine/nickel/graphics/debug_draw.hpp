@@ -9,6 +9,8 @@ public:
                  const Quat& rotation, const Color& color);
     void DrawTriangleMesh(std::span<Vec3> vertices, std::span<uint32_t> indices,
                           const Color& color);
+    void DrawTriangleMesh(std::span<Vec3> vertices, std::span<uint16_t> indices,
+                          const Color& color);
 };
 
-}
+}  // namespace nickel::graphics

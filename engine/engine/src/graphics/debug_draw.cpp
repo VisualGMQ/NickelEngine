@@ -1,5 +1,4 @@
 ﻿#include "nickel/graphics/debug_draw.hpp"
-
 #include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
@@ -75,12 +74,25 @@ void DebugDrawer::DrawTriangleMesh(std::span<Vec3> points,
                                    const Color& color) {
     auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
     std::vector<Vertex> vertices;
-    vertices.resize(indices.size());
-    for (auto idx : indices) {
-        auto p = points[idx];
-        vertices.push_back(Vertex{p, color});
-    }
-    graphics_ctx.DrawLineList(vertices);
+    vertices.resize(points.size());
+    std::ranges::transform(points, vertices.begin(),
+                   [=](const Vec3& p) { return Vertex{p, color}; });
+    graphics_ctx.DrawTriangleList(vertices, indices);
 }
+
+void DebugDrawer::DrawTriangleMesh(std::span<Vec3> points,
+                                   std::span<uint16_t> indices,
+                                   const Color& color) {
+    auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> u32_indices;
+    u32_indices.resize(indices.size());
+    vertices.resize(points.size());
+    std::ranges::copy(indices, u32_indices.begin());
+    std::ranges::transform(points, vertices.begin(),
+                   [=](const Vec3& p) { return Vertex{p, color}; });
+    graphics_ctx.DrawTriangleList(vertices, u32_indices);
+}
+
 
 }  // namespace nickel::graphics
