@@ -4,6 +4,7 @@
 // fwd
 namespace physx {
 class PxTriangleMesh;
+class PxConvexMesh;
 }
 
 namespace nickel::physics {
@@ -14,6 +15,7 @@ struct Geometry {
         Sphere,
         Capsule,
         TriangleMesh,
+        Convex,
         Plane,
     };
 
@@ -72,6 +74,27 @@ struct TriangleMeshGeometry: public Geometry {
     
     TriangleMeshGeometry();
     explicit TriangleMeshGeometry(const TriangleMesh& mesh, const Quat& = {}, const Vec3& = {});
+};
+
+struct ConvexMesh {
+    ConvexMesh() = default;
+    ConvexMesh(physx::PxConvexMesh*);
+    ConvexMesh(const ConvexMesh&);
+    ConvexMesh(ConvexMesh&&) noexcept;
+    ConvexMesh& operator=(const ConvexMesh&) noexcept;
+    ConvexMesh& operator=(ConvexMesh&&) noexcept;
+    ~ConvexMesh();
+    
+    physx::PxConvexMesh* m_mesh{};
+};
+
+struct ConvexMeshGeometry: public Geometry {
+    ConvexMesh m_data;
+    Quat m_rotation;
+    Vec3 m_scale;
+    
+    ConvexMeshGeometry();
+    explicit ConvexMeshGeometry(const ConvexMesh& mesh, const Quat& = {}, const Vec3& = {});
 };
 
 }  // namespace nickel::physics

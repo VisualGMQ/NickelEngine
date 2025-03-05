@@ -128,6 +128,42 @@ TriangleMesh ContextImpl::CreateTriangleMesh(
     return m_physics->createTriangleMesh(readBuffer);
 }
 
+ConvexMesh ContextImpl::CreateConvexMesh(std::span<const Vec3> vertices) {
+    physx::PxConvexMeshDesc convexDesc;
+    convexDesc.points.count = 5;
+    convexDesc.points.stride = sizeof(physx::PxVec3);
+    convexDesc.points.data = vertices.data();
+    convexDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+
+    physx::PxTolerancesScale scale;
+    physx::PxCookingParams params(scale);
+
+    physx::PxDefaultMemoryOutputStream buf;
+    physx::PxConvexMeshCookingResult::Enum result;
+    bool status = PxCookConvexMesh(params, convexDesc, buf, &result);
+    if (!status) {
+        return NULL;
+    }
+    switch (result) {
+        case physx::PxConvexMeshCookingResult::eZERO_AREA_TEST_FAILED:
+            LOGE("cook convex mesh faild: zero area");
+            break;
+        case physx::PxConvexMeshCookingResult::ePOLYGONS_LIMIT_REACHED:
+            LOGE("cook convex mesh faild: limit reached");
+            break;
+        case physx::PxConvexMeshCookingResult::eFAILURE:
+            LOGE("cook convex mesh faild: failure");
+            break;
+        case physx::PxConvexMeshCookingResult::eNON_GPU_COMPATIBLE:
+            LOGE("cook convex mesh faild: non gpu compatible");
+            break;
+        default:;
+    }
+
+    physx::PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+    return m_physics->createConvexMesh(input);
+}
+
 Shape ContextImpl::CreateShape(const SphereGeometry& geom,
                                const Material& material) {
     physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
@@ -159,6 +195,17 @@ Shape ContextImpl::CreateShape(const CapsuleGeometry& geom,
 }
 
 Shape ContextImpl::CreateShape(const TriangleMeshGeometry& geom,
+                               const Material& material) {
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),
+        *material.GetImpl()->m_mtl);
+    if (shape) {
+        return Shape{m_shape_allocator.Allocate(this, shape)};
+    }
+    return {};
+}
+
+Shape ContextImpl::CreateShape(const ConvexMeshGeometry& geom,
                                const Material& material) {
     physx::PxShape* shape = m_physics->createShape(
         Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),

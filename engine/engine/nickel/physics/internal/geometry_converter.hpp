@@ -23,13 +23,21 @@ inline physx::PxPlaneGeometry Geometry2PhysX(const PlaneGeometry&) {
     return physx::PxPlaneGeometry{};
 }
 
+
 inline physx::PxTriangleMeshGeometry Geometry2PhysX(
     const TriangleMeshGeometry& mesh, const Quat& rotation, const Vec3& scale) {
     physx::PxMeshScale scaling{Vec3ToPhysX(scale), QuatToPhysX(rotation)};
     return physx::PxTriangleMeshGeometry{mesh.m_data.m_mesh, scaling};
 }
 
-// NOTE: only triangle mesh geometry can use rotation & scale
+inline physx::PxConvexMeshGeometry Geometry2PhysX(const ConvexMeshGeometry& g,
+                                                  const Quat& rotation,
+                                                  const Vec3& scale) {
+    physx::PxMeshScale scaling{Vec3ToPhysX(scale), QuatToPhysX(rotation)};
+    return physx::PxConvexMeshGeometry{g.m_data.m_mesh, scaling};
+}
+
+// NOTE: only triangle mesh & convex mesh geometry can use rotation & scale
 inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g,
                                               const Quat& rotation = {},
                                               const Vec3& scale = {}) {
@@ -53,6 +61,10 @@ inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g,
         case Geometry::Type::Plane:
             holder.storeAny(
                 Geometry2PhysX(static_cast<const PlaneGeometry&>(g)));
+            break;
+        case Geometry::Type::Convex:
+            holder.storeAny(Geometry2PhysX(
+                static_cast<const ConvexMeshGeometry&>(g), rotation, scale));
             break;
     }
     return holder;

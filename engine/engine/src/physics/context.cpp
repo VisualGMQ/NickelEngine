@@ -30,6 +30,10 @@ TriangleMesh Context::CreateTriangleMesh(std::span<const Vec3> vertices,
     return m_impl->CreateTriangleMesh(vertices, indices);
 }
 
+ConvexMesh Context::CreateConvexMesh(std::span<const Vec3> vertices) {
+    return m_impl->CreateConvexMesh(vertices);
+}
+
 Shape Context::CreateShape(const SphereGeometry& g, const Material& mtl) {
     return m_impl->CreateShape(g, mtl);
 }
@@ -43,6 +47,10 @@ Shape Context::CreateShape(const CapsuleGeometry& g, const Material& mtl) {
 }
 
 Shape Context::CreateShape(const TriangleMeshGeometry& g, const Material& mtl) {
+    return m_impl->CreateShape(g, mtl);
+}
+
+Shape Context::CreateShape(const ConvexMeshGeometry& g, const Material& mtl) {
     return m_impl->CreateShape(g, mtl);
 }
 

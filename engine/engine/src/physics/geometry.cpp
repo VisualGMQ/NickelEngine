@@ -28,7 +28,6 @@ CapsuleGeometry::CapsuleGeometry(float radius, float half_height)
 
 PlaneGeometry::PlaneGeometry() : Geometry{Type::Plane} {}
 
-
 TriangleMesh::TriangleMesh(physx::PxTriangleMesh* mesh) : m_mesh{mesh} {}
 
 TriangleMesh::TriangleMesh(const TriangleMesh& o) : m_mesh{o.m_mesh} {
@@ -78,6 +77,57 @@ TriangleMeshGeometry::TriangleMeshGeometry(const TriangleMesh& mesh,
                                            const Vec3& scale)
     : Geometry{Type::TriangleMesh},
       m_data(mesh),
+      m_rotation{rotation},
+      m_scale{scale} {}
+
+ConvexMesh::ConvexMesh(physx::PxConvexMesh* mesh) : m_mesh{mesh} {}
+
+ConvexMesh::ConvexMesh(const ConvexMesh& o) : m_mesh{o.m_mesh} {
+    if (m_mesh) {
+        m_mesh->acquireReference();
+    }
+}
+
+ConvexMesh::ConvexMesh(ConvexMesh&& o) noexcept : m_mesh{o.m_mesh} {
+    o.m_mesh = nullptr;
+}
+
+ConvexMesh& ConvexMesh::operator=(const ConvexMesh& o) noexcept {
+    if (&o != this) {
+        if (m_mesh) {
+            m_mesh->release();
+        }
+        m_mesh = o.m_mesh;
+        if (m_mesh) {
+            m_mesh->acquireReference();
+        }
+    }
+    return *this;
+}
+
+ConvexMesh& ConvexMesh::operator=(ConvexMesh&& o) noexcept {
+    if (&o != this) {
+        if (m_mesh) {
+            m_mesh->release();
+        }
+        m_mesh = o.m_mesh;
+        o.m_mesh = nullptr;
+    }
+    return *this;
+}
+
+ConvexMesh::~ConvexMesh() {
+    if (m_mesh) {
+        m_mesh->release();
+    }
+}
+
+ConvexMeshGeometry::ConvexMeshGeometry() : Geometry{Type::Convex} {}
+
+ConvexMeshGeometry::ConvexMeshGeometry(const ConvexMesh& mesh,
+                                       const Quat& rotation, const Vec3& scale)
+    : Geometry{Type::Convex},
+      m_data{mesh},
       m_rotation{rotation},
       m_scale{scale} {}
 

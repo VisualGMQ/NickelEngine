@@ -3,6 +3,16 @@
 
 namespace nickel::graphics {
 
+void DebugDrawer::DrawLine(const Vec3& p1, const Vec3& p2, const Color& color1,
+                       const Color& color2) {
+    auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
+    std::array vertices = {
+        Vertex{p1, color1},
+        Vertex{p2, color2}
+    };
+    graphics_ctx.DrawLineList(vertices);
+}
+
 void DebugDrawer::DrawBox(const Vec3& center, const Vec3& half_size,
                           const Quat& rotation, const Color& color) {
     auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
@@ -76,7 +86,7 @@ void DebugDrawer::DrawTriangleMesh(std::span<Vec3> points,
     std::vector<Vertex> vertices;
     vertices.resize(points.size());
     std::ranges::transform(points, vertices.begin(),
-                   [=](const Vec3& p) { return Vertex{p, color}; });
+                           [=](const Vec3& p) { return Vertex{p, color}; });
     graphics_ctx.DrawTriangleList(vertices, indices);
 }
 
@@ -90,9 +100,8 @@ void DebugDrawer::DrawTriangleMesh(std::span<Vec3> points,
     vertices.resize(points.size());
     std::ranges::copy(indices, u32_indices.begin());
     std::ranges::transform(points, vertices.begin(),
-                   [=](const Vec3& p) { return Vertex{p, color}; });
+                           [=](const Vec3& p) { return Vertex{p, color}; });
     graphics_ctx.DrawTriangleList(vertices, u32_indices);
 }
-
 
 }  // namespace nickel::graphics

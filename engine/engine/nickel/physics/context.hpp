@@ -21,10 +21,13 @@ public:
 
     TriangleMesh CreateTriangleMesh(std::span<const Vec3> vertices,
                                     std::span<const uint32_t> indices);
+    
+    ConvexMesh CreateConvexMesh(std::span<const Vec3> vertices);
     Shape CreateShape(const SphereGeometry&, const Material&);
     Shape CreateShape(const BoxGeometry&, const Material&);
     Shape CreateShape(const CapsuleGeometry&, const Material&);
     Shape CreateShape(const TriangleMeshGeometry&, const Material&);
+    Shape CreateShape(const ConvexMeshGeometry &, const Material&);
     Shape CreateShape(const PlaneGeometry&, const Material&);
 
     Scene GetMainScene();

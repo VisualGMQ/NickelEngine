@@ -1,4 +1,5 @@
 ﻿#include "nickel/misc/Level.hpp"
+#include "nickel/common/macro.hpp"
 #include "nickel/nickel.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/internal/util.hpp"
@@ -61,7 +62,7 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                         Vec3{},
                         physics::Vec3FromPhysX(triangle_mesh.scale.scale),
                         physics::QuatFromPhysX(triangle_mesh.scale.rotation)};
-                
+
                 std::vector<Vec3> vertices;
                 vertices.resize(mesh->getNbVertices());
                 std::ranges::transform(
@@ -73,8 +74,8 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                                      {}
                         })
                             .p;
-                });
-                
+                    });
+
                 if (mesh->getTriangleMeshFlags() |
                     physx::PxTriangleMeshFlag::e16_BIT_INDICES) {
                     debug_drawer.DrawTriangleMesh(
@@ -91,11 +92,32 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                 }
                 break;
             }
+            case physx::PxGeometryType::eCONVEXMESH: {
+                auto& convex_mesh = holder.convexMesh();
+                auto mesh = convex_mesh.convexMesh;
+                auto vertices =
+                    std::span{mesh->getVertices(), mesh->getNbVertices()};
+                auto indices = mesh->getIndexBuffer();
+
+                for (uint32_t i = 0; i < mesh->getNbPolygons(); i++) {
+                    physx::PxHullPolygon face;
+                    NICKEL_CONTINUE_IF_FALSE(mesh->getPolygonData(i, face));
+
+                    const physx::PxU8* face_indices = indices + face.mIndexBase;
+
+                    for (uint32_t j = 1; j < face.mNbVerts; j++) {
+                        const physx::PxVec3& p2 = vertices[face_indices[j]];
+                        const physx::PxVec3& p1 = vertices[face_indices[j - 1]];
+                        debug_drawer.DrawLine(physics::Vec3FromPhysX(p1),
+                                              physics::Vec3FromPhysX(p2),
+                                              {0, 1, 0, 1}, {0, 1, 0, 1});
+                    }
+                }
+            } break;
             case physx::PxGeometryType::eSPHERE:
             case physx::PxGeometryType::ePLANE:
             case physx::PxGeometryType::eCAPSULE:
             case physx::PxGeometryType::eCONVEXCORE:
-            case physx::PxGeometryType::eCONVEXMESH:
             case physx::PxGeometryType::ePARTICLESYSTEM:
             case physx::PxGeometryType::eTETRAHEDRONMESH:
             case physx::PxGeometryType::eHEIGHTFIELD:
