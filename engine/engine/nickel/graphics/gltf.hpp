@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "nickel/common/impl_wrapper.hpp"
+#include "nickel/common/transform.hpp"
 #include "nickel/fs/path.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/lowlevel/buffer.hpp"
@@ -59,12 +60,17 @@ private:
 struct GLTFVertexData {
     std::vector<Vec3> m_positions;
     std::vector<uint32_t> m_indices;
+    Transform m_transform;
+};
+
+struct GLTFVertexDataLoadConfig {
+    bool m_use_parent_coord = true; 
 };
 
 class GLTFVertexDataLoader {
 public:
-    GLTFVertexData Load(const Path& path, const std::string& node_name);
-    GLTFVertexData Load(const tinygltf::Model&, const std::string& node_name);
+    std::vector<GLTFVertexData> Load(const Path& path, const std::string& node_name);
+    std::vector<GLTFVertexData> Load(const tinygltf::Model&, const std::string& node_name);
 
     bool parseNode(const tinygltf::Model& model, const tinygltf::Node& node,
                    const std::string& name, GLTFVertexData& out_data,

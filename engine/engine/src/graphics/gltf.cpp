@@ -26,8 +26,8 @@ GLTFManager::GLTFManager(Device device, CommonResource& res,
 
 GLTFManager::~GLTFManager() {}
 
-GLTFVertexData GLTFVertexDataLoader::Load(const Path& filename,
-                                          const std::string& node_name) {
+std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(
+    const Path& filename, const std::string& node_name) {
     tinygltf::TinyGLTF tiny_gltf_loader;
     std::string err, warn;
     tinygltf::Model gltf_model;
@@ -46,8 +46,8 @@ GLTFVertexData GLTFVertexDataLoader::Load(const Path& filename,
     return Load(gltf_model, node_name);
 }
 
-GLTFVertexData GLTFVertexDataLoader::Load(const tinygltf::Model& gltf_model,
-                                          const std::string& node_name) {
+std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(
+    const tinygltf::Model& gltf_model, const std::string& node_name) {
     NICKEL_ASSERT(gltf_model.scenes.size() == 1);
     GLTFVertexData vertex_data;
     Mat44 mat;

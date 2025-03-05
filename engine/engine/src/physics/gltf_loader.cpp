@@ -61,7 +61,11 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
     std::vector<BufferView> buffer_accessors;
     buffer_accessors.reserve(m_gltf_model.accessors.size());
 
-    auto textures = loadTextures(root_dir, texture_mgr);
+    std::set<uint32_t> color_textures, metallic_roughness_textures,
+        normal_textures, occlusion_textures, emmisive_textures;
+    analyzeImageUsage(color_textures, normal_textures, occlusion_textures,
+                      metallic_roughness_textures, emmisive_textures);
+    auto textures = loadTextures(root_dir, texture_mgr, color_textures);
     auto samplers = loadSamplers(device);
 
     std::vector<Material3D::Descriptor> mtl_desces;
@@ -451,14 +455,46 @@ void GLTFLoader::analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
     }
 }
 
-std::vector<Texture> GLTFLoader::loadTextures(const Path& root_dir,
-                                              TextureManager& texture_mgr) {
+void GLTFLoader::analyzeImageUsage(
+    std::set<uint32_t>& out_color_texture,
+    std::set<uint32_t>& out_normal_texture,
+    std::set<uint32_t>& out_occlusion_texture,
+    std::set<uint32_t>& out_metallic_roughness_texture,
+    std::set<uint32_t>& out_emissive_texture) const {
+    for (auto& mtl : m_gltf_model.materials) {
+        if (mtl.pbrMetallicRoughness.baseColorTexture.index != -1) {
+            out_color_texture.insert(
+                mtl.pbrMetallicRoughness.baseColorTexture.index);
+        }
+        if (mtl.normalTexture.index != -1) {
+            out_normal_texture.insert(mtl.normalTexture.index);
+        }
+        if (mtl.occlusionTexture.index != -1) {
+            out_occlusion_texture.insert(mtl.occlusionTexture.index);
+        }
+        if (mtl.pbrMetallicRoughness.metallicRoughnessTexture.index != -1) {
+            out_metallic_roughness_texture.insert(
+                mtl.pbrMetallicRoughness.metallicRoughnessTexture.index);
+        }
+        if (mtl.emissiveTexture.index != -1) {
+            out_emissive_texture.insert(mtl.emissiveTexture.index);
+        }
+    }
+}
+
+std::vector<Texture> GLTFLoader::loadTextures(
+    const Path& root_dir, TextureManager& texture_mgr,
+    const std::set<uint32_t>& color_textures) {
     std::vector<Texture> textures;
     textures.reserve(m_gltf_model.images.size());
     for (int i = 0; i < m_gltf_model.images.size(); i++) {
         auto& image = m_gltf_model.images[i];
-        textures.emplace_back(texture_mgr.Load(
-            root_dir / Path{ParseURI2Path(image.uri)}, Format::R8G8B8A8_UNORM));
+        Format fmt = Format::R8G8B8A8_UNORM;
+        if (color_textures.contains(i)) {
+            fmt = Format::R8G8B8A8_SRGB;
+        }
+        textures.emplace_back(
+            texture_mgr.Load(root_dir / Path{ParseURI2Path(image.uri)}, fmt));
     }
     return textures;
 }

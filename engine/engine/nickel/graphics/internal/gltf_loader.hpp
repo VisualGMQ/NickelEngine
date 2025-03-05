@@ -239,9 +239,15 @@ private:
                               std::set<uint32_t>& out_index_accessors,
                               size_t& out_vertex_buffer_size,
                               size_t& out_index_buffer_size);
+    void analyzeImageUsage(std::set<uint32_t>& out_color_texture,
+                           std::set<uint32_t>& out_normal_texture,
+                           std::set<uint32_t>& out_occlusion_texture,
+                           std::set<uint32_t>& out_metallic_roughness_texture,
+                           std::set<uint32_t>& out_emissive_texture) const;
 
     std::vector<Texture> loadTextures(const Path& root_dir,
-                                      TextureManager& texture_mgr);
+                                      TextureManager& texture_mgr,
+                                      const std::set<uint32_t>& color_textures);
     std::vector<Sampler> loadSamplers(Device& device);
     std::vector<Material3D> loadMaterials(
         const Adapter& adapter, GLTFManagerImpl& gltf_mgr,
