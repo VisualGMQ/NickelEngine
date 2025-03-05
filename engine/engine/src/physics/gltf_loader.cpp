@@ -172,7 +172,7 @@ int ComponentType2GLTF() {
     } else if constexpr (std::is_same_v<ComponentType, unsigned short>) {
         return TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
     } else {
-        static_assert(false, "invalid gltf component type");
+        NICKEL_CANT_REACH();
         return 0;
     }
 }
