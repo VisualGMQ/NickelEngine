@@ -54,19 +54,27 @@ void Level::debugDrawRigidActor(const GameObject& go) {
             case physx::PxGeometryType::eTRIANGLEMESH: {
                 auto& triangle_mesh = holder.triangleMesh();
                 auto mesh = triangle_mesh.triangleMesh;
+
+                auto transform =
+                    global_transform *
+                    Transform{
+                        Vec3{},
+                        physics::Vec3FromPhysX(triangle_mesh.scale.scale),
+                        physics::QuatFromPhysX(triangle_mesh.scale.rotation)};
+                
                 std::vector<Vec3> vertices;
                 vertices.resize(mesh->getNbVertices());
-                for (int i = 0; i < mesh->getNbVertices(); i++) {
-                    Vec3 p = physics::Vec3FromPhysX(mesh->getVertices()[i]);
-                    p = (global_transform *
-                         Transform{
-                             p,
-                             physics::Vec3FromPhysX(triangle_mesh.scale.scale),
-                             physics::QuatFromPhysX(
-                                 triangle_mesh.scale.rotation)})
+                std::ranges::transform(
+                    std::span{mesh->getVertices(), mesh->getNbVertices()},
+                    vertices.begin(), [&](const physx::PxVec3& v) {
+                        return (transform *
+                                Transform{
+                                    physics::Vec3FromPhysX(v), {1, 1, 1},
+                                     {}
+                        })
                             .p;
-                    vertices[i] = p;
-                }
+                });
+                
                 if (mesh->getTriangleMeshFlags() |
                     physx::PxTriangleMeshFlag::e16_BIT_INDICES) {
                     debug_drawer.DrawTriangleMesh(

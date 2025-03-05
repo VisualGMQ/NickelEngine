@@ -67,9 +67,11 @@ struct TriangleMesh {
 
 struct TriangleMeshGeometry: public Geometry {
     TriangleMesh m_data;
+    Quat m_rotation;
+    Vec3 m_scale;
     
     TriangleMeshGeometry();
-    explicit TriangleMeshGeometry(const TriangleMesh& mesh);
+    explicit TriangleMeshGeometry(const TriangleMesh& mesh, const Quat& = {}, const Vec3& = {});
 };
 
 }  // namespace nickel::physics

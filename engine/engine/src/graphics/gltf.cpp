@@ -52,8 +52,7 @@ std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(
     std::vector<GLTFVertexData> result;
     for (auto& scene : gltf_model.scenes) {
         for (auto node : scene.nodes) {
-            if (parseNode(gltf_model, gltf_model.nodes[node],
-                          {}, result)) {
+            if (parseNode(gltf_model, gltf_model.nodes[node], {}, result)) {
                 break;
             }
         }
@@ -73,22 +72,21 @@ bool GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
     vertex_data.m_name = node.name;
     for (auto& prim : mesh.primitives) {
         auto& attrs = prim.attributes;
-        size_t old_size = vertex_data.m_positions.size();
+        size_t old_size = vertex_data.m_points.size();
         if (auto it = attrs.find("POSITION"); it != attrs.end()) {
             auto& accessor = model.accessors[it->second];
             auto& buffer_view = model.bufferViews[accessor.bufferView];
             auto& buffer = model.buffers[buffer_view.buffer];
             uint32_t offset = buffer_view.byteOffset + accessor.byteOffset;
-            vertex_data.m_positions.resize(vertex_data.m_positions.size() +
-                                           accessor.count);
+            vertex_data.m_points.resize(vertex_data.m_points.size() +
+                                        accessor.count);
 
             NICKEL_ASSERT(accessor.type == TINYGLTF_TYPE_VEC3 &&
                           accessor.componentType ==
                               TINYGLTF_COMPONENT_TYPE_FLOAT);
 
             ConvertRangeData((Vec3*)(buffer.data.data() + offset),
-                             vertex_data.m_positions.data(),
-                             accessor.count, 1, 1);
+                             vertex_data.m_points.data(), accessor.count, 1, 1);
         }
 
         if (prim.indices != -1) {
@@ -119,15 +117,8 @@ bool GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
         }
     }
 
-    if (!vertex_data.m_positions.empty()) {
-        if (global_pose.scale != Vec3{1, 1, 1}) {
-            std::ranges::transform(
-                vertex_data.m_positions.begin(), vertex_data.m_positions.end(),
-                vertex_data.m_positions.begin(),
-                [=](const Vec3& p) { return global_pose.scale * p; });
-        }
-        vertex_data.m_transform.p = global_pose.p;
-        vertex_data.m_transform.q = global_pose.q;
+    if (!vertex_data.m_points.empty()) {
+        vertex_data.m_transform = global_pose;
         result.push_back(vertex_data);
     }
 

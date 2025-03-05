@@ -1,6 +1,7 @@
 #pragma once
-#include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/geometry.hpp"
+#include "nickel/physics/internal/pch.hpp"
+#include "util.hpp"
 
 namespace nickel::physics {
 
@@ -22,11 +23,16 @@ inline physx::PxPlaneGeometry Geometry2PhysX(const PlaneGeometry&) {
     return physx::PxPlaneGeometry{};
 }
 
-inline physx::PxTriangleMeshGeometry Geometry2PhysX(const TriangleMeshGeometry& mesh) {
-    return physx::PxTriangleMeshGeometry{mesh.m_data.m_mesh};
+inline physx::PxTriangleMeshGeometry Geometry2PhysX(
+    const TriangleMeshGeometry& mesh, const Quat& rotation, const Vec3& scale) {
+    physx::PxMeshScale scaling{Vec3ToPhysX(scale), QuatToPhysX(rotation)};
+    return physx::PxTriangleMeshGeometry{mesh.m_data.m_mesh, scaling};
 }
 
-inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g) {
+// NOTE: only triangle mesh geometry can use rotation & scale
+inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g,
+                                              const Quat& rotation = {},
+                                              const Vec3& scale = {}) {
     physx::PxGeometryHolder holder;
     switch (g.GetType()) {
         case Geometry::Type::Box:
@@ -41,8 +47,8 @@ inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g) {
                 Geometry2PhysX(static_cast<const CapsuleGeometry&>(g)));
             break;
         case Geometry::Type::TriangleMesh:
-            holder.storeAny(
-                Geometry2PhysX(static_cast<const TriangleMeshGeometry&>(g)));
+            holder.storeAny(Geometry2PhysX(
+                static_cast<const TriangleMeshGeometry&>(g), rotation, scale));
             break;
         case Geometry::Type::Plane:
             holder.storeAny(

@@ -31,8 +31,12 @@ public:
             auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
             auto loader = nickel::graphics::GLTFVertexDataLoader{};
             auto vertices = loader.Load("engine/assets/models/unit_box/unit_box.gltf");
-            auto triangle_mesh = physics_ctx.CreateTriangleMesh(vertices[0].m_positions, vertices[0].m_indices);
-            auto shape = physics_ctx.CreateShape(nickel::physics::TriangleMeshGeometry{triangle_mesh}, material);
+            auto triangle_mesh = physics_ctx.CreateTriangleMesh(vertices[0].m_points, vertices[0].m_indices);
+            auto shape = physics_ctx.CreateShape(
+                nickel::physics::TriangleMeshGeometry{
+                    triangle_mesh, vertices[0].m_transform.q,
+                    vertices[0].m_transform.scale},
+                material);
             shape.SetLocalPose({0, 1.5, 0}, {});
             ((nickel::physics::RigidDynamic*)&go.m_rigid_actor)->EnableKinematic(true);
             go.m_rigid_actor.AttachShape(shape);

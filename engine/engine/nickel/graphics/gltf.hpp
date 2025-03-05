@@ -60,7 +60,7 @@ private:
 struct GLTFVertexData {
     std::string m_name;
     Transform m_transform;
-    std::vector<Vec3> m_positions;
+    std::vector<Vec3> m_points;
     std::vector<uint32_t> m_indices;
 };
 

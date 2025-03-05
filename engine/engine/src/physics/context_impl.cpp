@@ -160,8 +160,9 @@ Shape ContextImpl::CreateShape(const CapsuleGeometry& geom,
 
 Shape ContextImpl::CreateShape(const TriangleMeshGeometry& geom,
                                const Material& material) {
-    physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
-                                                   *material.GetImpl()->m_mtl);
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),
+        *material.GetImpl()->m_mtl);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }

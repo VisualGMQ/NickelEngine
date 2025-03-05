@@ -73,7 +73,12 @@ TriangleMesh::~TriangleMesh() {
 
 TriangleMeshGeometry::TriangleMeshGeometry() : Geometry{Type::TriangleMesh} {}
 
-TriangleMeshGeometry::TriangleMeshGeometry(const TriangleMesh& mesh)
-    : Geometry{Type::TriangleMesh}, m_data(mesh) {}
+TriangleMeshGeometry::TriangleMeshGeometry(const TriangleMesh& mesh,
+                                           const Quat& rotation,
+                                           const Vec3& scale)
+    : Geometry{Type::TriangleMesh},
+      m_data(mesh),
+      m_rotation{rotation},
+      m_scale{scale} {}
 
 }  // namespace nickel::physics
