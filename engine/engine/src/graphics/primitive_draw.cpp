@@ -174,44 +174,25 @@ void PrimitiveRenderPass::ApplyDrawCall(RenderPassEncoder& encoder) {
 
 void PrimitiveRenderPass::DrawLineList(std::span<Vertex> vertices) {
     NICKEL_ASSERT(vertices.size() % 2 == 0);
-
-    size_t size = vertices.size() * sizeof(Vertex);
-    memcpy(m_line_vertex_buffer.m_ptr, vertices.data(), size);
-    m_line_vertex_buffer.m_ptr += size;
-    m_line_vertex_buffer.m_elem_count += vertices.size();
+    copyData2Buffer<MaxLineVertexNum>(m_line_vertex_buffer, vertices);
 }
 
 void PrimitiveRenderPass::DrawTriangleList(std::span<Vertex> vertices,
                                            std::span<uint32_t> indices,
                                            bool wireframe) {
-    NICKEL_ASSERT(indices.size() % 3 == 0);
-
-    size_t vertex_size = vertices.size() * sizeof(Vertex);
-    size_t index_size = indices.size() * sizeof(uint32_t);
-
+    NICKEL_ASSERT(!indices.empty() && indices.size() % 3 == 0);
     if (wireframe) {
-        size_t old_size = m_triangle_wireframe_vertex_buffer.m_elem_count;
-        memcpy(m_triangle_wireframe_vertex_buffer.m_ptr, vertices.data(),
-               vertex_size);
-        m_triangle_wireframe_vertex_buffer.m_ptr += vertex_size;
-        m_triangle_wireframe_vertex_buffer.m_elem_count += vertices.size();
-
-        std::ranges::transform(
-            indices, (uint32_t*)m_triangle_wireframe_indices_buffer.m_ptr,
-            [=](uint32_t a) { return a + old_size; });
-        m_triangle_wireframe_indices_buffer.m_ptr += index_size;
-        m_triangle_wireframe_indices_buffer.m_elem_count += indices.size();
+        auto old_size = m_triangle_wireframe_vertex_buffer.m_elem_count;
+        copyData2Buffer<MaxTriangleVertexNum>(
+            m_triangle_wireframe_vertex_buffer, vertices);
+        copyData2IndexBuffer<MaxTriangleVertexNum>(
+            m_triangle_wireframe_indices_buffer, indices, old_size);
     } else {
-        size_t old_size = m_triangle_vertex_buffer.m_elem_count;
-        memcpy(m_triangle_vertex_buffer.m_ptr, vertices.data(), vertex_size);
-        m_triangle_vertex_buffer.m_ptr += vertex_size;
-        m_triangle_vertex_buffer.m_elem_count += vertices.size();
-
-        std::ranges::transform(indices,
-                               (uint32_t*)m_triangle_indices_buffer.m_ptr,
-                               [=](uint32_t a) { return a + old_size; });
-        m_triangle_indices_buffer.m_ptr += index_size;
-        m_triangle_indices_buffer.m_elem_count += indices.size();
+        auto old_size = m_triangle_vertex_buffer.m_elem_count;
+        copyData2Buffer<MaxTriangleVertexNum>(m_triangle_vertex_buffer,
+                                              vertices);
+        copyData2IndexBuffer<MaxTriangleVertexNum>(m_triangle_indices_buffer,
+                                                   indices, old_size);
     }
 }
 
@@ -301,7 +282,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::CPULocal;
-        desc.m_size = sizeof(Vertex) * MaxLineNum;
+        desc.m_size = sizeof(Vertex) * MaxLineVertexNum;
         desc.m_usage = Flags{BufferUsage::CopySrc};
 
         m_line_vertex_buffer.m_cpu = device.CreateBuffer(desc);
@@ -310,7 +291,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::GPULocal;
-        desc.m_size = sizeof(Vertex) * MaxLineNum;
+        desc.m_size = sizeof(Vertex) * MaxLineVertexNum;
         desc.m_usage = Flags{BufferUsage::Vertex} | BufferUsage::CopyDst;
 
         m_line_vertex_buffer.m_gpu = device.CreateBuffer(desc);
@@ -319,7 +300,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::CPULocal;
-        desc.m_size = sizeof(Vertex) * MaxTriangleNum;
+        desc.m_size = sizeof(Vertex) * MaxTriangleVertexNum;
         desc.m_usage = BufferUsage::CopySrc;
 
         m_triangle_vertex_buffer.m_cpu = device.CreateBuffer(desc);
@@ -328,7 +309,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::GPULocal;
-        desc.m_size = sizeof(Vertex) * MaxTriangleNum;
+        desc.m_size = sizeof(Vertex) * MaxTriangleVertexNum;
         desc.m_usage = Flags{BufferUsage::Vertex} | BufferUsage::CopyDst;
 
         m_triangle_vertex_buffer.m_gpu = device.CreateBuffer(desc);
@@ -337,7 +318,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::CPULocal;
-        desc.m_size = sizeof(Vertex) * MaxTriangleNum;
+        desc.m_size = sizeof(Vertex) * MaxTriangleVertexNum;
         desc.m_usage = BufferUsage::CopySrc;
 
         m_triangle_wireframe_vertex_buffer.m_cpu = device.CreateBuffer(desc);
@@ -346,7 +327,7 @@ void PrimitiveRenderPass::initVertexBuffer(Device& device) {
     {
         Buffer::Descriptor desc;
         desc.m_memory_type = MemoryType::GPULocal;
-        desc.m_size = sizeof(Vertex) * MaxTriangleNum;
+        desc.m_size = sizeof(Vertex) * MaxTriangleVertexNum;
         desc.m_usage = Flags{BufferUsage::Vertex} | BufferUsage::CopyDst;
 
         m_triangle_wireframe_vertex_buffer.m_gpu = device.CreateBuffer(desc);
