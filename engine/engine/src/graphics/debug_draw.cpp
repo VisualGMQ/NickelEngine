@@ -49,7 +49,8 @@ void DebugDrawer::DrawCylinder(const Vec3& center, float half_height,
                             center;
         vertices.push_back(vertex);
     }
-    graphics_ctx.DrawTriangleList(vertices, m_sphere_data.m_indices, wireframe);
+    graphics_ctx.DrawTriangleList(vertices, m_cylinder_data.m_indices,
+                                  wireframe);
 }
 
 void DebugDrawer::DrawCapsule(const Vec3& center, float half_height,
@@ -68,7 +69,7 @@ void DebugDrawer::DrawCapsule(const Vec3& center, float half_height,
         Vertex vertex;
         vertex.m_color = color;
         vertex.m_position =
-            quat * point * radius + center + Vec3{0, 0, half_height};
+            quat * (point * radius + Vec3{0, half_height, 0}) + center;
         vertices.push_back(vertex);
     }
     for (auto idx : m_semi_sphere_data.m_indices) {
@@ -76,19 +77,21 @@ void DebugDrawer::DrawCapsule(const Vec3& center, float half_height,
     }
 
     // bottom semi-sphere
+    size_t old_size = vertices.size();
     for (auto& point : m_semi_sphere_data.m_points) {
         Vertex vertex;
         vertex.m_color = color;
-        vertex.m_position = quat * point * Vec3{radius, -radius, radius} +
-                            center - Vec3{0, 0, half_height};
+        vertex.m_position = quat * (point * Vec3{radius, -radius, radius} +
+                                    -Vec3{0, half_height, 0}) +
+                            center;
         vertices.push_back(vertex);
     }
-    size_t old_size = indices.size();
     for (auto idx : m_semi_sphere_data.m_indices) {
         indices.push_back(idx + old_size);
     }
 
     // cylinder
+    old_size = vertices.size();
     for (auto& point : m_cylinder_data.m_points) {
         Vertex vertex;
         vertex.m_color = color;
@@ -97,7 +100,6 @@ void DebugDrawer::DrawCapsule(const Vec3& center, float half_height,
                             center;
         vertices.push_back(vertex);
     }
-    old_size = indices.size();
     for (auto idx : m_cylinder_data.m_indices) {
         indices.push_back(idx + old_size);
     }

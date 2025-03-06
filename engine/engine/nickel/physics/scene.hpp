@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/physics/cct.hpp"
 #include "nickel/common/flags.hpp"
 #include "nickel/physics/enums.hpp"
 #include "nickel/physics/geom_query.hpp"
@@ -90,7 +91,9 @@ public:
                  OverlapHitCallback& hit_callback,
                  const QueryFilterData& filter_data,
                  QueryFilterCallback* filter_callback = nullptr);
+    
     void EnableCCTOverlapRecoveryModule(bool enable);
+    CapsuleController CreateCapsuleController(const CapsuleController::Descriptor&);
 
     void GC();
 };

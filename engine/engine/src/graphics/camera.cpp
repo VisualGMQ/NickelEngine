@@ -45,14 +45,13 @@ public:
     void MoveTo(const Vec3& pos) { m_position = pos; }
     const Vec3& GetPosition() const { return m_position; }
 
-    Vec3 GetForward() const {
-        return Quat::Create(Vec3::UNIT_Y, m_yaw) * Quat::Create(
-                               Vec3::UNIT_X, m_pitch) * -Vec3::UNIT_Z;
-    }
+    Vec3 GetForward() const { return GetRotation() * -Vec3::UNIT_Z; }
 
-    Vec3 GetUp() const {
+    Vec3 GetUp() const { return GetRotation() * Vec3::UNIT_Y; }
+
+    Quat GetRotation() const {
         return Quat::Create(Vec3::UNIT_Y, m_yaw) *
-               Quat::Create(Vec3::UNIT_X, m_pitch) * Vec3::UNIT_Y;
+               Quat::Create(Vec3::UNIT_X, m_pitch);
     }
 
     void MoveForward(float dist) { m_position += GetForward() * dist; }
@@ -106,6 +105,10 @@ Vec3 FlyCamera::GetForward() const {
 
 Vec3 FlyCamera::GetUp() const {
     return m_impl->GetUp();
+}
+
+Quat FlyCamera::GetRotation() const {
+    return m_impl->GetRotation();
 }
 
 void FlyCamera::Move(const Vec3& offset) {

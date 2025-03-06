@@ -41,6 +41,11 @@ void Scene::EnableCCTOverlapRecoveryModule(bool enable) {
     m_impl->EnableCCTOverlapRecoveryModule(enable);
 }
 
+CapsuleController Scene::CreateCapsuleController(
+    const CapsuleController::Descriptor& desc) {
+    return m_impl->CreateCapsuleController(desc);
+}
+
 void Scene::GC() {
     m_impl->GC();
 }

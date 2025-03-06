@@ -170,6 +170,14 @@ void Level::preorderGO(GameObject* parent, GameObject& go) {
                 ? go.m_global_transform.RelatedBy(parent->GetGlobalTransform())
                 : go.m_global_transform;
     }
+    if (go.m_controller) {
+        auto p = go.m_controller.GetFootPosition();
+        go.m_global_transform.p = p;
+        go.m_transform =
+            parent
+                ? go.m_global_transform.RelatedBy(parent->GetGlobalTransform())
+                : go.m_global_transform;
+    }
 
     if (go.m_model) {
         Context::GetInst().GetGraphicsContext().DrawModel(go.m_global_transform,

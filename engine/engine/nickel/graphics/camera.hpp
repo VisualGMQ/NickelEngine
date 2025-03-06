@@ -35,6 +35,7 @@ public:
     Radians GetPitch() const;
     Vec3 GetForward() const;
     Vec3 GetUp() const;
+    Quat GetRotation() const;
 
     void Move(const Vec3& offset);
     void MoveTo(const Vec3& pos);

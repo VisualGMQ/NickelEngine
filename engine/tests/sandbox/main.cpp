@@ -1,6 +1,8 @@
 #include "nickel/common/macro.hpp"
+#include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
+#include "nickel/physics/cct.hpp"
 
 class Application : public nickel::Application {
 public:
@@ -19,17 +21,17 @@ public:
         mgr.Load(
             "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
         mgr.Load(
-            "engine/assets/models/ReciprocatingSaw/ReciprocatingSaw.gltf");
+            "engine/assets/models/CesiumMan/CesiumMan.gltf");
         mgr.Load("engine/assets/models/unit_box/unit_box.gltf");
         mgr.Load("engine/assets/models/unit_sphere/unit_sphere.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
+        auto& physics_ctx = ctx.GetPhysicsContext();
         // create car
         {
             nickel::GameObject go;
             go.m_name = "car";
             go.m_model = mgr.Find("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
-            auto& physics_ctx = ctx.GetPhysicsContext();
             go.m_rigid_actor = nickel::physics::RigidActor{
                 physics_ctx.CreateRigidDynamic(nickel::Vec3{3, 0, 0}, nickel::Quat{})};
             auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
@@ -45,7 +47,6 @@ public:
         {
             nickel::GameObject go;
             go.m_name = "plane";
-            auto& physics_ctx = ctx.GetPhysicsContext();
             go.m_rigid_actor = nickel::physics::RigidActor{physics_ctx.CreateRigidStatic(
                     nickel::Vec3{}, nickel::Quat::Create(nickel::Vec3{0, 0, 1},
                                                          nickel::Degrees{90}))};
@@ -61,31 +62,39 @@ public:
             nickel::GameObject go;
             go.m_name = "saw";
             go.m_model =
-                mgr.Find("engine/assets/models/ReciprocatingSaw/ReciprocatingSaw");
-            go.m_transform.scale = nickel::Vec3{0.01};
-            auto& physics_ctx = ctx.GetPhysicsContext();
-            go.m_rigid_actor =
-                nickel::physics::RigidActor{physics_ctx.CreateRigidStatic(
-                    nickel::Vec3{}, nickel::Quat::Create(nickel::Vec3{1, 0, 0},
-                                                         nickel::Degrees{90}))};
-            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
-            auto shape = physics_ctx.CreateShape(
-                nickel::physics::BoxGeometry{nickel::Vec3{1, 1, 1}}, material);
-            go.m_rigid_actor.AttachShape(shape);
-            physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
+                mgr.Find("engine/assets/models/CesiumMan/CesiumMan");
+            go.m_transform.scale = nickel::Vec3{0.7};
+
+            nickel::physics::CapsuleController::Descriptor desc;
+            desc.m_radius = 0.5;
+            desc.m_height = 0.5;
+            desc.m_material = physics_ctx.CreateMaterial(0.01, 0.01, 0.01);
+            go.m_controller = physics_ctx.GetMainScene().CreateCapsuleController(desc);
+            
             root_go.m_children.push_back(go);
         }
     }
 
     void OnUpdate() override {
-        logicUpdate();
-        updateCamera();
-        drawGrid();
-
         auto& ctx = nickel::Context::GetInst();
-
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
+        
+        updateFlyCamera();
+        if (mode == Mode::Character) {
+            shootBall();
+            moveCharacter();
+        } 
+        if (keyboard.GetKey(nickel::input::Key::P).IsPressed()) {
+            if (mode == Mode::Character) {
+                mode = Mode::Fly;
+            } else {
+                mode = Mode::Character;
+            }
+        }
+        drawGrid();
+
+
         if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
             mouse.RelativeMode(mouse.IsRelativeMode() ? false : true);
         }
@@ -94,26 +103,54 @@ public:
     }
 
 private:
-    void logicUpdate() {
+    enum class Mode {
+        Fly,
+        Character,
+    } mode = Mode::Fly;
+
+    void moveCharacter() {
+        auto& ctx = nickel::Context::GetInst();
+        auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
+        auto& camera = (nickel::FlyCamera&)ctx.GetCamera();
+
+        constexpr float speed = 0.01f;
+        nickel::GameObject& go =
+            ctx.GetCurrentLevel().GetRootGO().m_children[2];
+        auto forward = camera.GetForward();
+        forward.y = 0;
+        Normalize(forward);
+        nickel::Vec3 up = nickel::Vec3{0, 1, 0};
+        nickel::Vec3 left = Cross(up, forward);
+
+        nickel::Vec3 disp;
+        
+        if (keyboard.GetKey(nickel::input::Key::W).IsPressing()) {
+            disp += forward * speed;
+        }
+        if (keyboard.GetKey(nickel::input::Key::S).IsPressing()) {
+            disp -= forward * speed;
+        }
+        if (keyboard.GetKey(nickel::input::Key::A).IsPressing()) {
+            disp += left * speed;
+        }
+        if (keyboard.GetKey(nickel::input::Key::D).IsPressing()) {
+            disp -= left * speed;
+        }
+
+        disp += nickel::Vec3{0, -9.8, 0} * 0.008;
+
+        go.m_controller.MoveAndSlide(disp, 0.00001f, 0.008);
+        go.m_controller.SetPosition(go.m_controller.GetPosition());
+        go.m_transform.q = nickel::Quat::Create(nickel::Vec3{0, 1, 0}, camera.GetYaw());
+
+        camera.MoveTo(go.m_controller.GetPosition());
+    }
+    
+    void shootBall() {
         auto& ctx = nickel::Context::GetInst();
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
         auto& camera = (nickel::FlyCamera&)ctx.GetCamera();
-
-        // nickel::GameObject& go =
-        //     ctx.GetCurrentLevel().GetRootGO().m_children[0];
-        // if (keyboard.GetKey(nickel::input::Key::W).IsPressing()) {
-        //     go.m_transform.p.z += 0.005f;
-        // }
-        // if (keyboard.GetKey(nickel::input::Key::S).IsPressing()) {
-        //     go.m_transform.p.z -= 0.005f;
-        // }
-        // if (keyboard.GetKey(nickel::input::Key::A).IsPressing()) {
-        //     go.m_transform.p.x += 0.005f;
-        // }
-        // if (keyboard.GetKey(nickel::input::Key::D).IsPressing()) {
-        //     go.m_transform.p.x -= 0.005f;
-        // }
 
         // create ball
         if (keyboard.GetKey(nickel::input::Key::Space).IsPressed()) {
@@ -138,7 +175,7 @@ private:
         }
     }
 
-    void updateCamera() {
+    void updateFlyCamera() {
         auto& ctx = nickel::Context::GetInst();
         nickel::FlyCamera& camera =
             static_cast<nickel::FlyCamera&>(ctx.GetCamera());
