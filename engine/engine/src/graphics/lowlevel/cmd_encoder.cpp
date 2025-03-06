@@ -406,7 +406,6 @@ void CopyEncoder::End() {
             barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            auto& subresource = copy_cmd.m_copy.m_image_subresource;
             barrier.subresourceRange.aspectMask =
                 ImageAspect2Vk(subresource.m_aspect_mask);
             barrier.subresourceRange.layerCount = subresource.m_layer_count;

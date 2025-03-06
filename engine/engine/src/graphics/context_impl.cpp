@@ -70,7 +70,7 @@ void ContextImpl::EndFrame() {
     render_pass_encoder.SetScissor(0, 0, rect.size.w, rect.size.h);
 
     if (m_primitive_draw.NeedDraw()) {
-        m_primitive_draw.ApplyDrawCall(render_pass_encoder, m_is_wireframe);
+        m_primitive_draw.ApplyDrawCall(render_pass_encoder);
     }
 
     if (m_gltf_draw.NeedDraw()) {
@@ -112,10 +112,11 @@ void ContextImpl::DrawLineList(std::span<Vertex> vertices) {
 }
 
 void ContextImpl::DrawTriangleList(std::span<Vertex> vertices,
-                                   std::span<uint32_t> indices) {
+                                   std::span<uint32_t> indices,
+                                   bool wireframe) {
     NICKEL_RETURN_IF_FALSE(ShouldRender());
 
-    m_primitive_draw.DrawTriangleList(vertices, indices);
+    m_primitive_draw.DrawTriangleList(vertices, indices, wireframe);
 }
 
 void ContextImpl::DrawModel(const Transform& transform,

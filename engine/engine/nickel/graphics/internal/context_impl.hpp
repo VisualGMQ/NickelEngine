@@ -21,7 +21,7 @@ public:
 
     void DrawLineList(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
-                          std::span<uint32_t> indices);
+                          std::span<uint32_t> indices, bool wireframe = true);
     void DrawModel(const Transform& transform, const GLTFModel& model);
 
     void SetClearColor(const Color& color);

@@ -56,6 +56,7 @@ public:
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.push_back(go);
         }
+        // create gun
         {
             nickel::GameObject go;
             go.m_name = "saw";

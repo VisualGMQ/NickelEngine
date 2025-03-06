@@ -19,16 +19,16 @@ public:
 
     void Begin();
     void UploadData2GPU(Device& device);
-    void ApplyDrawCall(RenderPassEncoder&, bool wireframe);
+    void ApplyDrawCall(RenderPassEncoder&);
     void DrawLineList(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
-                          std::span<uint32_t> indices);
+                          std::span<uint32_t> indices, bool wireframe);
 
     bool NeedDraw() const;
 
 private:
-    static constexpr uint32_t MaxLineNum = 1024;
-    static constexpr uint32_t MaxTriangleNum = 1024;
+    static constexpr uint32_t MaxLineNum = 8192;
+    static constexpr uint32_t MaxTriangleNum = 8192;
 
     struct BufferBundle {
         Buffer m_cpu;
@@ -47,6 +47,8 @@ private:
     BufferBundle m_line_vertex_buffer;
     BufferBundle m_triangle_vertex_buffer;
     BufferBundle m_triangle_indices_buffer;
+    BufferBundle m_triangle_wireframe_vertex_buffer;
+    BufferBundle m_triangle_wireframe_indices_buffer;
 
     void initBindGroupLayout(Device&);
     void initBindGroup(CommonResource& res);

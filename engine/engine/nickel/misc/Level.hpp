@@ -13,7 +13,6 @@ private:
     GameObject m_root_go;
 
     void preorderGO(GameObject* parent, GameObject& go);
-    void debugDrawRigidActor(const GameObject& go);
 };
 
 }  // namespace nickel
