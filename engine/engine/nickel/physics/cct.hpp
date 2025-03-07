@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/common/flags.hpp"
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/material.hpp"
@@ -13,6 +14,14 @@ enum class CCTType {
     Box,
     Capsule,
 };
+
+enum class CCTCollisionFlag
+{
+    Sides = 1 << 0,
+    Up = 1 << 1,
+    Down = 1 << 2,
+};
+
 
 struct CCTDesc {
     enum class NonWalkableMode {
@@ -58,7 +67,7 @@ public:
     void SetHeight(float height);
     float GetHeight() const;
     void Resize(float height);
-    void MoveAndSlide(const Vec3& disp, float min_dist, float elapsed_time);
+    Flags<CCTCollisionFlag> MoveAndSlide(const Vec3& disp, float min_dist, float elapsed_time);
     void SetPosition(const Vec3&);
     void SetFootPosition(const Vec3&);
     Vec3 GetPosition() const;

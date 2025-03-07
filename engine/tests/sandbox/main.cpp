@@ -69,6 +69,8 @@ public:
             desc.m_radius = 0.5;
             desc.m_height = 0.5;
             desc.m_up_dir = nickel::Vec3{1, 0, 0};
+            desc.m_scale_coeff = 1;
+            desc.m_contact_offset = 0.01;
             desc.m_material = physics_ctx.CreateMaterial(0.01, 0.01, 0.01);
             go.m_controller = physics_ctx.GetMainScene().CreateCapsuleController(desc);
             
@@ -141,7 +143,6 @@ private:
         disp += nickel::Vec3{0, -9.8, 0} * 0.008;
 
         go.m_controller.MoveAndSlide(disp, 0.00001f, 0.008);
-        go.m_controller.SetPosition(go.m_controller.GetPosition());
         go.m_transform.q = nickel::Quat::Create(nickel::Vec3{0, 1, 0}, camera.GetYaw());
 
         camera.MoveTo(go.m_controller.GetPosition());
@@ -150,7 +151,6 @@ private:
     void shootBall() {
         auto& ctx = nickel::Context::GetInst();
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
-        auto& mouse = ctx.GetDeviceManager().GetMouse();
         auto& camera = (nickel::FlyCamera&)ctx.GetCamera();
 
         // create ball

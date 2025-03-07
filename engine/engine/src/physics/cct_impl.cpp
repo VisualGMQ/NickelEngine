@@ -66,11 +66,12 @@ void CapsuleControllerImpl::Resize(float height) {
     m_cct->resize(height);
 }
 
-void CapsuleControllerImpl::MoveAndSlide(const Vec3& disp, float min_dist,
-                                         float elapsed_time) {
+Flags<CCTCollisionFlag> CapsuleControllerImpl::MoveAndSlide(
+    const Vec3& disp, float min_dist, float elapsed_time) {
     // TODO: explose filter as parameter
     physx::PxControllerFilters filter;
-    m_cct->move(Vec3ToPhysX(disp), min_dist, elapsed_time, filter);
+    return CCTCollisionFlagFromPhysX(
+        m_cct->move(Vec3ToPhysX(disp), min_dist, elapsed_time, filter));
 }
 
 void CapsuleControllerImpl::SetPosition(const Vec3& p) {

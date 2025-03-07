@@ -23,9 +23,10 @@ void CapsuleController::Resize(float height) {
     m_impl->Resize(height);
 }
 
-void CapsuleController::MoveAndSlide(const Vec3& disp, float min_dist,
-                                     float elapsed_time) {
-    m_impl->MoveAndSlide(disp, min_dist, elapsed_time);
+Flags<CCTCollisionFlag> CapsuleController::MoveAndSlide(const Vec3& disp,
+                                                        float min_dist,
+                                                        float elapsed_time) {
+    return m_impl->MoveAndSlide(disp, min_dist, elapsed_time);
 }
 
 void CapsuleController::SetPosition(const Vec3& v) {

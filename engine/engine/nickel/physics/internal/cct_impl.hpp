@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/common/flags.hpp"
 #include "nickel/physics/cct.hpp"
 #include "nickel/physics/internal/pch.hpp"
 
@@ -28,6 +29,36 @@ inline physx::PxCapsuleClimbingMode::Enum ClimbingMode2PhysX(
     }
     NICKEL_CANT_REACH();
     return {};
+}
+
+inline physx::PxControllerCollisionFlags CCTCollisionFlag2PhysX(
+    Flags<CCTCollisionFlag> flag) {
+    physx::PxControllerCollisionFlags bits{};
+    if (flag == CCTCollisionFlag::Down) {
+        bits |= physx::PxControllerCollisionFlag::eCOLLISION_DOWN;
+    }
+    if (flag == CCTCollisionFlag::Up) {
+        bits |= physx::PxControllerCollisionFlag::eCOLLISION_UP;
+    }
+    if (flag == CCTCollisionFlag::Sides) {
+        bits |= physx::PxControllerCollisionFlag::eCOLLISION_SIDES;
+    }
+    return bits;
+}
+
+inline Flags<CCTCollisionFlag> CCTCollisionFlagFromPhysX(
+    physx::PxControllerCollisionFlags flag) {
+    Flags<CCTCollisionFlag> bits{};
+    if (flag & physx::PxControllerCollisionFlag::eCOLLISION_DOWN) {
+        bits |= CCTCollisionFlag::Down;
+    }
+    if (flag & physx::PxControllerCollisionFlag::eCOLLISION_SIDES) {
+        bits |= CCTCollisionFlag::Sides;
+    }
+    if (flag & physx::PxControllerCollisionFlag::eCOLLISION_UP) {
+        bits |= CCTCollisionFlag::Up;
+    }
+    return bits;
 }
 
 inline CCTDesc::NonWalkableMode NonWalkableModeFromPhysX(
@@ -67,7 +98,7 @@ public:
     void SetHeight(float height);
     float GetHeight() const;
     void Resize(float height);
-    void MoveAndSlide(const Vec3& disp, float min_dist, float elapsed_time);
+    Flags<CCTCollisionFlag> MoveAndSlide(const Vec3& disp, float min_dist, float elapsed_time);
     void SetPosition(const Vec3&);
     void SetFootPosition(const Vec3&);
     Vec3 GetPosition() const;
