@@ -68,6 +68,7 @@ public:
             nickel::physics::CapsuleController::Descriptor desc;
             desc.m_radius = 0.5;
             desc.m_height = 0.5;
+            desc.m_up_dir = nickel::Vec3{1, 0, 0};
             desc.m_material = physics_ctx.CreateMaterial(0.01, 0.01, 0.01);
             go.m_controller = physics_ctx.GetMainScene().CreateCapsuleController(desc);
             
