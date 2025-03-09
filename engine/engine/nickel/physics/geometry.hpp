@@ -73,7 +73,7 @@ struct TriangleMeshGeometry: public Geometry {
     Vec3 m_scale;
     
     TriangleMeshGeometry();
-    explicit TriangleMeshGeometry(const TriangleMesh& mesh, const Quat& = {}, const Vec3& = {});
+    explicit TriangleMeshGeometry(const TriangleMesh& mesh, const Quat& = {}, const Vec3& = {1, 1, 1});
 };
 
 struct ConvexMesh {

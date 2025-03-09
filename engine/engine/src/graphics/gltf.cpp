@@ -52,16 +52,14 @@ std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(
     std::vector<GLTFVertexData> result;
     for (auto& scene : gltf_model.scenes) {
         for (auto node : scene.nodes) {
-            if (parseNode(gltf_model, gltf_model.nodes[node], {}, result)) {
-                break;
-            }
+            parseNode(gltf_model, gltf_model.nodes[node], {}, result);
         }
     }
 
     return result;
 }
 
-bool GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
+void GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
                                      const tinygltf::Node& node,
                                      const Transform& parent_transform,
                                      std::vector<GLTFVertexData>& result) {
@@ -135,8 +133,6 @@ bool GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
     for (auto& child : node.children) {
         parseNode(model, model.nodes[child], global_pose, result);
     }
-
-    return true;
 }
 
 Transform GLTFVertexDataLoader::calcNodeTransform(const tinygltf::Node& node) {

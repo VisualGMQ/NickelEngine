@@ -123,8 +123,9 @@ void debugDrawRigidActor(const physx::PxActor* actor) {
             } break;
             case physx::PxGeometryType::eCAPSULE: {
                 auto& capsule = holder.capsule();
-                debug_drawer.DrawCapsule(global_transform.p, capsule.halfHeight,
-                                         capsule.radius, global_transform.q,
+                debug_drawer.DrawCapsule(global_transform.p, capsule.halfHeight, capsule.radius,
+                    global_transform.q *
+                        Quat::Create(Vec3{0, 0, 1}, Degrees{90}),
                                          color, true);
             } break;
             case physx::PxGeometryType::ePLANE:
