@@ -1,12 +1,13 @@
 ﻿#include "nickel/graphics/common_resource.hpp"
 
+#include "nickel/graphics/lowlevel/internal/device_impl.hpp"
 #include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
 CommonResource::CommonResource(Device device, const video::Window& window) {
-    initDepthImages(device, window);
+    InitDepthImages(device, window.GetSize());
     initRenderPass(device);
-    initFramebuffers(device);
+    InitFramebuffers(device);
     initSyncObjects(device);
     initCameraBuffer(device);
     initDefaultResources(device);
@@ -52,12 +53,11 @@ void CommonResource::End() {
     m_camera_buffer.Unmap();
 }
 
-void CommonResource::initDepthImages(Device& device,
-                                     const video::Window& window) {
+void CommonResource::InitDepthImages(Device& device,
+                                     const SVector<uint32_t, 2>& size) {
     for (uint32_t i = 0; i < device.GetSwapchainImageInfo().m_image_count;
          i++) {
         {
-            auto size = window.GetSize();
             Image::Descriptor desc;
             desc.m_image_type = ImageType::Dim2;
             desc.m_extent.w = size.w;
@@ -81,7 +81,7 @@ void CommonResource::initDepthImages(Device& device,
     }
 }
 
-void CommonResource::initFramebuffers(Device& device) {
+void CommonResource::InitFramebuffers(Device& device) {
     auto swapchain_image_views = device.GetSwapchainImageViews();
     auto image_extent = device.GetSwapchainImageInfo().m_extent;
     for (uint32_t i = 0; i < device.GetSwapchainImageInfo().m_image_count;

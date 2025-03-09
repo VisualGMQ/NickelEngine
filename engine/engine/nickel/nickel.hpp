@@ -54,6 +54,8 @@ public:
     const physics::Context& GetPhysicsContext() const;
     Camera& GetCamera();
 
+    void OnWindowResize();
+
     void EnableRender(bool);
 
     void Update();

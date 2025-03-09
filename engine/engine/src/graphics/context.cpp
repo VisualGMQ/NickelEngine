@@ -54,6 +54,11 @@ void Context::EnableWireFrame(bool enable) const {
     m_impl->EnableWireFrame(enable);
 }
 
+void Context::OnSwapchainRecreate(const video::Window& window,
+                                  Adapter& adapter) {
+    m_impl->OnSwapchainRecreate(window, adapter);
+}
+
 const ContextImpl* Context::GetImpl() const {
     return m_impl.get();
 }

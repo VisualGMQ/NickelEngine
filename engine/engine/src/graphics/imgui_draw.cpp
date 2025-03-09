@@ -17,7 +17,7 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
     initDescriptorPool(adapter);
     initRenderPass(adapter);
     initCmdPool(adapter.GetDevice());
-    initFramebuffers(adapter.GetDevice());
+    InitFramebuffers(adapter.GetDevice());
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -61,9 +61,7 @@ ImGuiRenderPass::~ImGuiRenderPass() {
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 
-    for (auto fbo : m_fbos) {
-        vkDestroyFramebuffer(m_device, fbo, nullptr);
-    }
+    DestroyFramebuffers();
     vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
     vkDestroyRenderPass(m_device, m_render_pass, nullptr);
     VK_CALL(vkResetCommandPool(m_device, m_cmd_pool, 0));
@@ -77,8 +75,9 @@ void ImGuiRenderPass::Begin() {
 }
 
 void ImGuiRenderPass::End(Device device, CommonResource& res,
+                          uint32_t cur_swapchain_image_idx,
                           uint32_t cur_frame) {
-    renderImGui(device, res, cur_frame);
+    renderImGui(device, res, cur_swapchain_image_idx, cur_frame);
 }
 
 void ImGuiRenderPass::PrepareForRender() {
@@ -146,7 +145,7 @@ void ImGuiRenderPass::initCmdPool(const Device& device) {
         vkCreateCommandPool(device.Impl().m_device, &ci, nullptr, &m_cmd_pool));
 }
 
-void ImGuiRenderPass::initFramebuffers(const Device& device) {
+void ImGuiRenderPass::InitFramebuffers(const Device& device) {
     for (uint32_t i = 0; i < device.GetSwapchainImageInfo().m_image_count;
          i++) {
         ImageView view = device.GetSwapchainImageViews()[i];
@@ -167,8 +166,16 @@ void ImGuiRenderPass::initFramebuffers(const Device& device) {
     }
 }
 
+void ImGuiRenderPass::DestroyFramebuffers() {
+    for (auto fbo : m_fbos) {
+        vkDestroyFramebuffer(m_device, fbo, nullptr);
+    }
+    m_fbos.clear();
+}
+
 void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
-                                  int cur_frame_idx) {
+                                  uint32_t cur_swapchain_image_idx,
+                                  uint32_t cur_frame_idx) {
     auto draw_data = ImGui::GetDrawData();
 
     NICKEL_RETURN_IF_FALSE(draw_data->DisplaySize.x > 0 &&
@@ -181,7 +188,7 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = m_render_pass;
-        info.framebuffer = m_fbos[cur_frame_idx];
+        info.framebuffer = m_fbos[cur_swapchain_image_idx];
         info.renderArea.extent.width =
             device.GetSwapchainImageInfo().m_extent.w;
         info.renderArea.extent.height =

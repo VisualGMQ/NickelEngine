@@ -65,7 +65,7 @@ AdapterImpl::AdapterImpl(const video::Window::Impl& window) {
     queryLimits();
 
     LOGI("creating surface");
-    createSurface(window);
+    CreateSurface(window);
 
     LOGI("creating render device");
     createDevice(window.GetSize());
@@ -113,8 +113,8 @@ void AdapterImpl::createInstance() {
     uint32_t layer_count;
     VK_CALL(vkEnumerateInstanceLayerProperties(&layer_count, nullptr));
     support_layers.resize(layer_count);
-    VK_CALL(
-        vkEnumerateInstanceLayerProperties(&layer_count, support_layers.data()));
+    VK_CALL(vkEnumerateInstanceLayerProperties(&layer_count,
+                                               support_layers.data()));
 
     std::vector<const char*> require_layers;
 #ifdef NICKEL_DEBUG
@@ -166,14 +166,14 @@ void AdapterImpl::pickupPhysicalDevice() {
     uint32_t count;
     VK_CALL(vkEnumeratePhysicalDevices(m_instance, &count, nullptr));
     physical_devices.resize(count);
-    VK_CALL(
-        vkEnumeratePhysicalDevices(m_instance, &count, physical_devices.data()));
+    VK_CALL(vkEnumeratePhysicalDevices(m_instance, &count,
+                                       physical_devices.data()));
 
     NICKEL_ASSERT(!physical_devices.empty(), "no vulkan physics device");
     m_phy_device = physical_devices[0];
 }
 
-void AdapterImpl::createSurface(const video::Window::Impl& impl) {
+void AdapterImpl::CreateSurface(const video::Window::Impl& impl) {
     SDL_Vulkan_CreateSurface(impl.m_window, m_instance, nullptr, &m_surface);
 
     if (!m_surface) {
@@ -197,10 +197,12 @@ AdapterImpl::~AdapterImpl() {
     delete m_device;
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
-    auto vkDestroyDebugUtilsMessengerExTFuc = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        m_instance, "vkDestroyDebugUtilsMessengerEXT");
+    auto vkDestroyDebugUtilsMessengerExTFuc =
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+            m_instance, "vkDestroyDebugUtilsMessengerEXT");
     if (vkDestroyDebugUtilsMessengerExTFuc != nullptr) {
-        vkDestroyDebugUtilsMessengerExTFuc(m_instance, m_debug_utils_messenger, nullptr);
+        vkDestroyDebugUtilsMessengerExTFuc(m_instance, m_debug_utils_messenger,
+                                           nullptr);
     }
 
     vkDestroyInstance(m_instance, nullptr);

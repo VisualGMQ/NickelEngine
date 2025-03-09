@@ -2,9 +2,18 @@
 #include "nickel/common/math/math.hpp"
 
 namespace nickel {
+
+struct Frustum {
+    float near{}, far{}, aspect = 1.0;
+    Radians fov = Degrees{45};
+};
+
 class Camera {
 public:
     virtual Mat44 GetProject() const = 0;
+    virtual void SetProject(Radians fov, float aspect, float near,
+                            float far) const = 0;
+    virtual Frustum GetFrustum() const = 0;
     virtual Mat44 GetView() const = 0;
     virtual Vec3 GetPosition() const = 0;
     virtual ~Camera() = default;
@@ -14,7 +23,9 @@ class FlyCamera : public Camera {
 public:
     FlyCamera(Radians fov, float aspect, float near, float far);
     ~FlyCamera();
-    void SetProject(Radians fov, float aspect, float near, float far);
+    void SetProject(Radians fov, float aspect, float near,
+                    float far) const override;
+    Frustum GetFrustum() const override;
 
     void SetYaw(Radians value);
     void SetPitch(Radians value);
@@ -37,4 +48,4 @@ private:
     class Impl;
     std::unique_ptr<Impl> m_impl;
 };
-}
+}  // namespace nickel

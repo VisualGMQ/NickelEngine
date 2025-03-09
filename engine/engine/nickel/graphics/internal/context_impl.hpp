@@ -34,6 +34,8 @@ public:
     GLTFRenderPass& GetGLTFRenderPass();
     CommonResource& GetCommonResource();
 
+    void OnSwapchainRecreate(const video::Window& window, Adapter&);
+
 private:
     CommonResource m_common_resource;
     PrimitiveRenderPass m_primitive_draw;

@@ -31,6 +31,8 @@ public:
 
     void EnableWireFrame(bool enable) const;
 
+    void OnSwapchainRecreate(const video::Window& window, Adapter& adapter);
+
     const ContextImpl* GetImpl() const;
     ContextImpl* GetImpl() ;
 
