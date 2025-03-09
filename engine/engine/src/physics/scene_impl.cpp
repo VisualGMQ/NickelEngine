@@ -1,11 +1,11 @@
 #include "nickel/physics/internal/scene_impl.hpp"
+#include "nickel/physics/internal/cct_impl.hpp"
 #include "nickel/physics/internal/context_impl.hpp"
 #include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/geometry_converter.hpp"
 #include "nickel/physics/internal/rigidbody_impl.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/internal/util.hpp"
-#include "nickel/physics/internal/cct_impl.hpp"
 
 namespace nickel::physics {
 
@@ -149,6 +149,7 @@ SceneImpl::SceneImpl(const std::string& name, ContextImpl* ctx,
 
 SceneImpl::~SceneImpl() {
     m_capsule_controller_allocator.FreeAll();
+    m_const_capsule_controller_allocator.FreeAll();
 
     if (m_cct_manager) {
         m_cct_manager->release();
@@ -257,6 +258,7 @@ void SceneImpl::EnableCCTOverlapRecoveryModule(bool enable) {
 
 void SceneImpl::GC() {
     m_capsule_controller_allocator.GC();
+    m_const_capsule_controller_allocator.GC();
 }
 
 CapsuleController SceneImpl::CreateCapsuleController(

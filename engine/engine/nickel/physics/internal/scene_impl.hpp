@@ -1,13 +1,13 @@
 #pragma once
 #include "nickel/common/memory/memory.hpp"
 #include "nickel/common/memory/refcountable.hpp"
+#include "nickel/physics/internal/cct_impl.hpp"
 #include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/internal/rigidbody_impl.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
-#include "nickel/physics/cct.hpp"
 
 namespace nickel::physics {
 
@@ -135,6 +135,7 @@ public:
     physx::PxScene* m_scene{};
     physx::PxControllerManager* m_cct_manager{};
     BlockMemoryAllocator<CapsuleControllerImpl> m_capsule_controller_allocator;
+    BlockMemoryAllocator<CapsuleControllerConstImpl> m_const_capsule_controller_allocator;
 
 private:
     ContextImpl* m_ctx;

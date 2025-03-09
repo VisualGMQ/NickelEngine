@@ -2,16 +2,19 @@
 
 #include "nickel/common/log.hpp"
 #include "nickel/physics/internal/material_impl.hpp"
-#include "nickel/physics/internal/util.hpp"
 #include "nickel/physics/internal/scene_impl.hpp"
+#include "nickel/physics/internal/util.hpp"
 
 namespace nickel::physics {
 
+PhysXControllerFilterCallback::PhysXControllerFilterCallback(
+    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene)
+    : m_mgr(mgr), m_ctx(ctx), m_scene(scene) {}
 
 CapsuleControllerImpl::CapsuleControllerImpl(
-    physx::PxControllerManager& mgr, SceneImpl& scene,
+    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene,
     const CapsuleController::Descriptor& desc)
-    : m_scene{&scene} {
+    : m_ctx{&ctx}, m_scene{&scene} {
     physx::PxCapsuleControllerDesc physx_desc;
     physx_desc.height = desc.m_height;
     physx_desc.radius = desc.m_radius;
@@ -40,6 +43,11 @@ CapsuleControllerImpl::CapsuleControllerImpl(
     }
 }
 
+CapsuleControllerImpl::CapsuleControllerImpl(
+    physx::PxControllerManager&, ContextImpl& ctx, SceneImpl& scene,
+    physx::PxCapsuleController* controller)
+    : m_ctx{&ctx}, m_scene{&scene}, m_cct{controller} {}
+
 CapsuleControllerImpl::~CapsuleControllerImpl() {
     if (m_cct) {
         m_cct->release();
@@ -67,11 +75,32 @@ void CapsuleControllerImpl::Resize(float height) {
 }
 
 Flags<CCTCollisionFlag> CapsuleControllerImpl::MoveAndSlide(
-    const Vec3& disp, float min_dist, float elapsed_time) {
+    const Vec3& disp, float min_dist, float elapsed_time,
+    ControllerFilters* filter) {
     // TODO: explose filter as parameter
-    physx::PxControllerFilters filter;
+    physx::PxControllerFilters filters;
+    PhysXControllerFilterCallback filter_callback;
+
+    if (filter) {
+        if (filter->m_filter_data) {
+            auto filter_data = FilterData2PhysX(*filter->m_filter_data);
+            filters.mFilterData = &filter_data;
+        }
+        filters.mFilterFlags = QueryFlags2PhysX(filter->m_query_flags);
+
+        if (filter->m_filter_callback) {
+            PhysXQueryFilterCallback callback{*m_ctx,
+                                              filter->m_filter_callback};
+            filters.mFilterCallback = &callback;
+        }
+        if (filter->m_cct_callback) {
+            PhysXControllerFilterCallback callback;
+            callback.m_callback = filter->m_cct_callback;
+            filters.mCCTFilterCallback = &callback;
+        }
+    }
     return CCTCollisionFlagFromPhysX(
-        m_cct->move(Vec3ToPhysX(disp), min_dist, elapsed_time, filter));
+        m_cct->move(Vec3ToPhysX(disp), min_dist, elapsed_time, filters));
 }
 
 void CapsuleControllerImpl::SetPosition(const Vec3& p) {
@@ -92,7 +121,7 @@ Vec3 CapsuleControllerImpl::GetFootPosition() const {
     return Vec3(p.x, p.y, p.z);
 }
 
-void CapsuleControllerImpl::SetStepOffset(float offset) const {
+void CapsuleControllerImpl::SetStepOffset(float offset) {
     m_cct->setStepOffset(offset);
 }
 
@@ -122,7 +151,7 @@ CapsuleControllerImpl::GetClimbingMode() const {
 }
 
 void CapsuleControllerImpl::SetClimbingMode(
-    CapsuleController::Descriptor::ClimbingMode mode) const {
+    CapsuleController::Descriptor::ClimbingMode mode) {
     m_cct->setClimbingMode(ClimbingMode2PhysX(mode));
 }
 
@@ -131,6 +160,24 @@ void CapsuleControllerImpl::DecRefcount() {
 
     if (Refcount() == 0) {
         m_scene->m_capsule_controller_allocator.MarkAsGarbage(this);
+    }
+}
+
+CapsuleControllerConstImpl::CapsuleControllerConstImpl(
+    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene,
+    const CapsuleController::Descriptor& desc)
+    : CapsuleControllerImpl(mgr, ctx, scene, desc) {}
+
+CapsuleControllerConstImpl::CapsuleControllerConstImpl(
+    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene,
+    physx::PxCapsuleController* controller)
+    : CapsuleControllerImpl(mgr, ctx, scene, controller) {}
+
+void CapsuleControllerConstImpl::DecRefcount() {
+    CapsuleControllerImpl::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_scene->m_const_capsule_controller_allocator.MarkAsGarbage(this);
     }
 }
 }  // namespace nickel::physics
