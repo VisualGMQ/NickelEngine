@@ -172,7 +172,7 @@ void DeviceImpl::createSwapchain(VkPhysicalDevice phyDev,
     VK_CALL(vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapchain));
 
     if (m_swapchain) {
-        getAndCreateImageViews();
+        getAndCreateSwapchainImageViews();
     } else {
         LOGC("swapchain create failed");
     }
@@ -245,7 +245,7 @@ void DeviceImpl::createCmdPools() {
     }
 }
 
-void DeviceImpl::getAndCreateImageViews() {
+void DeviceImpl::getAndCreateSwapchainImageViews() {
     std::vector<VkImage> images;
     uint32_t count = 0;
     VK_CALL(vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, nullptr));
@@ -519,6 +519,14 @@ void DeviceImpl::Present(std::span<Semaphore> semaphores) {
 
     VK_CALL(vkQueuePresentKHR(m_present_queue, &info));
     m_cur_frame = (m_cur_frame + 1) % m_image_info.m_image_count;
+}
+
+void DeviceImpl::RecreateSwapchain(VkPhysicalDevice phy_device,
+                                   const SVector<uint32_t, 2>& window_size,
+                                   VkSurfaceKHR new_surface) {
+    m_image_info = queryImageInfo(phy_device, window_size, new_surface);
+    createSwapchain(phy_device, new_surface);
+    getAndCreateSwapchainImageViews();
 }
 
 }  // namespace nickel::graphics

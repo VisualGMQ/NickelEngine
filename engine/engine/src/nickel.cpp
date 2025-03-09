@@ -78,6 +78,9 @@ void Context::HandleEvent(const SDL_Event& event) {
     if (event.type == SDL_EVENT_QUIT) {
         Exit();
     }
+    if (event.type == SDL_EVENT_WINDOW_RESIZED) {
+        OnWindowResize();
+    }
 
     m_device_mgr.HandleEvent(event);
 }
@@ -172,6 +175,10 @@ const physics::Context& Context::GetPhysicsContext() const {
 
 Camera& Context::GetCamera() {
     return *m_camera;
+}
+
+void Context::OnWindowResize() {
+    m_graphics_ctx->OnSwapchainRecreate(*m_window, *m_graphics_adapter);
 }
 
 void Context::EnableRender(bool enable) {

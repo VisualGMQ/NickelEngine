@@ -7,14 +7,20 @@ namespace nickel {
 class FlyCamera::Impl {
 public:
     Impl(Radians fov, float aspect, float near, float far) {
-        m_project = CreatePersp(fov, aspect, near, far);
+        SetProject(fov, aspect, near, far);
     }
 
     void SetProject(Radians fov, float aspect, float near, float far) {
         m_project = CreatePersp(fov, aspect, near, far);
+        m_frustum.near = near;
+        m_frustum.far = far;
+        m_frustum.fov = fov;
+        m_frustum.aspect = aspect;
     }
 
     Mat44 GetProject() const { return m_project; }
+
+    Frustum GetFrustum() const { return m_frustum; }
 
     Mat44 GetView() const {
         return CreateXRotation(-m_pitch) * CreateYRotation(-m_yaw) * CreateTranslation(-m_position);
@@ -62,15 +68,11 @@ private:
     Radians m_pitch{0};
     Radians m_yaw{0};
     Vec3 m_position;
+    Frustum m_frustum;
 };
 
 FlyCamera::FlyCamera(Radians fov, float aspect, float near, float far)
     : m_impl{std::make_unique<Impl>(fov, aspect, near, far)} {
-}
-
-void FlyCamera::SetProject(Radians fov, float aspect, float near,
-                           float far) {
-    m_impl->SetProject(fov, aspect, near, far);
 }
 
 void FlyCamera::SetYaw(Radians value) {
@@ -131,4 +133,13 @@ Mat44 FlyCamera::GetView() const {
 
 FlyCamera::~FlyCamera() {}
 
+void FlyCamera::SetProject(Radians fov, float aspect, float near,
+                           float far) const {
+    m_impl->SetProject(fov, aspect, near, far);
 }
+
+Frustum FlyCamera::GetFrustum() const {
+    return m_impl->GetFrustum();
+}
+
+}  // namespace nickel

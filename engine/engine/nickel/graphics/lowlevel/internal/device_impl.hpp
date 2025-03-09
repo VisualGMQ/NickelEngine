@@ -104,6 +104,10 @@ public:
     void EndFrame();
 
     void Present(std::span<Semaphore> semaphores);
+
+    void RecreateSwapchain(VkPhysicalDevice,
+                           const SVector<uint32_t, 2>& window_size,
+                           VkSurfaceKHR);
     
     BlockMemoryAllocator<BufferImpl> m_buffer_allocator;
     BlockMemoryAllocator<ImageImpl> m_image_allocator;
@@ -135,7 +139,7 @@ private:
     VkPresentModeKHR queryPresentMode(VkPhysicalDevice, VkSurfaceKHR);
     void createCmdPools();
 
-    void getAndCreateImageViews();
+    void getAndCreateSwapchainImageViews();
     void cleanUpOneFrame();
 };
 

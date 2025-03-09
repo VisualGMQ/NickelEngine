@@ -13,6 +13,8 @@ public:
     Semaphore& GetRenderFinishSemaphore(uint32_t idx);
     Semaphore& GetImGuiRenderFinishSemaphore(uint32_t idx);
     Fence& GetFence(uint32_t idx);
+    void InitFramebuffers(Device& devcie);
+    void InitDepthImages(Device& device, const SVector<uint32_t, 2>& size);
 
     void Begin();
     void End();
@@ -36,8 +38,6 @@ public:
     Buffer m_view_buffer;
 
 private:
-    void initDepthImages(Device& device, const video::Window& window);
-    void initFramebuffers(Device& devcie);
     void initRenderPass(Device& device);
     void initSyncObjects(Device& device);
     void initDefaultResources(Device& device);

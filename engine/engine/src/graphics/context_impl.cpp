@@ -1,12 +1,14 @@
 #include "nickel/graphics/internal/context_impl.hpp"
 
 #include "nickel/common/macro.hpp"
+#include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/device_impl.hpp"
 #include "nickel/nickel.hpp"
 
 namespace nickel::graphics {
 
 ContextImpl::ContextImpl(const Adapter& adapter, const video::Window& window,
-                    StorageManager& storage_mgr)
+                         StorageManager& storage_mgr)
     : m_common_resource{adapter.GetDevice(), window},
       m_primitive_draw{adapter.GetDevice(), storage_mgr,
                        m_common_resource.m_render_pass, m_common_resource},
@@ -28,7 +30,7 @@ bool ContextImpl::ShouldRender() const {
 
 void ContextImpl::BeginFrame() {
     m_imgui_draw.Begin();
-    
+
     NICKEL_RETURN_IF_FALSE(ShouldRender());
 
     Fence fence = m_common_resource.GetFence(m_render_frame_index);
@@ -44,7 +46,7 @@ void ContextImpl::BeginFrame() {
 
 void ContextImpl::EndFrame() {
     m_imgui_draw.PrepareForRender();
-    
+
     NICKEL_RETURN_IF_FALSE(ShouldRender());
 
     auto& ctx = nickel::Context::GetInst();
@@ -88,7 +90,8 @@ void ContextImpl::EndFrame() {
             1},
         {});
 
-    m_imgui_draw.End(device, m_common_resource, m_render_frame_index);
+    m_imgui_draw.End(device, m_common_resource, m_swapchain_image_index,
+                     m_render_frame_index);
 
     device.Present(std::span{
         &m_common_resource.GetImGuiRenderFinishSemaphore(m_render_frame_index),
@@ -140,6 +143,35 @@ GLTFRenderPass& ContextImpl::GetGLTFRenderPass() {
 
 CommonResource& ContextImpl::GetCommonResource() {
     return m_common_resource;
+}
+
+void ContextImpl::OnSwapchainRecreate(const video::Window& window,
+                                      Adapter& adapter) {
+    auto& adapter_impl = adapter.GetImpl();
+    auto device = adapter.GetDevice();
+    device.WaitIdle();
+    auto& device_impl = device.Impl();
+
+    m_common_resource.m_fbos.clear();
+    m_imgui_draw.DestroyFramebuffers();
+    m_common_resource.m_depth_image_views.clear();
+    m_common_resource.m_depth_images.clear();
+    device_impl.m_framebuffer_allocator.GC();
+    device_impl.m_swapchain_image_views.clear();
+    device_impl.m_image_view_allocator.GC();
+    device_impl.m_image_allocator.GC();
+    vkDestroySwapchainKHR(device_impl.m_device, device_impl.m_swapchain,
+                          nullptr);
+    vkDestroySurfaceKHR(adapter_impl.m_instance, adapter_impl.m_surface,
+                        nullptr);
+
+    auto window_size = window.GetSize();
+    adapter.GetImpl().CreateSurface(window.GetImpl());
+    device_impl.RecreateSwapchain(adapter.GetImpl().m_phy_device, window_size,
+                                  adapter.GetImpl().m_surface);
+    m_common_resource.InitDepthImages(device, window_size);
+    m_common_resource.InitFramebuffers(device);
+    m_imgui_draw.InitFramebuffers(device);
 }
 
 }  // namespace nickel::graphics

@@ -25,6 +25,7 @@ public:
     Device GetDevice() const;
 
     const AdapterImpl& GetImpl() const;
+    AdapterImpl& GetImpl();
     const Limits& GetLimits() const;
 
 private:
