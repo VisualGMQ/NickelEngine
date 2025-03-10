@@ -3,8 +3,112 @@
 
 namespace nickel::graphics {
 
+DebugDrawer::DebugDrawer() {
+    {
+        GLTFVertexDataLoader loader;
+        m_sphere_data =
+            loader.Load("engine/assets/models/unit_sphere/unit_sphere.gltf")[0];
+    }
+    {
+        GLTFVertexDataLoader loader;
+        m_semi_sphere_data = loader.Load(
+            "engine/assets/models/unit_semi_sphere/semi_sphere.gltf")[0];
+    }
+    {
+        GLTFVertexDataLoader loader;
+        m_cylinder_data =
+            loader.Load("engine/assets/models/unit_cylinder/cylinder.gltf")[0];
+    }
+}
+
+void DebugDrawer::DrawSphere(const Vec3& center, float radius, const Quat& quat,
+                             const Color& color, bool wireframe) {
+    auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
+    std::vector<Vertex> vertices;
+    vertices.reserve(m_sphere_data.m_points.size());
+    for (auto& point : m_sphere_data.m_points) {
+        Vertex vertex;
+        vertex.m_color = color;
+        vertex.m_position = quat * point * radius + center;
+        vertices.push_back(vertex);
+    }
+    graphics_ctx.DrawTriangleList(vertices, m_sphere_data.m_indices, wireframe);
+}
+
+void DebugDrawer::DrawCylinder(const Vec3& center, float half_height,
+                               float radius, const Quat& quat,
+                               const Color& color, bool wireframe) {
+    auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
+    std::vector<Vertex> vertices;
+    vertices.reserve(m_cylinder_data.m_points.size());
+    for (auto& point : m_cylinder_data.m_points) {
+        Vertex vertex;
+        vertex.m_color = color;
+        vertex.m_position = quat * Vec3{point.x * radius, point.y * half_height,
+                                        point.z * radius} +
+                            center;
+        vertices.push_back(vertex);
+    }
+    graphics_ctx.DrawTriangleList(vertices, m_cylinder_data.m_indices,
+                                  wireframe);
+}
+
+void DebugDrawer::DrawCapsule(const Vec3& center, float half_height,
+                              float radius, const Quat& quat,
+                              const Color& color, bool wireframe) {
+    auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    vertices.reserve(m_semi_sphere_data.m_points.size() * 2 +
+                     m_cylinder_data.m_points.size());
+    indices.reserve(m_semi_sphere_data.m_indices.size() * 2 +
+                    m_cylinder_data.m_indices.size());
+
+    // top semi-sphere
+    for (auto& point : m_semi_sphere_data.m_points) {
+        Vertex vertex;
+        vertex.m_color = color;
+        vertex.m_position =
+            quat * (point * radius + Vec3{0, half_height, 0}) + center;
+        vertices.push_back(vertex);
+    }
+    for (auto idx : m_semi_sphere_data.m_indices) {
+        indices.push_back(idx);
+    }
+
+    // bottom semi-sphere
+    size_t old_size = vertices.size();
+    for (auto& point : m_semi_sphere_data.m_points) {
+        Vertex vertex;
+        vertex.m_color = color;
+        vertex.m_position = quat * (point * Vec3{radius, -radius, radius} +
+                                    -Vec3{0, half_height, 0}) +
+                            center;
+        vertices.push_back(vertex);
+    }
+    for (auto idx : m_semi_sphere_data.m_indices) {
+        indices.push_back(idx + old_size);
+    }
+
+    // cylinder
+    old_size = vertices.size();
+    for (auto& point : m_cylinder_data.m_points) {
+        Vertex vertex;
+        vertex.m_color = color;
+        vertex.m_position = quat * Vec3{point.x * radius, point.y * half_height,
+                                        point.z * radius} +
+                            center;
+        vertices.push_back(vertex);
+    }
+    for (auto idx : m_cylinder_data.m_indices) {
+        indices.push_back(idx + old_size);
+    }
+
+    graphics_ctx.DrawTriangleList(vertices, indices, wireframe);
+}
+
 void DebugDrawer::DrawLine(const Vec3& p1, const Vec3& p2, const Color& color1,
-                       const Color& color2) {
+                           const Color& color2) {
     auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
     std::array vertices = {
         Vertex{p1, color1},
@@ -18,30 +122,25 @@ void DebugDrawer::DrawBox(const Vec3& center, const Vec3& half_size,
     auto& graphics_ctx = nickel::Context::GetInst().GetGraphicsContext();
 
     std::array<Vertex, 8> vertices = {
-        Vertex{rotation * Vec3{center.x + half_size.x, center.y + half_size.y,
-center.z + half_size.z},
+        Vertex{rotation * Vec3{half_size.x, half_size.y, half_size.z} + center,
                color},
-        Vertex{rotation * Vec3{center.x - half_size.x, center.y + half_size.y,
-center.z + half_size.z},
+        Vertex{  rotation * Vec3{-half_size.x, half_size.y, half_size.z} + center,
                color},
-        Vertex{rotation * Vec3{center.x - half_size.x, center.y + half_size.y,
-center.z - half_size.z},
+        Vertex{
+               rotation * Vec3{-half_size.x, half_size.y, -half_size.z} + center,
                color},
-        Vertex{rotation * Vec3{center.x + half_size.x, center.y + half_size.y,
-center.z - half_size.z},
+        Vertex{  rotation * Vec3{half_size.x, half_size.y, -half_size.z} + center,
                color},
-
-        Vertex{rotation * Vec3{center.x + half_size.x, center.y - half_size.y,
-center.z + half_size.z},
+        Vertex{  rotation * Vec3{half_size.x, -half_size.y, half_size.z} + center,
                color},
-        Vertex{rotation * Vec3{center.x - half_size.x, center.y - half_size.y,
-center.z + half_size.z},
+        Vertex{
+               rotation * Vec3{-half_size.x, -half_size.y, half_size.z} + center,
                color},
-        Vertex{rotation * Vec3{center.x - half_size.x, center.y - half_size.y,
-center.z - half_size.z},
+        Vertex{
+               rotation * Vec3{-half_size.x, -half_size.y, -half_size.z} + center,
                color},
-        Vertex{rotation * Vec3{center.x + half_size.x, center.y - half_size.y,
-center.z - half_size.z},
+        Vertex{
+               rotation * Vec3{half_size.x, -half_size.y, -half_size.z} + center,
                color},
     };
 

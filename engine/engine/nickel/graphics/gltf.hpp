@@ -73,7 +73,7 @@ public:
     std::vector<GLTFVertexData> Load(const Path& path);
     std::vector<GLTFVertexData> Load(const tinygltf::Model&);
 
-    bool parseNode(const tinygltf::Model& model, const tinygltf::Node& node,
+    void parseNode(const tinygltf::Model& model, const tinygltf::Node& node,
                    const Transform& parent_transform,
                    std::vector<GLTFVertexData>& result);
     Transform calcNodeTransform(const tinygltf::Node& node);

@@ -16,14 +16,12 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-        mgr.Load("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
-        m_model = mgr.Find("tests/render/gltf/assets/CesiumMilkTruck/CesiumMilkTruck");
-        // mgr.Load("tests/render/gltf/assets/Box/Box.gltf");
-        // m_model = mgr.Find("tests/render/gltf/assets/Box/Box");
+        mgr.Load("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        m_model = mgr.Find("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
     }
 
     void OnUpdate() override {
-        updateCamera();
+        updateFlyCamera();
         drawGrid();
         
         auto& ctx = nickel::Context::GetInst();
@@ -43,7 +41,7 @@ private:
     nickel::graphics::GLTFModel m_model;
     float m_move_speed = 0.1f;
     
-    void updateCamera() {
+    void updateFlyCamera() {
         auto& ctx = nickel::Context::GetInst();
         nickel::FlyCamera& camera =
             static_cast<nickel::FlyCamera&>(ctx.GetCamera());

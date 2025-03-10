@@ -1,47 +1,49 @@
 ﻿#include "nickel/misc/Level.hpp"
 #include "nickel/common/macro.hpp"
 #include "nickel/nickel.hpp"
+#include "nickel/physics/internal/pch.hpp"
+#include "nickel/physics/internal/scene_impl.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/internal/util.hpp"
 
 namespace nickel {
-
-void Level::Update() {
-    preorderGO(nullptr, m_root_go);
-}
-
-void Level::preorderGO(GameObject* parent, GameObject& go) {
-    go.UpdateGlobalTransform(parent ? parent->GetGlobalTransform()
-                                    : Transform{});
-    Transform global_transform = go.GetGlobalTransform();
-
-    if (go.m_rigid_actor) {
-        go.m_global_transform = go.m_rigid_actor.GetGlobalTransform();
-        go.m_transform =
-            parent
-                ? go.m_global_transform.RelatedBy(parent->GetGlobalTransform())
-                : go.m_global_transform;
-        debugDrawRigidActor(go);
+void debugDrawRigidActor(const physx::PxActor* actor) {
+    Color color = Color{1, 1, 1, 1};
+    const physx::PxRigidActor* rigid_actor = actor->is<physx::PxRigidActor>();
+    NICKEL_RETURN_IF_FALSE(rigid_actor);
+    switch (rigid_actor->getType()) {
+        case physx::PxActorType::eRIGID_STATIC:
+            color = Color{0, 1, 0, 1};
+            break;
+        case physx::PxActorType::eRIGID_DYNAMIC:
+            color = Color{1, 0, 0, 1};
+            break;
+        case physx::PxActorType::eARTICULATION_LINK:
+            color = Color{1, 1, 0, 1};
+            break;
+        case physx::PxActorType::eDEFORMABLE_SURFACE:
+            color = Color{0, 1, 1, 1};
+            break;
+        case physx::PxActorType::eDEFORMABLE_VOLUME:
+            color = Color{0, 1, 1, 1};
+            break;
+        case physx::PxActorType::ePBD_PARTICLESYSTEM:
+            color = Color{1, 0, 1, 1};
+            break;
+        default:
+            NICKEL_CANT_REACH();
     }
-
-    if (go.m_model) {
-        Context::GetInst().GetGraphicsContext().DrawModel(global_transform,
-                                                          go.m_model);
-    }
-
-    for (auto& child : go.m_children) {
-        preorderGO(&go, child);
-    }
-}
-
-void Level::debugDrawRigidActor(const GameObject& go) {
-    auto shapes = go.m_rigid_actor.GetShapes();
     auto& debug_drawer = Context::GetInst().GetDebugDrawer();
+
+    std::vector<physx::PxShape*> shapes;
+    shapes.resize(rigid_actor->getNbShapes());
+    rigid_actor->getShapes(shapes.data(), shapes.size());
+
     for (auto& shape : shapes) {
-        auto& geom = shape.GetImpl()->m_shape->getGeometry();
-        auto local_transform = physics::TransformFromPhysX(
-            shape.GetImpl()->m_shape->getLocalPose());
-        Transform global_transform = go.GetGlobalTransform() * local_transform;
+        auto& geom = shape->getGeometry();
+        auto local_transform = shape->getLocalPose();
+        auto global_transform = physics::TransformFromPhysX(
+            rigid_actor->getGlobalPose() * local_transform);
         physx::PxGeometryHolder holder{geom};
 
         // TODO: draw all physics mesh
@@ -50,7 +52,7 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                 auto& box = holder.box();
                 debug_drawer.DrawBox(global_transform.p,
                                      physics::Vec3FromPhysX(box.halfExtents),
-                                     global_transform.q, Color{0, 1, 0, 1});
+                                     global_transform.q, color);
             } break;
             case physx::PxGeometryType::eTRIANGLEMESH: {
                 auto& triangle_mesh = holder.triangleMesh();
@@ -82,13 +84,13 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                         std::span(vertices),
                         std::span((uint16_t*)mesh->getTriangles(),
                                   mesh->getNbTriangles() * 3),
-                        Color{0, 1, 0, 1});
+                        color);
                 } else {
                     debug_drawer.DrawTriangleMesh(
                         std::span(vertices),
                         std::span((uint32_t*)mesh->getTriangles(),
                                   mesh->getNbTriangles() * 3),
-                        Color{0, 1, 0, 1});
+                        color);
                 }
                 break;
             }
@@ -109,22 +111,82 @@ void Level::debugDrawRigidActor(const GameObject& go) {
                         const physx::PxVec3& p2 = vertices[face_indices[j]];
                         const physx::PxVec3& p1 = vertices[face_indices[j - 1]];
                         debug_drawer.DrawLine(physics::Vec3FromPhysX(p1),
-                                              physics::Vec3FromPhysX(p2),
-                                              {0, 1, 0, 1}, {0, 1, 0, 1});
+                                              physics::Vec3FromPhysX(p2), color,
+                                              color);
                     }
                 }
             } break;
-            case physx::PxGeometryType::eSPHERE:
+            case physx::PxGeometryType::eSPHERE: {
+                auto& sphere = holder.sphere();
+                debug_drawer.DrawSphere(global_transform.p, sphere.radius,
+                                        global_transform.q, color, true);
+            } break;
+            case physx::PxGeometryType::eCAPSULE: {
+                auto& capsule = holder.capsule();
+                debug_drawer.DrawCapsule(global_transform.p, capsule.halfHeight, capsule.radius,
+                    global_transform.q *
+                        Quat::Create(Vec3{0, 0, 1}, Degrees{90}),
+                                         color, true);
+            } break;
             case physx::PxGeometryType::ePLANE:
-            case physx::PxGeometryType::eCAPSULE:
             case physx::PxGeometryType::eCONVEXCORE:
             case physx::PxGeometryType::ePARTICLESYSTEM:
             case physx::PxGeometryType::eTETRAHEDRONMESH:
             case physx::PxGeometryType::eHEIGHTFIELD:
             default:
-                NICKEL_CANT_REACH();
+                // NICKEL_CANT_REACH();
                 break;
         }
+    }
+}
+
+void Level::Update() {
+    preorderGO(nullptr, m_root_go);
+
+    auto& physics_ctx = Context::GetInst().GetPhysicsContext();
+    auto scene = physics_ctx.GetMainScene().GetImpl()->m_scene;
+    std::vector<physx::PxActor*> actors;
+
+    auto required_actor_type = physx::PxActorTypeFlag::eRIGID_STATIC |
+                               physx::PxActorTypeFlag::eRIGID_DYNAMIC;
+    actors.resize(scene->getNbActors(required_actor_type));
+    scene->getActors(required_actor_type, actors.data(), actors.size());
+
+    for (auto actor : actors) {
+        debugDrawRigidActor(actor);
+    }
+}
+
+void Level::preorderGO(GameObject* parent, GameObject& go) {
+    go.UpdateGlobalTransform(parent ? parent->GetGlobalTransform()
+                                    : Transform{});
+    Transform render_transform = go.GetGlobalTransform();
+
+    if (go.m_rigid_actor) {
+        go.m_global_transform = go.m_rigid_actor.GetGlobalTransform();
+        // NOTE: hack back render scale
+        go.m_global_transform.scale = render_transform.scale;
+        go.m_transform =
+            parent
+                ? go.m_global_transform.RelatedBy(parent->GetGlobalTransform())
+                : go.m_global_transform;
+    }
+    if (go.m_controller) {
+        auto p = go.m_controller.GetFootPosition();
+        go.m_global_transform.p = p;
+        go.m_transform =
+            parent
+                ? go.m_global_transform.RelatedBy(parent->GetGlobalTransform())
+                : go.m_global_transform;
+    }
+
+    if (go.m_model) {
+        Context::GetInst().GetGraphicsContext().DrawModel(go.m_global_transform,
+                                                          go.m_model);
+    }
+
+    for (auto& child : go.m_children) {
+        preorderGO(&go, child);
     }
 }
 

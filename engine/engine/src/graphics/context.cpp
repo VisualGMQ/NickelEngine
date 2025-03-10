@@ -34,8 +34,8 @@ void Context::DrawLineList(std::span<Vertex> vertices) {
 }
 
 void Context::DrawTriangleList(std::span<Vertex> vertices,
-                               std::span<uint32_t> indices) {
-    m_impl->DrawTriangleList(vertices, indices);
+                               std::span<uint32_t> indices, bool wireframe) {
+    m_impl->DrawTriangleList(vertices, indices, wireframe);
 }
 
 void Context::SetClearColor(const Color& color) {

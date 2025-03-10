@@ -33,6 +33,8 @@ public:
     MaterialImpl* GetImpl();
     const MaterialImpl* GetImpl() const;
 
+    operator bool() const noexcept;
+
 private:
     MaterialImpl* m_impl{};
 };

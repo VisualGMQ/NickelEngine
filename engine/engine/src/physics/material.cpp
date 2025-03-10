@@ -98,4 +98,8 @@ const MaterialImpl* Material::GetImpl() const {
     return m_impl;
 }
 
+Material::operator bool() const noexcept {
+    return m_impl;
+}
+
 }  // namespace nickel::physics

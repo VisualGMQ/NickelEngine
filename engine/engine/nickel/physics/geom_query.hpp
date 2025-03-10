@@ -3,32 +3,9 @@
 #include "nickel/common/flags.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/geometry.hpp"
+#include "nickel/physics/filter.hpp"
 
 namespace nickel::physics {
-
-struct BasicHitInfo {
-    Flags<HitFlag> m_flags;
-    Vec3 m_position;
-    Vec3 m_normal;
-    float m_distance{};
-    uint32_t m_face_index{};
-
-    bool HadInitialOverlap() const { return m_distance <= 0.0f; }
-};
-
-struct Bound {
-    Vec3 m_min, m_max;
-};
-
-struct GeomRaycastHit : public BasicHitInfo {
-    float m_u{}, m_v{};
-};
-
-struct GeomSweepHit : public BasicHitInfo {};
-
-struct GeomOverlapHit {
-    uint32_t m_face_index{};
-};
 
 class GeometryQuery {
 public:

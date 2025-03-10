@@ -23,7 +23,8 @@ public:
 
     void DrawLineList(std::span<Vertex> vertices);
     void DrawTriangleList(std::span<Vertex> vertices,
-                          std::span<uint32_t> indices);
+                          std::span<uint32_t> indices, bool wireframe = true);
+    
     void SetClearColor(const Color& color);
     void SetDepthClearValue(float depth, uint32_t stencil);
 

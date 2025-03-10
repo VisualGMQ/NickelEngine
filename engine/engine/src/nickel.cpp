@@ -197,7 +197,7 @@ void Context::Update() {
     GetDeviceManager().Update();
 
     // TODO: use sub-step simulation
-    m_physics->Update(0.0001);
+    m_physics->Update(0.008);
 
     m_graphics_ctx->EndFrame();
 

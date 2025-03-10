@@ -45,23 +45,24 @@ public:
     void MoveTo(const Vec3& pos) { m_position = pos; }
     const Vec3& GetPosition() const { return m_position; }
 
-    void MoveForward(float dist) {
-        auto forward_dir = Quat::Create(Vec3::UNIT_Y, m_yaw) * Quat::Create(
-                               Vec3::UNIT_X, m_pitch) * -Vec3::UNIT_Z;
-        m_position += forward_dir * dist;
+    Vec3 GetForward() const { return GetRotation() * -Vec3::UNIT_Z; }
+
+    Vec3 GetUp() const { return GetRotation() * Vec3::UNIT_Y; }
+
+    Quat GetRotation() const {
+        return Quat::Create(Vec3::UNIT_Y, m_yaw) *
+               Quat::Create(Vec3::UNIT_X, m_pitch);
     }
 
+    void MoveForward(float dist) { m_position += GetForward() * dist; }
+
     void MoveRightLeft(float dist) {
-        auto right_dir = Quat::Create(Vec3::UNIT_Y, m_yaw) * Quat::Create(
-                             Vec3::UNIT_X, m_pitch) * Vec3::UNIT_X;
+        auto right_dir = Quat::Create(Vec3::UNIT_Y, m_yaw) *
+                         Quat::Create(Vec3::UNIT_X, m_pitch) * Vec3::UNIT_X;
         m_position += right_dir * dist;
     }
 
-    void MoveUpDown(float dist) {
-        auto up_dir = Quat::Create(Vec3::UNIT_Y, m_yaw) * Quat::Create(
-                          Vec3::UNIT_X, m_pitch) * Vec3::UNIT_Y;
-        m_position += up_dir * dist;
-    }
+    void MoveUpDown(float dist) { m_position += GetUp() * dist; }
 
 private:
     Mat44 m_project;
@@ -72,8 +73,7 @@ private:
 };
 
 FlyCamera::FlyCamera(Radians fov, float aspect, float near, float far)
-    : m_impl{std::make_unique<Impl>(fov, aspect, near, far)} {
-}
+    : m_impl{std::make_unique<Impl>(fov, aspect, near, far)} {}
 
 void FlyCamera::SetYaw(Radians value) {
     m_impl->SetYaw(value);
@@ -97,6 +97,18 @@ Radians FlyCamera::GetYaw() const {
 
 Radians FlyCamera::GetPitch() const {
     return m_impl->GetPitch();
+}
+
+Vec3 FlyCamera::GetForward() const {
+    return m_impl->GetForward();
+}
+
+Vec3 FlyCamera::GetUp() const {
+    return m_impl->GetUp();
+}
+
+Quat FlyCamera::GetRotation() const {
+    return m_impl->GetRotation();
 }
 
 void FlyCamera::Move(const Vec3& offset) {

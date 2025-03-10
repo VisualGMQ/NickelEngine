@@ -1,5 +1,7 @@
 #pragma once
+#include "nickel/common/memory/memory.hpp"
 #include "nickel/common/memory/refcountable.hpp"
+#include "nickel/physics/internal/cct_impl.hpp"
 #include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/internal/rigidbody_impl.hpp"
@@ -125,8 +127,14 @@ public:
                  OverlapHitCallback& hit_callback,
                  const QueryFilterData& filter_data,
                  QueryFilterCallback* filter_callback = nullptr);
+    void EnableCCTOverlapRecoveryModule(bool enable);
+    void GC();
+
+    CapsuleController CreateCapsuleController(const CapsuleController::Descriptor&);
 
     physx::PxScene* m_scene{};
+    physx::PxControllerManager* m_cct_manager{};
+    BlockMemoryAllocator<CapsuleControllerImpl> m_capsule_controller_allocator;
 
 private:
     ContextImpl* m_ctx;
