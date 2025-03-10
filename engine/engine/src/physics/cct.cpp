@@ -33,9 +33,9 @@ void CapsuleController::Resize(float height) {
 }
 
 Flags<CCTCollisionFlag> CapsuleController::MoveAndSlide(const Vec3& disp,
-                                                        float min_dist, float elapsed_time,
-    ControllerFilters* filter) {
-    return m_impl->MoveAndSlide(disp, min_dist, elapsed_time, filter);
+                                                        float min_dist,
+                                                        float elapsed_time) {
+    return m_impl->MoveAndSlide(disp, min_dist, elapsed_time);
 }
 
 void CapsuleController::SetPosition(const Vec3& v) {
@@ -85,45 +85,6 @@ CapsuleController::Descriptor::ClimbingMode CapsuleController::GetClimbingMode()
 
 void CapsuleController::SetClimbingMode(Descriptor::ClimbingMode mode) {
     m_impl->SetClimbingMode(mode);
-}
-
-CapsuleControllerConst::CapsuleControllerConst()
-    : ControllerConst{CCTType::Capsule} {}
-
-CapsuleControllerConst::CapsuleControllerConst(CapsuleControllerConstImpl* impl)
-    : ControllerConst{CCTType::Capsule}, ImplWrapper(impl) {}
-
-float CapsuleControllerConst::GetRadius() const {
-    return m_impl->GetRadius();
-}
-
-float CapsuleControllerConst::GetHeight() const {
-    return m_impl->GetHeight();
-}
-
-Vec3 CapsuleControllerConst::GetPosition() const {
-    return m_impl->GetPosition();
-}
-
-Vec3 CapsuleControllerConst::GetFootPosition() const {
-    return m_impl->GetFootPosition();
-}
-
-float CapsuleControllerConst::GetStepOffset() const {
-    return m_impl->GetStepOffset();
-}
-
-Vec3 CapsuleControllerConst::GetUpDirection() const {
-    return m_impl->GetUpDirection();
-}
-
-CCTDesc::NonWalkableMode CapsuleControllerConst::GetNonWalkableMode() const {
-    return m_impl->GetNonWalkableMode();
-}
-
-CapsuleController::Descriptor::ClimbingMode
-CapsuleControllerConst::GetClimbingMode() const {
-    return m_impl->GetClimbingMode();
 }
 
 }  // namespace nickel::physics

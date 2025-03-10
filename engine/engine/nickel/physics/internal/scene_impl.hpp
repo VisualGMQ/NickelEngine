@@ -135,7 +135,6 @@ public:
     physx::PxScene* m_scene{};
     physx::PxControllerManager* m_cct_manager{};
     BlockMemoryAllocator<CapsuleControllerImpl> m_capsule_controller_allocator;
-    BlockMemoryAllocator<CapsuleControllerConstImpl> m_const_capsule_controller_allocator;
 
 private:
     ContextImpl* m_ctx;

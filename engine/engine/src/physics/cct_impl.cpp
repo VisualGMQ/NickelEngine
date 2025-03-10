@@ -7,10 +7,6 @@
 
 namespace nickel::physics {
 
-PhysXControllerFilterCallback::PhysXControllerFilterCallback(
-    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene)
-    : m_mgr(mgr), m_ctx(ctx), m_scene(scene) {}
-
 CapsuleControllerImpl::CapsuleControllerImpl(
     physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene,
     const CapsuleController::Descriptor& desc)
@@ -75,30 +71,10 @@ void CapsuleControllerImpl::Resize(float height) {
 }
 
 Flags<CCTCollisionFlag> CapsuleControllerImpl::MoveAndSlide(
-    const Vec3& disp, float min_dist, float elapsed_time,
-    ControllerFilters* filter) {
+    const Vec3& disp, float min_dist, float elapsed_time) {
     // TODO: explose filter as parameter
     physx::PxControllerFilters filters;
-    PhysXControllerFilterCallback filter_callback;
 
-    if (filter) {
-        if (filter->m_filter_data) {
-            auto filter_data = FilterData2PhysX(*filter->m_filter_data);
-            filters.mFilterData = &filter_data;
-        }
-        filters.mFilterFlags = QueryFlags2PhysX(filter->m_query_flags);
-
-        if (filter->m_filter_callback) {
-            PhysXQueryFilterCallback callback{*m_ctx,
-                                              filter->m_filter_callback};
-            filters.mFilterCallback = &callback;
-        }
-        if (filter->m_cct_callback) {
-            PhysXControllerFilterCallback callback;
-            callback.m_callback = filter->m_cct_callback;
-            filters.mCCTFilterCallback = &callback;
-        }
-    }
     return CCTCollisionFlagFromPhysX(
         m_cct->move(Vec3ToPhysX(disp), min_dist, elapsed_time, filters));
 }
@@ -163,21 +139,4 @@ void CapsuleControllerImpl::DecRefcount() {
     }
 }
 
-CapsuleControllerConstImpl::CapsuleControllerConstImpl(
-    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene,
-    const CapsuleController::Descriptor& desc)
-    : CapsuleControllerImpl(mgr, ctx, scene, desc) {}
-
-CapsuleControllerConstImpl::CapsuleControllerConstImpl(
-    physx::PxControllerManager& mgr, ContextImpl& ctx, SceneImpl& scene,
-    physx::PxCapsuleController* controller)
-    : CapsuleControllerImpl(mgr, ctx, scene, controller) {}
-
-void CapsuleControllerConstImpl::DecRefcount() {
-    CapsuleControllerImpl::DecRefcount();
-
-    if (Refcount() == 0) {
-        m_scene->m_const_capsule_controller_allocator.MarkAsGarbage(this);
-    }
-}
 }  // namespace nickel::physics
