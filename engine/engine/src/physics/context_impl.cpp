@@ -21,6 +21,13 @@ ContextImpl::ContextImpl() {
         LOGC("Failed to create PxPhysics");
     }
 
+    if (!PxInitVehicleSDK(*m_physics)) {
+        LOGE("Vehicle system init failed!");
+    }
+
+    physx::PxVehicleSetBasisVectors({0, 1, 0}, {0, 0, 1});
+    physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
+
     physx::PxSceneDesc desc{m_tolerances_scale};
     desc.gravity = Vec3ToPhysX(Vec3{0, -9.8f, 0});
     desc.frictionType = physx::PxFrictionType::ePATCH;
@@ -33,6 +40,8 @@ ContextImpl::ContextImpl() {
                                               m_physics->createScene(desc));
 
     m_blast_framework = NvBlastTkFrameworkCreate();
+
+    m_vehicle_manager = std::make_unique<VehicleManager>(*this, *m_main_scene);
 }
 
 ContextImpl::~ContextImpl() {
@@ -43,6 +52,8 @@ ContextImpl::~ContextImpl() {
     m_rigid_actor_allocator.FreeAll();
     m_rigid_actor_const_allocator.FreeAll();
     m_scene_allocator.FreeAll();
+    m_vehicle_manager.reset();
+    physx::PxCloseVehicleSDK();
     m_blast_framework->release();
     m_physics->release();
     m_foundation->release();
@@ -247,6 +258,14 @@ void ContextImpl::Update(float delta_time) {
 Scene ContextImpl::GetMainScene() {
     m_main_scene->IncRefcount();
     return Scene{m_main_scene};
+}
+
+VehicleManager& ContextImpl::GetVehicleManager() {
+    return *m_vehicle_manager;
+}
+
+const VehicleManager& ContextImpl::GetVehicleManager() const {
+    return *m_vehicle_manager;
 }
 
 void ContextImpl::GC() {
