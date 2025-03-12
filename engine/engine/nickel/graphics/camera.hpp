@@ -11,21 +11,27 @@ struct Frustum {
 class Camera {
 public:
     virtual Mat44 GetProject() const = 0;
-    virtual void SetProject(Radians fov, float aspect, float near,
+    virtual void SetProject(const SVector<uint32_t, 2>& window_size,
+                            Radians fov, float aspect, float near,
                             float far) const = 0;
     virtual Frustum GetFrustum() const = 0;
     virtual Mat44 GetView() const = 0;
     virtual Vec3 GetPosition() const = 0;
+    virtual void ResizeViewArea(
+        const SVector<uint32_t, 2>& new_window_size) = 0;
     virtual ~Camera() = default;
 };
 
 class FlyCamera : public Camera {
 public:
-    FlyCamera(Radians fov, float aspect, float near, float far);
+    FlyCamera(const SVector<uint32_t, 2>& window_size, Radians fov,
+              float aspect, float near, float far);
     ~FlyCamera();
-    void SetProject(Radians fov, float aspect, float near,
-                    float far) const override;
+    void SetProject(const SVector<uint32_t, 2>& window_size, Radians fov,
+                    float aspect, float near, float far) const override;
     Frustum GetFrustum() const override;
+
+    void ResizeViewArea(const SVector<uint32_t, 2>& new_window_size);
 
     void SetYaw(Radians value);
     void SetPitch(Radians value);

@@ -80,8 +80,8 @@ private:
         auto window_size = m_window->GetSize();
         float aspect = window_size.w / (float)window_size.h;
 
-        m_camera = std::make_unique<FlyCamera>(Radians{Degrees{45.0f}}, aspect,
-                                               0.01f, 10000.0f);
+        m_camera = std::make_unique<FlyCamera>(
+            window_size, Radians{Degrees{60.0f}}, aspect, 0.01f, 10000.0f);
     }
 };
 
