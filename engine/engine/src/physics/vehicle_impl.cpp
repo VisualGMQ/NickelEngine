@@ -71,8 +71,8 @@ inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
         wheel_desc[i + 4] = desc.m_other_wheels[i];
     }
 
-    for (uint32_t i = 0; i < desc.m_other_wheels.size(); i++) {
-        auto& wheel = desc.m_other_wheels[i];
+    for (uint32_t i = 0; i < desc.GetWheelNum(); i++) {
+        auto& wheel = wheel_desc[i];
 
         data->setWheelData(i, WheelData2PhysX(wheel.m_wheel));
         data->setTireData(i, TireData2PhysX(wheel.m_tire));
@@ -86,6 +86,8 @@ inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
         data->setTireForceAppPointOffset(
             i, Vec3ToPhysX(wheel.m_tire_force_app_cm_offsets));
         data->setWheelShapeMapping(i, i);
+        data->setSceneQueryFilterData(
+            i, FilterData2PhysX(wheel.m_scene_query_filter_data));
     }
 
     data->setChassisMass(desc.m_chassis_mass);
@@ -111,16 +113,17 @@ inline physx::PxVehicleGearsData VehicleGearData2PhysX(
     const VehicleGearDescriptor& desc) {
     physx::PxVehicleGearsData data;
     data.mFinalRatio = desc.m_final_ratio;
-    data.mNbRatios = desc.m_forward_ratios.size() + 2;
+    data.mNbRatios = desc.m_other_forward_ratios.size() + 3;
     data.mSwitchTime = desc.m_switch_time;
     data.setGearRatio(physx::PxVehicleGearsData::eREVERSE,
                       desc.m_reverse_ratio);
     data.setGearRatio(physx::PxVehicleGearsData::eNEUTRAL,
                       desc.m_neutral_ratio);
-    for (uint32_t i = 0; i < desc.m_forward_ratios.size(); i++) {
+    data.setGearRatio(physx::PxVehicleGearsData::eFIRST, desc.m_first_ratio);
+    for (uint32_t i = 0; i < desc.m_other_forward_ratios.size(); i++) {
         data.setGearRatio(static_cast<physx::PxVehicleGearsData::Enum>(
-                              physx::PxVehicleGearsData::eFIRST + i),
-                          desc.m_forward_ratios[i]);
+                              physx::PxVehicleGearsData::eSECOND + i),
+                          desc.m_other_forward_ratios[i]);
     }
     return data;
 }
@@ -189,10 +192,11 @@ physx::PxVehicleDriveSimData4W VehicleDriveSim4WDescriptor2PhysX(
     data.setEngineData(VehicleEngineData2PhysX(desc.m_engine));
     data.setClutchData(VehicleClutchData2PhysX(desc.m_clutch));
     data.setGearsData(VehicleGearData2PhysX(desc.m_gear));
+    data.setAckermannGeometryData(
+        VehicleAckermannGeometryDescriptor2PhysX(desc.m_ackermann));
+    data.setDiffData(VehicleDifferential4WData2PhysX(desc.m_diff));
     return data;
 }
-
-Vehicle4WDriveImpl::Vehicle4WDriveImpl(VehicleManagerImpl& mgr) : m_mgr{&mgr} {}
 
 Vehicle4WDriveImpl::Vehicle4WDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr,
@@ -217,9 +221,27 @@ Vehicle4WDriveImpl::Vehicle4WDriveImpl(
 
     wheel_sim_data->free();
     m_actor = actor;
+
+    const physx::PxF32 graphSizeX = 0.25f;
+    const physx::PxF32 graphSizeY = 0.25f;
+    const physx::PxF32 engineGraphPosX = 0.5f;
+    const physx::PxF32 engineGraphPosY = 0.5f;
+    const physx::PxF32 wheelGraphPosX[4] = {0.75f, 0.25f, 0.75f, 0.25f};
+    const physx::PxF32 wheelGraphPosY[4] = {0.75f, 0.75f, 0.25f, 0.25f};
+    const physx::PxVec3 backgroundColor(255, 255, 255);
+    const physx::PxVec3 lineColorHigh(255, 0, 0);
+    const physx::PxVec3 lineColorLow(0, 0, 0);
+    m_telemetry =
+        physx::PxVehicleTelemetryData::allocate(wheel_sim_desc.GetWheelNum());
+    m_telemetry->setup(graphSizeX, graphSizeY, engineGraphPosX, engineGraphPosY,
+                       wheelGraphPosX, wheelGraphPosY, backgroundColor,
+                       lineColorHigh, lineColorLow);
 }
 
 Vehicle4WDriveImpl::~Vehicle4WDriveImpl() {
+    if (m_telemetry) {
+        m_telemetry->free();
+    }
     if (m_drive) {
         m_drive->release();
     }
@@ -338,6 +360,11 @@ void Vehicle4WDriveImpl::Update(float delta_time) {
     physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(
         gKeySmoothingData, gSteerVsForwardSpeedTable, m_input_data, delta_time,
         false, *m_drive);
+    m_input_data = physx::PxVehicleDrive4WRawInputData{};
+
+    // TODO: only open in debug mode
+    telemetry(delta_time);
+    displayTelemetryInfo();
 }
 
 VehicleManagerImpl::VehicleManagerImpl(ContextImpl& ctx, SceneImpl& scene)
@@ -353,7 +380,9 @@ Vehicle4WDriveImpl* VehicleManagerImpl::CreateVehicle4WDrive(
     const VehicleWheelSimDescriptor& wheel,
     const VehicleDriveSim4WDescriptor& drive, const RigidDynamic& actor) {
     m_wheel_num += wheel.GetWheelNum();
-    return m_allocator.Allocate(m_ctx, *this, wheel, drive, actor);
+    auto vehicle = m_allocator.Allocate(m_ctx, *this, wheel, drive, actor);
+    m_vehicles.push_back(vehicle);
+    return vehicle;
 }
 
 void VehicleManagerImpl::Update(float delta_time) {
@@ -406,7 +435,7 @@ void VehicleManagerImpl::recreateBatchQuery(uint32_t batch_result_num,
     }
 
     m_batch_query = physx::PxCreateBatchQueryExt(
-        *m_scene.m_scene, nullptr, batch_result_num, batch_touch_num,
+        *m_scene.m_scene, &m_filter_shader, batch_result_num, batch_touch_num,
         batch_result_num, batch_touch_num, batch_result_num, batch_touch_num);
     if (m_batch_query) {
         m_batch_result_num = batch_result_num;

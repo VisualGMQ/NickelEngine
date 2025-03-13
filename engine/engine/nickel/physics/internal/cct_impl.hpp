@@ -2,7 +2,8 @@
 #include "nickel/common/flags.hpp"
 #include "nickel/physics/cct.hpp"
 #include "nickel/physics/internal/pch.hpp"
-#include "scene_impl.hpp"
+#include "nickel/physics/internal/scene_impl.hpp"
+#include "nickel/physics/internal/context_impl.hpp"
 
 namespace nickel::physics {
 class SceneImpl;

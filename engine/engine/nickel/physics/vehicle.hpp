@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/physics/filter.hpp"
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 
@@ -29,11 +30,11 @@ struct VehicleWheelSimDescriptor {
     };
 
     struct Suspension {
-        float m_spring_strength = 0.0f;
+        float m_spring_strength = 0.2f;
         float m_spring_damper_rate = 0.0f;
         float m_max_compression = 0.3f;
         float m_max_droop = 0.1f;
-        float m_sprung_mass = 0.0f;
+        float m_sprung_mass = 1.0f;
         float m_camber_at_rest = 0.0f;
         float m_camber_at_max_compression = 0.0f;
         float m_camber_at_max_droop = 0.0f;
@@ -43,10 +44,11 @@ struct VehicleWheelSimDescriptor {
         Wheel m_wheel;
         Tire m_tire;
         Suspension m_suspension;
+        FilterData m_scene_query_filter_data;
         Vec3 m_suspension_travel_directions = {0, -1, 0};
         Vec3 m_wheel_centre_cm_offsets;
-        Vec3 m_suspension_force_app_point_offsets;
-        Vec3 m_tire_force_app_cm_offsets;
+        Vec3 m_suspension_force_app_point_offsets = {0, 0.4, 0};
+        Vec3 m_tire_force_app_cm_offsets = {0, -0.4, 0};
     };
 
     WheelDescriptor m_rear_left_wheel;
@@ -72,7 +74,8 @@ struct VehicleEngineDescriptor {
 struct VehicleGearDescriptor {
     float m_reverse_ratio = -4.0f;
     float m_neutral_ratio = 0.0f;
-    std::vector<float> m_forward_ratios;
+    float m_first_ratio = 4.0f;
+    std::vector<float> m_other_forward_ratios;
     float m_final_ratio = 4.0f;
     float m_switch_time = 0.5f;
 };
@@ -121,9 +124,9 @@ struct VehicleDifferential4WDescriptor {
 
 struct VehicleAckermannGeometryDescriptor {
     float m_accuracy = 1.0f;
-    float m_front_width = 0.0f;
-    float m_rear_width = 0.0f;
-    float m_axle_separation = 0.0f;
+    float m_front_width = 0.1f;
+    float m_rear_width = 0.1f;
+    float m_axle_separation = 0.1f;
 };
 
 struct VehicleDriveSim4WDescriptor : public VehicleDriveSimDescriptor {

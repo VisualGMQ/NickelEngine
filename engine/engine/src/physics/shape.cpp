@@ -63,6 +63,14 @@ void Shape::SetMaterial(Material& mtl) {
     SetMaterials(std::span{&mtl, 1});
 }
 
+void Shape::SetQueryFilterData(const FilterData& filter) {
+    m_impl->SetQueryFilterData(filter);
+}
+
+void Shape::SetSimulateFilterData(const FilterData& filter) {
+    m_impl->SetSimulateFilterData(filter);
+}
+
 void Shape::SetLocalPose(const Vec3& p, const Quat& q) {
     return m_impl->SetLocalPose(p, q);
 }

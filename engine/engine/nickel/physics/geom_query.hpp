@@ -1,9 +1,9 @@
 #pragma once
-#include "nickel/physics/enums.hpp"
+#include "nickel/physics/hit.hpp"
 #include "nickel/common/flags.hpp"
 #include "nickel/common/math/math.hpp"
+#include "nickel/physics/enums.hpp"
 #include "nickel/physics/geometry.hpp"
-#include "nickel/physics/filter.hpp"
 
 namespace nickel::physics {
 

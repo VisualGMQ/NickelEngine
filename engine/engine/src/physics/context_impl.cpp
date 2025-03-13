@@ -25,7 +25,7 @@ ContextImpl::ContextImpl() {
         LOGE("Vehicle system init failed!");
     }
 
-    physx::PxVehicleSetBasisVectors({0, 1, 0}, {0, 0, 1});
+    physx::PxVehicleSetBasisVectors({0, 1, 0}, {1, 0, 0});
     physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
 
     physx::PxSceneDesc desc{m_tolerances_scale};
@@ -45,6 +45,7 @@ ContextImpl::ContextImpl() {
 }
 
 ContextImpl::~ContextImpl() {
+    m_vehicle_manager.reset();
     m_joint_allocator.FreeAll();
     m_material_allocator.FreeAll();
     m_shape_allocator.FreeAll();
@@ -52,7 +53,6 @@ ContextImpl::~ContextImpl() {
     m_rigid_actor_allocator.FreeAll();
     m_rigid_actor_const_allocator.FreeAll();
     m_scene_allocator.FreeAll();
-    m_vehicle_manager.reset();
     physx::PxCloseVehicleSDK();
     m_blast_framework->release();
     m_physics->release();
@@ -61,7 +61,7 @@ ContextImpl::~ContextImpl() {
 
 Scene ContextImpl::CreateScene(const std::string& name, const Vec3& gravity) {
     physx::PxSceneDesc desc{m_tolerances_scale};
-    desc.gravity = Vec3ToPhysX(Vec3{0, -9.8f, 0});
+    desc.gravity = Vec3ToPhysX(gravity);
     desc.frictionType = physx::PxFrictionType::ePATCH;
     desc.solverType = physx::PxSolverType::eTGS;
     desc.filterShader = physx::PxDefaultSimulationFilterShader;
@@ -141,7 +141,7 @@ TriangleMesh ContextImpl::CreateTriangleMesh(
 
 ConvexMesh ContextImpl::CreateConvexMesh(std::span<const Vec3> vertices) {
     physx::PxConvexMeshDesc convexDesc;
-    convexDesc.points.count = 5;
+    convexDesc.points.count = vertices.size();
     convexDesc.points.stride = sizeof(physx::PxVec3);
     convexDesc.points.data = vertices.data();
     convexDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
@@ -252,6 +252,7 @@ D6Joint ContextImpl::CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
 }
 
 void ContextImpl::Update(float delta_time) {
+    m_vehicle_manager->Update(delta_time);
     m_main_scene->Simulate(delta_time);
 }
 

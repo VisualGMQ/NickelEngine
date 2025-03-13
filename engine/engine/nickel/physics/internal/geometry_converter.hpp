@@ -40,7 +40,7 @@ inline physx::PxConvexMeshGeometry Geometry2PhysX(const ConvexMeshGeometry& g,
 // NOTE: only triangle mesh & convex mesh geometry can use rotation & scale
 inline physx::PxGeometryHolder Geometry2PhysX(const Geometry& g,
                                               const Quat& rotation = {},
-                                              const Vec3& scale = {}) {
+                                              const Vec3& scale = {1, 1, 1}) {
     physx::PxGeometryHolder holder;
     switch (g.GetType()) {
         case Geometry::Type::Box:

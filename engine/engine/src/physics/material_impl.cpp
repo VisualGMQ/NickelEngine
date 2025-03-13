@@ -18,28 +18,12 @@ MaterialImpl::~MaterialImpl() {
     }
 }
 
-void MaterialImpl::IncRefcount() {
-    if (m_mtl) {
-        m_mtl->acquireReference();
-    }
-}
-
 void MaterialImpl::DecRefcount() {
-    if (m_mtl) {
-        auto refcount = m_mtl->getReferenceCount();
-        m_mtl->release();
-        if (refcount == 1) {
-            m_mtl = nullptr;
-            m_ctx->m_material_allocator.MarkAsGarbage(this);
-        }
-    }
-}
+    RefCountable::DecRefcount();
 
-uint32_t MaterialImpl::Refcount() const {
-    if (m_mtl) {
-        return m_mtl->getReferenceCount();
+    if (Refcount() == 0) {
+        m_ctx->m_material_allocator.MarkAsGarbage(this);
     }
-    return 0;
 }
 
 void MaterialImpl::SetDynamicFriction(float friction) {

@@ -62,6 +62,13 @@ Scene Context::GetMainScene() {
     return m_impl->GetMainScene();
 }
 
+VehicleManager& Context::GetVehicleManager() {
+    return m_impl->GetVehicleManager();
+}
+const VehicleManager& Context::GetVehicleManager() const {
+    return m_impl->GetVehicleManager();
+}
+
 void Context::Update(float delta_time) {
     m_impl->Update(delta_time);
 }

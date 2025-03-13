@@ -1,6 +1,7 @@
 #pragma once
 #include "nickel/common/memory/refcountable.hpp"
 #include "nickel/common/transform.hpp"
+#include "nickel/physics/filter.hpp"
 #include "nickel/physics/geometry.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/material.hpp"
@@ -12,15 +13,13 @@ class ContextImpl;
 class ShapeImpl;
 class ShapeConstImpl;
 
-class ShapeImpl {
+class ShapeImpl: public RefCountable {
 public:
     ShapeImpl() = default;
     ShapeImpl(ContextImpl* ctx, physx::PxShape* shape);
     virtual ~ShapeImpl() = default;
 
-    void IncRefcount();
-    virtual void DecRefcount();
-    uint32_t Refcount();
+    void DecRefcount() override;
 
     void SetMaterials(std::span<Material> materials);
     void SetMaterial(Material& materials);
@@ -29,6 +28,9 @@ public:
 
     void SetLocalPose(const Vec3&, const Quat&);
     Transform GetLocalPose() const;
+
+    void SetQueryFilterData(const FilterData&);
+    void SetSimulateFilterData(const FilterData&);
 
     physx::PxShape* m_shape{};
 

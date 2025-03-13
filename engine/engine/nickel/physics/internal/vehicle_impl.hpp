@@ -17,11 +17,33 @@ physx::PxVehicleDriveSimData4W VehicleDriveSim4WDescriptor2PhysX(
 
 class VehicleManagerImpl;
 
+class VehicleQueryFilterShader : public physx::PxQueryFilterCallback {
+public:
+    physx::PxQueryHitType::Enum preFilter(
+        const physx::PxFilterData& filterData, const physx::PxShape* shape,
+        const physx::PxRigidActor* actor,
+        physx::PxHitFlags& queryFlags) override {
+        // TODO: remove magic number
+        auto filter_data = shape->getQueryFilterData();
+        if (filter_data.word0 & 0x01 || filter_data.word0 & 0x02) {
+            return physx::PxQueryHitType::eNONE;
+        }
+        return physx::PxQueryHitType::eBLOCK;
+    }
+
+    physx::PxQueryHitType::Enum postFilter(
+        const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
+        const physx::PxShape* shape,
+        const physx::PxRigidActor* actor) override {
+        return physx::PxQueryHitType::eBLOCK;
+    }
+};
+
 class Vehicle4WDriveImpl : public RefCountable {
 public:
-    explicit Vehicle4WDriveImpl(VehicleManagerImpl& mgr);
     Vehicle4WDriveImpl() = default;
-    Vehicle4WDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr, const VehicleWheelSimDescriptor&,
+    Vehicle4WDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr,
+                       const VehicleWheelSimDescriptor&,
                        const VehicleDriveSim4WDescriptor&, const RigidDynamic&);
     ~Vehicle4WDriveImpl();
 
@@ -48,6 +70,7 @@ private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDrive4WRawInputData m_input_data;
+    physx::PxVehicleTelemetryData* m_telemetry{};
 };
 
 class VehicleManagerImpl {
@@ -64,6 +87,7 @@ public:
     std::vector<Vehicle4WDriveImpl*> m_pending_delete;
     std::vector<Vehicle4WDriveImpl*> m_vehicles;
     BlockMemoryAllocator<Vehicle4WDriveImpl> m_allocator;
+    physx::PxVehicleDrivableSurfaceToTireFrictionPairs* m_friction_pairs;
 
 private:
     static constexpr uint32_t BatchTouchExpandStep = PX_MAX_NB_WHEELS * 4;
@@ -75,8 +99,7 @@ private:
     uint32_t m_wheel_num{};
     uint32_t m_batch_result_num{};
     uint32_t m_batch_touch_num{};
-
-    physx::PxVehicleDrivableSurfaceToTireFrictionPairs* m_friction_pairs;
+    VehicleQueryFilterShader m_filter_shader;
 
     void deletePendingVehicles();
     void tryRecreateBatchQuery();

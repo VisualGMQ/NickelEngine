@@ -3,6 +3,7 @@
 #include "nickel/physics/material.hpp"
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
+#include "nickel/physics/vehicle.hpp"
 
 namespace nickel::physics {
 
@@ -29,6 +30,9 @@ public:
     Shape CreateShape(const TriangleMeshGeometry&, const Material&);
     Shape CreateShape(const ConvexMeshGeometry &, const Material&);
     Shape CreateShape(const PlaneGeometry&, const Material&);
+
+    VehicleManager& GetVehicleManager();
+    const VehicleManager& GetVehicleManager() const;
 
     Scene GetMainScene();
 

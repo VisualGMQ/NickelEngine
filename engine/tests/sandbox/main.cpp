@@ -22,6 +22,7 @@ public:
         mgr.Load("engine/assets/models/CesiumMan/CesiumMan.gltf");
         mgr.Load("engine/assets/models/unit_box/unit_box.gltf");
         mgr.Load("engine/assets/models/unit_sphere/unit_sphere.gltf");
+        mgr.Load("tests/sandbox/assets/car/car.gltf");
         mgr.Load("tests/sandbox/assets/door/door.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
@@ -111,6 +112,104 @@ public:
 
             root_go.m_children.push_back(go);
         }
+
+        // create Vehicle
+        {
+            nickel::GameObject go;
+            go.m_name = "car";
+            go.m_model = mgr.Find("tests/sandbox/assets/car/car");
+            go.m_rigid_actor =
+                physics_ctx.CreateRigidDynamic(nickel::Vec3{-5, 5, 5}, {});
+
+            nickel::graphics::GLTFVertexDataLoader loader;
+            auto meshes = loader.Load("tests/sandbox/assets/car/car.gltf");
+
+            uint32_t wheel_steer_left = 0;
+            uint32_t wheel_steer_right = 0;
+            uint32_t wheel_driving_left = 0;
+            uint32_t wheel_driving_right = 0;
+            for (uint32_t i = 0; i < meshes.size(); ++i) {
+                if (meshes[i].m_name == "wheel.steer.front.right") {
+                    wheel_steer_right = i;
+                } else if (meshes[i].m_name == "wheel.steer.front.left") {
+                    wheel_steer_left = i;
+                } else if (meshes[i].m_name == "wheel.driving.rear.left") {
+                    wheel_driving_left = i;
+                } else if (meshes[i].m_name == "wheel.driving.rear.right") {
+                    wheel_driving_right = i;
+                }
+            }
+
+            constexpr uint32_t CollisionGroupVehicleChassis = 0x01;
+            constexpr uint32_t CollisionGroupVehicleWheels = 0x02;
+
+            auto convert_to_wheel =
+                [](nickel::physics::Context& ctx,
+                   const nickel::graphics::GLTFVertexData& mesh) {
+                    nickel::physics::VehicleWheelSimDescriptor::WheelDescriptor
+                        desc;
+                    desc.m_wheel.m_width = 0.2;
+                    desc.m_wheel_centre_cm_offsets = mesh.m_transform.p;
+                    auto convex_mesh = ctx.CreateConvexMesh(mesh.m_points);
+                    auto shape = ctx.CreateShape(
+                        nickel::physics::ConvexMeshGeometry{
+                            convex_mesh, mesh.m_transform.q,
+                            mesh.m_transform.scale},
+                        ctx.CreateMaterial(0.1, 0.1, 0.1));
+                    shape.SetQueryFilterData(nickel::physics::FilterData{
+                        CollisionGroupVehicleWheels});
+                    shape.SetSimulateFilterData(nickel::physics::FilterData{
+                        CollisionGroupVehicleWheels});
+                    desc.m_scene_query_filter_data.m_word0 =
+                        ~(CollisionGroupVehicleWheels | CollisionGroupVehicleChassis);
+                    return std::make_tuple(desc, shape);
+                };
+
+            auto [driving_left_desc, driving_left_shape] = convert_to_wheel(
+                ctx.GetPhysicsContext(), meshes[wheel_driving_left]);
+            auto [driving_right_desc, driving_right_shape] = convert_to_wheel(
+                ctx.GetPhysicsContext(), meshes[wheel_driving_right]);
+            auto [steer_right_desc, steer_right_shape] = convert_to_wheel(
+                ctx.GetPhysicsContext(), meshes[wheel_steer_right]);
+            auto [steer_left_desc, steer_left_shape] = convert_to_wheel(
+                ctx.GetPhysicsContext(), meshes[wheel_steer_left]);
+
+            nickel::physics::VehicleWheelSimDescriptor wheel_sim_desc;
+            wheel_sim_desc.m_rear_left_wheel = driving_left_desc;
+            wheel_sim_desc.m_rear_right_wheel = driving_right_desc;
+            wheel_sim_desc.m_front_left_wheel = steer_left_desc;
+            wheel_sim_desc.m_front_right_wheel = steer_right_desc;
+            go.m_rigid_actor.AttachShape(driving_left_shape);
+            go.m_rigid_actor.AttachShape(driving_right_shape);
+            go.m_rigid_actor.AttachShape(steer_left_shape);
+            go.m_rigid_actor.AttachShape(steer_right_shape);
+
+            for (auto& mesh : meshes) {
+                if (mesh.m_name.find("chassis") != mesh.m_name.npos) {
+                    auto convex_mesh =
+                        ctx.GetPhysicsContext().CreateConvexMesh(mesh.m_points);
+                    auto shape = ctx.GetPhysicsContext().CreateShape(
+                        nickel::physics::ConvexMeshGeometry{
+                            convex_mesh, mesh.m_transform.q,
+                            mesh.m_transform.scale},
+                        ctx.GetPhysicsContext().CreateMaterial(0.1, 0.1, 0.1));
+                    shape.SetQueryFilterData(nickel::physics::FilterData{
+                        CollisionGroupVehicleChassis});
+                    shape.SetSimulateFilterData(nickel::physics::FilterData{
+                        CollisionGroupVehicleChassis});
+                    go.m_rigid_actor.AttachShape(shape);
+                }
+            }
+
+            physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
+
+            nickel::physics::VehicleDriveSim4WDescriptor drive_sim_desc;
+            go.m_vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
+                wheel_sim_desc, drive_sim_desc,
+                static_cast<nickel::physics::RigidDynamic&>(go.m_rigid_actor));
+
+            root_go.m_children.push_back(go);
+        }
     }
 
     void OnUpdate() override {
@@ -123,6 +222,7 @@ public:
             shootBall();
             moveCharacter();
         }
+        driveVehicle();
         if (keyboard.GetKey(nickel::input::Key::P).IsPressed()) {
             if (mode == Mode::Character) {
                 mode = Mode::Fly;
@@ -181,6 +281,26 @@ private:
             nickel::Quat::Create(nickel::Vec3{0, 1, 0}, camera.GetYaw());
 
         camera.MoveTo(go.m_controller.GetPosition());
+    }
+
+    void driveVehicle() {
+        auto& ctx = nickel::Context::GetInst();
+        auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
+
+        auto& go = ctx.GetCurrentLevel().GetRootGO().m_children[4];
+
+        go.m_vehicle.SetDigitalAccel(
+            keyboard.GetKey(nickel::input::Key::Up).IsPressing());
+        go.m_vehicle.SetDigitalBrake(
+            keyboard.GetKey(nickel::input::Key::Down).IsPressing());
+        go.m_vehicle.SetDigitalSteerLeft(
+            keyboard.GetKey(nickel::input::Key::Left).IsPressing());
+        go.m_vehicle.SetDigitalSteerRight(
+            keyboard.GetKey(nickel::input::Key::Right).IsPressing());
+        go.m_vehicle.SetGearUp(
+            keyboard.GetKey(nickel::input::Key::RShift).IsPressing());
+        go.m_vehicle.SetGearDown(
+            keyboard.GetKey(nickel::input::Key::RCtrl).IsPressing());
     }
 
     void shootBall() {
