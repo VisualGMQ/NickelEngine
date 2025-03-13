@@ -9,8 +9,8 @@ class RigidDynamic;
 
 struct VehicleWheelSimDescriptor {
     struct Tire {
-        float m_lat_stiff_x = 2.0f;
-        Radians m_lat_stiff_y{0.3125f};
+        float m_last_stiff_x = 2.0f;
+        Radians m_last_stiff_y{0.3125f};
         float m_longitudinal_stiffness_per_unit_gravity = 1000.0f;
         Radians m_camber_stiffness_per_unit_gravity{0.1};  // in kg/rad
         float m_friction_vs_slip_graph[3][2] = {0.0, 1.0, 0.1, 1.0, 1.0, 1.0};

@@ -118,8 +118,10 @@ public:
             nickel::GameObject go;
             go.m_name = "car";
             go.m_model = mgr.Find("tests/sandbox/assets/car/car");
-            go.m_rigid_actor =
+            auto rigid =
                 physics_ctx.CreateRigidDynamic(nickel::Vec3{-5, 5, 5}, {});
+            rigid.SetMass(12.50f);
+            go.m_rigid_actor = rigid;
 
             nickel::graphics::GLTFVertexDataLoader loader;
             auto meshes = loader.Load("tests/sandbox/assets/car/car.gltf");
@@ -143,27 +145,54 @@ public:
             constexpr uint32_t CollisionGroupVehicleChassis = 0x01;
             constexpr uint32_t CollisionGroupVehicleWheels = 0x02;
 
-            auto convert_to_wheel =
-                [](nickel::physics::Context& ctx,
-                   const nickel::graphics::GLTFVertexData& mesh) {
-                    nickel::physics::VehicleWheelSimDescriptor::WheelDescriptor
-                        desc;
-                    desc.m_wheel.m_width = 0.2;
-                    desc.m_wheel_centre_cm_offsets = mesh.m_transform.p;
-                    auto convex_mesh = ctx.CreateConvexMesh(mesh.m_points);
-                    auto shape = ctx.CreateShape(
-                        nickel::physics::ConvexMeshGeometry{
-                            convex_mesh, mesh.m_transform.q,
-                            mesh.m_transform.scale},
-                        ctx.CreateMaterial(0.1, 0.1, 0.1));
-                    shape.SetQueryFilterData(nickel::physics::FilterData{
-                        CollisionGroupVehicleWheels});
-                    shape.SetSimulateFilterData(nickel::physics::FilterData{
-                        CollisionGroupVehicleWheels});
-                    desc.m_scene_query_filter_data.m_word0 =
-                        ~(CollisionGroupVehicleWheels | CollisionGroupVehicleChassis);
-                    return std::make_tuple(desc, shape);
-                };
+            auto convert_to_wheel = [](nickel::physics::Context& ctx,
+                                       const nickel::graphics::GLTFVertexData&
+                                           mesh) {
+                nickel::physics::VehicleWheelSimDescriptor::WheelDescriptor
+                    desc;
+                desc.m_wheel.m_width = 0.2f;
+                desc.m_wheel.m_radius = 0.5f;
+                desc.m_wheel_centre_cm_offsets = mesh.m_transform.p;
+                desc.m_suspension.m_spring_strength = 35000;
+                desc.m_suspension.m_spring_damper_rate = 4500;
+                desc.m_suspension.m_max_compression = 0.3;
+                desc.m_suspension.m_max_droop = 0.1;
+                desc.m_suspension.m_sprung_mass = 3.125;
+                desc.m_suspension.m_camber_at_rest = 0;
+                desc.m_suspension.m_camber_at_max_compression = -0.001;
+                desc.m_suspension.m_camber_at_max_droop = 0.001;
+
+                desc.m_tire.m_last_stiff_x = 2;
+                desc.m_tire.m_last_stiff_y = 17.904932;
+                desc.m_tire.m_longitudinal_stiffness_per_unit_gravity = 1000;
+                desc.m_tire.m_camber_stiffness_per_unit_gravity = 1000;
+                desc.m_tire.m_type = 0;
+                desc.m_tire.m_friction_vs_slip_graph[0][0] = 0;
+                desc.m_tire.m_friction_vs_slip_graph[0][1] = 1;
+                desc.m_tire.m_friction_vs_slip_graph[1][0] = 0.1;
+                desc.m_tire.m_friction_vs_slip_graph[1][1] = 1;
+                desc.m_tire.m_friction_vs_slip_graph[2][0] = 1;
+                desc.m_tire.m_friction_vs_slip_graph[2][1] = 1;
+
+                desc.m_suspension_travel_directions = nickel::Vec3{0, -1, 0};
+
+                desc.m_suspension_force_app_point_offsets = {-1.05, -0.3, 1.25};
+                desc.m_tire_force_app_cm_offsets = {-1.05, -0.3, 1.25};
+
+                auto convex_mesh = ctx.CreateConvexMesh(mesh.m_points);
+                auto shape = ctx.CreateShape(
+                    nickel::physics::ConvexMeshGeometry{convex_mesh,
+                                                        mesh.m_transform.q,
+                                                        mesh.m_transform.scale},
+                    ctx.CreateMaterial(0.1, 0.1, 0.1));
+                shape.SetQueryFilterData(
+                    nickel::physics::FilterData{CollisionGroupVehicleWheels});
+                shape.SetSimulateFilterData(
+                    nickel::physics::FilterData{CollisionGroupVehicleWheels});
+                desc.m_scene_query_filter_data.m_word0 = ~(
+                    CollisionGroupVehicleWheels | CollisionGroupVehicleChassis);
+                return std::make_tuple(desc, shape);
+            };
 
             auto [driving_left_desc, driving_left_shape] = convert_to_wheel(
                 ctx.GetPhysicsContext(), meshes[wheel_driving_left]);
@@ -175,14 +204,34 @@ public:
                 ctx.GetPhysicsContext(), meshes[wheel_steer_left]);
 
             nickel::physics::VehicleWheelSimDescriptor wheel_sim_desc;
+            driving_left_desc.m_wheel.m_max_hand_brake_torque = 4000.0f;
+            driving_left_desc.m_wheel.m_max_steer = 0;
             wheel_sim_desc.m_rear_left_wheel = driving_left_desc;
+
+            driving_right_desc.m_wheel.m_max_hand_brake_torque = 4000.0f;
+            driving_right_desc.m_wheel.m_max_steer = 0;
+            driving_right_desc.m_suspension.m_camber_at_rest *= -1;
+            driving_right_desc.m_suspension.m_camber_at_max_compression *= -1;
+            driving_right_desc.m_suspension.m_camber_at_max_droop *= -1;
             wheel_sim_desc.m_rear_right_wheel = driving_right_desc;
+
+            steer_left_desc.m_wheel.m_max_steer = nickel::PI * 0.33333f;
+            steer_left_desc.m_wheel.m_max_hand_brake_torque = 0;
             wheel_sim_desc.m_front_left_wheel = steer_left_desc;
+
+            steer_right_desc.m_wheel.m_max_steer = nickel::PI * 0.33333f;
+            steer_right_desc.m_suspension.m_camber_at_rest *= -1;
+            steer_right_desc.m_suspension.m_camber_at_max_compression *= -1;
+            steer_right_desc.m_suspension.m_camber_at_max_droop *= -1;
+            steer_right_desc.m_wheel.m_max_hand_brake_torque = 0;
             wheel_sim_desc.m_front_right_wheel = steer_right_desc;
+
             go.m_rigid_actor.AttachShape(driving_left_shape);
             go.m_rigid_actor.AttachShape(driving_right_shape);
             go.m_rigid_actor.AttachShape(steer_left_shape);
             go.m_rigid_actor.AttachShape(steer_right_shape);
+
+            wheel_sim_desc.m_chassis_mass = 12.500f;
 
             for (auto& mesh : meshes) {
                 if (mesh.m_name.find("chassis") != mesh.m_name.npos) {
@@ -204,6 +253,38 @@ public:
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
 
             nickel::physics::VehicleDriveSim4WDescriptor drive_sim_desc;
+            drive_sim_desc.m_engine.m_moi = 1;
+            drive_sim_desc.m_engine.m_peak_torque = 500;
+            drive_sim_desc.m_engine.m_max_omega = 600;
+            drive_sim_desc.m_engine.m_damping_rate_full_throttle = 0.15;
+            drive_sim_desc.m_engine
+                .m_damping_rate_zero_throttle_clutch_engaged = 2;
+            drive_sim_desc.m_engine
+                .m_damping_rate_zero_throttle_clutch_disengaged = 0.35;
+
+            drive_sim_desc.m_gear.m_reverse_ratio = -4;
+            drive_sim_desc.m_gear.m_neutral_ratio = 0;
+            drive_sim_desc.m_gear.m_first_ratio = 4;
+            drive_sim_desc.m_gear.m_final_ratio = 4;
+            drive_sim_desc.m_gear.m_switch_time = 0.5;
+
+            drive_sim_desc.m_clutch.m_estimate_iterations = 5;
+            drive_sim_desc.m_clutch.m_strength = 10;
+
+            drive_sim_desc.m_diff.m_front_rear_split = 0.45;
+            drive_sim_desc.m_diff.m_front_left_right_split = 0.5;
+            drive_sim_desc.m_diff.m_rear_left_right_split = 0.5;
+            drive_sim_desc.m_diff.m_centre_bias = 1.3;
+            drive_sim_desc.m_diff.m_front_bias = 1.3;
+            drive_sim_desc.m_diff.m_rear_bias = 1.3;
+            drive_sim_desc.m_diff.m_type =
+                nickel::physics::VehicleDifferential4WDescriptor::Type::LS_4_WD;
+
+            drive_sim_desc.m_ackermann.m_accuracy = 1;
+            drive_sim_desc.m_ackermann.m_front_width = 0.5;
+            drive_sim_desc.m_ackermann.m_rear_width = 0.5;
+            drive_sim_desc.m_ackermann.m_axle_separation = 3;
+
             go.m_vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
                 wheel_sim_desc, drive_sim_desc,
                 static_cast<nickel::physics::RigidDynamic&>(go.m_rigid_actor));

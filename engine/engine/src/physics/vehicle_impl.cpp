@@ -25,8 +25,8 @@ inline physx::PxVehicleTireData TireData2PhysX(
     const VehicleWheelSimDescriptor::Tire& tire) {
     physx::PxVehicleTireData data;
     data.mType = tire.m_type;
-    data.mLatStiffX = tire.m_lat_stiff_x;
-    data.mLatStiffY = tire.m_lat_stiff_y.Value();
+    data.mLatStiffX = tire.m_last_stiff_x;
+    data.mLatStiffY = tire.m_last_stiff_y.Value();
     memcpy(data.mFrictionVsSlipGraph, tire.m_friction_vs_slip_graph,
            sizeof(data.mFrictionVsSlipGraph));
     data.mCamberStiffnessPerUnitGravity =
@@ -221,6 +221,8 @@ Vehicle4WDriveImpl::Vehicle4WDriveImpl(
 
     wheel_sim_data->free();
     m_actor = actor;
+    m_drive->setToRestState();
+    m_drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
 
     const physx::PxF32 graphSizeX = 0.25f;
     const physx::PxF32 graphSizeY = 0.25f;
@@ -261,7 +263,7 @@ void Vehicle4WDriveImpl::SetDigitalAccel(bool active) {
 }
 
 void Vehicle4WDriveImpl::SetDigitalBrake(bool active) {
-    m_input_data.setDigitalAccel(active);
+    m_input_data.setDigitalBrake(active);
 }
 
 void Vehicle4WDriveImpl::SetDigitalHandbrake(bool active) {
@@ -361,10 +363,6 @@ void Vehicle4WDriveImpl::Update(float delta_time) {
         gKeySmoothingData, gSteerVsForwardSpeedTable, m_input_data, delta_time,
         false, *m_drive);
     m_input_data = physx::PxVehicleDrive4WRawInputData{};
-
-    // TODO: only open in debug mode
-    telemetry(delta_time);
-    displayTelemetryInfo();
 }
 
 VehicleManagerImpl::VehicleManagerImpl(ContextImpl& ctx, SceneImpl& scene)
@@ -391,6 +389,7 @@ void VehicleManagerImpl::Update(float delta_time) {
     std::vector<physx::PxVehicleWheels*> wheels;
     wheels.reserve(m_vehicles.size());
     for (auto vehicle : m_vehicles) {
+        vehicle->Update(delta_time);
         wheels.push_back(vehicle->m_drive);
     }
     physx::PxVehicleSuspensionRaycasts(m_batch_query, m_vehicles.size(),
