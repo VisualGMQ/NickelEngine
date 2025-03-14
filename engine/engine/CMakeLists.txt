@@ -27,7 +27,7 @@ macro(attach_common_config_on_engine target_name)
     target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_MODEL_FILES} ${ENGINE_SHADER_FILES})
     target_include_directories(${target_name} PUBLIC .)
     target_compile_features(${target_name} PUBLIC cxx_std_20)
-    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf
+    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus
         # PhysX
         PhysXExtensions
         PhysX
@@ -46,7 +46,7 @@ macro(attach_common_config_on_engine target_name)
         NvBlast::ExtAuthoring
         NvBlast::Tk
         NvBlast::ExtStress
-        )
+    )
     target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui)
 
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp nickel/physics/internal/pch.hpp)

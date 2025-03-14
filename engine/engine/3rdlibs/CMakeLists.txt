@@ -45,6 +45,8 @@ set(TINYGLTF_NO_INCLUDE_STB_IMAGE ON)
 set(TINYGLTF_NO_EXTERNAL_IMAGE ON)
 add_subdirectory(tinygltf)
 
+add_subdirectory(tomlplusplus)
+
 mark_as_3rdlib(SDL3-static)
 mark_as_3rdlib(SDL3-shared)
 mark_as_3rdlib(SDL_uclibc)
@@ -54,3 +56,4 @@ mark_as_3rdlib(volk)
 mark_as_3rdlib(stb_image)
 mark_as_3rdlib(imgui)
 mark_as_3rdlib(tinygltf)
+mark_as_3rdlib(tomlplusplus_tomlplusplus)
