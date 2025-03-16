@@ -70,12 +70,12 @@ public:
                                     std::span<const uint32_t> indices);
     ConvexMesh CreateConvexMesh(std::span<const Vec3> vertices);
     
-    Shape CreateShape(const SphereGeometry&, const Material&);
-    Shape CreateShape(const BoxGeometry&, const Material&);
-    Shape CreateShape(const CapsuleGeometry&, const Material&);
-    Shape CreateShape(const TriangleMeshGeometry&, const Material&);
-    Shape CreateShape(const ConvexMeshGeometry&, const Material&);
-    Shape CreateShape(const PlaneGeometry&, const Material&);
+    Shape CreateShape(const SphereGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const BoxGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const CapsuleGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const TriangleMeshGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const ConvexMeshGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const PlaneGeometry&, const Material&, bool is_exclusive = false);
 
     D6Joint CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
                           const Quat& q0, const RigidActor& actor1,
@@ -106,6 +106,8 @@ private:
     physx::PxDefaultAllocator m_allocator;
     physx::PxDefaultCpuDispatcher* m_cpu_dispatcher;
     std::unique_ptr<VehicleManager> m_vehicle_manager;
+    physx::PxPvd* m_pvd;
+    physx::PxPvdTransport* m_pvd_transport;
 
     SceneImpl* m_main_scene;
     Nv::Blast::TkFramework* m_blast_framework;

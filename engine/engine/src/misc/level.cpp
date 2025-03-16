@@ -168,9 +168,9 @@ void Level::Update() {
     actors.resize(scene->getNbActors(required_actor_type));
     scene->getActors(required_actor_type, actors.data(), actors.size());
 
-    for (auto actor : actors) {
-        debugDrawRigidActor(actor);
-    }
+   for (auto actor : actors) {
+       debugDrawRigidActor(actor);
+   }
 }
 
 void Level::preorderGO(GameObject* parent, GameObject& go) {

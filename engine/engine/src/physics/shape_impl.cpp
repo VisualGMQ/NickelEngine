@@ -57,12 +57,7 @@ ShapeConstImpl::ShapeConstImpl(ContextImpl* ctx, const physx::PxShape* shape)
 
 void ShapeConstImpl::DecRefcount() {
     if (m_shape) {
-        auto refcount = m_shape->getReferenceCount();
-        m_shape->release();
-        if (refcount == 1) {
-            m_shape = nullptr;
-            m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
-        }
+        m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
     }
 }
 

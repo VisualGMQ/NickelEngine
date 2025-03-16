@@ -3,5 +3,4 @@ add_subdirectory(sandbox)
 add_subdirectory(math)
 add_subdirectory(render)
 add_subdirectory(memory)
-
-
+add_subdirectory(physics)

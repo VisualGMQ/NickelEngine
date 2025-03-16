@@ -140,7 +140,10 @@ SceneImpl::SceneImpl(const std::string& name, ContextImpl* ctx,
                      physx::PxScene* scene)
     : m_scene{scene}, m_ctx{ctx} {
     scene->setName(name.c_str());
-
+    scene->getScenePvdClient()->setScenePvdFlags(
+        physx::PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS |
+        physx::PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES |
+        physx::PxPvdSceneFlag::eTRANSMIT_CONTACTS);
     m_cct_manager = PxCreateControllerManager(*scene);
     if (!m_cct_manager) {
         LOGE("physics cct create failed");

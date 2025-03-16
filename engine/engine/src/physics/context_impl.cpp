@@ -14,9 +14,14 @@ ContextImpl::ContextImpl() {
     if (!m_foundation) {
         LOGC("Failed to init PhysX");
     }
+    
+    m_pvd = physx::PxCreatePvd(*m_foundation);
+    m_pvd_transport =
+        physx::PxDefaultPvdSocketTransportCreate("localhost", 5425, 10);
+    m_pvd->connect(*m_pvd_transport, physx::PxPvdInstrumentationFlag::eALL);
 
-    m_physics =
-        PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, m_tolerances_scale);
+    m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation,
+                                m_tolerances_scale, false, m_pvd);
     if (!m_physics) {
         LOGC("Failed to create PxPhysics");
     }
@@ -56,7 +61,44 @@ ContextImpl::~ContextImpl() {
     physx::PxCloseVehicleSDK();
     m_blast_framework->release();
     m_physics->release();
+    m_pvd_transport->release();
+    m_pvd->release();
     m_foundation->release();
+}
+
+physx::PxFilterFlags VehicleSimulationFilterShader(
+    physx::PxFilterObjectAttributes attributes0,
+    physx::PxFilterData filterData0,
+    physx::PxFilterObjectAttributes attributes1,
+    physx::PxFilterData filterData1, physx::PxPairFlags& pairFlags,
+    const void* constantBlock, physx::PxU32 constantBlockSize) {
+    // TODO: remove magic number
+    if (filterData0.word0 & 0x03 && filterData1.word0 & 0x03) {
+        return physx::PxFilterFlag::eKILL;
+    }
+    return physx::PxFilterFlag::eDEFAULT;
+}
+
+physx::PxFilterFlags VehicleFilterShader(physx::PxFilterObjectAttributes attributes0,
+                                  physx::PxFilterData filterData0,
+                                  physx::PxFilterObjectAttributes attributes1,
+                                  physx::PxFilterData filterData1,
+                                  physx::PxPairFlags& pairFlags,
+                                  const void* constantBlock,
+                                  physx::PxU32 constantBlockSize) {
+    PX_UNUSED(attributes0);
+    PX_UNUSED(attributes1);
+    PX_UNUSED(constantBlock);
+    PX_UNUSED(constantBlockSize);
+
+    if ((0 == (filterData0.word0 & filterData1.word1)) &&
+        (0 == (filterData1.word0 & filterData0.word1)))
+        return physx::PxFilterFlag::eSUPPRESS;
+
+    pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
+    pairFlags |= physx::PxPairFlags(physx::PxU16(filterData0.word2 | filterData1.word2));
+
+    return physx::PxFilterFlags();
 }
 
 Scene ContextImpl::CreateScene(const std::string& name, const Vec3& gravity) {
@@ -64,7 +106,8 @@ Scene ContextImpl::CreateScene(const std::string& name, const Vec3& gravity) {
     desc.gravity = Vec3ToPhysX(gravity);
     desc.frictionType = physx::PxFrictionType::ePATCH;
     desc.solverType = physx::PxSolverType::eTGS;
-    desc.filterShader = physx::PxDefaultSimulationFilterShader;
+    // desc.filterShader = physx::PxDefaultSimulationFilterShader;
+    desc.filterShader = VehicleFilterShader;
 
     m_cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(4);
     desc.cpuDispatcher = m_cpu_dispatcher;
@@ -176,9 +219,9 @@ ConvexMesh ContextImpl::CreateConvexMesh(std::span<const Vec3> vertices) {
 }
 
 Shape ContextImpl::CreateShape(const SphereGeometry& geom,
-                               const Material& material) {
-    physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
-                                                   *material.GetImpl()->m_mtl);
+                               const Material& material, bool is_exclusive) {
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom), *material.GetImpl()->m_mtl, is_exclusive);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }
@@ -186,9 +229,9 @@ Shape ContextImpl::CreateShape(const SphereGeometry& geom,
 }
 
 Shape ContextImpl::CreateShape(const BoxGeometry& geom,
-                               const Material& material) {
-    physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
-                                                   *material.GetImpl()->m_mtl);
+                               const Material& material, bool is_exclusive) {
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom), *material.GetImpl()->m_mtl, is_exclusive);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }
@@ -196,9 +239,9 @@ Shape ContextImpl::CreateShape(const BoxGeometry& geom,
 }
 
 Shape ContextImpl::CreateShape(const CapsuleGeometry& geom,
-                               const Material& material) {
-    physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
-                                                   *material.GetImpl()->m_mtl);
+                               const Material& material, bool is_exclusive) {
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom), *material.GetImpl()->m_mtl, is_exclusive);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }
@@ -206,10 +249,10 @@ Shape ContextImpl::CreateShape(const CapsuleGeometry& geom,
 }
 
 Shape ContextImpl::CreateShape(const TriangleMeshGeometry& geom,
-                               const Material& material) {
+                               const Material& material, bool is_exclusive) {
     physx::PxShape* shape = m_physics->createShape(
         Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),
-        *material.GetImpl()->m_mtl);
+        *material.GetImpl()->m_mtl, is_exclusive);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }
@@ -217,10 +260,10 @@ Shape ContextImpl::CreateShape(const TriangleMeshGeometry& geom,
 }
 
 Shape ContextImpl::CreateShape(const ConvexMeshGeometry& geom,
-                               const Material& material) {
+                               const Material& material, bool is_exclusive) {
     physx::PxShape* shape = m_physics->createShape(
         Geometry2PhysX(geom, geom.m_rotation, geom.m_scale),
-        *material.GetImpl()->m_mtl);
+        *material.GetImpl()->m_mtl, is_exclusive);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }
@@ -228,9 +271,9 @@ Shape ContextImpl::CreateShape(const ConvexMeshGeometry& geom,
 }
 
 Shape ContextImpl::CreateShape(const PlaneGeometry& geom,
-                               const Material& material) {
-    physx::PxShape* shape = m_physics->createShape(Geometry2PhysX(geom),
-                                                   *material.GetImpl()->m_mtl);
+                               const Material& material, bool is_exclusive) {
+    physx::PxShape* shape = m_physics->createShape(
+        Geometry2PhysX(geom), *material.GetImpl()->m_mtl, is_exclusive);
     if (shape) {
         return Shape{m_shape_allocator.Allocate(this, shape)};
     }

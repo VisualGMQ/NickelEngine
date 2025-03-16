@@ -26,7 +26,8 @@ GLTFManager::GLTFManager(Device device, CommonResource& res,
 
 GLTFManager::~GLTFManager() {}
 
-std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(const Path& filename) {
+std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(const Path& filename,
+                                                       bool apply_transform) {
     tinygltf::TinyGLTF tiny_gltf_loader;
     std::string err, warn;
     tinygltf::Model gltf_model;
@@ -42,17 +43,18 @@ std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(const Path& filename) {
         return {};
     }
 
-    return Load(gltf_model);
+    return Load(gltf_model, apply_transform);
 }
 
 std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(
-    const tinygltf::Model& gltf_model) {
+    const tinygltf::Model& gltf_model, bool apply_transform) {
     NICKEL_ASSERT(gltf_model.scenes.size() == 1);
 
     std::vector<GLTFVertexData> result;
     for (auto& scene : gltf_model.scenes) {
         for (auto node : scene.nodes) {
-            parseNode(gltf_model, gltf_model.nodes[node], {}, result);
+            parseNode(gltf_model, gltf_model.nodes[node], {}, apply_transform,
+                      result);
         }
     }
 
@@ -62,6 +64,7 @@ std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(
 void GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
                                      const tinygltf::Node& node,
                                      const Transform& parent_transform,
+                                     bool apply_transform,
                                      std::vector<GLTFVertexData>& result) {
     Transform global_pose = parent_transform * calcNodeTransform(node);
 
@@ -88,6 +91,11 @@ void GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
                 accessor.count, 1,
                 buffer_view.byteStride == 0 ? sizeof(Vec3)
                                             : buffer_view.byteStride);
+            if (apply_transform) {
+                for (auto& point : vertex_data.m_points) {
+                    point = global_pose * point;
+                }
+            }
         }
 
         if (prim.indices != -1) {
@@ -126,12 +134,15 @@ void GLTFVertexDataLoader::parseNode(const tinygltf::Model& model,
     }
 
     if (!vertex_data.m_points.empty()) {
-        vertex_data.m_transform = global_pose;
+        if (!apply_transform) {
+            vertex_data.m_transform = global_pose;
+        }
         result.push_back(vertex_data);
     }
 
     for (auto& child : node.children) {
-        parseNode(model, model.nodes[child], global_pose, result);
+        parseNode(model, model.nodes[child], global_pose, apply_transform,
+                  result);
     }
 }
 

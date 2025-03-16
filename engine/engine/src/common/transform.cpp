@@ -30,4 +30,8 @@ Transform operator*(const Transform& t1, const Transform& t2) {
     return t;
 }
 
+Vec3 operator*(const Transform& t, const Vec3& p) {
+    return t.p + t.q * (t.scale * p);
+}
+
 }  // namespace nickel

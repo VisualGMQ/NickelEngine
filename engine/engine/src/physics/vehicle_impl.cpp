@@ -1,5 +1,6 @@
 #include "nickel/physics/internal/vehicle_impl.hpp"
 
+#include "3rdlibs/physx/physx/source/physxvehicle/src/PxVehicleSuspWheelTire4.h"
 #include "nickel/common/macro.hpp"
 #include "nickel/physics/internal/context_impl.hpp"
 #include "nickel/physics/internal/util.hpp"
@@ -395,8 +396,8 @@ void VehicleManagerImpl::Update(float delta_time) {
     physx::PxVehicleSuspensionRaycasts(m_batch_query, m_vehicles.size(),
                                        wheels.data());
 
-    physx::PxVehicleUpdates(delta_time, {0, -9.8, 0}, *m_friction_pairs, 1,
-                            wheels.data(), nullptr);
+    physx::PxVehicleUpdates(delta_time, {0, -9.8, 0}, *m_friction_pairs,
+                            wheels.size(), wheels.data(), nullptr);
 }
 
 void VehicleManagerImpl::GC() {

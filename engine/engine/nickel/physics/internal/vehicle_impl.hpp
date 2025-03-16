@@ -31,6 +31,8 @@ public:
         return physx::PxQueryHitType::eBLOCK;
     }
 
+    
+
     physx::PxQueryHitType::Enum postFilter(
         const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
         const physx::PxShape* shape,

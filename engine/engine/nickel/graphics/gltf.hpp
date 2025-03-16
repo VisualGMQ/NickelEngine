@@ -70,11 +70,11 @@ struct GLTFVertexDataLoadConfig {
 
 class GLTFVertexDataLoader {
 public:
-    std::vector<GLTFVertexData> Load(const Path& path);
-    std::vector<GLTFVertexData> Load(const tinygltf::Model&);
+    std::vector<GLTFVertexData> Load(const Path& path, bool apply_transform = false);
+    std::vector<GLTFVertexData> Load(const tinygltf::Model&, bool apply_transform = false);
 
     void parseNode(const tinygltf::Model& model, const tinygltf::Node& node,
-                   const Transform& parent_transform,
+                   const Transform& parent_transform, bool apply_transform,
                    std::vector<GLTFVertexData>& result);
     Transform calcNodeTransform(const tinygltf::Node& node);
 };
