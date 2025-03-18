@@ -17,7 +17,7 @@ public:
     physics::RigidActor m_rigid_actor;
     graphics::GLTFModel m_model;
     physics::CapsuleController m_controller;
-    physics::Vehicle4W m_vehicle;
+    physics::Vehicle m_vehicle;
 
     const Transform& GetGlobalTransform() const { return m_transform; }
 

@@ -89,15 +89,21 @@ void ShowVehicleDebugPanel(
         {
             ImGui::SeparatorText("wheel");
             DisplayFiled("chassis mass", wheel.m_chassis_mass);
-            ShowWheel("front left wheel", wheel.m_front_left_wheel);
-            ShowWheel("front right wheel", wheel.m_front_right_wheel);
-            ShowWheel("rear left wheel", wheel.m_rear_left_wheel);
-            ShowWheel("rear right wheel", wheel.m_rear_right_wheel);
+            for (int i = 0; i < wheel.m_wheels.size();  i++) {
+                ShowWheel(("wheel" + std::to_string(i)).c_str(),
+                          wheel.m_wheels[i]);
+            }
+            // ShowWheel("front left wheel",
+            //           wheel.m_wheels[wheel.m_front_left_wheel.value()]);
+            // ShowWheel("front right wheel",
+            //           wheel.m_wheels[wheel.m_front_right_wheel.value()]);
+            // ShowWheel("rear left wheel",
+            //           wheel.m_wheels[wheel.m_rear_left_wheel.value()]);
+            // ShowWheel("rear right wheel",
+            //           wheel.m_wheels[wheel.m_rear_right_wheel.value()]);
         }
 
-        {
-            ImGui::SeparatorText("drive");
-        }
+        { ImGui::SeparatorText("drive"); }
     }
     ImGui::End();
 }

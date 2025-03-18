@@ -1,13 +1,20 @@
 #pragma once
-#include "nickel/physics/filter.hpp"
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
+#include "nickel/physics/filter.hpp"
 
 namespace nickel::physics {
 
 class RigidDynamic;
 
+constexpr uint32_t VehicleMaxWheelNum = 20;
+
 struct VehicleWheelSimDescriptor {
+    enum class Type {
+        FourWheel,
+        ArbitraryWheel,
+    };
+
     struct Tire {
         float m_last_stiff_x = 2.0f;
         Radians m_last_stiff_y{0.3125f};
@@ -25,8 +32,8 @@ struct VehicleWheelSimDescriptor {
         float m_damping_rate = 0.25f;
         float m_max_hand_brake_torque = 0.0f;
         float m_max_brake_torque = 1500.0f;
-        Radians m_max_steer = PI * 0.3333f;
-        Radians m_toe_angle = 0.0f;
+        Radians m_max_steer = PI * 0.3333f;  // in [0, FLT_MAX)
+        Radians m_toe_angle = 0.0f;          // in [0, PI/2]
     };
 
     struct Suspension {
@@ -35,9 +42,9 @@ struct VehicleWheelSimDescriptor {
         float m_max_compression = 0.3f;
         float m_max_droop = 0.1f;
         float m_sprung_mass = 1.0f;
-        float m_camber_at_rest = 0.0f;
-        float m_camber_at_max_compression = 0.0f;
-        float m_camber_at_max_droop = 0.0f;
+        Radians m_camber_at_rest = 0.0f;             // in [-PI/2, PI/2]
+        Radians m_camber_at_max_compression = 0.0f;  // @brief in [-PI/2, PI/2]
+        Radians m_camber_at_max_droop = 0.0f;        // in [-PI/2, PI/2]
     };
 
     struct WheelDescriptor {
@@ -51,15 +58,27 @@ struct VehicleWheelSimDescriptor {
         Vec3 m_tire_force_app_cm_offsets = {0, -0.4, 0};
     };
 
-    WheelDescriptor m_rear_left_wheel;
-    WheelDescriptor m_rear_right_wheel;
-    WheelDescriptor m_front_left_wheel;
-    WheelDescriptor m_front_right_wheel;
     float m_chassis_mass = 1.0f;
-    std::vector<WheelDescriptor> m_other_wheels;
+    std::vector<WheelDescriptor> m_wheels;
     // AntiRollBar m_anti_roll_bar;
 
     uint32_t GetWheelNum() const;
+    Type GetType() const;
+
+protected:
+    VehicleWheelSimDescriptor(Type);
+
+private:
+    Type m_type;
+};
+
+struct VehicleWheelSim4WDescriptor : public VehicleWheelSimDescriptor {
+    VehicleWheelSim4WDescriptor();
+
+    std::optional<uint32_t> m_rear_left_wheel;
+    std::optional<uint32_t> m_rear_right_wheel;
+    std::optional<uint32_t> m_front_left_wheel;
+    std::optional<uint32_t> m_front_right_wheel;
 };
 
 struct VehicleEngineDescriptor {
@@ -91,15 +110,17 @@ struct VehicleClutchDescriptor {
 struct VehicleDriveSimDescriptor {
     enum class Type {
         FourWheel,
-        NoWheel,
+        ArbitraryWheel,
     };
 
-    explicit VehicleDriveSimDescriptor(Type type);
     Type GetType() const;
 
     VehicleEngineDescriptor m_engine;
     VehicleGearDescriptor m_gear;
     VehicleClutchDescriptor m_clutch;
+
+protected:
+    explicit VehicleDriveSimDescriptor(Type type);
 
 private:
     Type m_type;
@@ -129,6 +150,14 @@ struct VehicleAckermannGeometryDescriptor {
     float m_axle_separation = 0.1f;
 };
 
+struct VehicleDifferentialNWDescriptor {
+    void SetDrivenWheel(uint32_t idx);
+    bool GetDrivenWheel(uint32_t idx) const;
+
+private:
+    std::array<bool, VehicleMaxWheelNum> m_wheels{};
+};
+
 struct VehicleDriveSim4WDescriptor : public VehicleDriveSimDescriptor {
     VehicleDriveSim4WDescriptor();
 
@@ -136,9 +165,38 @@ struct VehicleDriveSim4WDescriptor : public VehicleDriveSimDescriptor {
     VehicleDifferential4WDescriptor m_diff;
 };
 
-class Vehicle4WDriveImpl;
+struct VehicleDriveSimNWDescriptor : public VehicleDriveSimDescriptor {
+    VehicleDriveSimNWDescriptor();
 
-class Vehicle4W : public ImplWrapper<Vehicle4WDriveImpl> {
+    VehicleDifferentialNWDescriptor m_diff;
+};
+
+class Vehicle4WDriveImpl;
+class VehicleDriveImpl;
+
+class Vehicle4W: public ImplWrapper<Vehicle4WDriveImpl> {
+public:
+    using ImplWrapper::ImplWrapper;
+    
+    void SetDigitalAccel(bool);
+    void SetDigitalBrake(bool);
+    void SetDigitalHandbrake(bool);
+    void SetDigitalSteerLeft(bool);
+    void SetDigitalSteerRight(bool);
+    void SetAnalogAccel(float);
+    void SetAnalogBrake(float);
+    void SetAnalogHandbrake(float);
+    void SetAnalogSteerLeft(float);
+    void SetAnalogSteerRight(float);
+    void SetGearUp(bool);
+    void SetGearDown(bool);
+
+    void Update(float delta_time);
+};
+
+class VehicleNWDriveImpl;
+
+class VehicleNW : public ImplWrapper<VehicleNWDriveImpl> {
 public:
     using ImplWrapper::ImplWrapper;
 
@@ -158,6 +216,20 @@ public:
     void Update(float delta_time);
 };
 
+class Vehicle: public ImplWrapper<VehicleDriveImpl> {
+public:
+    using ImplWrapper::ImplWrapper;
+
+    Vehicle(Vehicle4W vehicle);
+    Vehicle(VehicleNW vehicle);
+    
+    Vehicle& operator=(Vehicle4W vehicle);
+    Vehicle& operator=(VehicleNW vehicle);
+
+    Vehicle4W CastAs4W() const;
+    VehicleNW CastAsNW() const;
+};
+
 class VehicleManagerImpl;
 class ContextImpl;
 class SceneImpl;
@@ -169,6 +241,9 @@ public:
 
     Vehicle4W CreateVehicle4WDrive(const VehicleWheelSimDescriptor&,
                                    const VehicleDriveSim4WDescriptor&,
+                                   const RigidDynamic&);
+    VehicleNW CreateVehicleNWDrive(const VehicleWheelSimDescriptor&,
+                                   const VehicleDriveSimNWDescriptor&,
                                    const RigidDynamic&);
     void Update(float delta_time);
     void GC();

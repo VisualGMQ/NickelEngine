@@ -31,8 +31,6 @@ public:
         return physx::PxQueryHitType::eBLOCK;
     }
 
-    
-
     physx::PxQueryHitType::Enum postFilter(
         const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
         const physx::PxShape* shape,
@@ -41,9 +39,29 @@ public:
     }
 };
 
-class Vehicle4WDriveImpl : public RefCountable {
+class VehicleDriveImpl : public RefCountable {
 public:
-    Vehicle4WDriveImpl() = default;
+    enum class Type {
+        FourWheel,
+        N_Wheel,
+    };
+
+    Type GetType() const { return m_type; }
+
+    physx::PxVehicleDrive* m_drive{};
+
+    virtual void Update(float) = 0;
+
+protected:
+    VehicleDriveImpl(Type type) : m_type{type} {}
+
+private:
+    Type m_type;
+};
+
+class Vehicle4WDriveImpl : public VehicleDriveImpl {
+public:
+    Vehicle4WDriveImpl();
     Vehicle4WDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr,
                        const VehicleWheelSimDescriptor&,
                        const VehicleDriveSim4WDescriptor&, const RigidDynamic&);
@@ -64,14 +82,48 @@ public:
     void SetGearUp(bool);
     void SetGearDown(bool);
 
-    void Update(float delta_time);
+    void Update(float delta_time) override;
 
-    physx::PxVehicleDrive4W* m_drive{};
+    physx::PxVehicleDrive4W* GetUnderlying();
 
 private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDrive4WRawInputData m_input_data;
+    physx::PxVehicleTelemetryData* m_telemetry{};
+};
+
+class VehicleNWDriveImpl : public VehicleDriveImpl {
+public:
+    VehicleNWDriveImpl();
+    VehicleNWDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr,
+                       const VehicleWheelSimDescriptor&,
+                       const VehicleDriveSimNWDescriptor&, const RigidDynamic&);
+    ~VehicleNWDriveImpl();
+
+    void DecRefcount() override;
+
+    void SetDigitalAccel(bool);
+    void SetDigitalBrake(bool);
+    void SetDigitalHandbrake(bool);
+    void SetDigitalSteerLeft(bool);
+    void SetDigitalSteerRight(bool);
+    void SetAnalogAccel(float);
+    void SetAnalogBrake(float);
+    void SetAnalogHandbrake(float);
+    void SetAnalogSteerLeft(float);
+    void SetAnalogSteerRight(float);
+    void SetGearUp(bool);
+    void SetGearDown(bool);
+
+    void Update(float delta_time) override;
+
+    physx::PxVehicleDriveNW* GetUnderlying();
+
+private:
+    VehicleManagerImpl* m_mgr{};
+    RigidDynamic m_actor;
+    physx::PxVehicleDriveNWRawInputData m_input_data;
     physx::PxVehicleTelemetryData* m_telemetry{};
 };
 
@@ -83,12 +135,16 @@ public:
     Vehicle4WDriveImpl* CreateVehicle4WDrive(const VehicleWheelSimDescriptor&,
                                              const VehicleDriveSim4WDescriptor&,
                                              const RigidDynamic&);
+    VehicleNWDriveImpl* CreateVehicleNWDrive(const VehicleWheelSimDescriptor&,
+                                             const VehicleDriveSimNWDescriptor&,
+                                             const RigidDynamic&);
     void Update(float delta_time);
     void GC();
 
-    std::vector<Vehicle4WDriveImpl*> m_pending_delete;
-    std::vector<Vehicle4WDriveImpl*> m_vehicles;
-    BlockMemoryAllocator<Vehicle4WDriveImpl> m_allocator;
+    std::vector<VehicleDriveImpl*> m_pending_delete;
+    std::vector<VehicleDriveImpl*> m_vehicles;
+    BlockMemoryAllocator<Vehicle4WDriveImpl> m_4w_allocator;
+    BlockMemoryAllocator<VehicleNWDriveImpl> m_nw_allocator;
     physx::PxVehicleDrivableSurfaceToTireFrictionPairs* m_friction_pairs;
 
 private:

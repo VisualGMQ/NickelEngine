@@ -44,32 +44,56 @@ inline physx::PxVehicleSuspensionData SuspensionData2PhysX(
     data.mMaxDroop = suspension.m_max_droop;
     data.mSpringStrength = suspension.m_spring_strength;
     data.mSprungMass = suspension.m_sprung_mass;
-    data.mCamberAtRest = suspension.m_camber_at_rest;
     data.mSpringDamperRate = suspension.m_spring_damper_rate;
-    data.mCamberAtMaxCompression = suspension.m_camber_at_max_compression;
-    data.mCamberAtMaxDroop = suspension.m_camber_at_max_droop;
+    data.mCamberAtRest = suspension.m_camber_at_rest.Value();
+    data.mCamberAtMaxCompression =
+        suspension.m_camber_at_max_compression.Value();
+    data.mCamberAtMaxDroop = suspension.m_camber_at_max_droop.Value();
     return data;
 }
 
 // NOTE: don't forget call `free()` to free return value!
 inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
     const VehicleWheelSimDescriptor& desc) {
+    uint32_t wheel_num = desc.GetWheelNum();
     physx::PxVehicleWheelsSimData* data =
-        physx::PxVehicleWheelsSimData::allocate(4 + desc.m_other_wheels.size());
+        physx::PxVehicleWheelsSimData::allocate(wheel_num);
 
     std::array<VehicleWheelSimDescriptor::WheelDescriptor, PX_MAX_NB_WHEELS>
         wheel_desc;
-    wheel_desc[physx::PxVehicleDrive4WWheelOrder::eREAR_LEFT] =
-        desc.m_rear_left_wheel;
-    wheel_desc[physx::PxVehicleDrive4WWheelOrder::eREAR_RIGHT] =
-        desc.m_rear_right_wheel;
-    wheel_desc[physx::PxVehicleDrive4WWheelOrder::eFRONT_LEFT] =
-        desc.m_front_left_wheel;
-    wheel_desc[physx::PxVehicleDrive4WWheelOrder::eFRONT_RIGHT] =
-        desc.m_front_right_wheel;
 
-    for (uint32_t i = 0; i < desc.m_other_wheels.size(); i++) {
-        wheel_desc[i + 4] = desc.m_other_wheels[i];
+    uint32_t other_wheel_record_num = 0;
+    const VehicleWheelSim4WDescriptor* wheel_4w_desc =
+        desc.GetType() == VehicleWheelSimDescriptor::Type::FourWheel
+            ? static_cast<const VehicleWheelSim4WDescriptor*>(&desc)
+            : nullptr;
+    for (uint32_t i = 0; i < wheel_num; i++) {
+        auto& wheel = desc.m_wheels[i];
+        if (wheel_4w_desc) {
+            if (wheel_4w_desc->m_front_left_wheel &&
+                wheel_4w_desc->m_front_left_wheel.value() == i) {
+                wheel_desc[physx::PxVehicleDrive4WWheelOrder::eFRONT_LEFT] =
+                    wheel;
+            } else if (wheel_4w_desc->m_front_right_wheel &&
+                       wheel_4w_desc->m_front_right_wheel.value() == i) {
+                wheel_desc[physx::PxVehicleDrive4WWheelOrder::eFRONT_RIGHT] =
+                    wheel;
+            } else if (wheel_4w_desc->m_rear_left_wheel &&
+                       wheel_4w_desc->m_rear_left_wheel.value() == i) {
+                wheel_desc[physx::PxVehicleDrive4WWheelOrder::eREAR_LEFT] =
+                    wheel;
+            } else if (wheel_4w_desc->m_rear_right_wheel &&
+                       wheel_4w_desc->m_rear_right_wheel.value() == i) {
+                wheel_desc[physx::PxVehicleDrive4WWheelOrder::eREAR_RIGHT] =
+                    wheel;
+            } else {
+                wheel_desc[other_wheel_record_num + 4] = desc.m_wheels[i];
+                other_wheel_record_num++;
+            }
+        } else {
+            wheel_desc[other_wheel_record_num + 4] = desc.m_wheels[i];
+            other_wheel_record_num++;
+        }
     }
 
     for (uint32_t i = 0; i < desc.GetWheelNum(); i++) {
@@ -161,6 +185,18 @@ inline physx::PxVehicleDifferential4WData::Enum VehicleDifferential4WType2PhysX(
     return {};
 }
 
+inline physx::PxVehicleDifferentialNWData VehicleDifferentialNWData2PhysX(
+    VehicleDifferentialNWDescriptor desc) {
+    physx::PxVehicleDifferentialNWData data;
+
+    for (int i = 0; i < PX_MAX_NB_WHEELS; i++) {
+        if (desc.GetDrivenWheel(i)) {
+            data.setDrivenWheel(i, true);
+        }
+    }
+    return data;
+}
+
 inline physx::PxVehicleDifferential4WData VehicleDifferential4WData2PhysX(
     const VehicleDifferential4WDescriptor& desc) {
     physx::PxVehicleDifferential4WData data;
@@ -199,12 +235,24 @@ physx::PxVehicleDriveSimData4W VehicleDriveSim4WDescriptor2PhysX(
     return data;
 }
 
+physx::PxVehicleDriveSimDataNW VehicleDriveSimNWDescriptor2PhysX(
+    const VehicleDriveSimNWDescriptor& desc) {
+    physx::PxVehicleDriveSimDataNW data;
+    data.setEngineData(VehicleEngineData2PhysX(desc.m_engine));
+    data.setClutchData(VehicleClutchData2PhysX(desc.m_clutch));
+    data.setGearsData(VehicleGearData2PhysX(desc.m_gear));
+    data.setDiffData(VehicleDifferentialNWData2PhysX(desc.m_diff));
+    return data;
+}
+
+Vehicle4WDriveImpl::Vehicle4WDriveImpl() : VehicleDriveImpl{Type::FourWheel} {}
+
 Vehicle4WDriveImpl::Vehicle4WDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr,
     const VehicleWheelSimDescriptor& wheel_sim_desc,
     const VehicleDriveSim4WDescriptor& drive_sim_desc,
     const RigidDynamic& actor)
-    : m_mgr{&mgr} {
+    : VehicleDriveImpl{Type::FourWheel}, m_mgr{&mgr} {
     physx::PxVehicleWheelsSimData* wheel_sim_data =
         VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
 
@@ -212,18 +260,24 @@ Vehicle4WDriveImpl::Vehicle4WDriveImpl(
         VehicleDriveSim4WDescriptor2PhysX(drive_sim_desc);
 
     auto wheel_num = wheel_sim_desc.GetWheelNum();
-    m_drive = physx::PxVehicleDrive4W::allocate(wheel_num);
-    NICKEL_RETURN_IF_FALSE_LOGE(m_drive, "vehicle create failed");
+    auto drive = physx::PxVehicleDrive4W::allocate(wheel_num);
+    
+    if (!drive) {
+        LOGE("vehicle create failed");
+        wheel_sim_data->free();
+        return ;
+    }
 
-    m_drive->setup(
-        ctx.m_physics,
-        static_cast<physx::PxRigidDynamic*>(actor.GetImpl()->m_actor),
-        *wheel_sim_data, drive_sim_data, wheel_num - 4);
+    drive->setup(ctx.m_physics,
+                 static_cast<physx::PxRigidDynamic*>(actor.GetImpl()->m_actor),
+                 *wheel_sim_data, drive_sim_data, wheel_num - 4);
 
     wheel_sim_data->free();
     m_actor = actor;
-    m_drive->setToRestState();
-    m_drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
+    drive->setToRestState();
+    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
+
+    m_drive = drive;
 
     const physx::PxF32 graphSizeX = 0.25f;
     const physx::PxF32 graphSizeY = 0.25f;
@@ -254,7 +308,7 @@ void Vehicle4WDriveImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        m_mgr->m_allocator.MarkAsGarbage(this);
+        m_mgr->m_4w_allocator.MarkAsGarbage(this);
         m_mgr->m_pending_delete.push_back(this);
     }
 }
@@ -362,8 +416,139 @@ physx::PxFixedSizeLookupTable<8> gSteerVsForwardSpeedTable(gSteerVsForwardSpeedD
 void Vehicle4WDriveImpl::Update(float delta_time) {
     physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(
         gKeySmoothingData, gSteerVsForwardSpeedTable, m_input_data, delta_time,
-        false, *m_drive);
+        false, *GetUnderlying());
     m_input_data = physx::PxVehicleDrive4WRawInputData{};
+}
+
+physx::PxVehicleDrive4W* Vehicle4WDriveImpl::GetUnderlying() {
+    return static_cast<physx::PxVehicleDrive4W*>(m_drive);
+}
+
+VehicleNWDriveImpl::VehicleNWDriveImpl() : VehicleDriveImpl{Type::N_Wheel} {}
+
+VehicleNWDriveImpl::VehicleNWDriveImpl(
+    ContextImpl& ctx, VehicleManagerImpl& mgr,
+    const VehicleWheelSimDescriptor& wheel_sim_desc,
+    const VehicleDriveSimNWDescriptor& drive_sim_desc,
+    const RigidDynamic& actor)
+    : VehicleDriveImpl{Type::N_Wheel}, m_mgr{&mgr} {
+    physx::PxVehicleWheelsSimData* wheel_sim_data =
+        VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
+
+    physx::PxVehicleDriveSimDataNW drive_sim_data =
+        VehicleDriveSimNWDescriptor2PhysX(drive_sim_desc);
+
+    auto wheel_num = wheel_sim_desc.GetWheelNum();
+    auto drive = physx::PxVehicleDriveNW::allocate(wheel_num);
+
+    if (!drive) {
+        LOGE("vehicle create failed");
+        wheel_sim_data->free();
+        return ;
+    }
+    
+    drive->setup(ctx.m_physics,
+                 static_cast<physx::PxRigidDynamic*>(actor.GetImpl()->m_actor),
+                 *wheel_sim_data, drive_sim_data, wheel_num - 4);
+
+    wheel_sim_data->free();
+    m_actor = actor;
+    drive->setToRestState();
+    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
+
+    m_drive = drive;
+
+    const physx::PxF32 graphSizeX = 0.25f;
+    const physx::PxF32 graphSizeY = 0.25f;
+    const physx::PxF32 engineGraphPosX = 0.5f;
+    const physx::PxF32 engineGraphPosY = 0.5f;
+    const physx::PxF32 wheelGraphPosX[4] = {0.75f, 0.25f, 0.75f, 0.25f};
+    const physx::PxF32 wheelGraphPosY[4] = {0.75f, 0.75f, 0.25f, 0.25f};
+    const physx::PxVec3 backgroundColor(255, 255, 255);
+    const physx::PxVec3 lineColorHigh(255, 0, 0);
+    const physx::PxVec3 lineColorLow(0, 0, 0);
+    m_telemetry =
+        physx::PxVehicleTelemetryData::allocate(wheel_sim_desc.GetWheelNum());
+    m_telemetry->setup(graphSizeX, graphSizeY, engineGraphPosX, engineGraphPosY,
+                       wheelGraphPosX, wheelGraphPosY, backgroundColor,
+                       lineColorHigh, lineColorLow);
+}
+
+VehicleNWDriveImpl::~VehicleNWDriveImpl() {
+    if (m_telemetry) {
+        m_telemetry->free();
+    }
+    if (m_drive) {
+        m_drive->release();
+    }
+}
+
+void VehicleNWDriveImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_mgr->m_nw_allocator.MarkAsGarbage(this);
+        m_mgr->m_pending_delete.push_back(this);
+    }
+}
+
+void VehicleNWDriveImpl::SetDigitalAccel(bool active) {
+    m_input_data.setDigitalAccel(active);
+}
+
+void VehicleNWDriveImpl::SetDigitalBrake(bool active) {
+    m_input_data.setDigitalBrake(active);
+}
+
+void VehicleNWDriveImpl::SetDigitalHandbrake(bool active) {
+    m_input_data.setDigitalHandbrake(active);
+}
+
+void VehicleNWDriveImpl::SetDigitalSteerLeft(bool active) {
+    m_input_data.setDigitalSteerLeft(active);
+}
+
+void VehicleNWDriveImpl::SetDigitalSteerRight(bool active) {
+    m_input_data.setDigitalSteerRight(active);
+}
+
+void VehicleNWDriveImpl::SetAnalogAccel(float value) {
+    m_input_data.setAnalogAccel(value);
+}
+
+void VehicleNWDriveImpl::SetAnalogBrake(float value) {
+    m_input_data.setAnalogBrake(value);
+}
+
+void VehicleNWDriveImpl::SetAnalogHandbrake(float value) {
+    m_input_data.setAnalogHandbrake(value);
+}
+
+void VehicleNWDriveImpl::SetAnalogSteerLeft(float value) {
+    m_input_data.setDigitalSteerLeft(value);
+}
+
+void VehicleNWDriveImpl::SetAnalogSteerRight(float value) {
+    m_input_data.setDigitalSteerRight(value);
+}
+
+void VehicleNWDriveImpl::SetGearUp(bool active) {
+    m_input_data.setGearUp(active);
+}
+
+void VehicleNWDriveImpl::SetGearDown(bool active) {
+    m_input_data.setGearDown(active);
+}
+
+void VehicleNWDriveImpl::Update(float delta_time) {
+    physx::PxVehicleDriveNWSmoothDigitalRawInputsAndSetAnalogInputs(
+        gKeySmoothingData, gSteerVsForwardSpeedTable, m_input_data, delta_time,
+        false, *GetUnderlying());
+    m_input_data = physx::PxVehicleDriveNWRawInputData{};
+}
+
+physx::PxVehicleDriveNW* VehicleNWDriveImpl::GetUnderlying() {
+    return static_cast<physx::PxVehicleDriveNW*>(m_drive);
 }
 
 VehicleManagerImpl::VehicleManagerImpl(ContextImpl& ctx, SceneImpl& scene)
@@ -372,14 +557,23 @@ VehicleManagerImpl::VehicleManagerImpl(ContextImpl& ctx, SceneImpl& scene)
 }
 
 VehicleManagerImpl::~VehicleManagerImpl() {
-    m_allocator.FreeAll();
+    m_4w_allocator.FreeAll();
 }
 
 Vehicle4WDriveImpl* VehicleManagerImpl::CreateVehicle4WDrive(
     const VehicleWheelSimDescriptor& wheel,
     const VehicleDriveSim4WDescriptor& drive, const RigidDynamic& actor) {
     m_wheel_num += wheel.GetWheelNum();
-    auto vehicle = m_allocator.Allocate(m_ctx, *this, wheel, drive, actor);
+    auto vehicle = m_4w_allocator.Allocate(m_ctx, *this, wheel, drive, actor);
+    m_vehicles.push_back(vehicle);
+    return vehicle;
+}
+
+VehicleNWDriveImpl* VehicleManagerImpl::CreateVehicleNWDrive(
+    const VehicleWheelSimDescriptor& wheel,
+    const VehicleDriveSimNWDescriptor& drive, const RigidDynamic& actor) {
+    m_wheel_num += wheel.GetWheelNum();
+    auto vehicle = m_nw_allocator.Allocate(m_ctx, *this, wheel, drive, actor);
     m_vehicles.push_back(vehicle);
     return vehicle;
 }
@@ -402,7 +596,7 @@ void VehicleManagerImpl::Update(float delta_time) {
 
 void VehicleManagerImpl::GC() {
     deletePendingVehicles();
-    m_allocator.GC();
+    m_4w_allocator.GC();
 }
 
 void VehicleManagerImpl::deletePendingVehicles() {

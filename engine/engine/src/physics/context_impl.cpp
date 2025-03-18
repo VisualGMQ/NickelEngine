@@ -61,8 +61,8 @@ ContextImpl::~ContextImpl() {
     physx::PxCloseVehicleSDK();
     m_blast_framework->release();
     m_physics->release();
-    m_pvd_transport->release();
     m_pvd->release();
+    m_pvd_transport->release();
     m_foundation->release();
 }
 

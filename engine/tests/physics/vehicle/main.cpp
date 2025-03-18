@@ -66,7 +66,9 @@ public:
             go.m_name = "car";
             go.m_model = mgr.Find("tests/physics/vehicle/assets/car/car");
             auto rigid =
-                physics_ctx.CreateRigidDynamic(nickel::Vec3{-5, 5, 5}, {});
+                physics_ctx.CreateRigidDynamic(nickel::Vec3{0, 5, -5}, {});
+            // nickel::Quat::Create(nickel::Vec3{1, 0, 0},
+            //                      nickel::Degrees{180}));
             rigid.SetMass(12.50f);
             go.m_rigid_actor = rigid;
 
@@ -108,9 +110,8 @@ public:
                 desc.m_suspension.m_sprung_mass = 3.125;
                 desc.m_suspension.m_camber_at_rest = 0;
 
-                // WHATS THIS
-                desc.m_suspension.m_camber_at_max_compression = -0.0001;
-                desc.m_suspension.m_camber_at_max_droop = 0.0001;
+                desc.m_suspension.m_camber_at_max_compression = 0;
+                desc.m_suspension.m_camber_at_max_droop = 0;
 
                 desc.m_tire.m_last_stiff_x = 2;
                 desc.m_tire.m_last_stiff_y = 17.904932;
@@ -126,7 +127,8 @@ public:
 
                 desc.m_suspension_travel_directions = nickel::Vec3{0, -1, 0};
 
-                // desc.m_suspension_force_app_point_offsets = {-1.05, -0.3, 1.25};
+                // desc.m_suspension_force_app_point_offsets = {-1.05,
+                // -0.3, 1.25};
                 desc.m_suspension_force_app_point_offsets = {0, -0.3, 0};
                 // desc.m_tire_force_app_cm_offsets = {-1.05, -0.3, 1.25};
                 desc.m_tire_force_app_cm_offsets = {0, -0.3, 0};
@@ -164,25 +166,33 @@ public:
 
             driving_left_desc.m_wheel.m_max_hand_brake_torque = 4000.0f;
             driving_left_desc.m_wheel.m_max_steer = 0;
-            m_wheel_sim_desc.m_rear_left_wheel = driving_left_desc;
+            m_wheel_sim_desc.m_rear_left_wheel =
+                m_wheel_sim_desc.m_wheels.size();
+            m_wheel_sim_desc.m_wheels.push_back(driving_left_desc);
 
             driving_right_desc.m_wheel.m_max_hand_brake_torque = 4000.0f;
             driving_right_desc.m_wheel.m_max_steer = 0;
             driving_right_desc.m_suspension.m_camber_at_rest *= -1;
             driving_right_desc.m_suspension.m_camber_at_max_compression *= -1;
             driving_right_desc.m_suspension.m_camber_at_max_droop *= -1;
-            m_wheel_sim_desc.m_rear_right_wheel = driving_right_desc;
+            m_wheel_sim_desc.m_rear_right_wheel =
+                m_wheel_sim_desc.m_wheels.size();
+            m_wheel_sim_desc.m_wheels.push_back(driving_right_desc);
 
             steer_left_desc.m_wheel.m_max_steer = nickel::PI * 0.33333f;
             steer_left_desc.m_wheel.m_max_hand_brake_torque = 0;
-            m_wheel_sim_desc.m_front_left_wheel = steer_left_desc;
+            m_wheel_sim_desc.m_front_left_wheel =
+                m_wheel_sim_desc.m_wheels.size();
+            m_wheel_sim_desc.m_wheels.push_back(steer_left_desc);
 
             steer_right_desc.m_wheel.m_max_steer = nickel::PI * 0.33333f;
             steer_right_desc.m_wheel.m_max_hand_brake_torque = 0;
             steer_right_desc.m_suspension.m_camber_at_rest *= -1;
             steer_right_desc.m_suspension.m_camber_at_max_compression *= -1;
             steer_right_desc.m_suspension.m_camber_at_max_droop *= -1;
-            m_wheel_sim_desc.m_front_right_wheel = steer_right_desc;
+            m_wheel_sim_desc.m_front_right_wheel =
+                m_wheel_sim_desc.m_wheels.size();
+            m_wheel_sim_desc.m_wheels.push_back(steer_right_desc);
 
             go.m_rigid_actor.AttachShape(driving_left_shape);
             go.m_rigid_actor.AttachShape(driving_right_shape);
@@ -236,8 +246,8 @@ public:
             m_drive_sim_desc.m_diff.m_centre_bias = 1.3;
             m_drive_sim_desc.m_diff.m_front_bias = 1.3;
             m_drive_sim_desc.m_diff.m_rear_bias = 1.3;
-            m_drive_sim_desc.m_diff.m_type =
-                nickel::physics::VehicleDifferential4WDescriptor::Type::LS_Rear_WD;
+            m_drive_sim_desc.m_diff.m_type = nickel::physics::
+                VehicleDifferential4WDescriptor::Type::LS_Rear_WD;
 
             m_drive_sim_desc.m_ackermann.m_accuracy = 1;
             m_drive_sim_desc.m_ackermann.m_front_width = 0.5;
@@ -272,7 +282,7 @@ public:
     }
 
 private:
-    nickel::physics::VehicleWheelSimDescriptor m_wheel_sim_desc;
+    nickel::physics::VehicleWheelSim4WDescriptor m_wheel_sim_desc;
     nickel::physics::VehicleDriveSim4WDescriptor m_drive_sim_desc;
 
     void driveVehicle() {
@@ -281,17 +291,18 @@ private:
 
         auto& go = ctx.GetCurrentLevel().GetRootGO().m_children[1];
 
-        go.m_vehicle.SetDigitalAccel(
+        nickel::physics::Vehicle4W vehicle = go.m_vehicle.CastAs4W();
+        vehicle.SetDigitalAccel(
             keyboard.GetKey(nickel::input::Key::Up).IsPressing());
-        go.m_vehicle.SetDigitalBrake(
+        vehicle.SetDigitalBrake(
             keyboard.GetKey(nickel::input::Key::Down).IsPressing());
-        go.m_vehicle.SetDigitalSteerLeft(
+        vehicle.SetDigitalSteerLeft(
             keyboard.GetKey(nickel::input::Key::Left).IsPressing());
-        go.m_vehicle.SetDigitalSteerRight(
+        vehicle.SetDigitalSteerRight(
             keyboard.GetKey(nickel::input::Key::Right).IsPressing());
-        go.m_vehicle.SetGearUp(
+        vehicle.SetGearUp(
             keyboard.GetKey(nickel::input::Key::RShift).IsPressing());
-        go.m_vehicle.SetGearDown(
+        vehicle.SetGearDown(
             keyboard.GetKey(nickel::input::Key::RCtrl).IsPressing());
     }
 
