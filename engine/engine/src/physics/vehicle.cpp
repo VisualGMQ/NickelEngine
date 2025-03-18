@@ -2,6 +2,7 @@
 
 #include "nickel/physics/context.hpp"
 #include "nickel/physics/internal/pch.hpp"
+#include "nickel/physics/internal/util.hpp"
 #include "nickel/physics/internal/vehicle_impl.hpp"
 
 namespace nickel::physics {
@@ -201,6 +202,21 @@ VehicleNW Vehicle::CastAsNW() const {
         return VehicleNW{static_cast<VehicleNWDriveImpl*>(m_impl)};
     }
     return nullptr;
+}
+
+std::vector<float> ComputeVehicleSprungMass(
+    std::span<const Vec3> sprung_mass_coord, const Vec3& center_of_mass,
+    float totle_mass) {
+    std::vector<physx::PxVec3> coords;
+    coords.resize(sprung_mass_coord.size());
+    std::transform(sprung_mass_coord.begin(), sprung_mass_coord.end(),
+                   coords.begin(), Vec3ToPhysX);
+    std::vector<float> sprung_mass;
+    sprung_mass.resize(sprung_mass_coord.size());
+    physx::PxVehicleComputeSprungMasses(sprung_mass_coord.size(), coords.data(),
+                                        Vec3ToPhysX(center_of_mass), totle_mass,
+                                        1, sprung_mass.data());
+    return sprung_mass;
 }
 
 VehicleManager::VehicleManager(ContextImpl& ctx, SceneImpl& scene)

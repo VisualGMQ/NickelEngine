@@ -2,6 +2,7 @@
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/filter.hpp"
+#include <span>
 
 namespace nickel::physics {
 
@@ -233,6 +234,10 @@ public:
 class VehicleManagerImpl;
 class ContextImpl;
 class SceneImpl;
+
+std::vector<float> ComputeVehicleSprungMass(
+    std::span<const Vec3> sprung_mass_coord, const Vec3& center_of_mass,
+    float totle_mass);
 
 class VehicleManager {
 public:
