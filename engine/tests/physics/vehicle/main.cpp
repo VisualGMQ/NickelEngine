@@ -67,8 +67,6 @@ public:
             go.m_model = mgr.Find("tests/physics/vehicle/assets/car/car");
             auto rigid =
                 physics_ctx.CreateRigidDynamic(nickel::Vec3{0, 5, -5}, {});
-            // nickel::Quat::Create(nickel::Vec3{1, 0, 0},
-            //                      nickel::Degrees{180}));
             rigid.SetMass(12.50f);
             go.m_rigid_actor = rigid;
 
@@ -113,8 +111,8 @@ public:
                 desc.m_suspension.m_camber_at_max_compression = 0;
                 desc.m_suspension.m_camber_at_max_droop = 0;
 
-                desc.m_tire.m_last_stiff_x = 2;
-                desc.m_tire.m_last_stiff_y = 17.904932;
+                desc.m_tire.m_lat_stiff_x = 2;
+                desc.m_tire.m_lat_stiff_y = 17.904932;
                 desc.m_tire.m_longitudinal_stiffness_per_unit_gravity = 1000;
                 desc.m_tire.m_camber_stiffness_per_unit_gravity = 1000;
                 desc.m_tire.m_type = 0;
@@ -127,11 +125,8 @@ public:
 
                 desc.m_suspension_travel_directions = nickel::Vec3{0, -1, 0};
 
-                // desc.m_suspension_force_app_point_offsets = {-1.05,
-                // -0.3, 1.25};
-                desc.m_suspension_force_app_point_offsets = {0, -0.3, 0};
-                // desc.m_tire_force_app_cm_offsets = {-1.05, -0.3, 1.25};
-                desc.m_tire_force_app_cm_offsets = {0, -0.3, 0};
+                desc.m_suspension_force_app_point_offsets = mesh.m_transform.p;
+                desc.m_tire_force_app_cm_offsets = mesh.m_transform.p;
 
                 std::vector<nickel::Vec3> points;
                 points.reserve(mesh.m_points.size());
@@ -240,19 +235,8 @@ public:
             m_drive_sim_desc.m_clutch.m_estimate_iterations = 5;
             m_drive_sim_desc.m_clutch.m_strength = 10;
 
-            m_drive_sim_desc.m_diff.m_front_rear_split = 0.45;
-            m_drive_sim_desc.m_diff.m_front_left_right_split = 0.5;
-            m_drive_sim_desc.m_diff.m_rear_left_right_split = 0.5;
-            m_drive_sim_desc.m_diff.m_centre_bias = 1.3;
-            m_drive_sim_desc.m_diff.m_front_bias = 1.3;
-            m_drive_sim_desc.m_diff.m_rear_bias = 1.3;
             m_drive_sim_desc.m_diff.m_type = nickel::physics::
                 VehicleDifferential4WDescriptor::Type::LS_Rear_WD;
-
-            m_drive_sim_desc.m_ackermann.m_accuracy = 1;
-            m_drive_sim_desc.m_ackermann.m_front_width = 0.5;
-            m_drive_sim_desc.m_ackermann.m_rear_width = 0.5;
-            m_drive_sim_desc.m_ackermann.m_axle_separation = 3;
 
             go.m_vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
                 m_wheel_sim_desc, m_drive_sim_desc,

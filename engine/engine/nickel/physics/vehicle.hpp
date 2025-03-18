@@ -16,8 +16,8 @@ struct VehicleWheelSimDescriptor {
     };
 
     struct Tire {
-        float m_last_stiff_x = 2.0f;
-        Radians m_last_stiff_y{0.3125f};
+        float m_lat_stiff_x = 2.0f;
+        Radians m_lat_stiff_y{0.3125f};
         float m_longitudinal_stiffness_per_unit_gravity = 1000.0f;
         Radians m_camber_stiffness_per_unit_gravity{0.1};  // in kg/rad
         float m_friction_vs_slip_graph[3][2] = {0.0, 1.0, 0.1, 1.0, 1.0, 1.0};
@@ -54,8 +54,8 @@ struct VehicleWheelSimDescriptor {
         FilterData m_scene_query_filter_data;
         Vec3 m_suspension_travel_directions = {0, -1, 0};
         Vec3 m_wheel_centre_cm_offsets;
-        Vec3 m_suspension_force_app_point_offsets = {0, 0.4, 0};
-        Vec3 m_tire_force_app_cm_offsets = {0, -0.4, 0};
+        Vec3 m_suspension_force_app_point_offsets = {0, 0, 0};
+        Vec3 m_tire_force_app_cm_offsets = {0, 0, 0};
     };
 
     float m_chassis_mass = 1.0f;
@@ -135,16 +135,16 @@ struct VehicleDifferential4WDescriptor {
         Open_Front_WD,
         Open_Rear_WD,
     } m_type = Type::LS_4_WD;
-    float m_front_rear_split = 0.45f;
+    float m_front_rear_split = 0.5f;
     float m_front_left_right_split = 0.5f;
     float m_rear_left_right_split = 0.5f;
-    float m_centre_bias = 1.3f;
-    float m_front_bias = 1.3f;
-    float m_rear_bias = 1.3f;
+    float m_centre_bias = 1.0f;
+    float m_front_bias = 1.0f;
+    float m_rear_bias = 1.0f;
 };
 
 struct VehicleAckermannGeometryDescriptor {
-    float m_accuracy = 1.0f;
+    float m_accuracy = 0;
     float m_front_width = 0.1f;
     float m_rear_width = 0.1f;
     float m_axle_separation = 0.1f;

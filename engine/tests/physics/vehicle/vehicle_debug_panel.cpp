@@ -38,8 +38,8 @@ void ShowWheel(nickel::physics::VehicleWheelSimDescriptor::Wheel& wheel) {
 
 void ShowTire(nickel::physics::VehicleWheelSimDescriptor::Tire& tire) {
     ImGui::SeparatorText("tire");
-    DisplayFiled("last stiff x", tire.m_last_stiff_x);
-    DisplayFiled("last stiff y", tire.m_last_stiff_y);
+    DisplayFiled("last stiff x", tire.m_lat_stiff_x);
+    DisplayFiled("last stiff y", tire.m_lat_stiff_y);
     DisplayFiled("longitudinal stiffness per unit gravity",
                  tire.m_longitudinal_stiffness_per_unit_gravity);
     DisplayFiled("camber stiffness per unity gravity",

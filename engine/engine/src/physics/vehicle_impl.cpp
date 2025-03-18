@@ -26,8 +26,8 @@ inline physx::PxVehicleTireData TireData2PhysX(
     const VehicleWheelSimDescriptor::Tire& tire) {
     physx::PxVehicleTireData data;
     data.mType = tire.m_type;
-    data.mLatStiffX = tire.m_last_stiff_x;
-    data.mLatStiffY = tire.m_last_stiff_y.Value();
+    data.mLatStiffX = tire.m_lat_stiff_x;
+    data.mLatStiffY = tire.m_lat_stiff_y.Value();
     memcpy(data.mFrictionVsSlipGraph, tire.m_friction_vs_slip_graph,
            sizeof(data.mFrictionVsSlipGraph));
     data.mCamberStiffnessPerUnitGravity =
@@ -91,8 +91,7 @@ inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
                 other_wheel_record_num++;
             }
         } else {
-            wheel_desc[other_wheel_record_num + 4] = desc.m_wheels[i];
-            other_wheel_record_num++;
+            wheel_desc[i] = desc.m_wheels[i];
         }
     }
 
@@ -557,6 +556,7 @@ VehicleManagerImpl::VehicleManagerImpl(ContextImpl& ctx, SceneImpl& scene)
 }
 
 VehicleManagerImpl::~VehicleManagerImpl() {
+    m_nw_allocator.FreeAll();
     m_4w_allocator.FreeAll();
 }
 
@@ -597,6 +597,7 @@ void VehicleManagerImpl::Update(float delta_time) {
 void VehicleManagerImpl::GC() {
     deletePendingVehicles();
     m_4w_allocator.GC();
+    m_nw_allocator.GC();
 }
 
 void VehicleManagerImpl::deletePendingVehicles() {
