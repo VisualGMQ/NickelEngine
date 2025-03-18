@@ -319,6 +319,7 @@ void ContextImpl::GC() {
     m_joint_allocator.GC();
     m_rigid_actor_allocator.GC();
     m_rigid_actor_const_allocator.GC();
+    m_vehicle_manager->GC();
     m_scene_allocator.GC();
 }
 
