@@ -2,7 +2,9 @@
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/filter.hpp"
+
 #include <span>
+#include <optional>
 
 namespace nickel::physics {
 
@@ -38,7 +40,7 @@ struct VehicleWheelSimDescriptor {
     };
 
     struct Suspension {
-        float m_spring_strength = 0.2f;
+        float m_spring_strength = 0;
         float m_spring_damper_rate = 0.0f;
         float m_max_compression = 0.3f;
         float m_max_droop = 0.1f;
