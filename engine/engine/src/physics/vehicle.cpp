@@ -148,6 +148,50 @@ void VehicleNW::Update(float delta_time) {
     m_impl->Update(delta_time);
 }
 
+void VehicleTank::SetDigitalAccel(bool acc) {
+    m_impl->SetDigitalAccel(acc);
+}
+
+void VehicleTank::SetDigitalLeftBrake(bool brake) {
+    m_impl->SetDigitalLeftBrake(brake);
+}
+
+void VehicleTank::SetDigitalRightBrake(bool brake) {
+    m_impl->SetDigitalRightBrake(brake);
+}
+
+void VehicleTank::SetDigitalLeftThrust(bool thrust) {
+    m_impl->SetDigitalLeftThrust(thrust);
+}
+
+void VehicleTank::SetDigitalRightThrust(bool thrust) {
+    m_impl->SetDigitalRightThrust(thrust);
+}
+
+void VehicleTank::SetGearUp(bool enable) {
+    m_impl->SetGearUp(enable);
+}
+
+void VehicleTank::SetGearDown(bool enable) {
+    m_impl->SetGearDown(enable);
+}
+
+void VehicleTank::Update(float delta_time) {
+    m_impl->Update(delta_time);
+}
+
+void VehicleNoDrive::SetDriveTorque(uint32_t wheel_idx, float torque) {
+    m_impl->SetDriveTorque(wheel_idx, torque);
+}
+
+void VehicleNoDrive::SetSteerAngle(uint32_t wheel_idx, Radians angle) {
+    m_impl->SetSteerAngle(wheel_idx, angle);
+}
+
+void VehicleNoDrive::SetBrakeTorque(uint32_t wheel_idx, float torque) {
+    m_impl->SetBrakeTorque(wheel_idx, torque);
+}
+
 Vehicle::Vehicle(Vehicle4W vehicle) {
     m_impl = vehicle.GetImpl();
     if (m_impl) {
@@ -156,6 +200,20 @@ Vehicle::Vehicle(Vehicle4W vehicle) {
 }
 
 Vehicle::Vehicle(VehicleNW vehicle) {
+    m_impl = vehicle.GetImpl();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
+}
+
+Vehicle::Vehicle(VehicleNoDrive vehicle) {
+    m_impl = vehicle.GetImpl();
+    if (m_impl) {
+        m_impl->IncRefcount();
+    }
+}
+
+Vehicle::Vehicle(VehicleTank vehicle) {
     m_impl = vehicle.GetImpl();
     if (m_impl) {
         m_impl->IncRefcount();
@@ -204,6 +262,22 @@ VehicleNW Vehicle::CastAsNW() const {
     return nullptr;
 }
 
+VehicleNoDrive Vehicle::CastAsNoDrive() const {
+    if (m_impl && m_impl->GetType() == VehicleDriveImpl::Type::NoDrive) {
+        m_impl->IncRefcount();
+        return VehicleNoDrive{static_cast<VehicleNoDriveImpl*>(m_impl)};
+    }
+    return nullptr;
+}
+
+VehicleTank Vehicle::CastAsTank() const {
+    if (m_impl && m_impl->GetType() == VehicleDriveImpl::Type::Tank) {
+        m_impl->IncRefcount();
+        return VehicleTank{static_cast<VehicleTankDriveImpl*>(m_impl)};
+    }
+    return nullptr;
+}
+
 std::vector<float> ComputeVehicleSprungMass(
     std::span<const Vec3> sprung_mass_coord, const Vec3& center_of_mass,
     float totle_mass) {
@@ -234,6 +308,17 @@ VehicleNW VehicleManager::CreateVehicleNWDrive(
     const VehicleWheelSimDescriptor& wheel,
     const VehicleDriveSimNWDescriptor& drive, const RigidDynamic& actor) {
     return m_impl->CreateVehicleNWDrive(wheel, drive, actor);
+}
+
+VehicleTank VehicleManager::CreateVehicleTankDrive(
+    VehicleTankDriveMode drive_mode, const VehicleWheelSimDescriptor& wheel,
+    const VehicleDriveSimDescriptor& drive, const RigidDynamic& actor) {
+    return m_impl->CreateVehicleTankDrive(drive_mode, wheel, drive, actor);
+}
+
+VehicleNoDrive VehicleManager::CreateVehicleNoDrive(
+    const VehicleWheelSimDescriptor& wheel, const RigidDynamic& actor) {
+    return m_impl->CreateVehicleNoDrive(wheel, actor);
 }
 
 void VehicleManager::Update(float delta_time) {

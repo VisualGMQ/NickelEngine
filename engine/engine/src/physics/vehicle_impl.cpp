@@ -52,6 +52,27 @@ inline physx::PxVehicleSuspensionData SuspensionData2PhysX(
     return data;
 }
 
+inline physx::PxVehicleAntiRollBarData VehicleAntiRollBarData2PhysX(
+    const VehicleWheelSimDescriptor::AntiRollBar& data) {
+    physx::PxVehicleAntiRollBarData bar;
+    bar.mWheel0 = data.m_wheel0;
+    bar.mWheel1 = data.m_wheel1;
+    bar.mStiffness = data.stiffness;
+    return bar;
+}
+
+inline physx::PxVehicleDriveTankControlModel::Enum VehicleTankDriveMode2PhysX(
+    VehicleTankDriveMode mode) {
+    switch (mode) {
+        case VehicleTankDriveMode::Standard:
+            return physx::PxVehicleDriveTankControlModel::eSTANDARD;
+        case VehicleTankDriveMode::Special:
+            return physx::PxVehicleDriveTankControlModel::eSPECIAL;
+    }
+    NICKEL_CANT_REACH();
+    return {};
+}
+
 // NOTE: don't forget call `free()` to free return value!
 inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
     const VehicleWheelSimDescriptor& desc) {
@@ -115,6 +136,10 @@ inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
     }
 
     data->setChassisMass(desc.m_chassis_mass);
+
+    for (auto& bar : desc.m_anti_roll_bars) {
+        data->addAntiRollBarData(VehicleAntiRollBarData2PhysX(bar));
+    }
 
     return data;
 }
@@ -221,6 +246,15 @@ VehicleAckermannGeometryDescriptor2PhysX(
     return data;
 }
 
+physx::PxVehicleDriveSimData VehicleDriveSimDescriptor2PhysX(
+    const VehicleDriveSimDescriptor& desc) {
+    physx::PxVehicleDriveSimData data;
+    data.setEngineData(VehicleEngineData2PhysX(desc.m_engine));
+    data.setClutchData(VehicleClutchData2PhysX(desc.m_clutch));
+    data.setGearsData(VehicleGearData2PhysX(desc.m_gear));
+    return data;
+}
+
 physx::PxVehicleDriveSimData4W VehicleDriveSim4WDescriptor2PhysX(
     const VehicleDriveSim4WDescriptor& desc) {
     physx::PxVehicleDriveSimData4W data;
@@ -260,11 +294,11 @@ Vehicle4WDriveImpl::Vehicle4WDriveImpl(
 
     auto wheel_num = wheel_sim_desc.GetWheelNum();
     auto drive = physx::PxVehicleDrive4W::allocate(wheel_num);
-    
+
     if (!drive) {
         LOGE("vehicle create failed");
         wheel_sim_data->free();
-        return ;
+        return;
     }
 
     drive->setup(ctx.m_physics,
@@ -274,30 +308,12 @@ Vehicle4WDriveImpl::Vehicle4WDriveImpl(
     wheel_sim_data->free();
     m_actor = actor;
     drive->setToRestState();
-    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
+    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eNEUTRAL);
 
     m_drive = drive;
-
-    const physx::PxF32 graphSizeX = 0.25f;
-    const physx::PxF32 graphSizeY = 0.25f;
-    const physx::PxF32 engineGraphPosX = 0.5f;
-    const physx::PxF32 engineGraphPosY = 0.5f;
-    const physx::PxF32 wheelGraphPosX[4] = {0.75f, 0.25f, 0.75f, 0.25f};
-    const physx::PxF32 wheelGraphPosY[4] = {0.75f, 0.75f, 0.25f, 0.25f};
-    const physx::PxVec3 backgroundColor(255, 255, 255);
-    const physx::PxVec3 lineColorHigh(255, 0, 0);
-    const physx::PxVec3 lineColorLow(0, 0, 0);
-    m_telemetry =
-        physx::PxVehicleTelemetryData::allocate(wheel_sim_desc.GetWheelNum());
-    m_telemetry->setup(graphSizeX, graphSizeY, engineGraphPosX, engineGraphPosY,
-                       wheelGraphPosX, wheelGraphPosY, backgroundColor,
-                       lineColorHigh, lineColorLow);
 }
 
 Vehicle4WDriveImpl::~Vehicle4WDriveImpl() {
-    if (m_telemetry) {
-        m_telemetry->free();
-    }
     if (m_drive) {
         m_drive->release();
     }
@@ -443,40 +459,22 @@ VehicleNWDriveImpl::VehicleNWDriveImpl(
     if (!drive) {
         LOGE("vehicle create failed");
         wheel_sim_data->free();
-        return ;
+        return;
     }
-    
+
     drive->setup(ctx.m_physics,
                  static_cast<physx::PxRigidDynamic*>(actor.GetImpl()->m_actor),
-                 *wheel_sim_data, drive_sim_data, wheel_num - 4);
+                 *wheel_sim_data, drive_sim_data, wheel_num);
 
     wheel_sim_data->free();
     m_actor = actor;
     drive->setToRestState();
-    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
+    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eNEUTRAL);
 
     m_drive = drive;
-
-    const physx::PxF32 graphSizeX = 0.25f;
-    const physx::PxF32 graphSizeY = 0.25f;
-    const physx::PxF32 engineGraphPosX = 0.5f;
-    const physx::PxF32 engineGraphPosY = 0.5f;
-    const physx::PxF32 wheelGraphPosX[4] = {0.75f, 0.25f, 0.75f, 0.25f};
-    const physx::PxF32 wheelGraphPosY[4] = {0.75f, 0.75f, 0.25f, 0.25f};
-    const physx::PxVec3 backgroundColor(255, 255, 255);
-    const physx::PxVec3 lineColorHigh(255, 0, 0);
-    const physx::PxVec3 lineColorLow(0, 0, 0);
-    m_telemetry =
-        physx::PxVehicleTelemetryData::allocate(wheel_sim_desc.GetWheelNum());
-    m_telemetry->setup(graphSizeX, graphSizeY, engineGraphPosX, engineGraphPosY,
-                       wheelGraphPosX, wheelGraphPosY, backgroundColor,
-                       lineColorHigh, lineColorLow);
 }
 
 VehicleNWDriveImpl::~VehicleNWDriveImpl() {
-    if (m_telemetry) {
-        m_telemetry->free();
-    }
     if (m_drive) {
         m_drive->release();
     }
@@ -550,12 +548,167 @@ physx::PxVehicleDriveNW* VehicleNWDriveImpl::GetUnderlying() {
     return static_cast<physx::PxVehicleDriveNW*>(m_drive);
 }
 
+VehicleTankDriveImpl::VehicleTankDriveImpl()
+    : VehicleDriveImpl{Type::Tank},
+      m_input_data{physx::PxVehicleDriveTankControlModel::eSTANDARD} {}
+
+VehicleTankDriveImpl::VehicleTankDriveImpl(
+    ContextImpl& ctx, VehicleManagerImpl& mgr, VehicleTankDriveMode drive_mode,
+    const VehicleWheelSimDescriptor& wheel_sim_desc,
+    const VehicleDriveSimDescriptor& drive_sim_desc, const RigidDynamic& actor)
+    : VehicleDriveImpl{Type::Tank},
+      m_mgr{&mgr},
+      m_input_data{VehicleTankDriveMode2PhysX(drive_mode)} {
+    physx::PxVehicleWheelsSimData* wheel_sim_data =
+        VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
+
+    physx::PxVehicleDriveSimData drive_sim_data =
+        VehicleDriveSimDescriptor2PhysX(drive_sim_desc);
+
+    auto wheel_num = wheel_sim_desc.GetWheelNum();
+    auto drive = physx::PxVehicleDriveTank::allocate(wheel_num);
+
+    if (!drive) {
+        LOGE("vehicle create failed");
+        wheel_sim_data->free();
+        return;
+    }
+
+    drive->setup(ctx.m_physics,
+                 static_cast<physx::PxRigidDynamic*>(actor.GetImpl()->m_actor),
+                 *wheel_sim_data, drive_sim_data, wheel_num);
+
+    wheel_sim_data->free();
+    m_actor = actor;
+    drive->setToRestState();
+    drive->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eNEUTRAL);
+
+    m_drive = drive;
+}
+
+VehicleTankDriveImpl::~VehicleTankDriveImpl() {
+    if (m_drive) {
+        m_drive->release();
+    }
+}
+
+void VehicleTankDriveImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_mgr->m_tank_allocator.MarkAsGarbage(this);
+        m_mgr->m_pending_delete.push_back(this);
+    }
+}
+
+void VehicleTankDriveImpl::SetDigitalAccel(bool acc) {
+    m_input_data.setDigitalAccel(acc);
+}
+
+void VehicleTankDriveImpl::SetDigitalLeftBrake(bool brake) {
+    m_input_data.setDigitalLeftBrake(brake);
+}
+
+void VehicleTankDriveImpl::SetDigitalRightBrake(bool brake) {
+    m_input_data.setDigitalRightBrake(brake);
+}
+
+void VehicleTankDriveImpl::SetDigitalLeftThrust(bool thrust) {
+    m_input_data.setDigitalLeftThrust(thrust);
+}
+
+void VehicleTankDriveImpl::SetDigitalRightThrust(bool thrust) {
+    m_input_data.setDigitalRightThrust(thrust);
+}
+
+void VehicleTankDriveImpl::SetGearUp(bool gear) {
+    m_input_data.setGearUp(gear);
+}
+
+void VehicleTankDriveImpl::SetGearDown(bool gear) {
+    m_input_data.setGearDown(gear);
+}
+
+void VehicleTankDriveImpl::Update(float delta_time) {
+    physx::PxVehicleDriveTankSmoothDigitalRawInputsAndSetAnalogInputs(
+        gKeySmoothingData, m_input_data, delta_time, *GetUnderlying());
+    m_input_data =
+        physx::PxVehicleDriveTankRawInputData{m_input_data.getDriveModel()};
+}
+
+physx::PxVehicleDriveTank* VehicleTankDriveImpl::GetUnderlying() {
+    return static_cast<physx::PxVehicleDriveTank*>(m_drive);
+}
+
+VehicleNoDriveImpl::VehicleNoDriveImpl() : VehicleDriveImpl{Type::NoDrive} {}
+
+VehicleNoDriveImpl::VehicleNoDriveImpl(
+    ContextImpl& ctx, VehicleManagerImpl& mgr,
+    const VehicleWheelSimDescriptor& wheel_sim_desc, const RigidDynamic& actor)
+    : VehicleDriveImpl{Type::NoDrive}, m_mgr{&mgr} {
+    physx::PxVehicleWheelsSimData* wheel_sim_data =
+        VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
+
+    auto wheel_num = wheel_sim_desc.GetWheelNum();
+    auto drive = physx::PxVehicleNoDrive::allocate(wheel_num);
+
+    if (!drive) {
+        LOGE("vehicle create failed");
+        wheel_sim_data->free();
+        return;
+    }
+
+    drive->setup(ctx.m_physics,
+                 static_cast<physx::PxRigidDynamic*>(actor.GetImpl()->m_actor),
+                 *wheel_sim_data);
+
+    wheel_sim_data->free();
+    m_actor = actor;
+    drive->setToRestState();
+
+    m_drive = drive;
+}
+
+VehicleNoDriveImpl::~VehicleNoDriveImpl() {
+    if (m_drive) {
+        m_drive->release();
+    }
+}
+
+void VehicleNoDriveImpl::DecRefcount() {
+    RefCountable::DecRefcount();
+
+    if (Refcount() == 0) {
+        m_mgr->m_no_drive_allocator.MarkAsGarbage(this);
+        m_mgr->m_pending_delete.push_back(this);
+    }
+}
+
+void VehicleNoDriveImpl::SetDriveTorque(uint32_t wheel_idx, float torque) {
+    GetUnderlying()->setDriveTorque(wheel_idx, torque);
+}
+
+void VehicleNoDriveImpl::SetSteerAngle(uint32_t wheel_idx, Radians angle) {
+    GetUnderlying()->setSteerAngle(wheel_idx, angle.Value());
+}
+
+void VehicleNoDriveImpl::SetBrakeTorque(uint32_t wheel_idx, float torque) {
+    GetUnderlying()->setBrakeTorque(wheel_idx, torque);
+}
+
+void VehicleNoDriveImpl::Update(float) {}
+
+physx::PxVehicleNoDrive* VehicleNoDriveImpl::GetUnderlying() {
+    return static_cast<physx::PxVehicleNoDrive*>(m_drive);
+}
+
 VehicleManagerImpl::VehicleManagerImpl(ContextImpl& ctx, SceneImpl& scene)
     : m_ctx{ctx}, m_scene{scene} {
     setupFrictionPairs();
 }
 
 VehicleManagerImpl::~VehicleManagerImpl() {
+    m_tank_allocator.FreeAll();
     m_nw_allocator.FreeAll();
     m_4w_allocator.FreeAll();
 }
@@ -574,6 +727,24 @@ VehicleNWDriveImpl* VehicleManagerImpl::CreateVehicleNWDrive(
     const VehicleDriveSimNWDescriptor& drive, const RigidDynamic& actor) {
     m_wheel_num += wheel.GetWheelNum();
     auto vehicle = m_nw_allocator.Allocate(m_ctx, *this, wheel, drive, actor);
+    m_vehicles.push_back(vehicle);
+    return vehicle;
+}
+
+VehicleTank VehicleManagerImpl::CreateVehicleTankDrive(
+    VehicleTankDriveMode drive_mode, const VehicleWheelSimDescriptor& wheel,
+    const VehicleDriveSimDescriptor& drive, const RigidDynamic& actor) {
+    m_wheel_num += wheel.GetWheelNum();
+    auto vehicle = m_tank_allocator.Allocate(m_ctx, *this, drive_mode, wheel,
+                                             drive, actor);
+    m_vehicles.push_back(vehicle);
+    return vehicle;
+}
+
+VehicleNoDrive VehicleManagerImpl::CreateVehicleNoDrive(
+    const VehicleWheelSimDescriptor& wheel, const RigidDynamic& actor) {
+    m_wheel_num += wheel.GetWheelNum();
+    auto vehicle = m_no_drive_allocator.Allocate(m_ctx, *this, wheel, actor);
     m_vehicles.push_back(vehicle);
     return vehicle;
 }
@@ -598,6 +769,7 @@ void VehicleManagerImpl::GC() {
     deletePendingVehicles();
     m_4w_allocator.GC();
     m_nw_allocator.GC();
+    m_tank_allocator.GC();
 }
 
 void VehicleManagerImpl::deletePendingVehicles() {

@@ -59,9 +59,15 @@ struct VehicleWheelSimDescriptor {
         Vec3 m_tire_force_app_cm_offsets = {0, 0, 0};
     };
 
+    struct AntiRollBar {
+        uint32_t m_wheel0;
+        uint32_t m_wheel1;
+        float stiffness = 0;  // in [0, FLT_MAX)
+    };
+
     float m_chassis_mass = 1.0f;
     std::vector<WheelDescriptor> m_wheels;
-    // AntiRollBar m_anti_roll_bar;
+    std::vector<AntiRollBar> m_anti_roll_bars;
 
     uint32_t GetWheelNum() const;
     Type GetType() const;
@@ -172,13 +178,20 @@ struct VehicleDriveSimNWDescriptor : public VehicleDriveSimDescriptor {
     VehicleDifferentialNWDescriptor m_diff;
 };
 
+enum class VehicleTankDriveMode {
+    Standard,
+    Special,
+};
+
 class Vehicle4WDriveImpl;
 class VehicleDriveImpl;
+class VehicleNWDriveImpl;
+class VehicleTankDriveImpl;
 
-class Vehicle4W: public ImplWrapper<Vehicle4WDriveImpl> {
+class Vehicle4W : public ImplWrapper<Vehicle4WDriveImpl> {
 public:
     using ImplWrapper::ImplWrapper;
-    
+
     void SetDigitalAccel(bool);
     void SetDigitalBrake(bool);
     void SetDigitalHandbrake(bool);
@@ -194,8 +207,6 @@ public:
 
     void Update(float delta_time);
 };
-
-class VehicleNWDriveImpl;
 
 class VehicleNW : public ImplWrapper<VehicleNWDriveImpl> {
 public:
@@ -217,18 +228,48 @@ public:
     void Update(float delta_time);
 };
 
-class Vehicle: public ImplWrapper<VehicleDriveImpl> {
+class VehicleTank : public ImplWrapper<VehicleTankDriveImpl> {
+public:
+    using ImplWrapper::ImplWrapper;
+
+    void SetDigitalAccel(bool);
+    void SetDigitalLeftBrake(bool);
+    void SetDigitalRightBrake(bool);
+    void SetDigitalLeftThrust(bool);
+    void SetDigitalRightThrust(bool);
+    void SetGearUp(bool);
+    void SetGearDown(bool);
+
+    void Update(float delta_time);
+};
+
+class VehicleNoDriveImpl;
+
+class VehicleNoDrive : public ImplWrapper<VehicleNoDriveImpl> {
+public:
+    using ImplWrapper::ImplWrapper;
+
+    void SetDriveTorque(uint32_t wheel_idx, float);
+    void SetSteerAngle(uint32_t wheel_idx, Radians);
+    void SetBrakeTorque(uint32_t wheel_idx, float);
+};
+
+class Vehicle : public ImplWrapper<VehicleDriveImpl> {
 public:
     using ImplWrapper::ImplWrapper;
 
     Vehicle(Vehicle4W vehicle);
     Vehicle(VehicleNW vehicle);
-    
+    Vehicle(VehicleNoDrive vehicle);
+    Vehicle(VehicleTank vehicle);
+
     Vehicle& operator=(Vehicle4W vehicle);
     Vehicle& operator=(VehicleNW vehicle);
 
     Vehicle4W CastAs4W() const;
     VehicleNW CastAsNW() const;
+    VehicleNoDrive CastAsNoDrive() const;
+    VehicleTank CastAsTank() const;
 };
 
 class VehicleManagerImpl;
@@ -250,6 +291,12 @@ public:
     VehicleNW CreateVehicleNWDrive(const VehicleWheelSimDescriptor&,
                                    const VehicleDriveSimNWDescriptor&,
                                    const RigidDynamic&);
+    VehicleTank CreateVehicleTankDrive(VehicleTankDriveMode drive_mode,
+                                       const VehicleWheelSimDescriptor&,
+                                       const VehicleDriveSimDescriptor&,
+                                       const RigidDynamic&);
+    VehicleNoDrive CreateVehicleNoDrive(const VehicleWheelSimDescriptor&,
+                                       const RigidDynamic&);
     void Update(float delta_time);
     void GC();
 

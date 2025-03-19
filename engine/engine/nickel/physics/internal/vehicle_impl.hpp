@@ -44,11 +44,13 @@ public:
     enum class Type {
         FourWheel,
         N_Wheel,
+        Tank,
+        NoDrive,
     };
 
     Type GetType() const { return m_type; }
 
-    physx::PxVehicleDrive* m_drive{};
+    physx::PxVehicleWheels* m_drive{};
 
     virtual void Update(float) = 0;
 
@@ -90,7 +92,6 @@ private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDrive4WRawInputData m_input_data;
-    physx::PxVehicleTelemetryData* m_telemetry{};
 };
 
 class VehicleNWDriveImpl : public VehicleDriveImpl {
@@ -124,7 +125,57 @@ private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDriveNWRawInputData m_input_data;
-    physx::PxVehicleTelemetryData* m_telemetry{};
+};
+
+class VehicleTankDriveImpl : public VehicleDriveImpl {
+public:
+    VehicleTankDriveImpl();
+    VehicleTankDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr,
+                         VehicleTankDriveMode drive_mode,
+                         const VehicleWheelSimDescriptor&,
+                         const VehicleDriveSimDescriptor&, const RigidDynamic&);
+    ~VehicleTankDriveImpl();
+
+    void DecRefcount() override;
+
+    void SetDigitalAccel(bool);
+    void SetDigitalLeftBrake(bool);
+    void SetDigitalRightBrake(bool);
+    void SetDigitalLeftThrust(bool);
+    void SetDigitalRightThrust(bool);
+    void SetGearUp(bool);
+    void SetGearDown(bool);
+
+    void Update(float delta_time) override;
+
+    physx::PxVehicleDriveTank* GetUnderlying();
+
+private:
+    VehicleManagerImpl* m_mgr{};
+    RigidDynamic m_actor;
+    physx::PxVehicleDriveTankRawInputData m_input_data;
+};
+
+class VehicleNoDriveImpl: public VehicleDriveImpl {
+public:
+    VehicleNoDriveImpl();
+    VehicleNoDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr,
+                       const VehicleWheelSimDescriptor&, const RigidDynamic&);
+    ~VehicleNoDriveImpl();
+
+    void DecRefcount();
+
+    void SetDriveTorque(uint32_t wheel_idx, float);
+    void SetSteerAngle(uint32_t wheel_idx, Radians);
+    void SetBrakeTorque(uint32_t wheel_idx, float);
+
+    void Update(float) override;
+
+    physx::PxVehicleNoDrive* GetUnderlying();
+
+private:
+    VehicleManagerImpl* m_mgr{};
+    RigidDynamic m_actor;
 };
 
 class VehicleManagerImpl {
@@ -138,6 +189,15 @@ public:
     VehicleNWDriveImpl* CreateVehicleNWDrive(const VehicleWheelSimDescriptor&,
                                              const VehicleDriveSimNWDescriptor&,
                                              const RigidDynamic&);
+
+    VehicleTank CreateVehicleTankDrive(VehicleTankDriveMode drive_mode,
+                                       const VehicleWheelSimDescriptor& wheel,
+                                       const VehicleDriveSimDescriptor& drive,
+                                       const RigidDynamic& actor);
+
+    VehicleNoDrive CreateVehicleNoDrive(const VehicleWheelSimDescriptor& wheel,
+                                        const RigidDynamic& actor);
+
     void Update(float delta_time);
     void GC();
 
@@ -145,6 +205,8 @@ public:
     std::vector<VehicleDriveImpl*> m_vehicles;
     BlockMemoryAllocator<Vehicle4WDriveImpl> m_4w_allocator;
     BlockMemoryAllocator<VehicleNWDriveImpl> m_nw_allocator;
+    BlockMemoryAllocator<VehicleTankDriveImpl> m_tank_allocator;
+    BlockMemoryAllocator<VehicleNoDriveImpl> m_no_drive_allocator;
     physx::PxVehicleDrivableSurfaceToTireFrictionPairs* m_friction_pairs;
 
 private:

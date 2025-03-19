@@ -70,7 +70,7 @@ public:
             auto rigid =
                 physics_ctx.CreateRigidDynamic(nickel::Vec3{0, 5, -5}, {});
             rigid.SetMass(1500.f);
-            rigid.SetMassSpaceInertiaTensor({3625,3125,1281});
+            rigid.SetMassSpaceInertiaTensor({3625, 3125, 1281});
             rigid.SetCenterOfMassLocalPose(chassis_centre_offset, {});
             go.m_rigid_actor = rigid;
 
@@ -201,6 +201,18 @@ public:
 
             m_wheel_sim_desc.m_chassis_mass = 1500;
 
+            nickel::physics::VehicleWheelSimDescriptor::AntiRollBar front_bar;
+            front_bar.m_wheel0 = wheel_steer_left;
+            front_bar.m_wheel1 = wheel_steer_right;
+            front_bar.stiffness = 10000;
+            m_wheel_sim_desc.m_anti_roll_bars.push_back(front_bar);
+
+            nickel::physics::VehicleWheelSimDescriptor::AntiRollBar rear_bar;
+            rear_bar.m_wheel0 = wheel_driving_left;
+            rear_bar.m_wheel1 = wheel_driving_right;
+            rear_bar.stiffness = 10000;
+            m_wheel_sim_desc.m_anti_roll_bars.push_back(rear_bar);
+
             for (auto& mesh : meshes) {
                 if (mesh.m_name.find("chassis") != mesh.m_name.npos) {
                     auto convex_mesh =
@@ -233,12 +245,8 @@ public:
 
             m_drive_sim_desc.m_clutch.m_strength = 10;
 
-            m_drive_sim_desc.m_diff.m_type = nickel::physics::
-                VehicleDifferential4WDescriptor::Type::LS_4_WD;
-            // m_drive_sim_desc.m_diff.m_centre_bias = 1.5;
-            // m_drive_sim_desc.m_diff.m_front_rear_split = 0.0;
-            // m_drive_sim_desc.m_diff.m_rear_bias = 2.0f;
-            // m_drive_sim_desc.m_diff.m_rear_left_right_split = 0.7;
+            m_drive_sim_desc.m_diff.m_type =
+                nickel::physics::VehicleDifferential4WDescriptor::Type::LS_4_WD;
 
             go.m_vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
                 m_wheel_sim_desc, m_drive_sim_desc,
