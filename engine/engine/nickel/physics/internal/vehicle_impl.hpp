@@ -79,10 +79,13 @@ public:
     void SetAnalogAccel(float);
     void SetAnalogBrake(float);
     void SetAnalogHandbrake(float);
-    void SetAnalogSteerLeft(float);
-    void SetAnalogSteerRight(float);
+    void SetAnalogSteer(float);
     void SetGearUp(bool);
     void SetGearDown(bool);
+
+    void SetPadSmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetKeySmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetSteerVsForwardSpeedLookupTable(const VehicleSteerVsForwardTable&);
 
     void Update(float delta_time) override;
 
@@ -92,6 +95,9 @@ private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDrive4WRawInputData m_input_data;
+    physx::PxVehiclePadSmoothingData m_pad_smoothing_data;
+    physx::PxVehicleKeySmoothingData m_key_smoothing_data;
+    physx::PxFixedSizeLookupTable<8> m_steer_vs_forward_speed;
 };
 
 class VehicleNWDriveImpl : public VehicleDriveImpl {
@@ -112,10 +118,13 @@ public:
     void SetAnalogAccel(float);
     void SetAnalogBrake(float);
     void SetAnalogHandbrake(float);
-    void SetAnalogSteerLeft(float);
-    void SetAnalogSteerRight(float);
+    void SetAnalogSteer(float);
     void SetGearUp(bool);
     void SetGearDown(bool);
+    
+    void SetPadSmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetKeySmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetSteerVsForwardSpeedLookupTable(const VehicleSteerVsForwardTable&);
 
     void Update(float delta_time) override;
 
@@ -125,6 +134,9 @@ private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDriveNWRawInputData m_input_data;
+    physx::PxVehiclePadSmoothingData m_pad_smoothing_data;
+    physx::PxVehicleKeySmoothingData m_key_smoothing_data;
+    physx::PxFixedSizeLookupTable<8> m_steer_vs_forward_speed;
 };
 
 class VehicleTankDriveImpl : public VehicleDriveImpl {
@@ -143,8 +155,16 @@ public:
     void SetDigitalRightBrake(bool);
     void SetDigitalLeftThrust(bool);
     void SetDigitalRightThrust(bool);
+    void SetAnalogAccel(float);
+    void SetAnalogLeftBrake(float);
+    void SetAnalogRightBrake(float);
+    void SetAnalogLeftThrust(float);
+    void SetAnalogRightThrust(float);
     void SetGearUp(bool);
     void SetGearDown(bool);
+
+    void SetPadSmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetKeySmoothingConfig(const VehicleInputSmoothingConfig&);
 
     void Update(float delta_time) override;
 
@@ -154,9 +174,11 @@ private:
     VehicleManagerImpl* m_mgr{};
     RigidDynamic m_actor;
     physx::PxVehicleDriveTankRawInputData m_input_data;
+    physx::PxVehiclePadSmoothingData m_pad_smoothing_data;
+    physx::PxVehicleKeySmoothingData m_key_smoothing_data;
 };
 
-class VehicleNoDriveImpl: public VehicleDriveImpl {
+class VehicleNoDriveImpl : public VehicleDriveImpl {
 public:
     VehicleNoDriveImpl();
     VehicleNoDriveImpl(ContextImpl& ctx, VehicleManagerImpl& mgr,

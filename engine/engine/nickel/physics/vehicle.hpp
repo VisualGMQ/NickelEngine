@@ -3,8 +3,8 @@
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/filter.hpp"
 
-#include <span>
 #include <optional>
+#include <span>
 
 namespace nickel::physics {
 
@@ -19,11 +19,21 @@ struct VehicleWheelSimDescriptor {
     };
 
     struct Tire {
+        struct FrictionVsLongitudinalSlipConfig {
+            float m_friction_at_zero_slip{1.0};
+            
+            float m_slip_at_maximum_firction{0.1};
+            float m_max_firction{1.0};
+            
+            float m_max_slip{1.0};
+            float m_friction_at_max_slip{1.0};
+        };
+        
         float m_lat_stiff_x = 2.0f;
         Radians m_lat_stiff_y{0.3125f};
         float m_longitudinal_stiffness_per_unit_gravity = 1000.0f;
         Radians m_camber_stiffness_per_unit_gravity{0.1};  // in kg/rad
-        float m_friction_vs_slip_graph[3][2] = {0.0, 1.0, 0.1, 1.0, 1.0, 1.0};
+        FrictionVsLongitudinalSlipConfig m_friction_vs_slip_config;
         uint32_t m_type{};
     };
 
@@ -185,6 +195,36 @@ enum class VehicleTankDriveMode {
     Special,
 };
 
+struct VehicleInputSmoothingConfig {
+public:
+    struct Config {
+        float m_acceleration;
+        float m_brake;
+        float m_hand_brake;
+        float m_steer_left;
+        float m_steer_right;
+    };
+
+    Config m_rise_rates = {6.0, 6.0, 12.0, 2.5, 2.5};
+    Config m_fall_rates = {10, 10, 12, 5, 5};
+};
+
+struct VehicleSteerVsForwardTable {
+    struct SpeedSteerPair {
+        float m_speed;
+        float m_steer_coefficient;
+    };
+
+    VehicleSteerVsForwardTable();
+    void Add(float speed, float steer_coefficient);
+    uint32_t Size() const;
+    const SpeedSteerPair& GetPair(uint32_t idx) const;
+
+private:
+    std::array<SpeedSteerPair, 8> m_datas;
+    uint32_t m_count{};
+};
+
 class Vehicle4WDriveImpl;
 class VehicleDriveImpl;
 class VehicleNWDriveImpl;
@@ -202,10 +242,13 @@ public:
     void SetAnalogAccel(float);
     void SetAnalogBrake(float);
     void SetAnalogHandbrake(float);
-    void SetAnalogSteerLeft(float);
-    void SetAnalogSteerRight(float);
+    void SetAnalogSteer(float);
     void SetGearUp(bool);
     void SetGearDown(bool);
+
+    void SetPadSmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetKeySmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetSteerVsForwardSpeedLookupTable(const VehicleSteerVsForwardTable&);
 
     void Update(float delta_time);
 };
@@ -222,10 +265,13 @@ public:
     void SetAnalogAccel(float);
     void SetAnalogBrake(float);
     void SetAnalogHandbrake(float);
-    void SetAnalogSteerLeft(float);
-    void SetAnalogSteerRight(float);
+    void SetAnalogSteer(float);
     void SetGearUp(bool);
     void SetGearDown(bool);
+
+    void SetPadSmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetKeySmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetSteerVsForwardSpeedLookupTable(const VehicleSteerVsForwardTable&);
 
     void Update(float delta_time);
 };
@@ -241,6 +287,9 @@ public:
     void SetDigitalRightThrust(bool);
     void SetGearUp(bool);
     void SetGearDown(bool);
+
+    void SetPadSmoothingConfig(const VehicleInputSmoothingConfig&);
+    void SetKeySmoothingConfig(const VehicleInputSmoothingConfig&);
 
     void Update(float delta_time);
 };
@@ -298,7 +347,7 @@ public:
                                        const VehicleDriveSimDescriptor&,
                                        const RigidDynamic&);
     VehicleNoDrive CreateVehicleNoDrive(const VehicleWheelSimDescriptor&,
-                                       const RigidDynamic&);
+                                        const RigidDynamic&);
     void Update(float delta_time);
     void GC();
 

@@ -44,6 +44,25 @@ VehicleDriveSim4WDescriptor::VehicleDriveSim4WDescriptor()
 VehicleDriveSimNWDescriptor::VehicleDriveSimNWDescriptor()
     : VehicleDriveSimDescriptor{Type::ArbitraryWheel} {}
 
+VehicleSteerVsForwardTable::VehicleSteerVsForwardTable() {
+    m_datas.fill(
+        {std::numeric_limits<float>::max(), std::numeric_limits<float>::max()});
+}
+
+void VehicleSteerVsForwardTable::Add(float speed, float steer_coefficient) {
+    NICKEL_ASSERT(steer_coefficient >= 0 && steer_coefficient <= 1);
+    m_datas[m_count++] = {speed, steer_coefficient};
+}
+
+uint32_t VehicleSteerVsForwardTable::Size() const {
+    return m_count;
+}
+
+const VehicleSteerVsForwardTable::SpeedSteerPair&
+VehicleSteerVsForwardTable::GetPair(uint32_t idx) const {
+    return m_datas[idx];
+}
+
 void Vehicle4W::SetDigitalAccel(bool active) {
     m_impl->SetDigitalAccel(active);
 }
@@ -76,12 +95,8 @@ void Vehicle4W::SetAnalogHandbrake(float value) {
     m_impl->SetAnalogHandbrake(value);
 }
 
-void Vehicle4W::SetAnalogSteerLeft(float value) {
-    m_impl->SetAnalogSteerLeft(value);
-}
-
-void Vehicle4W::SetAnalogSteerRight(float value) {
-    m_impl->SetAnalogSteerRight(value);
+void Vehicle4W::SetAnalogSteer(float value) {
+    m_impl->SetAnalogSteer(value);
 }
 
 void Vehicle4W::SetGearUp(bool active) {
@@ -90,6 +105,21 @@ void Vehicle4W::SetGearUp(bool active) {
 
 void Vehicle4W::SetGearDown(bool active) {
     m_impl->SetGearDown(active);
+}
+
+void Vehicle4W::SetPadSmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_impl->SetPadSmoothingConfig(config);
+}
+
+void Vehicle4W::SetKeySmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_impl->SetKeySmoothingConfig(config);
+}
+
+void Vehicle4W::SetSteerVsForwardSpeedLookupTable(
+    const VehicleSteerVsForwardTable& config) {
+    m_impl->SetSteerVsForwardSpeedLookupTable(config);
 }
 
 void Vehicle4W::Update(float delta_time) {
@@ -128,12 +158,8 @@ void VehicleNW::SetAnalogHandbrake(float value) {
     m_impl->SetAnalogHandbrake(value);
 }
 
-void VehicleNW::SetAnalogSteerLeft(float value) {
-    m_impl->SetAnalogSteerLeft(value);
-}
-
-void VehicleNW::SetAnalogSteerRight(float value) {
-    m_impl->SetAnalogSteerRight(value);
+void VehicleNW::SetAnalogSteer(float value) {
+    m_impl->SetAnalogSteer(value);
 }
 
 void VehicleNW::SetGearUp(bool active) {
@@ -142,6 +168,21 @@ void VehicleNW::SetGearUp(bool active) {
 
 void VehicleNW::SetGearDown(bool active) {
     m_impl->SetGearDown(active);
+}
+
+void VehicleNW::SetPadSmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_impl->SetPadSmoothingConfig(config);
+}
+
+void VehicleNW::SetKeySmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_impl->SetKeySmoothingConfig(config);
+}
+
+void VehicleNW::SetSteerVsForwardSpeedLookupTable(
+    const VehicleSteerVsForwardTable& config) {
+    m_impl->SetSteerVsForwardSpeedLookupTable(config);
 }
 
 void VehicleNW::Update(float delta_time) {
@@ -174,6 +215,16 @@ void VehicleTank::SetGearUp(bool enable) {
 
 void VehicleTank::SetGearDown(bool enable) {
     m_impl->SetGearDown(enable);
+}
+
+void VehicleTank::SetPadSmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_impl->SetPadSmoothingConfig(config);
+}
+
+void VehicleTank::SetKeySmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_impl->SetKeySmoothingConfig(config);
 }
 
 void VehicleTank::Update(float delta_time) {

@@ -28,8 +28,17 @@ inline physx::PxVehicleTireData TireData2PhysX(
     data.mType = tire.m_type;
     data.mLatStiffX = tire.m_lat_stiff_x;
     data.mLatStiffY = tire.m_lat_stiff_y.Value();
-    memcpy(data.mFrictionVsSlipGraph, tire.m_friction_vs_slip_graph,
-           sizeof(data.mFrictionVsSlipGraph));
+
+    data.mFrictionVsSlipGraph[0][0] = 0;
+    data.mFrictionVsSlipGraph[0][1] =
+        tire.m_friction_vs_slip_config.m_friction_at_zero_slip;
+    data.mFrictionVsSlipGraph[1][0] =
+        tire.m_friction_vs_slip_config.m_slip_at_maximum_firction;
+    data.mFrictionVsSlipGraph[1][1] =
+        tire.m_friction_vs_slip_config.m_max_firction;
+    data.mFrictionVsSlipGraph[2][0] = tire.m_friction_vs_slip_config.m_max_slip;
+    data.mFrictionVsSlipGraph[2][1] =
+        tire.m_friction_vs_slip_config.m_friction_at_max_slip;
     data.mCamberStiffnessPerUnitGravity =
         tire.m_camber_stiffness_per_unit_gravity.Value();
     data.mLongitudinalStiffnessPerUnitGravity =
@@ -71,6 +80,79 @@ inline physx::PxVehicleDriveTankControlModel::Enum VehicleTankDriveMode2PhysX(
     }
     NICKEL_CANT_REACH();
     return {};
+}
+
+physx::PxVehiclePadSmoothingData VehiclePadSmoothingConfig2PhysX(
+    const VehicleInputSmoothingConfig& config) {
+    physx::PxVehiclePadSmoothingData data;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_ACCEL] =
+        config.m_fall_rates.m_acceleration;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_BRAKE] =
+        config.m_fall_rates.m_brake;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_HANDBRAKE] =
+        config.m_fall_rates.m_hand_brake;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_LEFT] =
+        config.m_fall_rates.m_steer_left;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_RIGHT] =
+        config.m_fall_rates.m_steer_right;
+
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_ACCEL] =
+        config.m_rise_rates.m_acceleration;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_BRAKE] =
+        config.m_rise_rates.m_brake;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_HANDBRAKE] =
+        config.m_rise_rates.m_hand_brake;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_LEFT] =
+        config.m_rise_rates.m_steer_left;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_RIGHT] =
+        config.m_rise_rates.m_steer_right;
+
+    return data;
+}
+
+physx::PxVehicleKeySmoothingData VehicleKeySmoothingConfig2PhysX(
+    const VehicleInputSmoothingConfig& config) {
+    physx::PxVehicleKeySmoothingData data;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_ACCEL] =
+        config.m_fall_rates.m_acceleration;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_BRAKE] =
+        config.m_fall_rates.m_brake;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_HANDBRAKE] =
+        config.m_fall_rates.m_hand_brake;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_LEFT] =
+        config.m_fall_rates.m_steer_left;
+    data.mFallRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_RIGHT] =
+        config.m_fall_rates.m_steer_right;
+
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_ACCEL] =
+        config.m_rise_rates.m_acceleration;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_BRAKE] =
+        config.m_rise_rates.m_brake;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_HANDBRAKE] =
+        config.m_rise_rates.m_hand_brake;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_LEFT] =
+        config.m_rise_rates.m_steer_left;
+    data.mRiseRates[physx::PxVehicleDrive4WControl::eANALOG_INPUT_STEER_RIGHT] =
+        config.m_rise_rates.m_steer_right;
+
+    return data;
+}
+
+physx::PxFixedSizeLookupTable<8> VehicleSteerVsForwardTable2PhysX(
+    const VehicleSteerVsForwardTable& table) {
+    physx::PxFixedSizeLookupTable<8> data;
+    int i = 0;
+    for (; i < table.Size(); i++) {
+        auto pair = table.GetPair(i);
+        data.addPair(pair.m_speed, pair.m_steer_coefficient);
+    }
+
+    for (; i < 8; i++) {
+        data.mDataPairs[i * 2] = PX_MAX_F32;
+        data.mDataPairs[i * 2 + 1] = PX_MAX_F32;
+    }
+
+    return data;
 }
 
 // NOTE: don't forget call `free()` to free return value!
@@ -278,14 +360,20 @@ physx::PxVehicleDriveSimDataNW VehicleDriveSimNWDescriptor2PhysX(
     return data;
 }
 
-Vehicle4WDriveImpl::Vehicle4WDriveImpl() : VehicleDriveImpl{Type::FourWheel} {}
+Vehicle4WDriveImpl::Vehicle4WDriveImpl()
+    : VehicleDriveImpl{Type::FourWheel},
+      m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
+      m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {}
 
 Vehicle4WDriveImpl::Vehicle4WDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr,
     const VehicleWheelSimDescriptor& wheel_sim_desc,
     const VehicleDriveSim4WDescriptor& drive_sim_desc,
     const RigidDynamic& actor)
-    : VehicleDriveImpl{Type::FourWheel}, m_mgr{&mgr} {
+    : VehicleDriveImpl{Type::FourWheel},
+      m_mgr{&mgr},
+      m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
+      m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {
     physx::PxVehicleWheelsSimData* wheel_sim_data =
         VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
 
@@ -360,12 +448,8 @@ void Vehicle4WDriveImpl::SetAnalogHandbrake(float value) {
     m_input_data.setAnalogHandbrake(value);
 }
 
-void Vehicle4WDriveImpl::SetAnalogSteerLeft(float value) {
-    m_input_data.setDigitalSteerLeft(value);
-}
-
-void Vehicle4WDriveImpl::SetAnalogSteerRight(float value) {
-    m_input_data.setDigitalSteerRight(value);
+void Vehicle4WDriveImpl::SetAnalogSteer(float value) {
+    m_input_data.setAnalogSteer(value);
 }
 
 void Vehicle4WDriveImpl::SetGearUp(bool active) {
@@ -376,62 +460,25 @@ void Vehicle4WDriveImpl::SetGearDown(bool active) {
     m_input_data.setGearDown(active);
 }
 
-// TODO: directly copied from PhysX example. Move to vehicle config later
-// clang-format off
-physx::PxVehicleKeySmoothingData gKeySmoothingData=
-{
-    {
-        3.0f,    //rise rate eANALOG_INPUT_ACCEL
-        3.0f,    //rise rate eANALOG_INPUT_BRAKE
-        10.0f,    //rise rate eANALOG_INPUT_HANDBRAKE
-        2.5f,    //rise rate eANALOG_INPUT_STEER_LEFT
-        2.5f,    //rise rate eANALOG_INPUT_STEER_RIGHT
-    },
-    {
-        5.0f,    //fall rate eANALOG_INPUT__ACCEL
-        5.0f,    //fall rate eANALOG_INPUT__BRAKE
-        10.0f,    //fall rate eANALOG_INPUT__HANDBRAKE
-        5.0f,    //fall rate eANALOG_INPUT_STEER_LEFT
-        5.0f    //fall rate eANALOG_INPUT_STEER_RIGHT
-    }
-};
+void Vehicle4WDriveImpl::SetPadSmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_pad_smoothing_data = VehiclePadSmoothingConfig2PhysX(config);
+}
 
-physx::PxVehiclePadSmoothingData gPadSmoothingData=
-{
-    {
-        6.0f,    //rise rate eANALOG_INPUT_ACCEL
-        6.0f,    //rise rate eANALOG_INPUT_BRAKE
-        12.0f,    //rise rate eANALOG_INPUT_HANDBRAKE
-        2.5f,    //rise rate eANALOG_INPUT_STEER_LEFT
-        2.5f,    //rise rate eANALOG_INPUT_STEER_RIGHT
-    },
-    {
-        10.0f,    //fall rate eANALOG_INPUT_ACCEL
-        10.0f,    //fall rate eANALOG_INPUT_BRAKE
-        12.0f,    //fall rate eANALOG_INPUT_HANDBRAKE
-        5.0f,    //fall rate eANALOG_INPUT_STEER_LEFT
-        5.0f    //fall rate eANALOG_INPUT_STEER_RIGHT
-    }
-};
+void Vehicle4WDriveImpl::SetKeySmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_key_smoothing_data = VehicleKeySmoothingConfig2PhysX(config);
+}
 
-float gSteerVsForwardSpeedData[2*8]=
-{
-    0.0f,        0.75f,
-    5.0f,        0.75f,
-    30.0f,        0.125f,
-    120.0f,        0.1f,
-    PX_MAX_F32, PX_MAX_F32,
-    PX_MAX_F32, PX_MAX_F32,
-    PX_MAX_F32, PX_MAX_F32,
-    PX_MAX_F32, PX_MAX_F32
-};
-physx::PxFixedSizeLookupTable<8> gSteerVsForwardSpeedTable(gSteerVsForwardSpeedData,4);
-// clang-format on
+void Vehicle4WDriveImpl::SetSteerVsForwardSpeedLookupTable(
+    const VehicleSteerVsForwardTable& table) {
+    m_steer_vs_forward_speed = VehicleSteerVsForwardTable2PhysX(table);
+}
 
 void Vehicle4WDriveImpl::Update(float delta_time) {
     physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(
-        gKeySmoothingData, gSteerVsForwardSpeedTable, m_input_data, delta_time,
-        false, *GetUnderlying());
+        m_key_smoothing_data, m_steer_vs_forward_speed, m_input_data,
+        delta_time, false, *GetUnderlying());
     m_input_data = physx::PxVehicleDrive4WRawInputData{};
 }
 
@@ -439,14 +486,20 @@ physx::PxVehicleDrive4W* Vehicle4WDriveImpl::GetUnderlying() {
     return static_cast<physx::PxVehicleDrive4W*>(m_drive);
 }
 
-VehicleNWDriveImpl::VehicleNWDriveImpl() : VehicleDriveImpl{Type::N_Wheel} {}
+VehicleNWDriveImpl::VehicleNWDriveImpl()
+    : VehicleDriveImpl{Type::N_Wheel},
+      m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
+      m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {}
 
 VehicleNWDriveImpl::VehicleNWDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr,
     const VehicleWheelSimDescriptor& wheel_sim_desc,
     const VehicleDriveSimNWDescriptor& drive_sim_desc,
     const RigidDynamic& actor)
-    : VehicleDriveImpl{Type::N_Wheel}, m_mgr{&mgr} {
+    : VehicleDriveImpl{Type::N_Wheel},
+      m_mgr{&mgr},
+      m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
+      m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {
     physx::PxVehicleWheelsSimData* wheel_sim_data =
         VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
 
@@ -521,12 +574,8 @@ void VehicleNWDriveImpl::SetAnalogHandbrake(float value) {
     m_input_data.setAnalogHandbrake(value);
 }
 
-void VehicleNWDriveImpl::SetAnalogSteerLeft(float value) {
-    m_input_data.setDigitalSteerLeft(value);
-}
-
-void VehicleNWDriveImpl::SetAnalogSteerRight(float value) {
-    m_input_data.setDigitalSteerRight(value);
+void VehicleNWDriveImpl::SetAnalogSteer(float value) {
+    m_input_data.setAnalogSteer(value);
 }
 
 void VehicleNWDriveImpl::SetGearUp(bool active) {
@@ -537,10 +586,25 @@ void VehicleNWDriveImpl::SetGearDown(bool active) {
     m_input_data.setGearDown(active);
 }
 
+void VehicleNWDriveImpl::SetPadSmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_pad_smoothing_data = VehiclePadSmoothingConfig2PhysX(config);
+}
+
+void VehicleNWDriveImpl::SetKeySmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_key_smoothing_data = VehicleKeySmoothingConfig2PhysX(config);
+}
+
+void VehicleNWDriveImpl::SetSteerVsForwardSpeedLookupTable(
+    const VehicleSteerVsForwardTable& table) {
+    m_steer_vs_forward_speed = VehicleSteerVsForwardTable2PhysX(table);
+}
+
 void VehicleNWDriveImpl::Update(float delta_time) {
     physx::PxVehicleDriveNWSmoothDigitalRawInputsAndSetAnalogInputs(
-        gKeySmoothingData, gSteerVsForwardSpeedTable, m_input_data, delta_time,
-        false, *GetUnderlying());
+        m_key_smoothing_data, m_steer_vs_forward_speed, m_input_data,
+        delta_time, false, *GetUnderlying());
     m_input_data = physx::PxVehicleDriveNWRawInputData{};
 }
 
@@ -550,7 +614,9 @@ physx::PxVehicleDriveNW* VehicleNWDriveImpl::GetUnderlying() {
 
 VehicleTankDriveImpl::VehicleTankDriveImpl()
     : VehicleDriveImpl{Type::Tank},
-      m_input_data{physx::PxVehicleDriveTankControlModel::eSTANDARD} {}
+      m_input_data{physx::PxVehicleDriveTankControlModel::eSTANDARD},
+      m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
+      m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {}
 
 VehicleTankDriveImpl::VehicleTankDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr, VehicleTankDriveMode drive_mode,
@@ -558,7 +624,9 @@ VehicleTankDriveImpl::VehicleTankDriveImpl(
     const VehicleDriveSimDescriptor& drive_sim_desc, const RigidDynamic& actor)
     : VehicleDriveImpl{Type::Tank},
       m_mgr{&mgr},
-      m_input_data{VehicleTankDriveMode2PhysX(drive_mode)} {
+      m_input_data{VehicleTankDriveMode2PhysX(drive_mode)},
+      m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
+      m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {
     physx::PxVehicleWheelsSimData* wheel_sim_data =
         VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
 
@@ -621,6 +689,26 @@ void VehicleTankDriveImpl::SetDigitalRightThrust(bool thrust) {
     m_input_data.setDigitalRightThrust(thrust);
 }
 
+void VehicleTankDriveImpl::SetAnalogAccel(float acc) {
+    m_input_data.setAnalogAccel(acc);
+}
+
+void VehicleTankDriveImpl::SetAnalogLeftBrake(float brake) {
+    m_input_data.setAnalogLeftBrake(brake);
+}
+
+void VehicleTankDriveImpl::SetAnalogRightBrake(float brake) {
+    m_input_data.setAnalogRightBrake(brake);
+}
+
+void VehicleTankDriveImpl::SetAnalogLeftThrust(float thrust) {
+    m_input_data.setAnalogLeftThrust(thrust);
+}
+
+void VehicleTankDriveImpl::SetAnalogRightThrust(float thrust) {
+    m_input_data.setAnalogRightThrust(thrust);
+}
+
 void VehicleTankDriveImpl::SetGearUp(bool gear) {
     m_input_data.setGearUp(gear);
 }
@@ -629,9 +717,19 @@ void VehicleTankDriveImpl::SetGearDown(bool gear) {
     m_input_data.setGearDown(gear);
 }
 
+void VehicleTankDriveImpl::SetPadSmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_pad_smoothing_data = VehiclePadSmoothingConfig2PhysX(config);
+}
+
+void VehicleTankDriveImpl::SetKeySmoothingConfig(
+    const VehicleInputSmoothingConfig& config) {
+    m_key_smoothing_data = VehicleKeySmoothingConfig2PhysX(config);
+}
+
 void VehicleTankDriveImpl::Update(float delta_time) {
     physx::PxVehicleDriveTankSmoothDigitalRawInputsAndSetAnalogInputs(
-        gKeySmoothingData, m_input_data, delta_time, *GetUnderlying());
+        m_key_smoothing_data, m_input_data, delta_time, *GetUnderlying());
     m_input_data =
         physx::PxVehicleDriveTankRawInputData{m_input_data.getDriveModel()};
 }

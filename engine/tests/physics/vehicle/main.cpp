@@ -2,7 +2,6 @@
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
-#include "vehicle_debug_panel.hpp"
 
 enum {
     COLLISION_FLAG_GROUND = 1 << 0,
@@ -202,14 +201,14 @@ public:
             m_wheel_sim_desc.m_chassis_mass = 1500;
 
             nickel::physics::VehicleWheelSimDescriptor::AntiRollBar front_bar;
-            front_bar.m_wheel0 = wheel_steer_left;
-            front_bar.m_wheel1 = wheel_steer_right;
+            front_bar.m_wheel0 = wheel_steer_left - 1;
+            front_bar.m_wheel1 = wheel_steer_right - 1;
             front_bar.stiffness = 10000;
             m_wheel_sim_desc.m_anti_roll_bars.push_back(front_bar);
 
             nickel::physics::VehicleWheelSimDescriptor::AntiRollBar rear_bar;
-            rear_bar.m_wheel0 = wheel_driving_left;
-            rear_bar.m_wheel1 = wheel_driving_right;
+            rear_bar.m_wheel0 = wheel_driving_left - 1;
+            rear_bar.m_wheel1 = wheel_driving_right - 1;
             rear_bar.stiffness = 10000;
             m_wheel_sim_desc.m_anti_roll_bars.push_back(rear_bar);
 
@@ -248,10 +247,17 @@ public:
             m_drive_sim_desc.m_diff.m_type =
                 nickel::physics::VehicleDifferential4WDescriptor::Type::LS_4_WD;
 
-            go.m_vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
+            auto vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
                 m_wheel_sim_desc, m_drive_sim_desc,
                 static_cast<nickel::physics::RigidDynamic&>(go.m_rigid_actor));
 
+            nickel::physics::VehicleSteerVsForwardTable table;
+            table.Add(0.0, 0.75);
+            table.Add(5.0, 0.75);
+            table.Add(30.0, 0.125);
+            table.Add(120.0, 0.1);
+            vehicle.SetSteerVsForwardSpeedLookupTable(table);
+            go.m_vehicle = vehicle;
             root_go.m_children.push_back(go);
         }
     }
@@ -264,9 +270,6 @@ public:
         updateFlyCamera();
         driveVehicle();
         drawGrid();
-
-        ShowVehicleDebugPanel(ctx.GetCurrentLevel().GetRootGO().m_children[1],
-                              m_wheel_sim_desc, m_drive_sim_desc);
 
         if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
             mouse.RelativeMode(mouse.IsRelativeMode() ? false : true);
