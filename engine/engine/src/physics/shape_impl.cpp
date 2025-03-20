@@ -8,11 +8,7 @@
 namespace nickel::physics {
 
 ShapeImpl::ShapeImpl(ContextImpl* ctx, physx::PxShape* shape)
-    : m_ctx{ctx}, m_shape{shape} {
-    if (shape) {
-        shape->acquireReference();
-    }
-}
+    : m_ctx{ctx}, m_shape{shape} {}
 
 void ShapeImpl::SetMaterials(std::span<Material> materials) {
     std::vector<physx::PxMaterial*> mtls;
@@ -34,40 +30,26 @@ void ShapeImpl::SetGeometry(const Geometry& g) {
 }
 
 void ShapeImpl::SetLocalPose(const Vec3& p, const Quat& q) {
-    if (m_shape->getReferenceCount() > 1) {
-        // very ugly hack
-        m_shape->release();
-        m_shape->setLocalPose({Vec3ToPhysX(p), QuatToPhysX(q)});
-        m_shape->acquireReference();
-    }
+    m_shape->setLocalPose({Vec3ToPhysX(p), QuatToPhysX(q)});
 }
 
 Transform ShapeImpl::GetLocalPose() const {
     return TransformFromPhysX(m_shape->getLocalPose());
 }
 
-void ShapeImpl::IncRefcount() {
-    if (m_shape) {
-        m_shape->acquireReference();
-    }
+void ShapeImpl::SetQueryFilterData(const FilterData& filter) {
+    m_shape->setQueryFilterData(FilterData2PhysX(filter));
+}
+
+void ShapeImpl::SetSimulateFilterData(const FilterData& filter) {
+    m_shape->setSimulationFilterData(FilterData2PhysX(filter));
 }
 
 void ShapeImpl::DecRefcount() {
-    if (m_shape) {
-        auto refcount = m_shape->getReferenceCount();
-        m_shape->release();
-        if (refcount == 1) {
-            m_shape = nullptr;
-            m_ctx->m_shape_allocator.MarkAsGarbage(this);
-        }
+    RefCountable::DecRefcount();
+    if (Refcount() == 0) {
+        m_ctx->m_shape_allocator.MarkAsGarbage(this);
     }
-}
-
-uint32_t ShapeImpl::Refcount() {
-    if (m_shape) {
-        return m_shape->getReferenceCount();
-    }
-    return 0;
 }
 
 ShapeConstImpl::ShapeConstImpl(ContextImpl* ctx, const physx::PxShape* shape)
@@ -75,12 +57,7 @@ ShapeConstImpl::ShapeConstImpl(ContextImpl* ctx, const physx::PxShape* shape)
 
 void ShapeConstImpl::DecRefcount() {
     if (m_shape) {
-        auto refcount = m_shape->getReferenceCount();
-        m_shape->release();
-        if (refcount == 1) {
-            m_shape = nullptr;
-            m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
-        }
+        m_ctx->m_shape_const_allocator.MarkAsGarbage(this);
     }
 }
 

@@ -3,7 +3,6 @@
 #include "nickel/common/assert.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/common/memory/memory.hpp"
-#include "nickel/physics/context.hpp"
 #include "nickel/physics/geometry.hpp"
 #include "nickel/physics/internal/joint_impl.hpp"
 #include "nickel/physics/internal/material_impl.hpp"
@@ -15,6 +14,7 @@
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
 #include "nickel/physics/shape.hpp"
+#include "nickel/physics/vehicle.hpp"
 
 namespace nickel::physics {
 
@@ -70,12 +70,12 @@ public:
                                     std::span<const uint32_t> indices);
     ConvexMesh CreateConvexMesh(std::span<const Vec3> vertices);
     
-    Shape CreateShape(const SphereGeometry&, const Material&);
-    Shape CreateShape(const BoxGeometry&, const Material&);
-    Shape CreateShape(const CapsuleGeometry&, const Material&);
-    Shape CreateShape(const TriangleMeshGeometry&, const Material&);
-    Shape CreateShape(const ConvexMeshGeometry&, const Material&);
-    Shape CreateShape(const PlaneGeometry&, const Material&);
+    Shape CreateShape(const SphereGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const BoxGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const CapsuleGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const TriangleMeshGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const ConvexMeshGeometry&, const Material&, bool is_exclusive = false);
+    Shape CreateShape(const PlaneGeometry&, const Material&, bool is_exclusive = false);
 
     D6Joint CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
                           const Quat& q0, const RigidActor& actor1,
@@ -84,6 +84,8 @@ public:
     void Update(float delta_time);
 
     Scene GetMainScene();
+    VehicleManager& GetVehicleManager();
+    const VehicleManager& GetVehicleManager() const;
 
     void GC();
 
@@ -103,6 +105,9 @@ private:
     PhysXErrorCallback m_error_callback;
     physx::PxDefaultAllocator m_allocator;
     physx::PxDefaultCpuDispatcher* m_cpu_dispatcher;
+    std::unique_ptr<VehicleManager> m_vehicle_manager;
+    physx::PxPvd* m_pvd;
+    physx::PxPvdTransport* m_pvd_transport;
 
     SceneImpl* m_main_scene;
     Nv::Blast::TkFramework* m_blast_framework;

@@ -3,6 +3,7 @@
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/physics/cct.hpp"
 #include "nickel/physics/rigidbody.hpp"
+#include "nickel/physics/vehicle.hpp"
 
 namespace nickel {
 
@@ -16,6 +17,7 @@ public:
     physics::RigidActor m_rigid_actor;
     graphics::GLTFModel m_model;
     physics::CapsuleController m_controller;
+    physics::Vehicle m_vehicle;
 
     const Transform& GetGlobalTransform() const { return m_transform; }
 

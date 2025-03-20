@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nickel/common/memory/refcountable.hpp"
 #include "nickel/physics/enums.hpp"
 #include "nickel/physics/internal/pch.hpp"
 
@@ -7,14 +8,12 @@ namespace nickel::physics {
 
 class ContextImpl;
 
-class MaterialImpl {
+class MaterialImpl: public RefCountable {
 public:
     MaterialImpl(ContextImpl* ctx, physx::PxMaterial* mtl);
     ~MaterialImpl();
 
-    void IncRefcount();
-    void DecRefcount();
-    uint32_t Refcount() const;
+    void DecRefcount() override;
 
     void SetDynamicFriction(float friction);
     void SetStaticFriction(float friction);

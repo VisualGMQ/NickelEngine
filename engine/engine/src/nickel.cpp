@@ -179,6 +179,7 @@ Camera& Context::GetCamera() {
 
 void Context::OnWindowResize() {
     m_graphics_ctx->OnSwapchainRecreate(*m_window, *m_graphics_adapter);
+    m_camera->ResizeViewArea(m_window->GetSize());
 }
 
 void Context::EnableRender(bool enable) {

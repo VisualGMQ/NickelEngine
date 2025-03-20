@@ -1,5 +1,6 @@
 #pragma once
-#include "geometry.hpp"
+#include "nickel/physics/filter.hpp"
+#include "nickel/physics/geometry.hpp"
 #include "nickel/common/transform.hpp"
 #include "nickel/physics/material.hpp"
 
@@ -23,6 +24,9 @@ public:
 
     void SetMaterials(std::span<Material> materials);
     void SetMaterial(Material& materials);
+    
+    void SetQueryFilterData(const FilterData&);
+    void SetSimulateFilterData(const FilterData&);
 
     void SetLocalPose(const Vec3&, const Quat&);
     Transform GetLocalPose() const;

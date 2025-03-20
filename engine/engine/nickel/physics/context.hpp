@@ -3,6 +3,7 @@
 #include "nickel/physics/material.hpp"
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
+#include "nickel/physics/vehicle.hpp"
 
 namespace nickel::physics {
 
@@ -23,12 +24,21 @@ public:
                                     std::span<const uint32_t> indices);
     
     ConvexMesh CreateConvexMesh(std::span<const Vec3> vertices);
-    Shape CreateShape(const SphereGeometry&, const Material&);
-    Shape CreateShape(const BoxGeometry&, const Material&);
-    Shape CreateShape(const CapsuleGeometry&, const Material&);
-    Shape CreateShape(const TriangleMeshGeometry&, const Material&);
-    Shape CreateShape(const ConvexMeshGeometry &, const Material&);
-    Shape CreateShape(const PlaneGeometry&, const Material&);
+    Shape CreateShape(const SphereGeometry&, const Material&,
+                      bool is_exclusive = false);
+    Shape CreateShape(const BoxGeometry&, const Material&,
+                      bool is_exclusive = false);
+    Shape CreateShape(const CapsuleGeometry&, const Material&,
+                      bool is_exclusive = false);
+    Shape CreateShape(const TriangleMeshGeometry&, const Material&,
+                      bool is_exclusive = false);
+    Shape CreateShape(const ConvexMeshGeometry&, const Material&,
+                      bool is_exclusive = false);
+    Shape CreateShape(const PlaneGeometry&, const Material&,
+                      bool is_exclusive = false);
+
+    VehicleManager& GetVehicleManager();
+    const VehicleManager& GetVehicleManager() const;
 
     Scene GetMainScene();
 

@@ -34,32 +34,45 @@ ConvexMesh Context::CreateConvexMesh(std::span<const Vec3> vertices) {
     return m_impl->CreateConvexMesh(vertices);
 }
 
-Shape Context::CreateShape(const SphereGeometry& g, const Material& mtl) {
-    return m_impl->CreateShape(g, mtl);
+Shape Context::CreateShape(const SphereGeometry& g, const Material& mtl, bool is_exclusive) {
+    return m_impl->CreateShape(g, mtl, is_exclusive);
 }
 
-Shape Context::CreateShape(const BoxGeometry& g, const Material& mtl) {
-    return m_impl->CreateShape(g, mtl);
+Shape Context::CreateShape(const BoxGeometry& g, const Material& mtl,
+                           bool is_exclusive) {
+    return m_impl->CreateShape(g, mtl, is_exclusive);
 }
 
-Shape Context::CreateShape(const CapsuleGeometry& g, const Material& mtl) {
-    return m_impl->CreateShape(g, mtl);
+Shape Context::CreateShape(const CapsuleGeometry& g, const Material& mtl,
+                           bool is_exclusive) {
+    return m_impl->CreateShape(g, mtl, is_exclusive);
 }
 
-Shape Context::CreateShape(const TriangleMeshGeometry& g, const Material& mtl) {
-    return m_impl->CreateShape(g, mtl);
+Shape Context::CreateShape(const TriangleMeshGeometry& g, const Material& mtl,
+                           bool is_exclusive) {
+    return m_impl->CreateShape(g, mtl, is_exclusive);
 }
 
-Shape Context::CreateShape(const ConvexMeshGeometry& g, const Material& mtl) {
-    return m_impl->CreateShape(g, mtl);
+Shape Context::CreateShape(const ConvexMeshGeometry& g, const Material& mtl,
+                           bool is_exclusive) {
+    return m_impl->CreateShape(g, mtl, is_exclusive);
 }
 
-Shape Context::CreateShape(const PlaneGeometry& g, const Material& mtl) {
-    return m_impl->CreateShape(g, mtl);
+Shape Context::CreateShape(const PlaneGeometry& g, const Material& mtl,
+                           bool is_exclusive) {
+    return m_impl->CreateShape(g, mtl, is_exclusive);
 }
 
 Scene Context::GetMainScene() {
     return m_impl->GetMainScene();
+}
+
+VehicleManager& Context::GetVehicleManager() {
+    return m_impl->GetVehicleManager();
+}
+
+const VehicleManager& Context::GetVehicleManager() const {
+    return m_impl->GetVehicleManager();
 }
 
 void Context::Update(float delta_time) {

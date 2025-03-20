@@ -25,6 +25,9 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    ImFontConfig font_config;
+    font_config.SizePixels = 20;
+    io.Fonts->AddFontDefault(&font_config);
 
     ImGui::StyleColorsDark();
 

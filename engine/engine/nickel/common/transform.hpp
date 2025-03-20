@@ -15,5 +15,6 @@ struct Transform {
 };
 
 Transform operator*(const Transform& t1, const Transform& t2);
+Vec3 operator*(const Transform& t, const Vec3& p);
 
 }

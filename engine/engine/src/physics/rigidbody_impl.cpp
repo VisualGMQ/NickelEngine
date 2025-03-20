@@ -75,6 +75,7 @@ bool RigidActorImpl::IsEnableSimulation() {
 
 void RigidActorImpl::AttachShape(const Shape& shape) {
     m_actor->attachShape(*shape.GetImpl()->m_shape);
+    shape.GetImpl()->m_shape->release();
 }
 
 void RigidActorImpl::DetachShape(const Shape& shape) {

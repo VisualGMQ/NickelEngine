@@ -97,9 +97,26 @@ void debugDrawRigidActor(const physx::PxActor* actor) {
             case physx::PxGeometryType::eCONVEXMESH: {
                 auto& convex_mesh = holder.convexMesh();
                 auto mesh = convex_mesh.convexMesh;
-                auto vertices =
-                    std::span{mesh->getVertices(), mesh->getNbVertices()};
+                std::vector<Vec3> vertices;
+                vertices.resize(mesh->getNbVertices());
                 auto indices = mesh->getIndexBuffer();
+
+                auto transform =
+                    global_transform *
+                    Transform{
+                        Vec3{}, physics::Vec3FromPhysX(convex_mesh.scale.scale),
+                        physics::QuatFromPhysX(convex_mesh.scale.rotation)};
+
+                std::ranges::transform(
+                    std::span{mesh->getVertices(), mesh->getNbVertices()},
+                    vertices.begin(), [&](const physx::PxVec3& v) {
+                        return (transform *
+                                Transform{
+                                    physics::Vec3FromPhysX(v), {1, 1, 1},
+                                     {}
+                        })
+                            .p;
+                    });
 
                 for (uint32_t i = 0; i < mesh->getNbPolygons(); i++) {
                     physx::PxHullPolygon face;
@@ -108,11 +125,9 @@ void debugDrawRigidActor(const physx::PxActor* actor) {
                     const physx::PxU8* face_indices = indices + face.mIndexBase;
 
                     for (uint32_t j = 1; j < face.mNbVerts; j++) {
-                        const physx::PxVec3& p2 = vertices[face_indices[j]];
-                        const physx::PxVec3& p1 = vertices[face_indices[j - 1]];
-                        debug_drawer.DrawLine(physics::Vec3FromPhysX(p1),
-                                              physics::Vec3FromPhysX(p2), color,
-                                              color);
+                        const Vec3& p2 = vertices[face_indices[j]];
+                        const Vec3& p1 = vertices[face_indices[j - 1]];
+                        debug_drawer.DrawLine(p1, p2, color, color);
                     }
                 }
             } break;
@@ -123,10 +138,11 @@ void debugDrawRigidActor(const physx::PxActor* actor) {
             } break;
             case physx::PxGeometryType::eCAPSULE: {
                 auto& capsule = holder.capsule();
-                debug_drawer.DrawCapsule(global_transform.p, capsule.halfHeight, capsule.radius,
+                debug_drawer.DrawCapsule(
+                    global_transform.p, capsule.halfHeight, capsule.radius,
                     global_transform.q *
                         Quat::Create(Vec3{0, 0, 1}, Degrees{90}),
-                                         color, true);
+                    color, true);
             } break;
             case physx::PxGeometryType::ePLANE:
             case physx::PxGeometryType::eCONVEXCORE:
@@ -152,9 +168,9 @@ void Level::Update() {
     actors.resize(scene->getNbActors(required_actor_type));
     scene->getActors(required_actor_type, actors.data(), actors.size());
 
-    for (auto actor : actors) {
-        debugDrawRigidActor(actor);
-    }
+   for (auto actor : actors) {
+       debugDrawRigidActor(actor);
+   }
 }
 
 void Level::preorderGO(GameObject* parent, GameObject& go) {
