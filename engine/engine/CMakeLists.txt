@@ -47,7 +47,7 @@ macro(attach_common_config_on_engine target_name)
         NvBlast::Tk
         NvBlast::ExtStress
     )
-    target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui)
+    target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui implot)
 
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp nickel/physics/internal/pch.hpp)
     target_compile_definitions(${target_name} PRIVATE _CRT_SECURE_NO_WARNINGS)

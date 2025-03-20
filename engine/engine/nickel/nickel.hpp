@@ -11,6 +11,7 @@
 #include "nickel/fs/dialog.hpp"
 
 #include "imgui.h"
+#include "implot.h"
 #include "misc/Level.hpp"
 #include "misc/cpp/imgui_stdlib.h"
 #include "nickel/graphics/gltf.hpp"
