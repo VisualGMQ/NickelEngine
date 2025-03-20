@@ -23,13 +23,19 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // Enable Docking
+    io.ConfigFlags |=
+        ImGuiConfigFlags_ViewportsEnable;  // Enable Multi-Viewport / Platform
+                                           // Windows
     ImFontConfig font_config;
     font_config.SizePixels = 20;
     io.Fonts->AddFontDefault(&font_config);
 
     ImGui::StyleColorsDark();
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 0.0f;
+    style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
     DeviceImpl& impl = adapter.GetDevice().Impl();
 
@@ -203,7 +209,13 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
     // Record dear imgui primitives into command m_buffer
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
-    // Submit command m_buffer
+    // Update and Render additional Platform Windows
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
+
+    // Submit command buffer
     vkCmdEndRenderPass(cmd);
     {
         VkPipelineStageFlags wait_stage =
