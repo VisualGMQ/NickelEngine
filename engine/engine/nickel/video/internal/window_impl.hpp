@@ -10,7 +10,9 @@ public:
     Impl(const std::string& title, int w, int h);
     SDL_Window* GetWindow() const;
     SVector<uint32_t, 2> GetSize() const noexcept;
+    
     bool IsMinimize() const noexcept;
+    void SetTitle(const std::string& title) const;
 
     SDL_Window* m_window;
 };

@@ -29,4 +29,8 @@ bool Window::Impl::IsMinimize() const noexcept {
     return SDL_GetWindowFlags(m_window) & SDL_WINDOW_MINIMIZED;
 }
 
+void Window::Impl::SetTitle(const std::string& title) const {
+    SDL_SetWindowTitle(m_window, title.c_str());
+}
+
 }  // namespace nickel::video

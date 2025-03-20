@@ -32,3 +32,10 @@ macro(mark_as_cli_test target_name)
     set_tests_properties(${target_name} PROPERTIES LABELS "cli")
 endmacro()
 
+macro(mark_as_tool target_name)
+    set_target_properties(${target_name} PROPERTIES
+        FOLDER tools
+        VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    target_link_libraries(${target_name} PRIVATE ${NICKEL_MAIN_ENTRY_NAME})
+endmacro()
+

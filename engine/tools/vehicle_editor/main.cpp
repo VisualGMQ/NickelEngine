@@ -1,4 +1,3 @@
-#include "nickel/common/macro.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
@@ -6,83 +5,44 @@ class Application : public nickel::Application {
 public:
     void OnInit() override {
         auto& ctx = nickel::Context::GetInst();
-        nickel::FlyCamera& camera = (nickel::FlyCamera&)ctx.GetCamera();
-
-        camera.MoveTo(nickel::Vec3{0, 3, 3});
-        camera.SetPitch(nickel::Degrees{45});
-
-        auto& mouse = ctx.GetDeviceManager().GetMouse();
-        mouse.RelativeMode(true);
-        mouse.Show(false);
-
-        auto& mgr = ctx.GetGLTFManager();
-        mgr.Load("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
-        m_model = mgr.Find("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
+        auto frustum = ctx.GetCamera().GetFrustum();
+        ctx.ChangeCamera(std::make_unique<nickel::OrbitCamera>(
+            frustum.fov, frustum.aspect, frustum.near, frustum.far));
     }
 
     void OnUpdate() override {
+        auto& ctx = nickel::Context::GetInst();
+
         updateCamera();
         drawGrid();
-        
-        auto& ctx = nickel::Context::GetInst();
-        ctx.GetGraphicsContext().DrawModel({}, m_model);
-
-        
-        auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
-        auto& mouse = ctx.GetDeviceManager().GetMouse();
-        if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
-            mouse.RelativeMode(mouse.IsRelativeMode() ? false : true);
-        }
-
-        // ImGui::ShowDemoWindow();
     }
 
 private:
-    nickel::graphics::GLTFModel m_model;
-    float m_move_speed = 0.1f;
-    
+    nickel::physics::VehicleWheelSim4WDescriptor m_wheel_sim_desc;
+    nickel::physics::VehicleDriveSim4WDescriptor m_drive_sim_desc;
+
     void updateCamera() {
         auto& ctx = nickel::Context::GetInst();
-        nickel::FlyCamera& camera =
-            static_cast<nickel::FlyCamera&>(ctx.GetCamera());
+        nickel::OrbitCamera& camera =
+            static_cast<nickel::OrbitCamera&>(ctx.GetCamera());
         auto& device_mgr = ctx.GetDeviceManager();
         auto& keyboard = device_mgr.GetKeyboard();
         auto& mouse = device_mgr.GetMouse();
 
-        NICKEL_RETURN_IF_FALSE(mouse.IsRelativeMode());
+        constexpr nickel::Radians rotate_speed = nickel::Degrees{0.1};
+        constexpr float scale_speed = 0.1f;
 
-        m_move_speed = std::max(m_move_speed + mouse.GetWheelDelta() * 0.01, 0.001);
+        if (mouse.GetButton(nickel::input::Mouse::Button::Type::Left)
+                .IsPressing()) {
+            auto& offset = mouse.GetOffset();
+            camera.AddTheta(offset.x * rotate_speed);
+            camera.AddPhi(-offset.y * rotate_speed);
 
-        if (auto btn = keyboard.GetKey(nickel::input::Key::W);
-            btn.IsPressing()) {
-            camera.MoveForward(m_move_speed);
+            float wheel = mouse.GetWheelDelta();
+            if (wheel != 0) {
+                camera.AddRadius(-wheel * scale_speed); 
+            }
         }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::S);
-            btn.IsPressing()) {
-            camera.MoveForward(-m_move_speed);
-        }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::A);
-            btn.IsPressing()) {
-            camera.MoveRightLeft(-m_move_speed);
-        }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::D);
-            btn.IsPressing()) {
-            camera.MoveRightLeft(m_move_speed);
-        }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::R);
-            btn.IsPressing()) {
-            camera.MoveUpDown(m_move_speed);
-        }
-        if (auto btn = keyboard.GetKey(nickel::input::Key::F);
-            btn.IsPressing()) {
-            camera.MoveUpDown(-m_move_speed);
-        }
-
-        constexpr nickel::Degrees rot_radians{0.1};
-        auto offset = mouse.GetOffset();
-
-        camera.AddYaw(-offset.x * rot_radians);
-        camera.AddPitch(-offset.y * rot_radians);
     }
 
     void drawGrid() {
@@ -148,4 +108,4 @@ private:
     }
 };
 
-NICKEL_RUN_APP(Application);
+NICKEL_RUN_APP(Application)

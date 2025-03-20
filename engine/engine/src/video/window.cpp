@@ -20,7 +20,11 @@ SVector<uint32_t, 2> Window::GetSize() const noexcept {
 }
 
 bool Window::IsMinimize() const noexcept {
-    return m_impl->IsMinimize(); 
+    return m_impl->IsMinimize();
+}
+
+void Window::SetTitle(const std::string& title) const {
+    m_impl->SetTitle(title);
 }
 
 Window::~Window() {}
