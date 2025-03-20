@@ -3,6 +3,8 @@
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
+#include "nickel/physics/collision_group.hpp"
+
 class Application : public nickel::Application {
 public:
     void OnInit() override {

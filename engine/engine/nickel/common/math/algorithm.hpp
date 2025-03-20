@@ -392,17 +392,17 @@ SMatrix<T, 4, 4> CreateTranslation(const SVector<T, 3>& position) {
 template <typename T>
 SMatrix<T, 4, 4> LookAt(const SVector<T, 3>& target,
                         const SVector<T, 3>& srcPos, const SVector<T, 3>& up) {
-    NICKEL_ASSERT(up.LengthSqrd() == 1, "look at param up must be normalized");
+    NICKEL_ASSERT(LengthSqrd(up) == 1, "look at param up must be normalized");
 
     auto zAxis = Normalize(srcPos - target);
-    auto xAxis = Normalize(up.Cross(zAxis));
-    auto yAxis = zAxis.Cross(xAxis);
+    auto xAxis = Normalize(Cross(up, zAxis));
+    auto yAxis = Cross(zAxis, xAxis);
 
     // clang-format off
     return SMatrix<T, 4, 4>::FromRow(
-        xAxis.x, xAxis.y, xAxis.z, -xAxis.Dot(srcPos),
-        yAxis.x, yAxis.y, yAxis.z, -yAxis.Dot(srcPos),
-        zAxis.x, zAxis.y, zAxis.z, -zAxis.Dot(srcPos),
+        xAxis.x, xAxis.y, xAxis.z, Dot(-xAxis, srcPos),
+        yAxis.x, yAxis.y, yAxis.z, Dot(-yAxis, srcPos),
+        zAxis.x, zAxis.y, zAxis.z, Dot(-zAxis, srcPos),
              0,      0,       0,                    1
     );
     // clang-format on

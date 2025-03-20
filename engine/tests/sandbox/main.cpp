@@ -118,7 +118,7 @@ public:
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
 
-        updateFlyCamera();
+        updateCamera();
         if (mode == Mode::Character) {
             shootBall();
             moveCharacter();
@@ -214,7 +214,7 @@ private:
         }
     }
 
-    void updateFlyCamera() {
+    void updateCamera() {
         auto& ctx = nickel::Context::GetInst();
         nickel::FlyCamera& camera =
             static_cast<nickel::FlyCamera&>(ctx.GetCamera());
