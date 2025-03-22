@@ -8,6 +8,7 @@
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/input/device/device_manager.hpp"
 #include "nickel/video/window.hpp"
+#include "nickel/fs/dialog.hpp"
 
 #include "imgui.h"
 #include "misc/Level.hpp"

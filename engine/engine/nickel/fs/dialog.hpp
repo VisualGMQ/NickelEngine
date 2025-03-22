@@ -4,6 +4,8 @@
 #include <vector>
 #include <memory>
 
+#include "nickel/fs/path.hpp"
+
 namespace nickel {
 
 class FileDialog {
@@ -20,7 +22,7 @@ public:
     FileDialog& SetDefaultFolder(const std::string&);
     FileDialog& Open();
 
-    const std::vector<std::string>& GetSelected() const;
+    const std::vector<Path>& GetSelected() const;
 
 private:
     class Impl;
