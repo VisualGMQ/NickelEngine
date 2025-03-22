@@ -1,9 +1,8 @@
 #include "nickel/fs/dialog.hpp"
 
 #include "nickel/common/internal/sdl_call.hpp"
+#include "nickel/fs/path.hpp"
 #include "nickel/internal/pch.hpp"
-#include "nickel/nickel.hpp"
-#include "nickel/video/internal/window_impl.hpp"
 
 namespace nickel {
 
@@ -21,7 +20,7 @@ public:
     void SetDefaultFolder(const std::string&);
     void Open();
 
-    const std::vector<std::string>& GetSelectedFiles() const;
+    const std::vector<Path>& GetSelectedFiles() const;
 
 private:
     struct Filter {
@@ -38,7 +37,8 @@ private:
     std::string m_cancel_label;
     SDL_PropertiesID m_properties;
 
-    std::vector<std::string> m_results;
+    std::promise<std::vector<Path>> m_promise;
+    std::vector<Path> m_results;
 
     static void callback(void* userdata, const char* const* filelist,
                          int filter);
@@ -78,6 +78,8 @@ void FileDialog::Impl::SetDefaultFolder(const std::string& folder) {
 }
 
 void FileDialog::Impl::Open() {
+    std::future f = m_promise.get_future();
+
     SDL_FileDialogType dialog_type{};
     switch (m_type) {
         case Type::OpenFile:
@@ -113,9 +115,6 @@ void FileDialog::Impl::Open() {
     SDL_CALL(SDL_SetBooleanProperty(m_properties,
                                     SDL_PROP_FILE_DIALOG_MANY_BOOLEAN,
                                     m_allow_multiple_select));
-    SDL_CALL(SDL_SetPointerProperty(
-        m_properties, SDL_PROP_FILE_DIALOG_WINDOW_POINTER,
-        ::nickel::Context::GetInst().GetWindow().GetImpl().m_window));
     SDL_CALL(SDL_SetNumberProperty(
         m_properties, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, filters.size()));
     SDL_CALL(SDL_SetPointerProperty(
@@ -123,20 +122,26 @@ void FileDialog::Impl::Open() {
 
     SDL_ShowFileDialogWithProperties(dialog_type, &callback, this,
                                      m_properties);
+
+    m_results = f.get();
 }
 
-const std::vector<std::string>& FileDialog::Impl::GetSelectedFiles() const {
+const std::vector<Path>& FileDialog::Impl::GetSelectedFiles() const {
     return m_results;
 }
 
 void FileDialog::Impl::callback(void* userdata, const char* const* filelist,
                                 int) {
-    std::vector<std::string> results;
+    auto self = static_cast<Impl*>(userdata);
+
+    std::vector<Path> results;
     while (filelist && *filelist) {
         const char* file = *filelist;
         results.push_back(file);
         filelist++;
     }
+
+    self->m_promise.set_value(std::move(results));
 }
 
 FileDialog FileDialog::CreateOpenFileDialog() {
@@ -182,12 +187,12 @@ FileDialog& FileDialog::SetDefaultFolder(const std::string& folder) {
     return *this;
 }
 
-FileDialog& FileDialog::Open(){
+FileDialog& FileDialog::Open() {
     m_impl->Open();
     return *this;
 }
 
-const std::vector<std::string>& FileDialog::GetSelected() const {
+const std::vector<Path>& FileDialog::GetSelected() const {
     return m_impl->GetSelectedFiles();
 }
 
