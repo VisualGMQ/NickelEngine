@@ -200,7 +200,8 @@ AdapterImpl::~AdapterImpl() {
     auto vkDestroyDebugUtilsMessengerExTFuc =
         (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
             m_instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (vkDestroyDebugUtilsMessengerExTFuc != nullptr) {
+    if (vkDestroyDebugUtilsMessengerExTFuc != nullptr &&
+        m_debug_utils_messenger != VK_NULL_HANDLE) {
         vkDestroyDebugUtilsMessengerExTFuc(m_instance, m_debug_utils_messenger,
                                            nullptr);
     }

@@ -36,7 +36,7 @@ public:
                 nickel::physics::PlaneGeometry{}, material);
             go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
-            root_go.m_children.push_back(go);
+            root_go.m_children.emplace_back(std::move(go));
         }
         // create Vehicle
         {
@@ -148,48 +148,52 @@ public:
 
             driving_left_desc.m_wheel.m_max_hand_brake_torque = 4000.0f;
             driving_left_desc.m_wheel.m_max_steer = 0;
-            m_wheel_sim_desc.m_rear_left_wheel =
-                m_wheel_sim_desc.m_wheels.size();
-            m_wheel_sim_desc.m_wheels.push_back(driving_left_desc);
+            driving_left_desc.m_shape = 0;
+            wheel_sim_desc.m_rear_left_wheel =
+                wheel_sim_desc.m_wheels.size();
+            wheel_sim_desc.m_wheels.push_back(driving_left_desc);
 
             driving_right_desc.m_wheel.m_max_hand_brake_torque = 4000.0f;
             driving_right_desc.m_wheel.m_max_steer = 0;
-            m_wheel_sim_desc.m_rear_right_wheel =
-                m_wheel_sim_desc.m_wheels.size();
-            m_wheel_sim_desc.m_wheels.push_back(driving_right_desc);
+            driving_right_desc.m_shape = 1;
+            wheel_sim_desc.m_rear_right_wheel =
+                wheel_sim_desc.m_wheels.size();
+            wheel_sim_desc.m_wheels.push_back(driving_right_desc);
 
             steer_left_desc.m_wheel.m_max_steer = nickel::PI * 0.33333f;
             steer_left_desc.m_wheel.m_max_hand_brake_torque = 0;
             steer_left_desc.m_wheel.m_max_brake_torque = 2500.0f;
-            m_wheel_sim_desc.m_front_left_wheel =
-                m_wheel_sim_desc.m_wheels.size();
-            m_wheel_sim_desc.m_wheels.push_back(steer_left_desc);
+            steer_left_desc.m_shape = 2;
+            wheel_sim_desc.m_front_left_wheel =
+                wheel_sim_desc.m_wheels.size();
+            wheel_sim_desc.m_wheels.push_back(steer_left_desc);
 
             steer_right_desc.m_wheel.m_max_steer = nickel::PI * 0.33333f;
             steer_right_desc.m_wheel.m_max_hand_brake_torque = 0;
             steer_right_desc.m_wheel.m_max_brake_torque = 2500.0f;
-            m_wheel_sim_desc.m_front_right_wheel =
-                m_wheel_sim_desc.m_wheels.size();
-            m_wheel_sim_desc.m_wheels.push_back(steer_right_desc);
+            steer_right_desc.m_shape = 3;
+            wheel_sim_desc.m_front_right_wheel =
+                wheel_sim_desc.m_wheels.size();
+            wheel_sim_desc.m_wheels.push_back(steer_right_desc);
 
             go.m_rigid_actor.AttachShape(driving_left_shape);
             go.m_rigid_actor.AttachShape(driving_right_shape);
             go.m_rigid_actor.AttachShape(steer_left_shape);
             go.m_rigid_actor.AttachShape(steer_right_shape);
 
-            m_wheel_sim_desc.m_chassis_mass = 1500;
+            wheel_sim_desc.m_chassis_mass = 1500;
 
             nickel::physics::VehicleWheelSimDescriptor::AntiRollBar front_bar;
             front_bar.m_wheel0 = wheel_steer_left - 1;
             front_bar.m_wheel1 = wheel_steer_right - 1;
             front_bar.stiffness = 10000;
-            m_wheel_sim_desc.m_anti_roll_bars.push_back(front_bar);
+            wheel_sim_desc.m_anti_roll_bars.push_back(front_bar);
 
             nickel::physics::VehicleWheelSimDescriptor::AntiRollBar rear_bar;
             rear_bar.m_wheel0 = wheel_driving_left - 1;
             rear_bar.m_wheel1 = wheel_driving_right - 1;
             rear_bar.stiffness = 10000;
-            m_wheel_sim_desc.m_anti_roll_bars.push_back(rear_bar);
+            wheel_sim_desc.m_anti_roll_bars.push_back(rear_bar);
 
             for (auto& mesh : meshes) {
                 if (mesh.m_name.find("chassis") != mesh.m_name.npos) {
@@ -211,22 +215,22 @@ public:
 
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
 
-            m_drive_sim_desc.m_engine.m_peak_torque = 500;
-            m_drive_sim_desc.m_engine.m_max_omega = 600;
+            drive_sim_desc.m_engine.m_peak_torque = 500;
+            drive_sim_desc.m_engine.m_max_omega = 600;
 
-            m_drive_sim_desc.m_gear.m_reverse_ratio = -4;
-            m_drive_sim_desc.m_gear.m_neutral_ratio = 0;
-            m_drive_sim_desc.m_gear.m_first_ratio = 4;
-            m_drive_sim_desc.m_gear.m_final_ratio = 4;
-            m_drive_sim_desc.m_gear.m_switch_time = 0.5;
+            drive_sim_desc.m_gear.m_reverse_ratio = -4;
+            drive_sim_desc.m_gear.m_neutral_ratio = 0;
+            drive_sim_desc.m_gear.m_first_ratio = 4;
+            drive_sim_desc.m_gear.m_final_ratio = 4;
+            drive_sim_desc.m_gear.m_switch_time = 0.5;
 
-            m_drive_sim_desc.m_clutch.m_strength = 10;
+            drive_sim_desc.m_clutch.m_strength = 10;
 
-            m_drive_sim_desc.m_diff.m_type =
+            drive_sim_desc.m_diff.m_type =
                 nickel::physics::VehicleDifferential4WDescriptor::Type::LS_4_WD;
 
             auto vehicle = physics_ctx.GetVehicleManager().CreateVehicle4WDrive(
-                m_wheel_sim_desc, m_drive_sim_desc,
+                wheel_sim_desc, drive_sim_desc,
                 static_cast<nickel::physics::RigidDynamic&>(go.m_rigid_actor));
 
             nickel::physics::VehicleSteerVsForwardTable table;
@@ -236,7 +240,7 @@ public:
             table.Add(120.0, 0.1);
             vehicle.SetSteerVsForwardSpeedLookupTable(table);
             go.m_vehicle = vehicle;
-            root_go.m_children.push_back(go);
+            root_go.m_children.emplace_back(std::move(go));
         }
     }
 
@@ -257,8 +261,8 @@ public:
     }
 
 private:
-    nickel::physics::VehicleWheelSim4WDescriptor m_wheel_sim_desc;
-    nickel::physics::VehicleDriveSim4WDescriptor m_drive_sim_desc;
+    nickel::physics::VehicleWheelSim4WDescriptor wheel_sim_desc;
+    nickel::physics::VehicleDriveSim4WDescriptor drive_sim_desc;
 
     void driveVehicle() {
         auto& ctx = nickel::Context::GetInst();

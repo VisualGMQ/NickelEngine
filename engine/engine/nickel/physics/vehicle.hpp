@@ -68,6 +68,7 @@ struct VehicleWheelSimDescriptor {
         Vec3 m_wheel_centre_cm_offsets;
         Vec3 m_suspension_force_app_point_offsets = {0, 0, 0};
         Vec3 m_tire_force_app_cm_offsets = {0, 0, 0};
+        uint32_t m_shape{};
     };
 
     struct AntiRollBar {

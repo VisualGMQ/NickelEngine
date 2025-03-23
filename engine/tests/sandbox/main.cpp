@@ -44,7 +44,7 @@ public:
             shape.SetLocalPose({0, 1.5, 0}, {});
             go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
-            root_go.m_children.push_back(go);
+            root_go.m_children.emplace_back(std::move(go));
         }
         //  create plane
         {
@@ -59,7 +59,7 @@ public:
                 nickel::physics::PlaneGeometry{}, material);
             go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
-            root_go.m_children.push_back(go);
+            root_go.m_children.emplace_back(std::move(go));
         }
         // create gun
         {
@@ -81,7 +81,7 @@ public:
             go.m_controller =
                 physics_ctx.GetMainScene().CreateCapsuleController(desc);
 
-            root_go.m_children.push_back(go);
+            root_go.m_children.emplace_back(std::move(go));
         }
 
         // create door
@@ -109,7 +109,7 @@ public:
             }
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
 
-            root_go.m_children.push_back(go);
+            root_go.m_children.emplace_back(std::move(go));
         }
     }
 
@@ -207,7 +207,7 @@ private:
             ball_go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(ball_go.m_rigid_actor);
             auto& root_go = ctx.GetCurrentLevel().GetRootGO();
-            root_go.m_children.push_back(ball_go);
+            root_go.m_children.emplace_back(std::move(ball_go));
             static_cast<nickel::physics::RigidDynamic&>(ball_go.m_rigid_actor)
                 .AddForce(camera.GetForward() * 20,
                           nickel::physics::ForceMode::Impulse);

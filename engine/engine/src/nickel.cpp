@@ -64,7 +64,7 @@ Context::~Context() {
     m_gltf_mgr.reset();
     m_texture_mgr.reset();
 
-    LOGI("clear graphics context");
+    LOGI("release graphics context");
     m_graphics_ctx.reset();
 
     LOGI("shutdown graphics system");

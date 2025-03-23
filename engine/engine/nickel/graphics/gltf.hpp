@@ -52,6 +52,8 @@ public:
     bool Load(const Path&, const GLTFLoadConfig& = {});
     GLTFModel Find(const std::string&);
     void GC();
+    void Clear();
+    std::vector<std::string> GetAllGLTFModelNames() const;
 
 private:
     std::unique_ptr<GLTFManagerImpl> m_impl;

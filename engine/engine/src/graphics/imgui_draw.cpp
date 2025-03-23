@@ -21,6 +21,7 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // Enable Docking
@@ -28,7 +29,7 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
         ImGuiConfigFlags_ViewportsEnable;  // Enable Multi-Viewport / Platform
                                            // Windows
     ImFontConfig font_config;
-    font_config.SizePixels = 20;
+    font_config.SizePixels = 30;
     io.Fonts->AddFontDefault(&font_config);
 
     ImGui::StyleColorsDark();
@@ -68,6 +69,7 @@ ImGuiRenderPass::~ImGuiRenderPass() {
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
     DestroyFramebuffers();
@@ -91,6 +93,11 @@ void ImGuiRenderPass::End(Device device, CommonResource& res,
 
 void ImGuiRenderPass::PrepareForRender() {
     ImGui::Render();
+    // Update and Render additional Platform Windows
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 }
 
 void ImGuiRenderPass::initDescriptorPool(const Adapter& adapter) {
@@ -209,11 +216,6 @@ void ImGuiRenderPass::renderImGui(Device device, CommonResource& res,
     // Record dear imgui primitives into command m_buffer
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
-    // Update and Render additional Platform Windows
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-    }
 
     // Submit command buffer
     vkCmdEndRenderPass(cmd);

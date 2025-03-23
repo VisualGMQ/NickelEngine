@@ -37,9 +37,13 @@ ContextImpl::ContextImpl() {
     }
 
     m_pvd = physx::PxCreatePvd(*m_foundation);
-    m_pvd_transport =
-        physx::PxDefaultPvdSocketTransportCreate("localhost", 5425, 10);
-    m_pvd->connect(*m_pvd_transport, physx::PxPvdInstrumentationFlag::eALL);
+    if (!m_pvd) {
+        LOGE("create PhysX PVD failed");
+    } else {
+        m_pvd_transport =
+            physx::PxDefaultPvdSocketTransportCreate("localhost", 5425, 10);
+        m_pvd->connect(*m_pvd_transport, physx::PxPvdInstrumentationFlag::eALL);
+    }
 
     m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation,
                                 m_tolerances_scale, false, m_pvd);
@@ -54,15 +58,19 @@ ContextImpl::ContextImpl() {
     physx::PxVehicleSetBasisVectors({0, 1, 0}, {1, 0, 0});
     physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
 
-    m_main_scene = CreateScene("NickelEngineMainScene", {0, -9.8, 0});
+    LOGT("create main physics scene");
+    m_main_scene = CreateScene("NickelMainPhysicsScene", {0, -9.8, 0});
 
+    LOGT("init blast framework");
     m_blast_framework = NvBlastTkFrameworkCreate();
 
-    m_vehicle_manager =
-        std::make_unique<VehicleManager>(*this, *m_main_scene.GetImpl());
+    LOGT("init vehicle manager");
+    m_vehicle_manager = std::make_unique<VehicleManager>(*this, *m_main_scene.GetImpl());
 }
 
 ContextImpl::~ContextImpl() {
+    m_main_scene = {};
+    
     m_vehicle_manager.reset();
     m_joint_allocator.FreeAll();
     m_material_allocator.FreeAll();
@@ -74,8 +82,12 @@ ContextImpl::~ContextImpl() {
     physx::PxCloseVehicleSDK();
     m_blast_framework->release();
     m_physics->release();
-    m_pvd->release();
-    m_pvd_transport->release();
+    if (m_pvd) {
+        m_pvd->release();
+    }
+    if (m_pvd_transport) {
+        m_pvd_transport->release();
+    }
     m_foundation->release();
 }
 

@@ -122,7 +122,7 @@ void OrbitCamera::SetTheta(Radians theta) {
 }
 
 void OrbitCamera::SetPhi(Radians phi) {
-    m_phi = Clamp<float>(phi.Value(), -PI + 0.0001, PI - 0.0001);
+    m_phi = Clamp<float>(phi.Value(), 0.0001, PI - 0.0001);
     m_position.y = std::cos(m_phi.Value()) * m_radius;
     float l = std::sin(m_phi.Value()) * m_radius;
     m_position.x = l * std::cos(m_theta.Value());
