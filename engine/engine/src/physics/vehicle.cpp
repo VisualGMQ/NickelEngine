@@ -1,5 +1,6 @@
 #include "nickel/physics/vehicle.hpp"
 
+#include "nickel/common/macro.hpp"
 #include "nickel/physics/context.hpp"
 #include "nickel/physics/internal/pch.hpp"
 #include "nickel/physics/internal/util.hpp"
@@ -52,6 +53,15 @@ VehicleSteerVsForwardTable::VehicleSteerVsForwardTable() {
 void VehicleSteerVsForwardTable::Add(float speed, float steer_coefficient) {
     NICKEL_ASSERT(steer_coefficient >= 0 && steer_coefficient <= 1);
     m_datas[m_count++] = {speed, steer_coefficient};
+}
+
+void VehicleSteerVsForwardTable::Remove(size_t i) {
+    NICKEL_RETURN_IF_FALSE(i < m_count);
+
+    for (; i < m_count; i++) {
+        m_datas[i] = m_datas[i + 1];
+    }
+    m_count --;
 }
 
 uint32_t VehicleSteerVsForwardTable::Size() const {

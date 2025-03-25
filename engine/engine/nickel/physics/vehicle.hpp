@@ -217,6 +217,7 @@ struct VehicleSteerVsForwardTable {
 
     VehicleSteerVsForwardTable();
     void Add(float speed, float steer_coefficient);
+    void Remove(size_t i);
     uint32_t Size() const;
     const SpeedSteerPair& GetPair(uint32_t idx) const;
 

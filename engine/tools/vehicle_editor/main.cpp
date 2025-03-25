@@ -67,6 +67,7 @@ private:
 
     nickel::physics::VehicleWheelSim4WDescriptor m_wheel_sim_desc;
     nickel::physics::VehicleDriveSim4WDescriptor m_drive_sim_desc;
+    nickel::physics::VehicleSteerVsForwardTable m_steer_vs_forward_table;
     std::vector<nickel::graphics::GLTFModel> m_models;
     std::vector<nickel::graphics::GLTFVertexData> m_physics_meshes;
     nickel::graphics::GLTFModel m_chassis_model, m_front_left_wheel_model,
@@ -330,9 +331,6 @@ private:
         nickel::physics::VehicleWheelSim4WDescriptor wheel_sim_desc;
         nickel::physics::VehicleDriveSim4WDescriptor drive_sim_desc;
 
-        constexpr uint32_t CollisionGroupVehicleChassis = 0x01;
-        constexpr uint32_t CollisionGroupVehicleWheels = 0x02;
-
         // create chassis
         {
             auto rigid =
@@ -475,12 +473,11 @@ private:
             static_cast<nickel::physics::RigidDynamic&>(
                 m_chassis_go->m_rigid_actor));
 
-        nickel::physics::VehicleSteerVsForwardTable table;
-        table.Add(0.0, 0.75);
-        table.Add(5.0, 0.75);
-        table.Add(30.0, 0.125);
-        table.Add(120.0, 0.1);
-        vehicle.SetSteerVsForwardSpeedLookupTable(table);
+        m_steer_vs_forward_table.Add(0.0, 0.75);
+        m_steer_vs_forward_table.Add(5.0, 0.75);
+        m_steer_vs_forward_table.Add(30.0, 0.125);
+        m_steer_vs_forward_table.Add(120.0, 0.1);
+        vehicle.SetSteerVsForwardSpeedLookupTable(m_steer_vs_forward_table);
         m_chassis_go->m_vehicle = vehicle;
     }
 
@@ -493,8 +490,10 @@ private:
                 static_cast<nickel::physics::RigidDynamic&>(
                     m_chassis_go->m_rigid_actor);
             rigid.SetGlobalTransform({0, 5, 0}, {});
-            m_chassis_go->m_vehicle = vehicle_mgr.CreateVehicle4WDrive(
+            auto vehicle = vehicle_mgr.CreateVehicle4WDrive(
                 m_wheel_sim_desc, m_drive_sim_desc, rigid);
+            vehicle.SetSteerVsForwardSpeedLookupTable(m_steer_vs_forward_table);
+            m_chassis_go->m_vehicle = vehicle;
         }
         if (ImGui::TreeNode("drive")) {
             tunningEngine(m_drive_sim_desc.m_engine);
@@ -508,6 +507,10 @@ private:
         if (ImGui::TreeNode("wheel")) {
             tunningWheelSimData(m_wheel_sim_desc);
             ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("steer vs forward table")) {
+            tunningSteerVsForwardTable(m_steer_vs_forward_table);
         }
     }
 
@@ -615,7 +618,7 @@ private:
                              FLT_MAX);
 
             std::array<const char*, 3> tunning_mode_name = {"single", "double",
-                                                            "four"};
+                                                            "all"};
             uint32_t tunning_mode_idx = static_cast<uint32_t>(m_tunning_mode);
             if (ImGui::BeginCombo("tunning mode",
                                   tunning_mode_name[tunning_mode_idx])) {
@@ -626,12 +629,6 @@ private:
                     }
                 }
                 ImGui::EndCombo();
-            }
-
-            WheelTunningMode last_tunning_mode =
-                static_cast<WheelTunningMode>(tunning_mode_idx);
-            if (last_tunning_mode != m_tunning_mode) {
-                // TODO:
             }
 
             auto& front_left_wheel =
@@ -840,6 +837,23 @@ private:
             ImGui::DragFloat3("wheel centre mass offset",
                               wheel.m_wheel_centre_cm_offsets.Ptr());
             ImGui::TreePop();
+        }
+    }
+
+    void tunningSteerVsForwardTable(
+        nickel::physics::VehicleSteerVsForwardTable& table) {
+        std::optional<size_t> pending_delete;
+        for (int i = 0; i < table.Size(); i++) {
+            auto& pair = table.GetPair(i);
+            if (ImGui::Button("delete")) {
+                pending_delete = i;
+            }
+            ImGui::SameLine();
+            ImGui::DragFloat2(("value " + std::to_string(i)).c_str(),
+                              (float*)&pair, 0.01, 0, FLT_MAX);
+        }
+        if (pending_delete) {
+            table.Remove(pending_delete.value());
         }
     }
 };
