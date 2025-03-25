@@ -349,8 +349,7 @@ private:
                 nickel::physics::ConvexMeshGeometry{
                     convex_mesh, mesh.m_transform.q, mesh.m_transform.scale},
                 ctx.GetPhysicsContext().CreateMaterial(0.8, 0.8, 0.1), true);
-            shape.SetQueryFilterData(
-                nickel::physics::FilterData{CollisionGroupVehicleChassis});
+            shape.SetCollisionGroup(nickel::physics::CollisionGroup::VehicleChassis);
             m_chassis_go->m_rigid_actor.AttachShape(shape);
 
             physics_ctx.GetMainScene().AddRigidActor(
@@ -408,10 +407,7 @@ private:
             auto shape = ctx.CreateShape(
                 nickel::physics::ConvexMeshGeometry{convex_mesh},
                 ctx.CreateMaterial(0.2, 0.2, 0.6), true);
-            shape.SetQueryFilterData(
-                nickel::physics::FilterData{CollisionGroupVehicleWheels});
-            desc.m_scene_query_filter_data.m_word0 =
-                ~(CollisionGroupVehicleWheels | CollisionGroupVehicleChassis);
+            shape.SetCollisionGroup(nickel::physics::CollisionGroup::VehicleWheel);
             return std::make_tuple(desc, shape);
         };
 
