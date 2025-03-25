@@ -1,11 +1,11 @@
 #include "nickel/physics/internal/scene_impl.hpp"
+#include "nickel/physics/internal/cct_impl.hpp"
 #include "nickel/physics/internal/context_impl.hpp"
 #include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/geometry_converter.hpp"
 #include "nickel/physics/internal/rigidbody_impl.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/internal/util.hpp"
-#include "nickel/physics/internal/cct_impl.hpp"
 
 namespace nickel::physics {
 
@@ -89,53 +89,6 @@ OverlapHit HitTypeFromPhysX<OverlapHit, physx::PxOverlapHit>(
     return result;
 }
 
-physx::PxFilterData FilterData2PhysX(const FilterData& data) {
-    physx::PxFilterData result;
-    result.word0 = data.m_word0;
-    result.word1 = data.m_word1;
-    result.word2 = data.m_word2;
-    result.word3 = data.m_word3;
-    return result;
-}
-
-FilterData FilterDataFromPhysX(const physx::PxFilterData& data) {
-    FilterData result;
-    result.m_word0 = data.word0;
-    result.m_word1 = data.word1;
-    result.m_word2 = data.word2;
-    result.m_word3 = data.word3;
-    return result;
-}
-
-PhysXQueryFilterCallback::PhysXQueryFilterCallback(
-    ContextImpl& ctx, QueryFilterCallback* callback)
-    : m_callback{callback}, m_ctx{ctx} {}
-
-physx::PxQueryHitType::Enum PhysXQueryFilterCallback::preFilter(
-    const physx::PxFilterData& filterData, const physx::PxShape* shape,
-    const physx::PxRigidActor* actor, physx::PxHitFlags& query_flags) {
-    if (m_callback) {
-        return QueryHitType2PhysX(m_callback->PreFilter(
-            FilterDataFromPhysX(filterData),
-            m_ctx.m_shape_const_allocator.Allocate(&m_ctx, shape),
-            m_ctx.m_rigid_actor_const_allocator.Allocate(&m_ctx, actor),
-            HitFlagFromPhysX(query_flags)));
-    }
-    return physx::PxQueryHitType::eBLOCK;
-}
-
-physx::PxQueryHitType::Enum PhysXQueryFilterCallback::postFilter(
-    const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
-    const physx::PxShape* shape, const physx::PxRigidActor* actor) {
-    if (m_callback) {
-        return QueryHitType2PhysX(m_callback->PostFilter(
-            FilterDataFromPhysX(filterData),
-            m_ctx.m_shape_const_allocator.Allocate(&m_ctx, shape),
-            m_ctx.m_rigid_actor_const_allocator.Allocate(&m_ctx, actor)));
-    }
-    return physx::PxQueryHitType::eBLOCK;
-}
-
 SceneImpl::SceneImpl(const std::string& name, ContextImpl* ctx,
                      physx::PxScene* scene)
     : m_scene{scene}, m_ctx{ctx} {
@@ -181,15 +134,13 @@ void SceneImpl::Simulate(float delta_time) const {
 bool SceneImpl::Raycast(const Vec3& origin, const Vec3& unit_dir,
                         float distance, RaycastHitCallback& hit_callback,
                         const QueryFilterData& filter_data,
-                        Flags<HitFlag> hit_flags,
-                        QueryFilterCallback* filter_callback) {
+                        Flags<HitFlag> hit_flags) const {
     PhysicsRaycastCallback physx_hit_callback{*m_ctx, hit_callback};
 
-    PhysXQueryFilterCallback physx_filter_callback{*m_ctx, filter_callback};
     bool has_touch = m_scene->raycast(
         Vec3ToPhysX(origin), Vec3ToPhysX(unit_dir), distance,
         physx_hit_callback, HitFlag2PhysX(hit_flags),
-        QueryFilterData2PhysX(filter_data), &physx_filter_callback);
+        QueryFilterData2PhysX(filter_data), &m_ctx->m_query_filter_callback);
 
     hit_callback.hasBlock = physx_hit_callback.hasBlock;
     hit_callback.nbTouches = physx_hit_callback.nbTouches;
@@ -207,16 +158,14 @@ bool SceneImpl::Sweep(const Geometry& geometry, const Vec3& p, const Quat& q,
                       const Vec3& unit_dir, float distance,
                       SweepHitCallback& hit_callback,
                       const QueryFilterData& filter_data,
-                      Flags<HitFlag> hit_flags,
-                      QueryFilterCallback* filter_callback, float inflation) {
+                      Flags<HitFlag> hit_flags, float inflation) const {
     PhysicsSweepCallback physx_hit_callback{*m_ctx, hit_callback};
 
-    PhysXQueryFilterCallback physx_filter_callback{*m_ctx, filter_callback};
     bool has_touch = m_scene->sweep(
         Geometry2PhysX(geometry).any(), {Vec3ToPhysX(p), QuatToPhysX(q)},
         Vec3ToPhysX(unit_dir), distance, physx_hit_callback,
         HitFlag2PhysX(hit_flags), QueryFilterData2PhysX(filter_data),
-        &physx_filter_callback, nullptr, inflation);
+        &m_ctx->m_query_filter_callback, nullptr, inflation);
 
     hit_callback.hasBlock = physx_hit_callback.hasBlock;
     hit_callback.nbTouches = physx_hit_callback.nbTouches;
@@ -232,15 +181,13 @@ bool SceneImpl::Sweep(const Geometry& geometry, const Vec3& p, const Quat& q,
 
 bool SceneImpl::Overlap(const Geometry& geometry, const Vec3& p, const Quat& q,
                         OverlapHitCallback& hit_callback,
-                        const QueryFilterData& filter_data,
-                        QueryFilterCallback* filter_callback) {
+                        const QueryFilterData& filter_data) const {
     PhysicsOverlapCallback physx_hit_callback{*m_ctx, hit_callback};
 
-    PhysXQueryFilterCallback physx_filter_callback{*m_ctx, filter_callback};
     bool has_touch = m_scene->overlap(
         Geometry2PhysX(geometry).any(), {Vec3ToPhysX(p), QuatToPhysX(q)},
         physx_hit_callback, QueryFilterData2PhysX(filter_data),
-        &physx_filter_callback);
+        &m_ctx->m_query_filter_callback);
 
     hit_callback.hasBlock = physx_hit_callback.hasBlock;
     hit_callback.nbTouches = physx_hit_callback.nbTouches;
@@ -264,7 +211,8 @@ void SceneImpl::GC() {
 
 CapsuleController SceneImpl::CreateCapsuleController(
     const CapsuleController::Descriptor& desc) {
-    return m_capsule_controller_allocator.Allocate(*m_cct_manager, *m_ctx, *this, desc);
+    return m_capsule_controller_allocator.Allocate(*m_cct_manager, *m_ctx,
+                                                   *this, desc);
 }
 
 }  // namespace nickel::physics

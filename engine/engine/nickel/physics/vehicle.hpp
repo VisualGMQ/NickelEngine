@@ -64,7 +64,6 @@ struct VehicleWheelSimDescriptor {
         Wheel m_wheel;
         Tire m_tire;
         Suspension m_suspension;
-        FilterData m_scene_query_filter_data;
         Vec3 m_suspension_travel_directions = {0, -1, 0};
         Vec3 m_wheel_centre_cm_offsets;
         Vec3 m_suspension_force_app_point_offsets = {0, 0, 0};

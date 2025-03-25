@@ -21,22 +21,20 @@ public:
     bool Raycast(const Vec3& origin, const Vec3& unit_dir, float distance,
                  RaycastHitCallback& hit_callback,
                  const QueryFilterData& filter_data,
-                 Flags<HitFlag> hit_flags = HitFlag::Default,
-                 QueryFilterCallback* filter_callback = nullptr);
+                 Flags<HitFlag> hit_flags = HitFlag::Default);
     bool Sweep(const Geometry& geometry, const Vec3& p, const Quat& q,
                const Vec3& unit_dir, float distance,
                SweepHitCallback& hit_callback,
                const QueryFilterData& filter_data,
                Flags<HitFlag> hit_flags = HitFlag::Default,
-               QueryFilterCallback* filter_callback = nullptr,
                float inflation = 0.0f);
     bool Overlap(const Geometry& geometry, const Vec3& p, const Quat& q,
                  OverlapHitCallback& hit_callback,
-                 const QueryFilterData& filter_data,
-                 QueryFilterCallback* filter_callback = nullptr);
-    
+                 const QueryFilterData& filter_data);
+
     void EnableCCTOverlapRecoveryModule(bool enable);
-    CapsuleController CreateCapsuleController(const CapsuleController::Descriptor&);
+    CapsuleController CreateCapsuleController(
+        const CapsuleController::Descriptor&);
 
     void GC();
 };

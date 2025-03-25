@@ -1,7 +1,8 @@
 #pragma once
+#include "nickel/common/transform.hpp"
+#include "nickel/physics/collision_group.hpp"
 #include "nickel/physics/filter.hpp"
 #include "nickel/physics/geometry.hpp"
-#include "nickel/common/transform.hpp"
 #include "nickel/physics/material.hpp"
 
 namespace nickel::physics {
@@ -24,12 +25,27 @@ public:
 
     void SetMaterials(std::span<Material> materials);
     void SetMaterial(Material& materials);
-    
-    void SetQueryFilterData(const FilterData&);
-    void SetSimulateFilterData(const FilterData&);
 
     void SetLocalPose(const Vec3&, const Quat&);
     Transform GetLocalPose() const;
+
+    void SetCollisionGroup(CollisionGroup);
+    CollisionGroup GetCollisionGroup() const;
+    void EnableGenerateHitEvent(bool enable);
+    bool IsEnabledGenerateHitEvent() const;
+    void EnableSceneQuery(bool enable);
+    bool IsEnableSceneQuery() const;
+    void EnableSimulate(bool enable);
+    bool IsEnableSimulate() const;
+    void SetTrigger(bool enable);
+    bool IsTrigger() const;
+    
+    void SetSimulateBehaviorOverlap(CollisionGroup, bool);
+    bool IsSimulateBehaviorOverlap(CollisionGroup) const;
+    void SetSimulateBehaviorBlock(CollisionGroup, bool);
+    bool IsSimulateBehaviorBlock(CollisionGroup) const;
+    void SetSimulateBehaviorNoCollide(CollisionGroup);
+    bool IsSimulateBehaviorNoCollide(CollisionGroup) const;
 
     void SetGeometry(const Geometry&);
 
@@ -46,10 +62,10 @@ public:
     ShapeConst& operator=(const ShapeConst& other);
     ShapeConst& operator=(ShapeConst&& other) noexcept;
     ~ShapeConst();
-    
+
     const ShapeConstImpl* GetImpl() const;
     ShapeConstImpl* GetImpl();
-    
+
     Transform GetLocalPose() const;
 
 private:

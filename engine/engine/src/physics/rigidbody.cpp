@@ -29,7 +29,7 @@ void RigidActor::DisableGravity(bool disable) {
     m_impl->DisableGravity(disable);
 }
 
-bool RigidActor::IsEnableGravity() {
+bool RigidActor::IsEnableGravity() const {
     return m_impl->IsEnableGravity();
 }
 
@@ -37,11 +37,11 @@ void RigidActor::DisableSimulation(bool disable) {
     m_impl->DisableSimulation(disable);
 }
 
-bool RigidActor::IsEnableSimulation() {
+bool RigidActor::IsEnableSimulation() const {
     return m_impl->IsEnableSimulation();
 }
 
-void RigidActor::AttachShape(const Shape& shape) {
+void RigidActor::AttachShape(Shape& shape) {
     m_impl->AttachShape(shape);
 }
 
@@ -73,12 +73,20 @@ bool RigidDynamic::IsKinematic() const {
     return getUnderlyingImpl()->IsKinematic();
 }
 
-void RigidDynamic::EnabelCCD(bool enable) {
+void RigidDynamic::EnableCCD(bool enable) {
     getUnderlyingImpl()->EnabelCCD(enable);
+}
+
+bool RigidDynamic::IsEnableCCD() const {
+    return getUnderlyingImpl()->IsEnableCCD();
 }
 
 void RigidDynamic::EnableGyroscopicForces(bool enable) {
     getUnderlyingImpl()->EnableGyroscopicForces(enable);
+}
+
+bool RigidDynamic::IsEnableGyroscopicForces() const {
+    return getUnderlyingImpl()->IsEnableGyroscopicForces();
 }
 
 void RigidDynamic::LockLinearX(bool lock) {

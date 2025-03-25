@@ -3,29 +3,6 @@
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
-enum {
-    COLLISION_FLAG_GROUND = 1 << 0,
-    COLLISION_FLAG_WHEEL = 1 << 1,
-    COLLISION_FLAG_CHASSIS = 1 << 2,
-    COLLISION_FLAG_OBSTACLE = 1 << 3,
-    COLLISION_FLAG_DRIVABLE_OBSTACLE = 1 << 4,
-
-    COLLISION_FLAG_GROUND_AGAINST = COLLISION_FLAG_CHASSIS |
-                                    COLLISION_FLAG_OBSTACLE |
-                                    COLLISION_FLAG_DRIVABLE_OBSTACLE,
-    COLLISION_FLAG_WHEEL_AGAINST =
-        COLLISION_FLAG_WHEEL | COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE,
-    COLLISION_FLAG_CHASSIS_AGAINST =
-        COLLISION_FLAG_GROUND | COLLISION_FLAG_WHEEL | COLLISION_FLAG_CHASSIS |
-        COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
-    COLLISION_FLAG_OBSTACLE_AGAINST =
-        COLLISION_FLAG_GROUND | COLLISION_FLAG_WHEEL | COLLISION_FLAG_CHASSIS |
-        COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
-    COLLISION_FLAG_DRIVABLE_OBSTACLE_AGAINST =
-        COLLISION_FLAG_GROUND | COLLISION_FLAG_CHASSIS |
-        COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE
-};
-
 class Application : public nickel::Application {
 public:
     void OnInit() override {
@@ -105,54 +82,54 @@ public:
             auto sprung_masses = nickel::physics::ComputeVehicleSprungMass(
                 wheel_centre_offset, chassis_centre_offset, 1500);
 
-            auto convert_to_wheel = [=](nickel::physics::Context& ctx,
-                                        const nickel::graphics::GLTFVertexData&
-                                            mesh,
-                                        uint32_t i) {
-                nickel::physics::VehicleWheelSimDescriptor::WheelDescriptor
-                    desc;
-                desc.m_wheel.m_width = 0.4f;
-                desc.m_wheel.m_radius = 0.5f;
-                desc.m_wheel.m_mass = 20.0f;
-                desc.m_wheel.m_moi = 2.5;
-                desc.m_wheel_centre_cm_offsets = mesh.m_transform.p;
+            auto convert_to_wheel =
+                [=](nickel::physics::Context& ctx,
+                    const nickel::graphics::GLTFVertexData& mesh, uint32_t i) {
+                    nickel::physics::VehicleWheelSimDescriptor::WheelDescriptor
+                        desc;
+                    desc.m_wheel.m_width = 0.4f;
+                    desc.m_wheel.m_radius = 0.5f;
+                    desc.m_wheel.m_mass = 20.0f;
+                    desc.m_wheel.m_moi = 2.5;
+                    desc.m_wheel_centre_cm_offsets = mesh.m_transform.p;
 
-                desc.m_suspension.m_max_compression = 0.3;
-                desc.m_suspension.m_max_droop = 0.1;
-                desc.m_suspension.m_spring_strength = 35000;
-                desc.m_suspension.m_spring_damper_rate = 4500;
-                desc.m_suspension.m_sprung_mass = sprung_masses[i - 1];
+                    desc.m_suspension.m_max_compression = 0.3;
+                    desc.m_suspension.m_max_droop = 0.1;
+                    desc.m_suspension.m_spring_strength = 35000;
+                    desc.m_suspension.m_spring_damper_rate = 4500;
+                    desc.m_suspension.m_sprung_mass = sprung_masses[i - 1];
 
-                desc.m_suspension_travel_directions = nickel::Vec3{0, -1, 0};
+                    desc.m_suspension_travel_directions =
+                        nickel::Vec3{0, -1, 0};
 
-                auto wheel_centre_cmo_offset =
-                    desc.m_wheel_centre_cm_offsets - chassis_centre_offset;
-                desc.m_suspension_force_app_point_offsets = {
-                    wheel_centre_cmo_offset.x, -0.3, wheel_centre_cmo_offset.z};
-                desc.m_tire_force_app_cm_offsets = {
-                    wheel_centre_cmo_offset.x, -0.3, wheel_centre_cmo_offset.z};
+                    auto wheel_centre_cmo_offset =
+                        desc.m_wheel_centre_cm_offsets - chassis_centre_offset;
+                    desc.m_suspension_force_app_point_offsets = {
+                        wheel_centre_cmo_offset.x, -0.3,
+                        wheel_centre_cmo_offset.z};
+                    desc.m_tire_force_app_cm_offsets = {
+                        wheel_centre_cmo_offset.x, -0.3,
+                        wheel_centre_cmo_offset.z};
 
-                std::vector<nickel::Vec3> points;
-                points.reserve(mesh.m_points.size());
+                    std::vector<nickel::Vec3> points;
+                    points.reserve(mesh.m_points.size());
 
-                nickel::Transform transform = mesh.m_transform;
-                transform.p = {0, 0, 0};
-                for (auto& p : mesh.m_points) {
-                    points.emplace_back(transform * p);
-                }
+                    nickel::Transform transform = mesh.m_transform;
+                    transform.p = {0, 0, 0};
+                    for (auto& p : mesh.m_points) {
+                        points.emplace_back(transform * p);
+                    }
 
-                auto convex_mesh = ctx.CreateConvexMesh(points);
-                auto shape = ctx.CreateShape(
-                    nickel::physics::ConvexMeshGeometry{convex_mesh},
-                    ctx.CreateMaterial(0.2, 0.2, 0.6), true);
-                shape.SetQueryFilterData(
-                    nickel::physics::FilterData{CollisionGroupVehicleWheels});
-                shape.SetSimulateFilterData(nickel::physics::FilterData{
-                    COLLISION_FLAG_WHEEL, COLLISION_FLAG_WHEEL_AGAINST, 0, 0});
-                desc.m_scene_query_filter_data.m_word0 = ~(
-                    CollisionGroupVehicleWheels | CollisionGroupVehicleChassis);
-                return std::make_tuple(desc, shape);
-            };
+                    auto convex_mesh = ctx.CreateConvexMesh(points);
+                    auto shape = ctx.CreateShape(
+                        nickel::physics::ConvexMeshGeometry{convex_mesh},
+                        ctx.CreateMaterial(0.2, 0.2, 0.6), true);
+                    shape.SetCollisionGroup(
+                        nickel::physics::CollisionGroup::VehicleWheel);
+                    shape.SetSimulateBehaviorNoCollide(
+                        nickel::physics::CollisionGroup::VehicleChassis);
+                    return std::make_tuple(desc, shape);
+                };
 
             auto [driving_left_desc, driving_left_shape] = convert_to_wheel(
                 ctx.GetPhysicsContext(), meshes[wheel_driving_left],
@@ -222,11 +199,10 @@ public:
                             mesh.m_transform.scale},
                         ctx.GetPhysicsContext().CreateMaterial(0.8, 0.8, 0.1),
                         true);
-                    shape.SetQueryFilterData(nickel::physics::FilterData{
-                        CollisionGroupVehicleChassis});
-                    shape.SetSimulateFilterData(nickel::physics::FilterData{
-                        COLLISION_FLAG_CHASSIS, COLLISION_FLAG_CHASSIS_AGAINST,
-                        0, 0});
+                    shape.SetCollisionGroup(
+                        nickel::physics::CollisionGroup::VehicleChassis);
+                    shape.SetSimulateBehaviorNoCollide(
+                        nickel::physics::CollisionGroup::VehicleWheel);
                     go.m_rigid_actor.AttachShape(shape);
                 }
             }

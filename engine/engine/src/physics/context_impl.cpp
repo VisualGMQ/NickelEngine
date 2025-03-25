@@ -1,4 +1,5 @@
 ﻿#include "nickel/physics/internal/context_impl.hpp"
+#include "nickel/common/bit_manipulate.hpp"
 #include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/geometry_converter.hpp"
 #include "nickel/physics/internal/pch.hpp"
@@ -8,13 +9,33 @@
 
 namespace nickel::physics {
 
+physx::PxQueryHitType::Enum QueryFilterCallback::preFilter(
+    const physx::PxFilterData& query_data, const physx::PxShape* shape,
+    const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags) {
+    auto filter_data = shape->getQueryFilterData();
+    uint32_t collision_group_in_bit =
+        1 << static_cast<std::underlying_type_t<CollisionGroup>>(
+            filter_data.word0);
+    if (collision_group_in_bit & query_data.word0) {
+        // TODO: check block or touch
+        return physx::PxQueryHitType::eTOUCH;
+    }
+    return physx::PxQueryHitType::eNONE;
+}
+
+physx::PxQueryHitType::Enum QueryFilterCallback::postFilter(
+    const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
+    const physx::PxShape* shape, const physx::PxRigidActor* actor) {
+    return physx::PxQueryHitType::eTOUCH;
+}
+
 ContextImpl::ContextImpl() {
     m_foundation =
         PxCreateFoundation(PX_PHYSICS_VERSION, m_allocator, m_error_callback);
     if (!m_foundation) {
         LOGC("Failed to init PhysX");
     }
-    
+
     m_pvd = physx::PxCreatePvd(*m_foundation);
     m_pvd_transport =
         physx::PxDefaultPvdSocketTransportCreate("localhost", 5425, 10);
@@ -33,20 +54,12 @@ ContextImpl::ContextImpl() {
     physx::PxVehicleSetBasisVectors({0, 1, 0}, {1, 0, 0});
     physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
 
-    physx::PxSceneDesc desc{m_tolerances_scale};
-    desc.gravity = Vec3ToPhysX(Vec3{0, -9.8f, 0});
-    desc.frictionType = physx::PxFrictionType::ePATCH;
-    desc.solverType = physx::PxSolverType::ePGS;
-    desc.filterShader = physx::PxDefaultSimulationFilterShader;
-
-    m_cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(4);
-    desc.cpuDispatcher = m_cpu_dispatcher;
-    m_main_scene = m_scene_allocator.Allocate("NickelMainPhysicsScene", this,
-                                              m_physics->createScene(desc));
+    m_main_scene = CreateScene("NickelEngineMainScene", {0, -9.8, 0});
 
     m_blast_framework = NvBlastTkFrameworkCreate();
 
-    m_vehicle_manager = std::make_unique<VehicleManager>(*this, *m_main_scene);
+    m_vehicle_manager =
+        std::make_unique<VehicleManager>(*this, *m_main_scene.GetImpl());
 }
 
 ContextImpl::~ContextImpl() {
@@ -66,37 +79,71 @@ ContextImpl::~ContextImpl() {
     m_foundation->release();
 }
 
-physx::PxFilterFlags VehicleSimulationFilterShader(
+physx::PxFilterFlags ContextImpl::SimulateFilterShader(
     physx::PxFilterObjectAttributes attributes0,
     physx::PxFilterData filterData0,
     physx::PxFilterObjectAttributes attributes1,
     physx::PxFilterData filterData1, physx::PxPairFlags& pairFlags,
     const void* constantBlock, physx::PxU32 constantBlockSize) {
-    // TODO: remove magic number
-    if (filterData0.word0 & 0x03 && filterData1.word0 & 0x03) {
-        return physx::PxFilterFlag::eKILL;
-    }
-    return physx::PxFilterFlag::eDEFAULT;
-}
-
-physx::PxFilterFlags VehicleFilterShader(physx::PxFilterObjectAttributes attributes0,
-                                  physx::PxFilterData filterData0,
-                                  physx::PxFilterObjectAttributes attributes1,
-                                  physx::PxFilterData filterData1,
-                                  physx::PxPairFlags& pairFlags,
-                                  const void* constantBlock,
-                                  physx::PxU32 constantBlockSize) {
-    PX_UNUSED(attributes0);
-    PX_UNUSED(attributes1);
     PX_UNUSED(constantBlock);
     PX_UNUSED(constantBlockSize);
 
-    if ((0 == (filterData0.word0 & filterData1.word1)) &&
-        (0 == (filterData1.word0 & filterData0.word1)))
-        return physx::PxFilterFlag::eSUPPRESS;
+    bool k0 = physx::PxFilterObjectIsKinematic(attributes0);
+    bool k1 = physx::PxFilterObjectIsKinematic(attributes1);
 
-    pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
-    pairFlags |= physx::PxPairFlags(physx::PxU16(filterData0.word2 | filterData1.word2));
+    physx::PxU32 FilterFlags0 =
+        filterData0.word0 >> SimulationBehaviorBitOffset;
+    physx::PxU32 FilterFlags1 =
+        filterData1.word0 >> SimulationBehaviorBitOffset;
+
+    // TODO: implement after do contact modify
+    // if (k0 && k1) {
+    //     if (!(FilterFlags0 & EPDF_KinematicKinematicPairs) &&
+    //         !(FilterFlags1 & EPDF_KinematicKinematicPairs)) {
+    //         return physx::PxFilterFlag::eSUPPRESS;
+    //     }
+    // }
+
+    bool s0 = physx::PxGetFilterObjectType(attributes0) ==
+              physx::PxFilterObjectType::eRIGID_STATIC;
+    bool s1 = physx::PxGetFilterObjectType(attributes1) ==
+              physx::PxFilterObjectType::eRIGID_STATIC;
+
+    if ((k0 || k1) && (s0 || s1)) {
+        return physx::PxFilterFlag::eSUPPRESS;
+    }
+
+    // Find out which channels the objects are in
+    std::underlying_type_t<CollisionGroup> Channel0 =
+        filterData0.word0 & GenFullBitMast(SimulationBehaviorContainBits);
+    std::underlying_type_t<CollisionGroup> Channel1 =
+        filterData1.word0 & GenFullBitMast(SimulationBehaviorContainBits);
+
+    // see if 0/1 would like to block the other
+    bool block_flag_to_1 = (1 << Channel1) & filterData0.word2;
+    bool block_flag_to0 = (1 << Channel0) & filterData1.word2;
+
+    bool should_block = block_flag_to_1 && block_flag_to0;
+
+    if (!should_block) {
+        return physx::PxFilterFlag::eSUPPRESS;
+    }
+
+    pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT |
+                physx::PxPairFlag::eDETECT_CCD_CONTACT |
+                physx::PxPairFlag::eSOLVE_CONTACT;
+
+    if ((FilterFlags0 & SimulationBehavior_Notify) ||
+        (FilterFlags1 & SimulationBehavior_Notify)) {
+        pairFlags |= physx::PxPairFlag::eNOTIFY_TOUCH_FOUND |
+                     physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS |
+                     physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
+    }
+
+    if ((FilterFlags0 & SimulationBehavior_ModifyContacts) ||
+        (FilterFlags1 & SimulationBehavior_ModifyContacts)) {
+        pairFlags |= physx::PxPairFlag::eMODIFY_CONTACTS;
+    }
 
     return physx::PxFilterFlags();
 }
@@ -106,8 +153,8 @@ Scene ContextImpl::CreateScene(const std::string& name, const Vec3& gravity) {
     desc.gravity = Vec3ToPhysX(gravity);
     desc.frictionType = physx::PxFrictionType::ePATCH;
     desc.solverType = physx::PxSolverType::eTGS;
-    // desc.filterShader = physx::PxDefaultSimulationFilterShader;
-    desc.filterShader = VehicleFilterShader;
+    desc.filterShader = SimulateFilterShader;
+    desc.flags |= physx::PxSceneFlag::eENABLE_CCD;
 
     m_cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(4);
     desc.cpuDispatcher = m_cpu_dispatcher;
@@ -296,12 +343,11 @@ D6Joint ContextImpl::CreateD6Joint(const RigidActor& actor0, const Vec3& p0,
 
 void ContextImpl::Update(float delta_time) {
     m_vehicle_manager->Update(delta_time);
-    m_main_scene->Simulate(delta_time);
+    m_main_scene.Simulate(delta_time);
 }
 
 Scene ContextImpl::GetMainScene() {
-    m_main_scene->IncRefcount();
-    return Scene{m_main_scene};
+    return m_main_scene;
 }
 
 VehicleManager& ContextImpl::GetVehicleManager() {
