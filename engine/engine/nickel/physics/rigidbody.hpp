@@ -18,11 +18,11 @@ public:
     Transform GetGlobalTransform() const;
 
     void DisableGravity(bool disable);
-    bool IsEnableGravity();
+    bool IsEnableGravity() const;
     void DisableSimulation(bool disable);
-    bool IsEnableSimulation();
+    bool IsEnableSimulation() const;
 
-    void AttachShape(const Shape& shape);
+    void AttachShape(Shape& shape);
     void DetachShape(const Shape& shape);
     uint32_t GetShapeNum() const;
     std::vector<Shape> GetShapes() const;
@@ -31,7 +31,7 @@ public:
 class RigidStatic : public RigidActor {
 public:
     using RigidActor::RigidActor;
-    
+
     operator RigidActor();
 
 private:
@@ -48,8 +48,10 @@ public:
     void SetKinematicTarget(const Vec3& force, const Quat& q);
     void EnableKinematic(bool enable);
     bool IsKinematic() const;
-    void EnabelCCD(bool);
+    void EnableCCD(bool);
+    bool IsEnableCCD() const;
     void EnableGyroscopicForces(bool enable);
+    bool IsEnableGyroscopicForces() const;
 
     void LockLinearX(bool lock);
     void LockLinearY(bool lock);
@@ -98,14 +100,13 @@ private:
     const RigidDynamicImpl* getUnderlyingImpl() const;
 };
 
-class RigidActorConst: public ImplWrapper<RigidActorConstImpl> {
+class RigidActorConst : public ImplWrapper<RigidActorConstImpl> {
 public:
     using ImplWrapper::ImplWrapper;
-    
+
     Transform GetGlobalTransform() const;
 
     uint32_t GetShapeNum() const;
 };
-
 
 }  // namespace nickel::physics

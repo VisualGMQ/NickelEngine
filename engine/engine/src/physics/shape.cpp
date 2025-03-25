@@ -63,20 +63,76 @@ void Shape::SetMaterial(Material& mtl) {
     SetMaterials(std::span{&mtl, 1});
 }
 
-void Shape::SetQueryFilterData(const FilterData& filter) {
-    m_impl->SetQueryFilterData(filter);
-}
-
-void Shape::SetSimulateFilterData(const FilterData& filter) {
-    m_impl->SetSimulateFilterData(filter);
-}
-
 void Shape::SetLocalPose(const Vec3& p, const Quat& q) {
     return m_impl->SetLocalPose(p, q);
 }
 
 Transform Shape::GetLocalPose() const {
     return m_impl->GetLocalPose();
+}
+
+void Shape::SetCollisionGroup(CollisionGroup group) {
+    m_impl->SetCollisionGroup(group);
+}
+
+CollisionGroup Shape::GetCollisionGroup() const {
+    return m_impl->GetCollisionGroup();
+}
+
+void Shape::EnableGenerateHitEvent(bool enable) {
+    m_impl->EnableGenerateHitEvent(enable);
+}
+
+bool Shape::IsEnabledGenerateHitEvent() const {
+    return m_impl->IsEnabledGenerateHitEvent();
+}
+
+void Shape::EnableSceneQuery(bool enable) {
+    m_impl->EnableSceneQuery(enable);
+}
+
+bool Shape::IsEnableSceneQuery() const {
+    return m_impl->IsEnableSceneQuery();
+}
+
+void Shape::EnableSimulate(bool enable) {
+    m_impl->EnableSimulate(enable);
+}
+
+bool Shape::IsEnableSimulate() const {
+    return m_impl->IsEnableSimulate();
+}
+
+void Shape::SetTrigger(bool enable) {
+    m_impl->SetTrigger(enable);
+}
+
+bool Shape::IsTrigger() const {
+    return m_impl->IsTrigger();
+}
+
+void Shape::SetSimulateBehaviorOverlap(CollisionGroup group, bool enable) {
+    m_impl->SetSimulateBehaviorOverlap(group, enable);
+}
+
+bool Shape::IsSimulateBehaviorOverlap(CollisionGroup group) const {
+    return m_impl->IsSimulateBehaviorOverlap(group);
+}
+
+void Shape::SetSimulateBehaviorBlock(CollisionGroup group, bool enable) {
+    m_impl->SetSimulateBehaviorBlock(group, enable);
+}
+
+bool Shape::IsSimulateBehaviorBlock(CollisionGroup group) const {
+    return m_impl->IsSimulateBehaviorBlock(group);
+}
+
+void Shape::SetSimulateBehaviorNoCollide(CollisionGroup group) {
+    m_impl->SetSimulateBehaviorNoCollide(group);
+}
+
+bool Shape::IsSimulateBehaviorNoCollide(CollisionGroup group) const {
+    return m_impl->IsSimulateBehaviorNoCollide(group);
 }
 
 void Shape::SetGeometry(const Geometry& g) {

@@ -213,8 +213,10 @@ inline physx::PxVehicleWheelsSimData* VehicleWheelSimDescriptor2PhysX(
         data->setTireForceAppPointOffset(
             i, Vec3ToPhysX(wheel.m_tire_force_app_cm_offsets));
         data->setWheelShapeMapping(i, i);
-        data->setSceneQueryFilterData(
-            i, FilterData2PhysX(wheel.m_scene_query_filter_data));
+        CollisionGroupFilter filter;
+        filter.AddAllCollisionGroup();
+        filter.RemoveCollisionGroup(CollisionGroup::VehicleChassis);
+        data->setSceneQueryFilterData(i, {filter.GetFilter(), 0, 0, 0});
     }
 
     data->setChassisMass(desc.m_chassis_mass);

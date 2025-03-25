@@ -1,7 +1,6 @@
 #pragma once
 #include "nickel/fs/path.hpp"
 
-#include <fstream>
 #include <vector>
 
 namespace nickel {

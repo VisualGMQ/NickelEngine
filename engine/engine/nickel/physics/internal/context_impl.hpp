@@ -56,6 +56,16 @@ public:
     }
 };
 
+struct QueryFilterCallback: public physx::PxQueryFilterCallback {
+    physx::PxQueryHitType::Enum preFilter(
+        const physx::PxFilterData& filterData, const physx::PxShape* shape,
+        const physx::PxRigidActor* actor,
+        physx::PxHitFlags& queryFlags) override;
+    physx::PxQueryHitType::Enum postFilter(
+        const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
+        const physx::PxShape* shape, const physx::PxRigidActor* actor) override;
+};
+
 class ContextImpl {
 public:
     ContextImpl();
@@ -91,6 +101,7 @@ public:
 
     physx::PxTolerancesScale m_tolerances_scale;
     physx::PxPhysics* m_physics;
+    QueryFilterCallback m_query_filter_callback;
 
     BlockMemoryAllocator<SceneImpl> m_scene_allocator;
     BlockMemoryAllocator<RigidActorImpl> m_rigid_actor_allocator;
@@ -109,7 +120,14 @@ private:
     physx::PxPvd* m_pvd;
     physx::PxPvdTransport* m_pvd_transport;
 
-    SceneImpl* m_main_scene;
+    static physx::PxFilterFlags SimulateFilterShader(
+        physx::PxFilterObjectAttributes attributes0,
+        physx::PxFilterData filterData0,
+        physx::PxFilterObjectAttributes attributes1,
+        physx::PxFilterData filterData1, physx::PxPairFlags& pairFlags,
+        const void* constantBlock, physx::PxU32 constantBlockSize);
+
+    Scene m_main_scene;
     Nv::Blast::TkFramework* m_blast_framework;
 };
 

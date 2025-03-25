@@ -1,10 +1,10 @@
 #pragma once
+#include "nickel/common/bit_manipulate.hpp"
 #include "nickel/common/memory/memory.hpp"
 #include "nickel/common/memory/refcountable.hpp"
 #include "nickel/physics/internal/cct_impl.hpp"
 #include "nickel/physics/internal/enum_convert.hpp"
 #include "nickel/physics/internal/pch.hpp"
-#include "nickel/physics/internal/rigidbody_impl.hpp"
 #include "nickel/physics/internal/shape_impl.hpp"
 #include "nickel/physics/rigidbody.hpp"
 #include "nickel/physics/scene.hpp"
@@ -33,17 +33,10 @@ SweepHit HitTypeFromPhysX(ContextImpl& ctx, const physx::PxSweepHit& hit);
 template <>
 OverlapHit HitTypeFromPhysX(ContextImpl& ctx, const physx::PxOverlapHit& hit);
 
-physx::PxFilterData FilterData2PhysX(const FilterData& data);
-
-FilterData FilterDataFromPhysX(const physx::PxFilterData& data);
-
 inline physx::PxQueryFilterData QueryFilterData2PhysX(
     const QueryFilterData& data) {
     physx::PxQueryFilterData result;
-    result.data.word0 = data.m_filter.m_word0;
-    result.data.word1 = data.m_filter.m_word1;
-    result.data.word2 = data.m_filter.m_word2;
-    result.data.word3 = data.m_filter.m_word3;
+    result.data.word0 = data.m_filter.GetFilter();
     result.flags = QueryFlags2PhysX(data.m_flags);
     return result;
 }
@@ -83,24 +76,6 @@ using PhysicsSweepCallback = PhysicsQueryCallback<SweepHit, physx::PxSweepHit>;
 using PhysicsOverlapCallback =
     PhysicsQueryCallback<OverlapHit, physx::PxOverlapHit>;
 
-class PhysXQueryFilterCallback : public physx::PxQueryFilterCallback {
-public:
-    PhysXQueryFilterCallback(ContextImpl& ctx, QueryFilterCallback* callback);
-
-    physx::PxQueryHitType::Enum preFilter(
-        const physx::PxFilterData& filterData, const physx::PxShape* shape,
-        const physx::PxRigidActor* actor,
-        physx::PxHitFlags& query_flags) override;
-
-    physx::PxQueryHitType::Enum postFilter(
-        const physx::PxFilterData& filterData, const physx::PxQueryHit& hit,
-        const physx::PxShape* shape, const physx::PxRigidActor* actor) override;
-
-private:
-    QueryFilterCallback* m_callback{};
-    ContextImpl& m_ctx;
-};
-
 class SceneImpl : public RefCountable {
 public:
     SceneImpl(const std::string& name, ContextImpl* ctx, physx::PxScene*);
@@ -114,23 +89,21 @@ public:
     bool Raycast(const Vec3& origin, const Vec3& unit_dir, float distance,
                  RaycastHitCallback& hit_callback,
                  const QueryFilterData& filter_data,
-                 Flags<HitFlag> hit_flags = HitFlag::Default,
-                 QueryFilterCallback* filter_callback = nullptr);
+                 Flags<HitFlag> hit_flags = HitFlag::Default) const;
     bool Sweep(const Geometry& geometry, const Vec3& p, const Quat& q,
                const Vec3& unit_dir, float distance,
                SweepHitCallback& hit_callback,
                const QueryFilterData& filter_data,
                Flags<HitFlag> hit_flags = HitFlag::Default,
-               QueryFilterCallback* filter_callback = nullptr,
-               float inflation = 0.0f);
+               float inflation = 0.0f) const;
     bool Overlap(const Geometry& geometry, const Vec3& p, const Quat& q,
                  OverlapHitCallback& hit_callback,
-                 const QueryFilterData& filter_data,
-                 QueryFilterCallback* filter_callback = nullptr);
+                 const QueryFilterData& filter_data) const;
     void EnableCCTOverlapRecoveryModule(bool enable);
     void GC();
 
-    CapsuleController CreateCapsuleController(const CapsuleController::Descriptor&);
+    CapsuleController CreateCapsuleController(
+        const CapsuleController::Descriptor&);
 
     physx::PxScene* m_scene{};
     physx::PxControllerManager* m_cct_manager{};

@@ -71,13 +71,4 @@ using RaycastHitCallback = QueryHitCallback<RaycastHit>;
 using SweepHitCallback = QueryHitCallback<SweepHit>;
 using OverlapHitCallback = QueryHitCallback<OverlapHit>;
 
-struct QueryFilterCallback {
-    virtual ~QueryFilterCallback() = default;
-    virtual QueryHitType PreFilter(const FilterData&, const ShapeConst&,
-                                   const RigidActorConst&, Flags<HitFlag>) = 0;
-    virtual QueryHitType PostFilter(const FilterData&, const ShapeConst&,
-                                    const RigidActorConst&) = 0;
-};
-
-
 }

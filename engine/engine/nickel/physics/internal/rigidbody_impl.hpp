@@ -23,11 +23,11 @@ public:
     Transform GetGlobalTransform() const;
 
     void DisableGravity(bool disable);
-    bool IsEnableGravity();
+    bool IsEnableGravity() const;
     void DisableSimulation(bool disable);
-    bool IsEnableSimulation();
+    bool IsEnableSimulation() const;
     
-    void AttachShape(const Shape& shape);
+    void AttachShape(Shape& shape);
     void DetachShape(const Shape& shape);
     uint32_t GetShapeNum() const;
     std::vector<Shape> GetShapes() const;
@@ -51,7 +51,9 @@ public:
     void EnableKinematic(bool enable);
     bool IsKinematic() const;
     void EnabelCCD(bool);
+    bool IsEnableCCD() const;
     void EnableGyroscopicForces(bool enable);
+    bool IsEnableGyroscopicForces() const;
 
     void LockLinearX(bool lock);
     void LockLinearY(bool lock);

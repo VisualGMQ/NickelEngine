@@ -60,7 +60,7 @@ void RigidActorImpl::DisableGravity(bool disable) {
     m_actor->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, disable);
 }
 
-bool RigidActorImpl::IsEnableGravity() {
+bool RigidActorImpl::IsEnableGravity() const {
     return !(m_actor->getActorFlags() & physx::PxActorFlag::eDISABLE_GRAVITY);
 }
 
@@ -68,13 +68,20 @@ void RigidActorImpl::DisableSimulation(bool disable) {
     m_actor->setActorFlag(physx::PxActorFlag::eDISABLE_SIMULATION, disable);
 }
 
-bool RigidActorImpl::IsEnableSimulation() {
+bool RigidActorImpl::IsEnableSimulation() const {
     return !(m_actor->getActorFlags() &
              physx::PxActorFlag::eDISABLE_SIMULATION);
 }
 
-void RigidActorImpl::AttachShape(const Shape& shape) {
-    m_actor->attachShape(*shape.GetImpl()->m_shape);
+void RigidActorImpl::AttachShape(Shape& shape) {
+    auto underlying_shape = shape.GetImpl()->m_shape;
+    if (m_actor->getType() == physx::PxActorType::eRIGID_STATIC) {
+        shape.SetCollisionGroup(CollisionGroup::WorldStatic);
+    } else {
+        shape.SetCollisionGroup(CollisionGroup::WorldDynamic);
+    }
+
+    m_actor->attachShape(*underlying_shape);
     shape.GetImpl()->m_shape->release();
 }
 
@@ -179,9 +186,19 @@ void RigidDynamicImpl::EnabelCCD(bool enable) {
                                       enable);
 }
 
+bool RigidDynamicImpl::IsEnableCCD() const {
+    return getUnderlying()->getRigidBodyFlags() &
+           physx::PxRigidBodyFlag::eENABLE_CCD;
+}
+
 void RigidDynamicImpl::EnableGyroscopicForces(bool enable) {
     getUnderlying()->setRigidBodyFlag(
         physx::PxRigidBodyFlag::eENABLE_GYROSCOPIC_FORCES, enable);
+}
+
+bool RigidDynamicImpl::IsEnableGyroscopicForces() const {
+    return getUnderlying()->getRigidBodyFlags() &
+           physx::PxRigidBodyFlag::eENABLE_GYROSCOPIC_FORCES;
 }
 
 void RigidDynamicImpl::LockLinearX(bool lock) {
