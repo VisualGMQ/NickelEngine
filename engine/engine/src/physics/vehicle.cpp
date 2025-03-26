@@ -308,7 +308,7 @@ Vehicle& Vehicle::operator=(VehicleNW vehicle) {
 }
 
 Vehicle4W Vehicle::CastAs4W() const {
-    if (m_impl && m_impl->GetType() == VehicleDriveImpl::Type::FourWheel) {
+    if (m_impl && m_impl->GetType() == Type::FourWheel) {
         m_impl->IncRefcount();
         return Vehicle4W{static_cast<Vehicle4WDriveImpl*>(m_impl)};
     }
@@ -316,7 +316,7 @@ Vehicle4W Vehicle::CastAs4W() const {
 }
 
 VehicleNW Vehicle::CastAsNW() const {
-    if (m_impl && m_impl->GetType() == VehicleDriveImpl::Type::N_Wheel) {
+    if (m_impl && m_impl->GetType() == Type::N_Wheel) {
         m_impl->IncRefcount();
         return VehicleNW{static_cast<VehicleNWDriveImpl*>(m_impl)};
     }
@@ -324,7 +324,7 @@ VehicleNW Vehicle::CastAsNW() const {
 }
 
 VehicleNoDrive Vehicle::CastAsNoDrive() const {
-    if (m_impl && m_impl->GetType() == VehicleDriveImpl::Type::NoDrive) {
+    if (m_impl && m_impl->GetType() == Type::NoDrive) {
         m_impl->IncRefcount();
         return VehicleNoDrive{static_cast<VehicleNoDriveImpl*>(m_impl)};
     }
@@ -332,11 +332,15 @@ VehicleNoDrive Vehicle::CastAsNoDrive() const {
 }
 
 VehicleTank Vehicle::CastAsTank() const {
-    if (m_impl && m_impl->GetType() == VehicleDriveImpl::Type::Tank) {
+    if (m_impl && m_impl->GetType() == Type::Tank) {
         m_impl->IncRefcount();
         return VehicleTank{static_cast<VehicleTankDriveImpl*>(m_impl)};
     }
     return nullptr;
+}
+
+Vehicle::Type Vehicle::GetType() const {
+    return m_impl->GetType();
 }
 
 std::vector<float> ComputeVehicleSprungMass(

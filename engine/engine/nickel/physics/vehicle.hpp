@@ -309,6 +309,13 @@ public:
 class Vehicle : public ImplWrapper<VehicleDriveImpl> {
 public:
     using ImplWrapper::ImplWrapper;
+ 
+    enum class Type {
+        FourWheel = 0,
+        N_Wheel,
+        Tank,
+        NoDrive,
+    };
 
     Vehicle(Vehicle4W vehicle);
     Vehicle(VehicleNW vehicle);
@@ -322,6 +329,7 @@ public:
     VehicleNW CastAsNW() const;
     VehicleNoDrive CastAsNoDrive() const;
     VehicleTank CastAsTank() const;
+    Type GetType() const;
 };
 
 class VehicleManagerImpl;

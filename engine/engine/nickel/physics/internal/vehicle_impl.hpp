@@ -41,24 +41,16 @@ public:
 
 class VehicleDriveImpl : public RefCountable {
 public:
-    enum class Type {
-        FourWheel,
-        N_Wheel,
-        Tank,
-        NoDrive,
-    };
-
-    Type GetType() const { return m_type; }
+    Vehicle::Type GetType() const { return m_type; }
+    virtual void Update(float) = 0;
 
     physx::PxVehicleWheels* m_drive{};
 
-    virtual void Update(float) = 0;
-
 protected:
-    VehicleDriveImpl(Type type) : m_type{type} {}
+    VehicleDriveImpl(Vehicle::Type type) : m_type{type} {}
 
 private:
-    Type m_type;
+    Vehicle::Type m_type;
 };
 
 class Vehicle4WDriveImpl : public VehicleDriveImpl {

@@ -363,7 +363,7 @@ physx::PxVehicleDriveSimDataNW VehicleDriveSimNWDescriptor2PhysX(
 }
 
 Vehicle4WDriveImpl::Vehicle4WDriveImpl()
-    : VehicleDriveImpl{Type::FourWheel},
+    : VehicleDriveImpl{Vehicle::Type::FourWheel},
       m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
       m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {}
 
@@ -372,7 +372,7 @@ Vehicle4WDriveImpl::Vehicle4WDriveImpl(
     const VehicleWheelSimDescriptor& wheel_sim_desc,
     const VehicleDriveSim4WDescriptor& drive_sim_desc,
     const RigidDynamic& actor)
-    : VehicleDriveImpl{Type::FourWheel},
+    : VehicleDriveImpl{Vehicle::Type::FourWheel},
       m_mgr{&mgr},
       m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
       m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {
@@ -489,7 +489,7 @@ physx::PxVehicleDrive4W* Vehicle4WDriveImpl::GetUnderlying() {
 }
 
 VehicleNWDriveImpl::VehicleNWDriveImpl()
-    : VehicleDriveImpl{Type::N_Wheel},
+    : VehicleDriveImpl{Vehicle::Type::N_Wheel},
       m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
       m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {}
 
@@ -498,7 +498,7 @@ VehicleNWDriveImpl::VehicleNWDriveImpl(
     const VehicleWheelSimDescriptor& wheel_sim_desc,
     const VehicleDriveSimNWDescriptor& drive_sim_desc,
     const RigidDynamic& actor)
-    : VehicleDriveImpl{Type::N_Wheel},
+    : VehicleDriveImpl{Vehicle::Type::N_Wheel},
       m_mgr{&mgr},
       m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
       m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {
@@ -615,7 +615,7 @@ physx::PxVehicleDriveNW* VehicleNWDriveImpl::GetUnderlying() {
 }
 
 VehicleTankDriveImpl::VehicleTankDriveImpl()
-    : VehicleDriveImpl{Type::Tank},
+    : VehicleDriveImpl{Vehicle::Type::Tank},
       m_input_data{physx::PxVehicleDriveTankControlModel::eSTANDARD},
       m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
       m_pad_smoothing_data{VehiclePadSmoothingConfig2PhysX({})} {}
@@ -624,7 +624,7 @@ VehicleTankDriveImpl::VehicleTankDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr, VehicleTankDriveMode drive_mode,
     const VehicleWheelSimDescriptor& wheel_sim_desc,
     const VehicleDriveSimDescriptor& drive_sim_desc, const RigidDynamic& actor)
-    : VehicleDriveImpl{Type::Tank},
+    : VehicleDriveImpl{Vehicle::Type::Tank},
       m_mgr{&mgr},
       m_input_data{VehicleTankDriveMode2PhysX(drive_mode)},
       m_key_smoothing_data{VehicleKeySmoothingConfig2PhysX({})},
@@ -740,12 +740,12 @@ physx::PxVehicleDriveTank* VehicleTankDriveImpl::GetUnderlying() {
     return static_cast<physx::PxVehicleDriveTank*>(m_drive);
 }
 
-VehicleNoDriveImpl::VehicleNoDriveImpl() : VehicleDriveImpl{Type::NoDrive} {}
+VehicleNoDriveImpl::VehicleNoDriveImpl() : VehicleDriveImpl{Vehicle::Type::NoDrive} {}
 
 VehicleNoDriveImpl::VehicleNoDriveImpl(
     ContextImpl& ctx, VehicleManagerImpl& mgr,
     const VehicleWheelSimDescriptor& wheel_sim_desc, const RigidDynamic& actor)
-    : VehicleDriveImpl{Type::NoDrive}, m_mgr{&mgr} {
+    : VehicleDriveImpl{Vehicle::Type::NoDrive}, m_mgr{&mgr} {
     physx::PxVehicleWheelsSimData* wheel_sim_data =
         VehicleWheelSimDescriptor2PhysX(wheel_sim_desc);
 
