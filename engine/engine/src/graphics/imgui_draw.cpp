@@ -24,9 +24,9 @@ ImGuiRenderPass::ImGuiRenderPass(const video::Window& window,
     ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // Enable Docking
-    io.ConfigFlags |=
-        ImGuiConfigFlags_ViewportsEnable;  // Enable Multi-Viewport / Platform
+    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // Enable Docking
+    // io.ConfigFlags |=
+    //     ImGuiConfigFlags_ViewportsEnable;  // Enable Multi-Viewport / Platform
                                            // Windows
     ImFontConfig font_config;
     font_config.SizePixels = 30;
@@ -94,10 +94,10 @@ void ImGuiRenderPass::End(Device device, CommonResource& res,
 void ImGuiRenderPass::PrepareForRender() {
     ImGui::Render();
     // Update and Render additional Platform Windows
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-    }
+    // if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    //     ImGui::UpdatePlatformWindows();
+    //     ImGui::RenderPlatformWindowsDefault();
+    // }
 }
 
 void ImGuiRenderPass::initDescriptorPool(const Adapter& adapter) {

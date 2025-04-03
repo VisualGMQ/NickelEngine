@@ -72,9 +72,6 @@ public:
                 }
             }
 
-            constexpr uint32_t CollisionGroupVehicleChassis = 0x01;
-            constexpr uint32_t CollisionGroupVehicleWheels = 0x02;
-
             std::vector<nickel::Vec3> wheel_centre_offset;
             wheel_centre_offset.resize(meshes.size() - 1);
             for (uint32_t i = 1; i < meshes.size(); ++i) {
