@@ -282,11 +282,11 @@ void TunningPanel::tunningWheel4WSimData(
                         ImGui::TreePop();
                     }
                 }
-                for (int i = 1; i < wheel.m_wheels.size(); i++) {
-                    copyCommonConfig2Wheel(wheel.m_wheels[0],
-                                           wheel.m_wheels[i]);
-                }
                 ImGui::TreePop();
+            }
+
+            for (int i = 1; i < wheel.m_wheels.size(); i++) {
+                copyCommonConfig2Wheel(wheel.m_wheels[0], wheel.m_wheels[i]);
             }
         } else if (m_tunning_mode == WheelTunningMode::AllWheel) {
             for (int i = 0; i < wheel.m_wheels.size(); i++) {
@@ -305,57 +305,6 @@ void TunningPanel::tunningWheel4WSimData(
                 }
                 auto& wheel_i = wheel.m_wheels[i];
                 tunningWheel(name.c_str(), wheel_i);
-            }
-        }
-        ImGui::TreePop();
-    }
-}
-
-void TunningPanel::tunningWheelSimData(
-    nickel::physics::VehicleWheelSimDescriptor& wheel) {
-    if (ImGui::TreeNode("wheel sim data")) {
-        ImGui::DragFloat("chassis mass", &wheel.m_chassis_mass, 0.1, 0.01,
-                         FLT_MAX);
-
-        std::array<const char*, 2> tunning_mode_name = {"single", "all"};
-        uint32_t tunning_mode_idx = static_cast<uint32_t>(m_tunning_mode);
-        if (ImGui::BeginCombo("tunning mode",
-                              tunning_mode_name[tunning_mode_idx])) {
-            for (int i = 0; i < 3; i++) {
-                if (ImGui::Selectable(tunning_mode_name[i],
-                                      tunning_mode_idx == i)) {
-                    m_tunning_mode = static_cast<WheelTunningMode>(i);
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        if (m_tunning_mode == WheelTunningMode::SingleWheel) {
-            auto wheel_shape_backup = wheel.m_wheels;
-
-            if (ImGui::TreeNode("wheel common config")) {
-                tunningWheelCommonConfig(wheel.m_wheels[0]);
-                ImGui::TreePop();
-            }
-
-            if (ImGui::TreeNode("wheel unique config")) {
-                for (int i = 0; i < wheel.m_wheels.size(); i++) {
-                    if (ImGui::TreeNode(
-                            ("wheel " + std::to_string(i)).c_str())) {
-                        tunningWheelUniqueConfig(wheel.m_wheels[i]);
-                        ImGui::TreePop();
-                    }
-                }
-                for (int i = 1; i < wheel.m_wheels.size(); i++) {
-                    copyCommonConfig2Wheel(wheel.m_wheels[0],
-                                           wheel.m_wheels[i]);
-                }
-                ImGui::TreePop();
-            }
-        } else if (m_tunning_mode == WheelTunningMode::AllWheel) {
-            for (int i = 0; i < wheel.m_wheels.size(); i++) {
-                auto& wheel_i = wheel.m_wheels[i];
-                tunningWheel(("wheel" + std::to_string(i)).c_str(), wheel_i);
             }
         }
         ImGui::TreePop();
@@ -388,11 +337,6 @@ void TunningPanel::tunningWheelCommonConfig(
         ImGui::DragFloat("radius", &wheel.m_wheel.m_radius, 0.1, 0.001,
                          FLT_MAX);
         ImGui::DragFloat("width", &wheel.m_wheel.m_width, 0.1, 0.001, FLT_MAX);
-
-        float max_steer = nickel::Degrees{wheel.m_wheel.m_max_steer}.Value();
-        if (ImGui::DragFloat("max steer", &max_steer, 0.1, 0.001, FLT_MAX)) {
-            wheel.m_wheel.m_max_steer = nickel::Degrees{max_steer};
-        }
 
         float toe_angle = nickel::Degrees{wheel.m_wheel.m_toe_angle}.Value();
         if (ImGui::DragFloat("toe angle", &toe_angle, 0.1, 0.001, FLT_MAX)) {
@@ -484,10 +428,6 @@ void TunningPanel::tunningWheelCommonConfig(
                       wheel.m_suspension_travel_directions.Ptr());
     ImGui::DragFloat3("tire force apply centre mass offset",
                       wheel.m_tire_force_app_cm_offsets.Ptr());
-
-    ImGui::SeparatorText("misc");
-    ImGui::DragFloat3("wheel centre mass offset",
-                      wheel.m_wheel_centre_cm_offsets.Ptr());
 }
 
 void TunningPanel::tunningWheelUniqueConfig(
@@ -521,6 +461,14 @@ void TunningPanel::tunningWheelUniqueConfig(
                 nickel::Radians{nickel::Degrees{camber}};
         }
     }
+
+    ImGui::SeparatorText("misc");
+    ImGui::DragFloat3("wheel centre center mass offset",
+                      wheel.m_wheel_centre_cm_offsets.Ptr());
+    float max_steer = nickel::Degrees{wheel.m_wheel.m_max_steer}.Value();
+    if (ImGui::DragFloat("max steer", &max_steer, 0.1, 0.001, FLT_MAX)) {
+        wheel.m_wheel.m_max_steer = nickel::Degrees{max_steer};
+    }
 }
 
 void TunningPanel::tunningSteerVsForwardTable(
@@ -550,6 +498,9 @@ void TunningPanel::copyCommonConfig2Wheel(
     dst.m_suspension.m_camber_at_max_droop =
         backup.m_suspension.m_camber_at_max_droop;
     dst.m_suspension.m_camber_at_rest = backup.m_suspension.m_camber_at_rest;
+    dst.m_wheel_centre_cm_offsets = backup.m_wheel_centre_cm_offsets;
+    dst.m_shape = backup.m_shape;
+    dst.m_wheel.m_max_steer = backup.m_wheel.m_max_steer;
 }
 
 ImGuiWindowManager::ImGuiWindowManager(VehicleParams& params)
@@ -874,6 +825,8 @@ void ChoosingVehicleComponentPopupWindow::initDefaultPhysicsVehicle(
 nickel::physics::Vehicle createVehicle(const VehicleParams& vehicle_params,
                                        nickel::GameObject& chassis_go) {
     auto& physics_ctx = nickel::Context::GetInst().GetPhysicsContext();
+    static_cast<nickel::physics::RigidDynamic&>(chassis_go.m_rigid_actor)
+        .SetMass(vehicle_params.m_wheel_sim_desc.m_chassis_mass);
 
     auto type = vehicle_params.m_vehicle_type;
 

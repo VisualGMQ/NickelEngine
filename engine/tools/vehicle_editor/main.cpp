@@ -60,12 +60,14 @@ public:
         auto& go = root_go.m_children[1];
 
         nickel::physics::Vehicle4W vehicle = go.m_vehicle.CastAs4W();
-        vehicle.SetDigitalAccel(
-            keyboard.GetKey(nickel::input::Key::Up).IsPressing());
+        // bool riding = keyboard.GetKey(nickel::input::Key::Up).IsPressing();
+        bool riding = true;
+        vehicle.SetDigitalAccel(riding);
         vehicle.SetDigitalBrake(
             keyboard.GetKey(nickel::input::Key::Down).IsPressing());
-        vehicle.SetDigitalSteerLeft(
-            keyboard.GetKey(nickel::input::Key::Right).IsPressing());
+        bool steer_left =
+            keyboard.GetKey(nickel::input::Key::Right).IsPressing();
+        vehicle.SetDigitalSteerLeft(steer_left);
         vehicle.SetDigitalSteerRight(
             keyboard.GetKey(nickel::input::Key::Left).IsPressing());
         vehicle.SetGearUp(
