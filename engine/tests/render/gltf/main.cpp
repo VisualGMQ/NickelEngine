@@ -21,7 +21,7 @@ public:
     }
 
     void OnUpdate() override {
-        updateFlyCamera();
+        updateCamera();
         drawGrid();
         
         auto& ctx = nickel::Context::GetInst();
@@ -41,7 +41,7 @@ private:
     nickel::graphics::GLTFModel m_model;
     float m_move_speed = 0.1f;
     
-    void updateFlyCamera() {
+    void updateCamera() {
         auto& ctx = nickel::Context::GetInst();
         nickel::FlyCamera& camera =
             static_cast<nickel::FlyCamera&>(ctx.GetCamera());

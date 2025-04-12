@@ -47,6 +47,8 @@ add_subdirectory(tinygltf)
 
 add_subdirectory(tomlplusplus)
 
+add_subdirectory(implot)
+
 mark_as_3rdlib(SDL3-static)
 mark_as_3rdlib(SDL3-shared)
 mark_as_3rdlib(SDL_uclibc)
@@ -55,5 +57,6 @@ mark_as_3rdlib(spdlog)
 mark_as_3rdlib(volk)
 mark_as_3rdlib(stb_image)
 mark_as_3rdlib(imgui)
+mark_as_3rdlib(implot)
 mark_as_3rdlib(tinygltf)
 mark_as_3rdlib(tomlplusplus_tomlplusplus)

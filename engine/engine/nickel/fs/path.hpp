@@ -8,6 +8,7 @@ namespace nickel {
 
 class Path {
 public:
+    Path() = default;
     Path(const std::string& path);
     Path(const char* path);
     Path(std::string_view path);
@@ -34,6 +35,9 @@ public:
     bool IsEmpty() const;
     Path& ReplaceFilename(const Path& path);
     Path& ReplaceExtension(const Path& extension);
+
+    Path& operator=(const Path&) = default;
+    Path& operator=(Path&&) = default;
 
     Path operator/(const Path&) const noexcept;
     Path& operator/=(const Path&) noexcept;

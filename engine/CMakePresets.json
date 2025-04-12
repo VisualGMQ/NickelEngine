@@ -6,7 +6,8 @@
             "binaryDir": "${sourceDir}/cmake-build",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "NICKEL_TESTS" : "ON"
+                "NICKEL_BUILD_TESTS" : "ON",
+                "NICKEL_BUILD_TOOLS" : "ON"
             }
         },
         {
@@ -14,14 +15,16 @@
             "binaryDir": "${sourceDir}/cmake-build",
             "generator": "Ninja",
             "cacheVariables": { 
-                "NICKEL_TESTS" : "ON"
+                "NICKEL_BUILD_TESTS" : "ON",
+                "NICKEL_BUILD_TOOLS" : "ON"
             }
         },
         {
             "name": "CI-Windows",
             "binaryDir": "${sourceDir}/cmake-build",
             "cacheVariables": {
-                "NICKEL_TESTS" : "ON",
+                "NICKEL_BUILD_TESTS" : "ON",
+                "NICKEL_BUILD_TOOLS" : "ON",
                 "CMAKE_SYSTEM_VERSION" : "10.0.26100.0"
             }
         }

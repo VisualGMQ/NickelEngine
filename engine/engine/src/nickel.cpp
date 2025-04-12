@@ -12,6 +12,7 @@ namespace nickel {
 Context::Context() {
     LOGI("init video system");
     m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
+    m_old_window_size = {1024, 720};
 
     LOGI("init graphics system");
     m_graphics_adapter =
@@ -63,7 +64,7 @@ Context::~Context() {
     m_gltf_mgr.reset();
     m_texture_mgr.reset();
 
-    LOGI("clear graphics context");
+    LOGI("release graphics context");
     m_graphics_ctx.reset();
 
     LOGI("shutdown graphics system");
@@ -177,9 +178,22 @@ Camera& Context::GetCamera() {
     return *m_camera;
 }
 
+void Context::ChangeCamera(std::unique_ptr<Camera>&& camera) {
+    m_camera = std::move(camera);
+}
+
 void Context::OnWindowResize() {
     m_graphics_ctx->OnSwapchainRecreate(*m_window, *m_graphics_adapter);
-    m_camera->ResizeViewArea(m_window->GetSize());
+
+    auto new_window_size = m_window->GetSize();
+
+    if (m_camera) {
+        auto new_frustum = ResizeFrustumInNewWindowSize(
+            m_old_window_size, new_window_size, m_camera->GetFrustum());
+        m_camera->SetProject(new_frustum.fov, new_frustum.aspect,
+                             new_frustum.near, new_frustum.far);
+    }
+    m_old_window_size = new_window_size;
 }
 
 void Context::EnableRender(bool enable) {

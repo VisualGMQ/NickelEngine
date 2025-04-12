@@ -20,6 +20,14 @@ void GLTFManager::GC() {
     m_impl->GC();
 }
 
+void GLTFManager::Clear() {
+    m_impl->Clear();
+}
+
+std::vector<std::string> GLTFManager::GetAllGLTFModelNames() const {
+    return m_impl->GetAllGLTFModelNames();
+}
+
 GLTFManager::GLTFManager(Device device, CommonResource& res,
                          GLTFRenderPass& render_pass)
     : m_impl{std::make_unique<GLTFManagerImpl>(device, res, render_pass)} {}

@@ -27,7 +27,7 @@ public:
     VkSurfaceKHR m_surface = VK_NULL_HANDLE;
     DeviceImpl* m_device{};
     Adapter::Limits m_limits;
-    VkDebugUtilsMessengerEXT m_debug_utils_messenger;
+    VkDebugUtilsMessengerEXT m_debug_utils_messenger = VK_NULL_HANDLE;
     
     void CreateSurface(const video::Window::Impl& impl);
 

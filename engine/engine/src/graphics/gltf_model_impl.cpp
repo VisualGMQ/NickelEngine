@@ -22,9 +22,8 @@ void GLTFModelImpl::DecRefcount() {
     RefCountable::DecRefcount();
 
     if (Refcount() == 0) {
-        // TODO: GC GLTFModelImpl
-        // m_mgr->m_model_allocator.MarkAsGarbage(this);
-        // m_mgr->Remove(*this);
+        m_mgr->m_model_allocator.MarkAsGarbage(this);
+        m_mgr->Remove(*this);
     }
 }
 

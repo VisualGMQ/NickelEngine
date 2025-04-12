@@ -19,6 +19,7 @@ public:
     SVector<uint32_t, 2> GetSize() const noexcept;
 
     bool IsMinimize() const noexcept;
+    void SetTitle(const std::string&) const;
     
 private:
     std::unique_ptr<Impl> m_impl;

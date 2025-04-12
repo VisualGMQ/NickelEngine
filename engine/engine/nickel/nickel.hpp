@@ -11,6 +11,7 @@
 #include "nickel/fs/dialog.hpp"
 
 #include "imgui.h"
+#include "implot.h"
 #include "misc/Level.hpp"
 #include "misc/cpp/imgui_stdlib.h"
 #include "nickel/graphics/gltf.hpp"
@@ -54,6 +55,7 @@ public:
     physics::Context& GetPhysicsContext();
     const physics::Context& GetPhysicsContext() const;
     Camera& GetCamera();
+    void ChangeCamera(std::unique_ptr<Camera>&&);
 
     void OnWindowResize();
 
@@ -63,6 +65,7 @@ public:
 
 private:
     bool m_should_exit = false;
+    SVector<uint32_t, 2> m_old_window_size;
     std::unique_ptr<video::Window> m_window;
     std::unique_ptr<graphics::Adapter> m_graphics_adapter;
     std::unique_ptr<Application> m_application;
@@ -81,8 +84,8 @@ private:
         auto window_size = m_window->GetSize();
         float aspect = window_size.w / (float)window_size.h;
 
-        m_camera = std::make_unique<FlyCamera>(
-            window_size, Radians{Degrees{30.0f}}, aspect, 0.01f, 10000.0f);
+        m_camera = std::make_unique<FlyCamera>(Radians{Degrees{30.0f}}, aspect,
+                                               0.01f, 10000.0f);
     }
 };
 

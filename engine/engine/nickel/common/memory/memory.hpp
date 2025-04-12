@@ -317,7 +317,7 @@ private:
             size_t idx = (Mem*)p - m_mem;
             Mem* mem = m_mem + idx;
 
-            if (mem->m_status != Mem::Status::InUse) {
+            if (mem->m_status == Mem::Status::Unuse) {
                 LOGE("memory is not in use when mark as garbage");
                 return;
             }

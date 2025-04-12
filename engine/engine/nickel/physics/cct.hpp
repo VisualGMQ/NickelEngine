@@ -7,8 +7,6 @@
 
 namespace nickel::physics {
 
-class CCTManagerImpl;
-
 class CapsuleControllerImpl;
 class CapsuleControllerConstImpl;
 

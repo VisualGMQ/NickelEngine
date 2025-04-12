@@ -22,7 +22,7 @@ public:
     ImplWrapper(ImplWrapper&& o) noexcept : m_impl{o.m_impl} { o.m_impl = nullptr; }
 
     ImplWrapper& operator=(const ImplWrapper& o) {
-        if (&o != this) {
+        if (o.m_impl != m_impl) {
             if (m_impl) {
                 ((RefCountable*)m_impl)->DecRefcount();
             }
@@ -35,10 +35,16 @@ public:
     }
 
     ImplWrapper& operator=(ImplWrapper&& o) noexcept {
-        if (&o != this) {
-            m_impl = o.m_impl;
-            o.m_impl = nullptr;
+        if (&o == this) {
+            return *this;
         }
+        if (o.m_impl != m_impl) {
+            if (m_impl) {
+                ((RefCountable*)m_impl)->DecRefcount();
+            }
+            m_impl = o.m_impl;
+        }
+        o.m_impl = nullptr;
         return *this;
     }
 

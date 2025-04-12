@@ -11,6 +11,12 @@ class GameObject {
 public:
     friend class Level;
 
+    GameObject() = default;
+    GameObject(const GameObject&) = delete;
+    GameObject& operator=(const GameObject&) = delete;
+    GameObject(GameObject&&) noexcept = default;
+    GameObject& operator=(GameObject&&) noexcept = default;
+
     std::string m_name;
     Transform m_transform;
 

@@ -68,6 +68,7 @@ struct VehicleWheelSimDescriptor {
         Vec3 m_wheel_centre_cm_offsets;
         Vec3 m_suspension_force_app_point_offsets = {0, 0, 0};
         Vec3 m_tire_force_app_cm_offsets = {0, 0, 0};
+        uint32_t m_shape{};
     };
 
     struct AntiRollBar {
@@ -216,6 +217,7 @@ struct VehicleSteerVsForwardTable {
 
     VehicleSteerVsForwardTable();
     void Add(float speed, float steer_coefficient);
+    void Remove(size_t i);
     uint32_t Size() const;
     const SpeedSteerPair& GetPair(uint32_t idx) const;
 
@@ -307,6 +309,13 @@ public:
 class Vehicle : public ImplWrapper<VehicleDriveImpl> {
 public:
     using ImplWrapper::ImplWrapper;
+ 
+    enum class Type {
+        FourWheel = 0,
+        N_Wheel,
+        Tank,
+        NoDrive,
+    };
 
     Vehicle(Vehicle4W vehicle);
     Vehicle(VehicleNW vehicle);
@@ -320,6 +329,7 @@ public:
     VehicleNW CastAsNW() const;
     VehicleNoDrive CastAsNoDrive() const;
     VehicleTank CastAsTank() const;
+    Type GetType() const;
 };
 
 class VehicleManagerImpl;

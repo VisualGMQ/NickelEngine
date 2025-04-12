@@ -13,55 +13,57 @@ template <typename T>
 requires(std::is_floating_point_v<T>)
 class TRadians {
 public:
+    TRadians() : value_{} {}
+    
     template <typename U>
     requires(std::convertible_to<T, U>)
-    TRadians(U value) : value_{static_cast<T>(value)} {}
+    constexpr TRadians(U value) : value_{static_cast<T>(value)} {}
 
     template <typename U>
     requires(std::convertible_to<U, T>)
-    TRadians(TDegrees<U> o)
+    constexpr TRadians(TDegrees<U> o)
         : value_{static_cast<T>(static_cast<T>(o) * GenericPI<T> /
                                 static_cast<T>(180.0))} {}
 
-    TRadians& operator+=(const TRadians& o) {
+    constexpr TRadians& operator+=(const TRadians& o) {
         value_ += o.value_;
         return *this;
     }
 
-    TRadians& operator-=(const TRadians& o) {
+    constexpr TRadians& operator-=(const TRadians& o) {
         value_ -= o.value_;
         return *this;
     }
 
     template <typename U>
-    TRadians& operator*=(U value) {
+    constexpr TRadians& operator*=(U value) {
         value_ *= value;
         return *this;
     }
 
     template <typename U>
-    TRadians& operator/=(U value) {
+    constexpr TRadians& operator/=(U value) {
         value_ /= value;
         return *this;
     }
 
     template <typename U>
-    TRadians& operator*=(TRadians<U> value) {
+    constexpr TRadians& operator*=(TRadians<U> value) {
         value_ *= value.value_;
         return *this;
     }
 
     template <typename U>
-    TRadians& operator/=(TRadians<U> value) {
+    constexpr TRadians& operator/=(TRadians<U> value) {
         value_ /= value.value_;
         return *this;
     }
 
-    TRadians(const TRadians&) = default;
+    constexpr TRadians(const TRadians&) = default;
 
-    explicit operator T() const noexcept { return value_; }
+    constexpr explicit operator T() const noexcept { return value_; }
 
-    T Value() const noexcept { return value_; }
+    constexpr T Value() const noexcept { return value_; }
 
 private:
     T value_;
@@ -71,6 +73,8 @@ template <typename T>
 requires(std::is_floating_point_v<T>)
 class TDegrees {
 public:
+    constexpr TDegrees() : value_{} {}
+
     template <typename U>
     requires(std::convertible_to<T, U>)
     constexpr TDegrees(U value) : value_{static_cast<T>(value)} {}
