@@ -13,16 +13,17 @@ GLTFRenderPass::GLTFRenderPass(Device device, CommonResource& res) {
     initBindGroupLayout(device);
     initPipelineLayout(device);
 
+    auto engine_relative_path = nickel::Context::GetInst().GetEngineRelativePath();
     ShaderModule vertex_shader, frag_shader;
     {
-        auto content =
-            ReadWholeFile("engine/assets/shaders/shader_pbr.vert.spv");
+        auto content = ReadWholeFile(engine_relative_path /
+                                     "engine/assets/shaders/shader_pbr.vert.spv");
         vertex_shader = device.CreateShaderModule((uint32_t*)content.data(),
                                                   content.size());
     }
     {
-        auto content =
-            ReadWholeFile("engine/assets/shaders/shader_pbr.frag.spv");
+        auto content = ReadWholeFile(engine_relative_path /
+                                     "engine/assets/shaders/shader_pbr.frag.spv");
         frag_shader = device.CreateShaderModule((uint32_t*)content.data(),
                                                 content.size());
     }

@@ -16,7 +16,9 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-        mgr.Load("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        auto engine_relative_path = ctx.GetEngineRelativePath();
+        mgr.Load(engine_relative_path /
+                 "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
         m_model = mgr.Find("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
     }
 

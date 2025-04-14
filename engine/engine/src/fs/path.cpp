@@ -3,19 +3,27 @@
 namespace nickel {
 
 Path::Path(const std::string& path)
-    : m_path{path, std::filesystem::path::generic_format} {
-}
+    : m_path{uniformPathFormat(path), std::filesystem::path::generic_format} {}
 
 Path::Path(const std::filesystem::path& path)
-    : m_path{path, std::filesystem::path::generic_format} {
-}
+    : m_path{uniformPathFormat(path.string()),
+             std::filesystem::path::generic_format} {}
 
 Path::Path(const char* path)
-    : m_path{path, std::filesystem::path::generic_format} {
-}
+    : m_path{uniformPathFormat(path), std::filesystem::path::generic_format} {}
 
 Path::Path(std::string_view path)
-    : m_path{path, std::filesystem::path::generic_format} {
+    : m_path{path, std::filesystem::path::generic_format} {}
+
+std::string Path::uniformPathFormat(std::string path) {
+    std::ranges::replace(path, '\\', '/');
+    if (path.size() >= 2 && path[0] == '.' &&
+        (path[1] == '/' || path[1] == '\\')) {
+        path = path.substr(2);
+    } else if (path == ".") {
+        path.clear();
+    }
+    return path;
 }
 
 void Path::Clear() {

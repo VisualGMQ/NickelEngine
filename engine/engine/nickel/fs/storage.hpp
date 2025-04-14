@@ -1,6 +1,6 @@
 #pragma once
-#include "nickel/common/singleton.hpp"
 #include "nickel/common/memory/memory.hpp"
+#include "nickel/fs/path.hpp"
 
 #include <vector>
 
@@ -26,8 +26,7 @@ public:
     bool IsStorageReady() const;
     void WaitStorageReady(
         uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
-    void EnumerateStorage(const std::string& path,
-                          StorageEnumerator enumerator);
+    void EnumerateStorage(const Path& path, StorageEnumerator enumerator);
 
 private:
     StorageImpl* m_impl{};
@@ -36,10 +35,10 @@ private:
 class ReadOnlyStorageBehavior {
 public:
     void Initialize(StorageImpl*);
-    uint64_t GetFileSize(const std::string& filename) const;
+    uint64_t GetFileSize(const Path& filename) const;
     uint64_t GetRemainingSpacing() const;
-    std::vector<char> ReadStorageFile(const std::string& filename) const;
-    bool ReadStorageFile(const std::string& filename, void* buffer,
+    std::vector<char> ReadStorageFile(const Path& filename) const;
+    bool ReadStorageFile(const Path& filename, void* buffer,
                          uint64_t size) const;
 
 private:
@@ -51,11 +50,9 @@ public:
     void Initialize(StorageImpl*);
     bool WriteStorageFile(const std::string& filename, const void* buffer,
                           uint64_t size) const;
-    bool CopyFile(const std::string& old_path,
-                  const std::string& new_path) const;
-    bool RemovePath(const std::string& path) const;
-    bool MovePath(const std::string& old_path,
-                  const std::string& new_path) const;
+    bool CopyFile(const Path& old_path, const Path& new_path) const;
+    bool RemovePath(const Path& path) const;
+    bool MovePath(const Path& old_path, const Path& new_path) const;
 
 private:
     StorageImpl* m_impl{};
@@ -67,7 +64,7 @@ class AppReadOnlyStorage : public internal::CommonStorageBehavior,
                            public internal::ReadOnlyStorageBehavior {
 public:
     AppReadOnlyStorage();
-    AppReadOnlyStorage(const std::string& root_path);
+    AppReadOnlyStorage(const Path& root_path);
     ~AppReadOnlyStorage();
 
 private:
@@ -79,7 +76,7 @@ class LocalStorage : public internal::CommonStorageBehavior,
                      public internal::WritableStorageBehavior {
 public:
     LocalStorage();
-    explicit LocalStorage(const std::string& base_path);
+    explicit LocalStorage(const Path& base_path);
     ~LocalStorage();
 
 private:
@@ -106,8 +103,8 @@ public:
     UserStorage& GetUserStorage();
     const UserStorage& GetUserStorage() const;
 
-    std::unique_ptr<LocalStorage> AcqurieLocalStorage(
-        const std::string& base_path = "");
+    std::unique_ptr<LocalStorage> AcquireLocalStorage(
+        const Path& base_path = "");
 
 private:
     AppReadOnlyStorage m_app_storage;

@@ -1,4 +1,5 @@
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
+#include "nickel/common/common.hpp"
 #include "nickel/common/macro.hpp"
 #include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/gltf_draw.hpp"
@@ -55,11 +56,16 @@ GLTFManagerImpl::~GLTFManagerImpl() {
 
 bool GLTFManagerImpl::Load(const Path& filename,
                            const GLTFLoadConfig& load_config) {
+    auto content = ReadWholeFile(filename);
+    NICKEL_RETURN_VALUE_IF_FALSE_LOGW(false, !content.empty(), "read ",
+                                      filename, " failed");
+
     tinygltf::TinyGLTF tiny_gltf_loader;
     std::string err, warn;
     tinygltf::Model gltf_model;
-    if (!tiny_gltf_loader.LoadASCIIFromFile(&gltf_model, &err, &warn,
-                                            filename.ToString())) {
+    if (!tiny_gltf_loader.LoadASCIIFromString(
+            &gltf_model, &err, &warn, content.data(), content.size(),
+            filename.ParentPath().ToString())) {
         LOGE("load model from {} failed: \n\terr: {}\n\twarn: {}", filename,
              err, warn);
         return false;

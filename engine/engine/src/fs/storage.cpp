@@ -21,23 +21,20 @@ public:
     StorageImpl& operator=(StorageImpl&&) = delete;
     ~StorageImpl();
 
-    uint64_t GetFileSize(const std::string& filename) const;
+    uint64_t GetFileSize(const Path& filename) const;
     uint64_t GetRemainingSpacing() const;
-    std::vector<char> ReadStorageFile(const std::string& filename) const;
-    bool ReadStorageFile(const std::string& filename, void* buffer,
+    std::vector<char> ReadStorageFile(const Path& filename) const;
+    bool ReadStorageFile(const Path& filename, void* buffer,
                          uint64_t size) const;
-    bool WriteStorageFile(const std::string& filename, const void* buffer,
+    bool WriteStorageFile(const Path& filename, const void* buffer,
                           uint64_t size) const;
-    bool CopyFile(const std::string& old_path,
-                  const std::string& new_path) const;
-    bool RemovePath(const std::string& path) const;
-    bool MovePath(const std::string& old_path,
-                  const std::string& new_path) const;
+    bool CopyFile(const Path& old_path, const Path& new_path) const;
+    bool RemovePath(const Path& path) const;
+    bool MovePath(const Path& old_path, const Path& new_path) const;
     bool IsStorageReady() const;
     void WaitStorageReady(
         uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
-    void EnumerateStorage(const std::string& path,
-                          StorageEnumerator enumerator);
+    void EnumerateStorage(const Path& path, StorageEnumerator enumerator);
 
 private:
     SDL_Storage* m_storage = nullptr;
@@ -68,10 +65,9 @@ StorageImpl::~StorageImpl() {
     SDL_CALL(SDL_CloseStorage(m_storage));
 }
 
-bool StorageImpl::CopyFile(const std::string& old_path,
-                           const std::string& new_path) const {
-    bool success =
-        SDL_CopyStorageFile(m_storage, old_path.c_str(), new_path.c_str());
+bool StorageImpl::CopyFile(const Path& old_path, const Path& new_path) const {
+    bool success = SDL_CopyStorageFile(m_storage, old_path.ToString().c_str(),
+                                       new_path.ToString().c_str());
     if (!success) {
         LOGW("copy file {} to {} failed: {}", old_path, new_path,
              SDL_GetError());
@@ -79,9 +75,10 @@ bool StorageImpl::CopyFile(const std::string& old_path,
     return success;
 }
 
-uint64_t StorageImpl::GetFileSize(const std::string& filename) const {
+uint64_t StorageImpl::GetFileSize(const Path& filename) const {
     Uint64 length = 0;
-    SDL_CALL(SDL_GetStorageFileSize(m_storage, filename.c_str(), &length));
+    SDL_CALL(SDL_GetStorageFileSize(m_storage, filename.ToString().c_str(),
+                                    &length));
     return static_cast<uint64_t>(length);
 }
 
@@ -90,7 +87,7 @@ uint64_t StorageImpl::GetRemainingSpacing() const {
 }
 
 std::vector<char> StorageImpl::ReadStorageFile(
-    const std::string& filename) const {
+    const Path& filename) const {
     uint64_t file_size = GetFileSize(filename);
     if (file_size == 0) {
         return {};
@@ -98,23 +95,25 @@ std::vector<char> StorageImpl::ReadStorageFile(
 
     std::vector<char> buffer;
     buffer.resize(file_size);
-    SDL_CALL(SDL_ReadStorageFile(m_storage, filename.c_str(), buffer.data(),
-                                 file_size));
+    SDL_CALL(SDL_ReadStorageFile(m_storage, filename.ToString().c_str(),
+                                 buffer.data(), file_size));
     return buffer;
 }
 
-bool StorageImpl::ReadStorageFile(const std::string& filename, void* buffer,
+bool StorageImpl::ReadStorageFile(const Path& filename, void* buffer,
                                   uint64_t size) const {
-    if (!SDL_ReadStorageFile(m_storage, filename.c_str(), buffer, size)) {
+    if (!SDL_ReadStorageFile(m_storage, filename.ToString().c_str(), buffer,
+                             size)) {
         LOGE("read file {} failed: {}", filename, SDL_GetError());
         return false;
     }
     return true;
 }
 
-bool StorageImpl::WriteStorageFile(const std::string& filename,
+bool StorageImpl::WriteStorageFile(const Path& filename,
                                    const void* buffer, uint64_t size) const {
-    if (!SDL_WriteStorageFile(m_storage, filename.c_str(), buffer, size)) {
+    if (!SDL_WriteStorageFile(m_storage, filename.ToString().c_str(), buffer,
+                              size)) {
         LOGE("write file {} failed: {}", filename, SDL_GetError());
         return false;
     }
@@ -134,10 +133,10 @@ void StorageImpl::WaitStorageReady(uint32_t timeout) const {
     }
 }
 
-void StorageImpl::EnumerateStorage(const std::string& path,
+void StorageImpl::EnumerateStorage(const Path& path,
                                    StorageEnumerator enumerator) {
-    SDL_EnumerateStorageDirectory(m_storage, path.c_str(), sdlEnumerateCallback,
-                                  &enumerator);
+    SDL_EnumerateStorageDirectory(m_storage, path.ToString().c_str(),
+                                  sdlEnumerateCallback, &enumerator);
 }
 
 SDL_EnumerationResult StorageImpl::sdlEnumerateCallback(void* userdata,
@@ -162,17 +161,17 @@ SDL_EnumerationResult StorageImpl::sdlEnumerateCallback(void* userdata,
     return {};
 }
 
-bool StorageImpl::RemovePath(const std::string& path) const {
-    if (!SDL_RemoveStoragePath(m_storage, path.c_str())) {
+bool StorageImpl::RemovePath(const Path& path) const {
+    if (!SDL_RemoveStoragePath(m_storage, path.ToString().c_str())) {
         LOGE("remove path {} failed: {}", path, SDL_GetError());
         return false;
     }
     return true;
 }
 
-bool StorageImpl::MovePath(const std::string& old_path,
-                           const std::string& new_path) const {
-    if (!SDL_RenameStoragePath(m_storage, old_path.c_str(), new_path.c_str())) {
+bool StorageImpl::MovePath(const Path& old_path, const Path& new_path) const {
+    if (!SDL_RenameStoragePath(m_storage, old_path.ToString().c_str(),
+                               new_path.ToString().c_str())) {
         LOGE("move path {} to {} failed: {}", old_path, new_path,
              SDL_GetError());
         return false;
@@ -200,7 +199,8 @@ void CommonStorageBehavior::WaitStorageReady(uint32_t timeout) const {
     return m_impl->WaitStorageReady(timeout);
 }
 
-void CommonStorageBehavior::EnumerateStorage(const std::string& path, StorageEnumerator enumerator){
+void CommonStorageBehavior::EnumerateStorage(const Path& path,
+                                             StorageEnumerator enumerator) {
     return m_impl->EnumerateStorage(path, enumerator);
 }
 
@@ -209,7 +209,7 @@ void ReadOnlyStorageBehavior::Initialize(StorageImpl* impl) {
 }
 
 uint64_t ReadOnlyStorageBehavior::GetFileSize(
-    const std::string& filename) const {
+    const Path& filename) const {
     return m_impl->GetFileSize(filename);
 }
 
@@ -218,11 +218,11 @@ uint64_t ReadOnlyStorageBehavior::GetRemainingSpacing() const {
 }
 
 std::vector<char> ReadOnlyStorageBehavior::ReadStorageFile(
-    const std::string& filename) const {
+    const Path& filename) const {
     return m_impl->ReadStorageFile(filename);
 }
 
-bool ReadOnlyStorageBehavior::ReadStorageFile(const std::string& filename,
+bool ReadOnlyStorageBehavior::ReadStorageFile(const Path& filename,
                                               void* buffer,
                                               uint64_t size) const {
     return m_impl->ReadStorageFile(filename, buffer, size);
@@ -238,17 +238,17 @@ bool WritableStorageBehavior::WriteStorageFile(const std::string& filename,
     return m_impl->WriteStorageFile(filename, buffer, size);
 }
 
-bool WritableStorageBehavior::CopyFile(const std::string& old_path,
-                                       const std::string& new_path) const {
+bool WritableStorageBehavior::CopyFile(const Path& old_path,
+                                       const Path& new_path) const {
     return m_impl->CopyFile(old_path, new_path);
 }
 
-bool WritableStorageBehavior::RemovePath(const std::string& path) const {
+bool WritableStorageBehavior::RemovePath(const Path& path) const {
     return m_impl->RemovePath(path);
 }
 
-bool WritableStorageBehavior::MovePath(const std::string& old_path,
-                                       const std::string& new_path) const {
+bool WritableStorageBehavior::MovePath(const Path& old_path,
+                                       const Path& new_path) const {
     return m_impl->MovePath(old_path, new_path);
 }
 
@@ -260,9 +260,9 @@ AppReadOnlyStorage::AppReadOnlyStorage()
     ReadOnlyStorageBehavior::Initialize(m_impl.get());
 }
 
-AppReadOnlyStorage::AppReadOnlyStorage(const std::string& root_path)
+AppReadOnlyStorage::AppReadOnlyStorage(const Path& root_path)
     : m_impl(std::make_unique<StorageImpl>(StorageImpl::Type::Title,
-                                           root_path.c_str(), "")) {
+                                           root_path.ToString().c_str(), "")) {
     CommonStorageBehavior::Initialize(m_impl.get());
     ReadOnlyStorageBehavior::Initialize(m_impl.get());
 }
@@ -276,9 +276,9 @@ LocalStorage::LocalStorage()
     WritableStorageBehavior::Initialize(m_impl.get());
 }
 
-LocalStorage::LocalStorage(const std::string& base_path)
+LocalStorage::LocalStorage(const Path& base_path)
     : m_impl(std::make_unique<StorageImpl>(StorageImpl::Type::Local,
-                                           base_path.c_str(), "")) {
+                                           base_path.ToString().c_str(), "")) {
     CommonStorageBehavior::Initialize(m_impl.get());
     ReadOnlyStorageBehavior::Initialize(m_impl.get());
     WritableStorageBehavior::Initialize(m_impl.get());
@@ -322,9 +322,9 @@ const UserStorage& StorageManager::GetUserStorage() const {
     return m_user_storage;
 }
 
-std::unique_ptr<LocalStorage> StorageManager::AcqurieLocalStorage(
-    const std::string& base_path) {
-    if (base_path.empty()) {
+std::unique_ptr<LocalStorage> StorageManager::AcquireLocalStorage(
+    const Path& base_path) {
+    if (base_path.IsEmpty()) {
         return std::make_unique<LocalStorage>();
     }
     return std::make_unique<LocalStorage>(base_path);

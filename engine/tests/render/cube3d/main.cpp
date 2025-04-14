@@ -37,7 +37,7 @@ public:
     }
 
     void OnUpdate() override {
-        auto render_ctx = RenderTestCommonContext::GetInst();
+        auto& render_ctx = RenderTestCommonContext::GetInst();
         
         auto& window = nickel::Context::GetInst().GetWindow();
         if (window.IsMinimize()) {
@@ -418,10 +418,11 @@ private:
         desc.m_render_pass = m_render_pass;
         desc.m_layout = m_pipeline_layout;
 
+        auto engine_relative_path = nickel::Context::GetInst().GetEngineRelativePath();
         auto vert_file_content =
-            nickel::ReadWholeFile("./tests/render/cube3d/vert.spv");
+            nickel::ReadWholeFile(engine_relative_path / "tests/render/cube3d/vert.spv");
         auto frag_file_content =
-            nickel::ReadWholeFile("./tests/render/cube3d/frag.spv");
+            nickel::ReadWholeFile(engine_relative_path / "tests/render/cube3d/frag.spv");
 
         ShaderModule vertex_shader = device.CreateShaderModule(
             (uint32_t*)vert_file_content.data(), vert_file_content.size());

@@ -31,7 +31,7 @@ public:
     void OnQuit() override { RenderTestCommonContext::Delete(); }
 
     void OnUpdate() override {
-        auto render_ctx = RenderTestCommonContext::GetInst();
+        auto& render_ctx = RenderTestCommonContext::GetInst();
 
         auto& window = nickel::Context::GetInst().GetWindow();
         if (window.IsMinimize()) {
@@ -231,11 +231,12 @@ private:
         desc.m_render_pass = m_render_pass;
         desc.m_layout = m_pipeline_layout;
 
-        auto vert_file_content =
-            nickel::ReadWholeFile("./tests/render/colorful_rectangle/vert.spv");
+        auto engine_relative_path = nickel::Context::GetInst().GetEngineRelativePath();
+        auto vert_file_content = nickel::ReadWholeFile(
+            engine_relative_path / "tests/render/colorful_rectangle/vert.spv");
 
-        auto frag_file_content =
-            nickel::ReadWholeFile("./tests/render/colorful_rectangle/frag.spv");
+        auto frag_file_content = nickel::ReadWholeFile(
+            engine_relative_path / "tests/render/colorful_rectangle/frag.spv");
 
         ShaderModule vertex_shader = device.CreateShaderModule(
             (uint32_t*)vert_file_content.data(), vert_file_content.size());

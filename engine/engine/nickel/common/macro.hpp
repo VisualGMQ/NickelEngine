@@ -35,3 +35,19 @@
             return;                                     \
         }                                               \
     } while (0)
+
+#define NICKEL_RETURN_VALUE_IF_FALSE_LOGW(value, expr, msg, ...) \
+    do {                                                         \
+        if (!(expr)) {                                           \
+            LOGW(#expr " failed: " msg, ##__VA_ARGS__);          \
+            return value;                                        \
+        }                                                        \
+    } while (0)
+
+#define NICKEL_RETURN_VALUE_IF_FALSE_LOGE(value, expr, msg, ...) \
+    do {                                                         \
+        if (!(expr)) {                                           \
+            LOGE(#expr " failed: " msg, ##__VA_ARGS__);          \
+            return value;                                        \
+        }                                                        \
+    } while (0)

@@ -20,6 +20,19 @@ endif()
 include(cmake/target_category_helper.cmake)
 include(cmake/compile_shader.cmake)
 
+
+## generate path content
+file(READ ./nickel_engine_project_path_template.toml PROJECT_PATH_TEMPLATE_CONTENT)
+cmake_path(RELATIVE_PATH CMAKE_CURRENT_SOURCE_DIR
+            BASE_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            OUTPUT_VARIABLE NICKEL_ENGINE_RELATIVE_PATH)
+string(REPLACE "#PROJECT_PATH#" "${NICKEL_ENGINE_RELATIVE_PATH}" PROJECT_PATH_CONTENT ${PROJECT_PATH_TEMPLATE_CONTENT})
+
+file(WRITE ${CMAKE_SOURCE_DIR}/nickel_engine_project_path.toml ${PROJECT_PATH_CONTENT})
+
+
+## build
+
 add_subdirectory(engine)
 
 if (NICKEL_BUILD_TOOLS)

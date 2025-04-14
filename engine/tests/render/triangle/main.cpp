@@ -31,7 +31,7 @@ public:
             return;
         }
 
-        auto render_ctx = RenderTestCommonContext::GetInst();
+        auto& render_ctx = RenderTestCommonContext::GetInst();
 
         Device device = nickel::Context::GetInst().GetGPUAdapter().GetDevice();
 
@@ -117,10 +117,12 @@ private:
         desc.m_render_pass = m_render_pass;
         desc.m_layout = m_pipeline_layout;
 
+        auto engine_relative_path =
+            nickel::Context::GetInst().GetEngineRelativePath();
         auto vert_file_content =
-            nickel::ReadWholeFile("./tests/render/triangle/vert.spv");
+            nickel::ReadWholeFile(engine_relative_path / "tests/render/triangle/vert.spv");
         auto frag_file_content =
-            nickel::ReadWholeFile("./tests/render/triangle/frag.spv");
+            nickel::ReadWholeFile(engine_relative_path / "tests/render/triangle/frag.spv");
 
         ShaderModule vertex_shader = device.CreateShaderModule(
             (uint32_t*)vert_file_content.data(), vert_file_content.size());
