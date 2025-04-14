@@ -1,20 +1,19 @@
 #include "nickel/common/common.hpp"
 #include "nickel/common/log.hpp"
-
-#include <iterator>
+#include "nickel/context.hpp"
 
 namespace nickel {
 
 std::vector<char> ReadWholeFile(const Path& filename) {
-    std::ifstream file(filename.GetUnderlyingPath(), std::ios::binary);
-
-    if (file.fail()) {
-        LOGW("file {} load failed", filename);
-        return {};
+    auto storage = Context::GetInst().GetStorageManager().AcquireLocalStorage();
+    uint64_t size = storage->GetFileSize(filename);
+    if (size > 0) {
+        storage->WaitStorageReady();
+        return storage->ReadStorageFile(filename);
     }
 
-    return std::vector<char>{std::istreambuf_iterator(file),
-                             std::istreambuf_iterator<char>()};
+    LOGW("load ", filename, " failed: file is empty or not found");
+    return {};
 }
 
 }  // namespace nickel

@@ -1,5 +1,6 @@
 #include "nickel/graphics/primitive_draw.hpp"
 
+#include "nickel/common/common.hpp"
 #include "nickel/graphics/internal/context_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/image_impl.hpp"
 #include "nickel/nickel.hpp"
@@ -15,12 +16,14 @@ PrimitiveRenderPass::PrimitiveRenderPass(Device device,
     initPipelineLayout(device);
     initBindGroup(res);
 
-    auto local_storage = storage_mgr.AcqurieLocalStorage();
-    local_storage->WaitStorageReady();
-    auto vertex_shader_content = local_storage->ReadStorageFile(
-        "engine/assets/shaders/shader_gridline.vert.spv");
-    auto frag_shader_content = local_storage->ReadStorageFile(
-        "engine/assets/shaders/shader_gridline.frag.spv");
+    auto engine_relative_path =
+        nickel::Context::GetInst().GetEngineRelativePath();
+    auto vertex_shader_content =
+        ReadWholeFile(engine_relative_path /
+                      "engine/assets/shaders/shader_gridline.vert.spv");
+    auto frag_shader_content =
+        ReadWholeFile(engine_relative_path /
+                      "engine/assets/shaders/shader_gridline.frag.spv");
 
     // shader stages
     ShaderModule vertex_shader = device.CreateShaderModule(

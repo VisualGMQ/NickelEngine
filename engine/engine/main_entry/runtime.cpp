@@ -14,6 +14,9 @@ Runtime::Runtime() {
     }
 
     Context::Init();
+    
+    // due to dependencies of systems, we need two-phase initialize
+    Context::GetInst().Initialize();
 
     auto& ctx = Context::GetInst();
     ctx.RegisterCustomApplication(

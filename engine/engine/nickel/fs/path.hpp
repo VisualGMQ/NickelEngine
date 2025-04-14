@@ -51,6 +51,7 @@ private:
     std::filesystem::path m_path;
 
     explicit Path(const std::filesystem::path& path);
+    static std::string uniformPathFormat(std::string path);
 };
 
 std::ostream& operator<<(std::ostream& os, const Path& path);

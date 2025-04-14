@@ -4,20 +4,25 @@
 namespace nickel::graphics {
 
 DebugDrawer::DebugDrawer() {
+    auto engine_relative_path =
+        nickel::Context::GetInst().GetEngineRelativePath();
     {
         GLTFVertexDataLoader loader;
         m_sphere_data =
-            loader.Load("engine/assets/models/unit_sphere/unit_sphere.gltf")[0];
+            loader.Load(engine_relative_path /
+                        "engine/assets/models/unit_sphere/unit_sphere.gltf")[0];
     }
     {
         GLTFVertexDataLoader loader;
         m_semi_sphere_data = loader.Load(
+            engine_relative_path /
             "engine/assets/models/unit_semi_sphere/semi_sphere.gltf")[0];
     }
     {
         GLTFVertexDataLoader loader;
         m_cylinder_data =
-            loader.Load("engine/assets/models/unit_cylinder/cylinder.gltf")[0];
+            loader.Load(engine_relative_path /
+                        "engine/assets/models/unit_cylinder/cylinder.gltf")[0];
     }
 }
 

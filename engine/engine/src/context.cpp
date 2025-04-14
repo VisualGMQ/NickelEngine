@@ -1,5 +1,6 @@
-﻿#include "nickel/nickel.hpp"
+﻿#include "nickel/context.hpp"
 
+#include "nickel/common/macro.hpp"
 #include "nickel/graphics/internal/context_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/device_impl.hpp"
@@ -8,43 +9,6 @@
 #include "nickel/internal/pch.hpp"
 
 namespace nickel {
-
-Context::Context() {
-    LOGI("init video system");
-    m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
-    m_old_window_size = {1024, 720};
-
-    LOGI("init graphics system");
-    m_graphics_adapter =
-        std::make_unique<graphics::Adapter>(m_window->GetImpl());
-
-    initCamera();
-
-    LOGI("init storage manager");
-    // TODO: change org & app from config
-    m_storage_mgr =
-        std::make_unique<StorageManager>("visualgmq", "nickelengine");
-
-    LOGI("init graphics context");
-    m_graphics_ctx = std::make_unique<graphics::Context>(
-        *m_graphics_adapter, *m_window, *m_storage_mgr);
-
-    LOGI("init asset managers");
-    m_gltf_mgr = std::make_unique<graphics::GLTFManager>(
-        m_graphics_adapter->GetDevice(),
-        m_graphics_ctx->GetImpl()->GetCommonResource(),
-        m_graphics_ctx->GetImpl()->GetGLTFRenderPass());
-    m_texture_mgr = std::make_unique<graphics::TextureManager>();
-
-    LOGI("init physics context");
-    m_physics = std::make_unique<physics::Context>();
-
-    LOGI("init debug drawer");
-    m_debug_drawer = std::make_unique<graphics::DebugDrawer>();
-
-    LOGI("init game level");
-    m_level = std::make_unique<Level>();
-}
 
 Context::~Context() {
     if (m_application) {
@@ -72,6 +36,47 @@ Context::~Context() {
 
     LOGI("shutdown window system");
     m_window.reset();
+}
+
+void Context::Initialize() {
+    LOGI("init video system");
+    m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
+    m_old_window_size = {1024, 720};
+
+    LOGI("init graphics system");
+    m_graphics_adapter =
+        std::make_unique<graphics::Adapter>(m_window->GetImpl());
+
+    initCamera();
+
+    LOGI("init storage manager");
+    // TODO: change org & app from config
+    m_storage_mgr =
+        std::make_unique<StorageManager>("visualgmq", "nickelengine");
+    
+    LOGI("read project path config");
+    m_engine_relative_path = parseEngineProjectPath();
+    LOGI("engine project path: ", m_engine_relative_path);
+
+    LOGI("init graphics context");
+    m_graphics_ctx = std::make_unique<graphics::Context>(
+        *m_graphics_adapter, *m_window, *m_storage_mgr);
+
+    LOGI("init asset managers");
+    m_gltf_mgr = std::make_unique<graphics::GLTFManager>(
+        m_graphics_adapter->GetDevice(),
+        m_graphics_ctx->GetImpl()->GetCommonResource(),
+        m_graphics_ctx->GetImpl()->GetGLTFRenderPass());
+    m_texture_mgr = std::make_unique<graphics::TextureManager>();
+
+    LOGI("init physics context");
+    m_physics = std::make_unique<physics::Context>();
+
+    LOGI("init debug drawer");
+    m_debug_drawer = std::make_unique<graphics::DebugDrawer>();
+
+    LOGI("init game level");
+    m_level = std::make_unique<Level>();
 }
 
 void Context::HandleEvent(const SDL_Event& event) {
@@ -219,6 +224,24 @@ void Context::Update() {
     m_physics->GC();
     m_gltf_mgr->GC();
     m_texture_mgr->GC();
+}
+
+const Path& Context::GetEngineRelativePath() const {
+    return m_engine_relative_path;
+}
+
+Path Context::parseEngineProjectPath() const {
+    auto parser = toml::parse_file("nickel_engine_project_path.toml");
+    NICKEL_RETURN_VALUE_IF_FALSE_LOGW(
+        {}, !parser.failed(),
+        "can't parse nickel_engine_project_path.toml, use default project path "
+        "'.'");
+    auto& tbl = parser.table();
+    auto path = tbl.get_as<std::string>("project_path");
+    NICKEL_RETURN_VALUE_IF_FALSE_LOGW({}, path,
+                                      "parse nickel_engine_project_path.toml "
+                                      "failed: no 'project_path' field");
+    return path->get();
 }
 
 }  // namespace nickel

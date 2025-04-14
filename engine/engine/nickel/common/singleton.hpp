@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include <cassert>
 #include <memory>
+#include <cassert>
 
 namespace nickel {
 
@@ -30,6 +30,12 @@ public:
         static T instance;
         return instance;
     }
+
+    Singlton() = default;
+    Singlton(const Singlton&) = delete;
+    Singlton(Singlton&&) = delete;
+    Singlton& operator=(Singlton&&) = delete;
+    Singlton& operator=(const Singlton&) = delete;
 };
 
 /**
@@ -41,8 +47,14 @@ public:
 template <typename T>
 class Singlton<T, true> {
 public:
+    Singlton() = default;
+    Singlton(const Singlton&) = delete;
+    Singlton(Singlton&&) = delete;
+    Singlton& operator=(Singlton&&) = delete;
+    Singlton& operator=(const Singlton&) = delete;
+    
     /**
-     * @brief get signelton instance
+     * @brief get singleton instance
      * @return The singleton instance
      */
     static T& GetInst() {

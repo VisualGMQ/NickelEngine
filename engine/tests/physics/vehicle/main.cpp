@@ -19,7 +19,9 @@ public:
         mouse.Show(false);
 
         auto& mgr = ctx.GetGLTFManager();
-        mgr.Load("tests/physics/vehicle/assets/car/car.gltf");
+        auto engine_relative_path = ctx.GetEngineRelativePath();
+        mgr.Load(engine_relative_path /
+                 "tests/physics/vehicle/assets/car/car.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         auto& physics_ctx = ctx.GetPhysicsContext();

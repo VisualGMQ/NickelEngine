@@ -17,12 +17,18 @@ public:
         mouse.RelativeMode(true);
         mouse.Show(false);
 
+        auto engine_relative_path = ctx.GetEngineRelativePath();
+
         auto& mgr = ctx.GetGLTFManager();
-        mgr.Load("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
-        mgr.Load("engine/assets/models/CesiumMan/CesiumMan.gltf");
-        mgr.Load("engine/assets/models/unit_box/unit_box.gltf");
-        mgr.Load("engine/assets/models/unit_sphere/unit_sphere.gltf");
-        mgr.Load("tests/sandbox/assets/door/door.gltf");
+        mgr.Load(engine_relative_path /
+                 "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        mgr.Load(engine_relative_path /
+                 "engine/assets/models/CesiumMan/CesiumMan.gltf");
+        mgr.Load(engine_relative_path /
+                 "engine/assets/models/unit_box/unit_box.gltf");
+        mgr.Load(engine_relative_path /
+                 "engine/assets/models/unit_sphere/unit_sphere.gltf");
+        mgr.Load(engine_relative_path / "tests/sandbox/assets/door/door.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         auto& physics_ctx = ctx.GetPhysicsContext();
