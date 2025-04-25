@@ -23,7 +23,7 @@ CapsuleControllerImpl::CapsuleControllerImpl(
     physx_desc.position.z = desc.m_position.z;
     physx_desc.contactOffset = desc.m_contact_offset;
     physx_desc.scaleCoeff = desc.m_scale_coeff;
-    physx_desc.slopeLimit = desc.m_slope_limit;
+    physx_desc.slopeLimit = std::cos(Radians{desc.m_slope_limit}.Value());
     physx_desc.stepOffset = desc.m_step_offset;
     physx_desc.upDirection = Vec3ToPhysX(desc.m_up_dir);
     physx_desc.invisibleWallHeight = desc.m_invisible_wall_height;

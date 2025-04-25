@@ -179,6 +179,10 @@ const physics::Context& Context::GetPhysicsContext() const {
     return *m_physics;
 }
 
+const Time& Context::GetTime() const {
+    return m_time;
+}
+
 Camera& Context::GetCamera() {
     return *m_camera;
 }
@@ -206,18 +210,19 @@ void Context::EnableRender(bool enable) {
 }
 
 void Context::Update() {
+    m_time.Update();
     m_graphics_ctx->BeginFrame();
 
     auto app = GetApplication();
     if (app) {
-        app->OnUpdate();
+        app->OnUpdate(m_time.DeltaTime());
     }
     m_level->Update();
 
     GetDeviceManager().Update();
 
     // TODO: use sub-step simulation
-    m_physics->Update(0.008);
+    m_physics->Update(m_time.DeltaTime());
 
     m_graphics_ctx->EndFrame();
 

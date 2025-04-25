@@ -31,7 +31,7 @@ struct CCTDesc {
 
     Vec3 m_position;
     Vec3 m_up_dir{0, 1, 0};
-    float m_slope_limit = 0;
+    Degrees m_slope_limit = 0;
     float m_invisible_wall_height = 0;
     float m_max_jump_height = 0;
     float m_contact_offset = 0.1f;

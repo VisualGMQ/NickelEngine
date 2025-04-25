@@ -9,6 +9,7 @@
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/input/device/device_manager.hpp"
 #include "nickel/video/window.hpp"
+#include "nickel/time/time.hpp"
 
 #include "imgui.h"
 #include "implot.h"
@@ -56,6 +57,7 @@ public:
     graphics::DebugDrawer& GetDebugDrawer();
     physics::Context& GetPhysicsContext();
     const physics::Context& GetPhysicsContext() const;
+    const Time& GetTime() const;
     Camera& GetCamera();
     void ChangeCamera(std::unique_ptr<Camera>&&);
 
@@ -77,7 +79,7 @@ private:
     std::unique_ptr<StorageManager> m_storage_mgr;
     std::unique_ptr<physics::Context> m_physics;
     std::unique_ptr<graphics::DebugDrawer> m_debug_drawer;
-
+    Time m_time;
     input::DeviceManager m_device_mgr;
     std::unique_ptr<graphics::TextureManager> m_texture_mgr;
     std::unique_ptr<graphics::GLTFManager> m_gltf_mgr;
@@ -104,7 +106,7 @@ public:
 
     virtual void OnQuit() {}
 
-    virtual void OnUpdate() {}
+    virtual void OnUpdate(float delta_time) {}
 
     virtual ~Application() = default;
 };

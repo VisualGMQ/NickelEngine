@@ -40,7 +40,7 @@ public:
         ImGuiWindowManager::Init(m_vehicle_params);
     }
 
-    void OnUpdate() override {
+    void OnUpdate(float delta_time) override {
         ImGuiWindowManager::GetInst().Update();
 
         driveVehicle();

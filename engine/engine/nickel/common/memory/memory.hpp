@@ -321,6 +321,10 @@ private:
                 LOGE("memory is not in use when mark as garbage");
                 return;
             }
+
+            if (mem->m_status == Mem::Status::PendingDelete) {
+                return;
+            }
             
             mem->m_status = Mem::Status::PendingDelete;
 

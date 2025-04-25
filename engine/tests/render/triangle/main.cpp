@@ -25,7 +25,7 @@ public:
 
     void OnQuit() override { RenderTestCommonContext::Delete(); }
 
-    void OnUpdate() override {
+    void OnUpdate(float delta_time) override {
         auto& window = nickel::Context::GetInst().GetWindow();
         if (window.IsMinimize()) {
             return;

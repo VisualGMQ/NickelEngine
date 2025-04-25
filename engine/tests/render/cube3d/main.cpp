@@ -36,7 +36,7 @@ public:
         bufferVertexData();
     }
 
-    void OnUpdate() override {
+    void OnUpdate(float delta_time) override {
         auto& render_ctx = RenderTestCommonContext::GetInst();
         
         auto& window = nickel::Context::GetInst().GetWindow();
