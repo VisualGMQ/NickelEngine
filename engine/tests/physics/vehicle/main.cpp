@@ -243,7 +243,7 @@ public:
         }
     }
 
-    void OnUpdate() override {
+    void OnUpdate(float delta_time) override {
         auto& ctx = nickel::Context::GetInst();
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();

@@ -37,7 +37,9 @@ public:
             nickel::GameObject go;
             go.m_name = "car";
             go.m_model = mgr.Find(
-                "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
+                (engine_relative_path /
+                 "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck")
+                    .ToString());
             go.m_rigid_actor =
                 nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
                     nickel::Vec3{3, 0, 0}, nickel::Quat{})};
@@ -67,11 +69,13 @@ public:
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.emplace_back(std::move(go));
         }
-        // create gun
+        // create man
         {
             nickel::GameObject go;
             go.m_name = "saw";
-            go.m_model = mgr.Find("engine/assets/models/CesiumMan/CesiumMan");
+            go.m_model = mgr.Find((engine_relative_path /
+                                   "engine/assets/models/CesiumMan/CesiumMan")
+                                      .ToString());
             go.m_transform.scale = nickel::Vec3{0.7};
 
             nickel::physics::CapsuleController::Descriptor desc;
@@ -94,7 +98,9 @@ public:
         {
             nickel::GameObject go;
             go.m_name = "wall";
-            go.m_model = mgr.Find("tests/sandbox/assets/door/door");
+            go.m_model = mgr.Find(
+                (engine_relative_path / "tests/sandbox/assets/door/door")
+                    .ToString());
             go.m_rigid_actor =
                 physics_ctx.CreateRigidStatic(nickel::Vec3{0, 0, 5}, {});
 
@@ -119,7 +125,7 @@ public:
         }
     }
 
-    void OnUpdate() override {
+    void OnUpdate(float delta_time) override {
         auto& ctx = nickel::Context::GetInst();
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& mouse = ctx.GetDeviceManager().GetMouse();
@@ -201,7 +207,9 @@ private:
             ball_go.m_transform.scale = nickel::Vec3{0.3};
             ball_go.m_name = "ball";
             ball_go.m_model =
-                mgr.Find("engine/assets/models/unit_sphere/unit_sphere");
+                mgr.Find((ctx.GetEngineRelativePath() /
+                          "engine/assets/models/unit_sphere/unit_sphere")
+                             .ToString());
             auto& physics_ctx = ctx.GetPhysicsContext();
             ball_go.m_rigid_actor =
                 nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
@@ -213,10 +221,10 @@ private:
             ball_go.m_rigid_actor.AttachShape(shape);
             physics_ctx.GetMainScene().AddRigidActor(ball_go.m_rigid_actor);
             auto& root_go = ctx.GetCurrentLevel().GetRootGO();
-            root_go.m_children.emplace_back(std::move(ball_go));
             static_cast<nickel::physics::RigidDynamic&>(ball_go.m_rigid_actor)
                 .AddForce(camera.GetForward() * 20,
                           nickel::physics::ForceMode::Impulse);
+            root_go.m_children.emplace_back(std::move(ball_go));
         }
     }
 
