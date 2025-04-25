@@ -1,5 +1,4 @@
 #include "nickel/time/time.hpp"
-#include "nickel/internal/pch.hpp"
 
 namespace nickel {
 

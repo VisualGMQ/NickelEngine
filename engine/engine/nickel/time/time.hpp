@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 namespace nickel {
 
 class Time {
