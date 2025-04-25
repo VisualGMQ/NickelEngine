@@ -200,6 +200,8 @@ private:
         auto& keyboard = ctx.GetDeviceManager().GetKeyboard();
         auto& camera = (nickel::FlyCamera&)ctx.GetCamera();
 
+        constexpr float force = 20;
+
         // create ball
         if (keyboard.GetKey(nickel::input::Key::Space).IsPressed()) {
             auto& mgr = ctx.GetGLTFManager();
@@ -222,7 +224,7 @@ private:
             physics_ctx.GetMainScene().AddRigidActor(ball_go.m_rigid_actor);
             auto& root_go = ctx.GetCurrentLevel().GetRootGO();
             static_cast<nickel::physics::RigidDynamic&>(ball_go.m_rigid_actor)
-                .AddForce(camera.GetForward() * 20,
+                .AddForce(camera.GetForward() * force,
                           nickel::physics::ForceMode::Impulse);
             root_go.m_children.emplace_back(std::move(ball_go));
         }
