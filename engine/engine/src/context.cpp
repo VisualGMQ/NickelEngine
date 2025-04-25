@@ -221,8 +221,19 @@ void Context::Update() {
 
     GetDeviceManager().Update();
 
-    // TODO: use sub-step simulation
-    m_physics->Update(m_time.DeltaTime());
+    // substep simulation
+    constexpr float substep_time = 1.0 / 30.0f;
+    // NOTE: if delta_time very small, physics simulate will occur error!
+    constexpr float minimal_simulate_time = 1.0 / 240.0f;
+    float delta_time = std::max(m_time.DeltaTime(), minimal_simulate_time);
+    
+    while (delta_time > substep_time) {
+        m_physics->Update(substep_time);
+        delta_time -= substep_time;
+    }
+    if (delta_time > 0) {
+        m_physics->Update(delta_time);
+    }
 
     m_graphics_ctx->EndFrame();
 
