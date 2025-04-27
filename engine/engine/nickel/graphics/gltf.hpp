@@ -3,10 +3,7 @@
 #include "nickel/common/transform.hpp"
 #include "nickel/fs/path.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
-#include "nickel/graphics/lowlevel/buffer.hpp"
-#include "nickel/graphics/lowlevel/sampler.hpp"
 #include "nickel/graphics/material.hpp"
-#include "nickel/graphics/texture.hpp"
 
 namespace tinygltf {
 class Model;
@@ -42,6 +39,7 @@ struct GLTFLoadConfig {
 
 class CommonResource;
 class GLTFRenderPass;
+struct GLTFLoadData;
 
 class GLTFManager {
 public:
@@ -49,6 +47,7 @@ public:
                 GLTFRenderPass& render_pass);
     ~GLTFManager();
 
+    bool Load(const GLTFLoadData& load_data, const GLTFLoadConfig& load_config);
     bool Load(const Path&, const GLTFLoadConfig& = {});
     GLTFModel Find(const std::string&);
     void GC();

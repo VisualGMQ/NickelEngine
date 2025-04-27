@@ -43,6 +43,16 @@ public:
         return *this;
     }
 
+    Flags& operator|=(Flags o) {
+        value_ |= static_cast<underlying_type>(o.value_);
+        return *this;
+    }
+
+    Flags& operator&=(Flags o) {
+        value_ &= static_cast<underlying_type>(o.value_);
+        return *this;
+    }
+
     Flags operator~() const noexcept { return ~value_; }
 
     operator T() const { return static_cast<T>(value_); }

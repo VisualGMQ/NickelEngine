@@ -17,6 +17,8 @@ struct Quaternion final {
     
     Quaternion() = default;
 
+    T* Ptr() { return v.Ptr(); }
+
     Quaternion(const SVector<T, 3>& v, T w)
         : v{v}, w{w} {
     }

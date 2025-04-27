@@ -8,13 +8,16 @@
 namespace nickel::graphics {
 class CommonResource;
 class GLTFRenderPass;
+class Node;
+struct GLTFLoadData;
 
 class GLTFManagerImpl {
 public:
     explicit GLTFManagerImpl(Device device, CommonResource&, GLTFRenderPass&);
     ~GLTFManagerImpl();
 
-    bool Load(const Path&, const GLTFLoadConfig& load_config);
+    bool Load(const GLTFLoadData&, const GLTFLoadConfig&);
+    bool Load(const Path&, const GLTFLoadConfig&);
     GLTFModel Find(const std::string&);
     void GC();
     void Remove(GLTFModelImpl&);
@@ -36,9 +39,9 @@ public:
     std::set<std::string> m_pending_delete;
 
 private:
-    void preorderNode(const tinygltf::Model& gltf_model,
-                      const tinygltf::Node& node,
-                      const GLTFModelResource& resource, std::span<Mesh> meshes,
+    void preorderNode(const GLTFLoadData& load_data,
+                      const Node& node,
+                      const GLTFModelResource& resource, std::span<const Mesh> meshes,
                       GLTFModelImpl& parent_model);
 };
 

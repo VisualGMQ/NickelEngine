@@ -21,7 +21,7 @@ void ConvertRangeData(const unsigned char* src, DstT* dst, size_t blockCount,
             src += sizeof(SrcT);
             eCount++;
         } else {
-            blockCount --;
+            blockCount--;
             eCount = 0;
             src = src_start_ptr + stride;
             src_start_ptr = src;
@@ -162,7 +162,7 @@ inline std::string ParseURI2Path(std::string_view str) {
     return path;
 }
 
-inline Mat44 CalcNodeTransform(const tinygltf::Node& node) {
+inline Transform CalcNodeTransform(const tinygltf::Node& node) {
     auto cvtMat = [](const std::vector<double>& datas) {
         Mat44 mat;
         for (int i = 0; i < datas.size(); i++) {
@@ -171,35 +171,61 @@ inline Mat44 CalcNodeTransform(const tinygltf::Node& node) {
         return mat;
     };
 
-    auto m = Mat44::Identity();
     if (!node.matrix.empty()) {
-        m = cvtMat(node.matrix);
-    } else if (!node.scale.empty() || !node.translation.empty() ||
-               !node.rotation.empty()) {
-        m = Mat44::Identity();
-        if (!node.scale.empty()) {
-            m = CreateScale(Vec3(node.scale[0], node.scale[1], node.scale[2])) *
-                m;
-        }
-        if (!node.rotation.empty()) {
-            m = Quat(node.rotation[0], node.rotation[1], node.rotation[2],
-                     node.rotation[3])
-                    .ToMat() *
-                m;
-        }
-        if (!node.translation.empty()) {
-            m = CreateTranslation(Vec3(node.translation[0], node.translation[1],
-                                       node.translation[2])) *
-                m;
-        }
+        auto m = cvtMat(node.matrix);
+        return Transform::FromMat(m);
     }
 
-    return m;
+    Transform transform;
+    if (!node.scale.empty()) {
+        transform.scale = Vec3(node.scale[0], node.scale[1], node.scale[2]);
+    }
+    if (!node.rotation.empty()) {
+        transform.q = Quat(node.rotation[0], node.rotation[1],
+                           node.rotation[2], node.rotation[3]);
+    }
+    if (!node.translation.empty()) {
+        transform.p = Vec3(node.translation[0], node.translation[1],
+                           node.translation[2]);
+    }
+    return transform;
 }
 
+struct Node {
+    enum class Flag {
+        None = 0x00,
+        HasMesh = 0x01,
+        HasBone = 0x02, 
+    };
+    
+    std::string m_name;
+    Flags<Flag> m_flags = Flag::None;
+    Transform m_local_transform;
+    Transform m_global_transform;
+    std::vector<uint32_t> m_children;
+
+    std::optional<uint32_t> m_mesh;
+
+    bool HasMesh() const { return m_flags & Flag::HasMesh; }
+    bool HasBone() const { return m_flags & Flag::HasBone; }
+};
+
+struct Skin {
+    std::string m_name;
+    uint32_t m_root;
+    std::set<uint32_t> m_bone_indices;
+};
+
 struct GLTFLoadData {
+    Path m_filename;
+    
+    std::vector<Node> m_nodes;
+    std::vector<uint32_t> m_root_nodes;
+
     GLTFModelResource m_resource;
     std::vector<Mesh> m_meshes;
+
+    std::vector<Skin> m_skins;
 };
 
 class GLTFLoader {
@@ -263,6 +289,13 @@ private:
         std::vector<unsigned char>& out_index_buffer,
         const std::set<uint32_t>& vertex_accessor,
         const std::set<uint32_t>& index_accessor) const;
+
+    /*
+     * 1. calculate node global transform
+     * 2. record wether node/subtree is a mesh node or bone node
+     */
+    Flags<Node::Flag> recordNodeInfoRecursive(std::vector<Node>& nodes, Node& node,
+                                 Transform* parent_transform) const;
 };
 
 }  // namespace nickel::graphics

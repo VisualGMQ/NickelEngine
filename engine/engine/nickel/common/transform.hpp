@@ -12,6 +12,7 @@ struct Transform {
     Transform RelatedBy(const Transform& parent) const;
 
     Mat44 ToMat() const;
+    static Transform FromMat(const Mat44& mat);
 };
 
 Transform operator*(const Transform& t1, const Transform& t2);

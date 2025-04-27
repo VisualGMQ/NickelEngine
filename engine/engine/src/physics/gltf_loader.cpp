@@ -46,6 +46,7 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
 
     Path root_dir = filename.ParentPath();
     GLTFLoadData load_data;
+    load_data.m_filename = filename;
     load_data.m_resource =
         gltf_manager.m_model_resource_allocator.Allocate(&gltf_manager);
     GLTFModelResourceImpl* resource = load_data.m_resource.GetImpl();
@@ -120,6 +121,42 @@ GLTFLoadData GLTFLoader::loadGLTF(const Path& filename, const Adapter& adapter,
     }
 
     load_data.m_resource = resource;
+
+    for (auto& gltf_node : m_gltf_model.nodes) {
+        Node node;
+        node.m_name = gltf_node.name;
+        node.m_local_transform = CalcNodeTransform(gltf_node);
+        for (int child : gltf_node.children) {
+            node.m_children.emplace_back(child);
+        }
+        bool is_mesh_node = gltf_node.mesh != -1;
+        if (is_mesh_node) {
+            node.m_mesh = gltf_node.mesh;
+        }
+        node.m_flags |= Node::Flag::HasMesh;
+        load_data.m_nodes.push_back(std::move(node));
+    }
+
+    for (auto& gltf_skin : m_gltf_model.skins) {
+        Skin skin;
+        skin.m_name = gltf_skin.name;
+        skin.m_root = gltf_skin.skeleton;
+        for (int i : gltf_skin.joints) {
+            load_data.m_nodes[i].m_flags |= Node::Flag::HasBone;
+            skin.m_bone_indices.insert(i);
+        }
+    }
+
+    // currently we only load one scene
+    const tinygltf::Scene& scene = m_gltf_model.scenes[0];
+    for (int root_node : scene.nodes) {
+        load_data.m_root_nodes.push_back(root_node);
+    }
+
+    for (auto root_node_idx : load_data.m_root_nodes) {
+        recordNodeInfoRecursive(load_data.m_nodes,
+                                load_data.m_nodes[root_node_idx], nullptr);
+    }
 
     return load_data;
 }
@@ -644,6 +681,23 @@ std::vector<BufferView> GLTFLoader::loadVertexBuffer(
     }
 
     return views;
+}
+
+Flags<Node::Flag> GLTFLoader::recordNodeInfoRecursive(
+    std::vector<Node>& nodes, Node& node, Transform* parent_transform) const {
+    if (!parent_transform) {
+        node.m_global_transform = node.m_local_transform;
+    } else {
+        node.m_global_transform = *parent_transform * node.m_local_transform;
+    }
+
+    for (auto& child : node.m_children) {
+        auto child_flag = recordNodeInfoRecursive(nodes, nodes[child],
+                                                  &node.m_global_transform);
+        node.m_flags |= child_flag;
+    }
+
+    return node.m_flags;
 }
 
 }  // namespace nickel::graphics

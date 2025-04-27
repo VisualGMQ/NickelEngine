@@ -12,6 +12,11 @@ bool GLTFManager::Load(const Path& filename,
     return m_impl->Load(filename, load_config);
 }
 
+bool GLTFManager::Load(const GLTFLoadData& load_data,
+                       const GLTFLoadConfig& load_config) {
+    return m_impl->Load(load_data, load_config);
+}
+
 GLTFModel GLTFManager::Find(const std::string& name) {
     return m_impl->Find(name);
 }
