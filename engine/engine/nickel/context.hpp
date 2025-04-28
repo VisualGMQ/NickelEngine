@@ -11,6 +11,7 @@
 #include "nickel/video/window.hpp"
 #include "nickel/time/time.hpp"
 
+#include "animation/skeleton.hpp"
 #include "imgui.h"
 #include "implot.h"
 #include "misc/Level.hpp"
@@ -49,8 +50,10 @@ public:
     graphics::Context& GetGraphicsContext();
     graphics::TextureManager& GetTextureManager();
     const graphics::TextureManager& GetTextureManager() const;
-    const graphics::GLTFManager& GetGLTFManager() const;
-    graphics::GLTFManager& GetGLTFManager();
+    const graphics::GLTFModelManager& GetGLTFManager() const;
+    graphics::GLTFModelManager& GetGLTFManager();
+    SkeletonManager& GetSkeletonManager();
+    const SkeletonManager& GetSkeletonManager() const;
     Level& GetCurrentLevel();
     const Level& GetCurrentLevel() const;
     const graphics::DebugDrawer& GetDebugDrawer() const;
@@ -82,7 +85,8 @@ private:
     Time m_time;
     input::DeviceManager m_device_mgr;
     std::unique_ptr<graphics::TextureManager> m_texture_mgr;
-    std::unique_ptr<graphics::GLTFManager> m_gltf_mgr;
+    std::unique_ptr<graphics::GLTFModelManager> m_gltf_mgr;
+    std::unique_ptr<SkeletonManager> m_skeleton_mgr;
     std::unique_ptr<Level> m_level;
 
     std::unique_ptr<Application> m_application;

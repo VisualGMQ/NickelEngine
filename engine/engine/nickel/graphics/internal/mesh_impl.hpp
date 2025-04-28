@@ -4,10 +4,10 @@
 #include "nickel/graphics/mesh.hpp"
 
 namespace nickel::graphics {
-class GLTFManagerImpl;
+class GLTFModelManagerImpl;
 
 struct MeshImpl : public RefCountable {
-    explicit MeshImpl(GLTFManagerImpl* mgr);
+    explicit MeshImpl(GLTFModelManagerImpl* mgr);
 
     void DecRefcount() override;
 
@@ -15,7 +15,7 @@ struct MeshImpl : public RefCountable {
     std::vector<Primitive> m_primitives;
 
 private:
-    GLTFManagerImpl* m_mgr{};
+    GLTFModelManagerImpl* m_mgr{};
 };
 
 }  // namespace nickel::graphics

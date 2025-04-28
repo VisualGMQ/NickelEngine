@@ -24,9 +24,10 @@ Context::~Context() {
     LOGI("release physics context");
     m_physics.reset();
 
-    LOGI("release assets");
+    LOGI("release asset managers");
     m_gltf_mgr.reset();
     m_texture_mgr.reset();
+    m_skeleton_mgr.reset();
 
     LOGI("release graphics context");
     m_graphics_ctx.reset();
@@ -63,11 +64,12 @@ void Context::Initialize() {
         *m_graphics_adapter, *m_window, *m_storage_mgr);
 
     LOGI("init asset managers");
-    m_gltf_mgr = std::make_unique<graphics::GLTFManager>(
+    m_gltf_mgr = std::make_unique<graphics::GLTFModelManager>(
         m_graphics_adapter->GetDevice(),
         m_graphics_ctx->GetImpl()->GetCommonResource(),
         m_graphics_ctx->GetImpl()->GetGLTFRenderPass());
     m_texture_mgr = std::make_unique<graphics::TextureManager>();
+    m_skeleton_mgr = std::make_unique<SkeletonManager>();
 
     LOGI("init physics context");
     m_physics = std::make_unique<physics::Context>();
@@ -147,12 +149,20 @@ const graphics::TextureManager& Context::GetTextureManager() const {
     return *m_texture_mgr;
 }
 
-const graphics::GLTFManager& Context::GetGLTFManager() const {
+const graphics::GLTFModelManager& Context::GetGLTFManager() const {
     return *m_gltf_mgr;
 }
 
-graphics::GLTFManager& Context::GetGLTFManager() {
+graphics::GLTFModelManager& Context::GetGLTFManager() {
     return *m_gltf_mgr;
+}
+
+SkeletonManager& Context::GetSkeletonManager() {
+    return *m_skeleton_mgr;
+}
+
+const SkeletonManager& Context::GetSkeletonManager() const {
+    return *m_skeleton_mgr;
 }
 
 Level& Context::GetCurrentLevel() {
@@ -240,6 +250,7 @@ void Context::Update() {
     m_physics->GC();
     m_gltf_mgr->GC();
     m_texture_mgr->GC();
+    m_skeleton_mgr->GC();
 }
 
 const Path& Context::GetEngineRelativePath() const {

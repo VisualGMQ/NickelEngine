@@ -1,15 +1,17 @@
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
 #include "nickel/common/common.hpp"
 #include "nickel/common/macro.hpp"
+#include "nickel/context.hpp"
 #include "nickel/graphics/common_resource.hpp"
 #include "nickel/graphics/gltf_draw.hpp"
-#include "nickel/graphics/internal/gltf_loader.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
-#include "nickel/context.hpp"
+#include "nickel/importer/internal/gltf_importer_impl.hpp"
+
+#include <unordered_set>
 
 namespace nickel::graphics {
 
-GLTFManagerImpl::GLTFManagerImpl(Device device, CommonResource& res,
+GLTFModelManagerImpl::GLTFModelManagerImpl(Device device, CommonResource& res,
                                  GLTFRenderPass& gltf_render_pass) {
     {
         Buffer::Descriptor desc;
@@ -44,7 +46,7 @@ GLTFManagerImpl::GLTFManagerImpl(Device device, CommonResource& res,
     }
 }
 
-GLTFManagerImpl::~GLTFManagerImpl() {
+GLTFModelManagerImpl::~GLTFModelManagerImpl() {
     m_models.clear();
 
     m_model_allocator.FreeAll();
@@ -53,32 +55,46 @@ GLTFManagerImpl::~GLTFManagerImpl() {
     m_mtl_allocator.FreeAll();
 }
 
-bool GLTFManagerImpl::Load(const GLTFLoadData& load_data,
-                           const GLTFLoadConfig& load_config) {
-    Path pure_filename = load_data.m_filename.Filename().ReplaceExtension("");
-    Path parent_dir = load_data.m_filename.ParentPath();
-    std::string final_name = (parent_dir / pure_filename).ToString();
-    std::replace(final_name.begin(), final_name.end(), '\\', '/');
-    if (load_config.m_combine_mesh) {
+bool GLTFModelManagerImpl::Load(const GLTFImportData& load_data,
+                                const GLTFLoadConfig& load_config) {
+    if (!load_config.ShouldLoadMesh()) {
+        return true;
+    }
+
+    if (load_config.ShouldCombineMeshes()) {
         // NOTE: currently we only load one scene
         for (auto& root_node_idx : load_data.m_root_nodes) {
             auto& root_node = load_data.m_nodes[root_node_idx];
-            NICKEL_CONTINUE_IF_FALSE(root_node.HasMesh());
+            NICKEL_CONTINUE_IF_FALSE(root_node.IsInMeshTree());
             GLTFModelImpl* root_model_impl = m_model_allocator.Allocate(this);
             preorderNode(load_data, root_node, load_data.m_resource,
                          std::span{load_data.m_meshes}, *root_model_impl);
             root_model_impl->m_name = root_node.m_name;
-            m_models[final_name] = root_model_impl;
+            m_models[load_data.m_asset_name] = root_model_impl;
         }
     } else {
+        std::unordered_set<std::string> mesh_names;
+        const std::unordered_set<std::string>* using_mesh_set =
+            &load_config.m_meshes;
+
+        if (load_config.ShouldLoadAllMeshes()) {
+            for (auto& node : load_data.m_nodes) {
+                if (node.m_mesh) {
+                    mesh_names.emplace(node.m_name);
+                }
+            }
+            using_mesh_set = &mesh_names;
+        }
+
         for (auto& node : load_data.m_nodes) {
-            NICKEL_CONTINUE_IF_FALSE(node.m_mesh);
+            NICKEL_CONTINUE_IF_FALSE(node.m_mesh &&
+                                     using_mesh_set->contains(node.m_name));
             auto& mesh = load_data.m_meshes[node.m_mesh.value()];
 
             GLTFModelImpl* model = m_model_allocator.Allocate(this);
             model->m_mesh = mesh;
             model->m_resource = load_data.m_resource;
-            model->m_name = final_name + "." + node.m_name;
+            model->m_name = load_data.m_asset_name + "." + node.m_name;
             model->m_transform = node.m_global_transform.ToMat();
 
             if (auto it = m_models.find(model->m_name); it != m_models.end()) {
@@ -92,43 +108,14 @@ bool GLTFManagerImpl::Load(const GLTFLoadData& load_data,
     return true;
 }
 
-bool GLTFManagerImpl::Load(const Path& filename,
-                           const GLTFLoadConfig& load_config) {
-    auto content = ReadWholeFile(filename);
-    NICKEL_RETURN_VALUE_IF_FALSE_LOGW(false, !content.empty(), "read ",
-                                      filename, " failed");
-
-    tinygltf::TinyGLTF tiny_gltf_loader;
-    std::string err, warn;
-    tinygltf::Model gltf_model;
-    if (!tiny_gltf_loader.LoadASCIIFromString(
-            &gltf_model, &err, &warn, content.data(), content.size(),
-            filename.ParentPath().ToString())) {
-        LOGE("load model from {} failed: \n\terr: {}\n\twarn: {}", filename,
-             err, warn);
-        return false;
-    }
-
-    if (gltf_model.nodes.empty()) {
-        LOGE("load model from {} failed: no nodes", filename);
-        return false;
-    }
-
-    GLTFLoader loader(gltf_model);
-    auto load_data = loader.Load(
-        filename, nickel::Context::GetInst().GetGPUAdapter(), *this);
-
-    return Load(load_data, load_config);
-}
-
-GLTFModel GLTFManagerImpl::Find(const std::string& name) {
+GLTFModel GLTFModelManagerImpl::Find(const std::string& name) {
     if (auto it = m_models.find(name); it != m_models.end()) {
         return it->second;
     }
     return {};
 }
 
-void GLTFManagerImpl::GC() {
+void GLTFModelManagerImpl::GC() {
     for (auto pending_delete : m_pending_delete) {
         m_models.erase(pending_delete);
     }
@@ -139,7 +126,7 @@ void GLTFManagerImpl::GC() {
     m_mtl_allocator.GC();
 }
 
-void GLTFManagerImpl::Remove(GLTFModelImpl& impl) {
+void GLTFModelManagerImpl::Remove(GLTFModelImpl& impl) {
     for (auto it = m_models.begin(); it != m_models.end(); it++) {
         if (it->second == &impl) {
             m_pending_delete.insert(it->first);
@@ -148,7 +135,7 @@ void GLTFManagerImpl::Remove(GLTFModelImpl& impl) {
     }
 }
 
-void GLTFManagerImpl::Clear() {
+void GLTFModelManagerImpl::Clear() {
     m_models.clear();
 
     m_model_allocator.GC();
@@ -157,7 +144,7 @@ void GLTFManagerImpl::Clear() {
     m_mtl_allocator.GC();
 }
 
-std::vector<std::string> GLTFManagerImpl::GetAllGLTFModelNames() const {
+std::vector<std::string> GLTFModelManagerImpl::GetAllGLTFModelNames() const {
     std::vector<std::string> names;
     for (auto& [name, _] : m_models) {
         names.push_back(name);
@@ -165,12 +152,12 @@ std::vector<std::string> GLTFManagerImpl::GetAllGLTFModelNames() const {
     return names;
 }
 
-void GLTFManagerImpl::preorderNode(const GLTFLoadData& load_data,
-                                   const Node& node,
-                                   const GLTFModelResource& resource,
-                                   std::span<const Mesh> meshes,
-                                   GLTFModelImpl& parent_model) {
-    NICKEL_RETURN_IF_FALSE(node.HasMesh());
+void GLTFModelManagerImpl::preorderNode(const nickel::GLTFImportData& load_data,
+                                        const Node& node,
+                                        const GLTFModelResource& resource,
+                                        std::span<const Mesh> meshes,
+                                        GLTFModelImpl& parent_model) {
+    NICKEL_RETURN_IF_FALSE(node.IsInMeshTree());
 
     GLTFModelImpl* model = m_model_allocator.Allocate(this);
     model->m_name = node.m_name;

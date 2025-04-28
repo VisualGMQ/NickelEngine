@@ -1,13 +1,14 @@
 #pragma once
+#include "nickel/context.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/graphics/internal/material3d_impl.hpp"
 #include "nickel/graphics/mesh.hpp"
 #include "nickel/graphics/texture_manager.hpp"
-#include "nickel/nickel.hpp"
+#include "nickel/importer/gltf_importer.hpp"
 #include "tiny_gltf.h"
 
-namespace nickel::graphics {
-class GLTFRenderPass;
+namespace nickel {
+class graphics::GLTFRenderPass;
 
 template <typename SrcT, typename DstT>
 void ConvertRangeData(const unsigned char* src, DstT* dst, size_t blockCount,
@@ -41,15 +42,16 @@ void ConvertRangeData(const unsigned char* src, DstT* dst, size_t blockCount,
  * @param model model
  */
 template <typename ComponentType>
-BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
-                              const tinygltf::Accessor& accessor,
-                              const tinygltf::Model& model) {
+graphics::BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
+                                        int type,
+                                        const tinygltf::Accessor& accessor,
+                                        const tinygltf::Model& model) {
     auto& view = model.bufferViews[accessor.bufferView];
     auto& buffer = model.buffers[view.buffer];
     auto src_offset = accessor.byteOffset + view.byteOffset;
     auto size = accessor.count * sizeof(ComponentType) *
                 tinygltf::GetNumComponentsInType(type);
-    BufferView bufView;
+    graphics::BufferView bufView;
     bufView.m_offset = dst.size();
     bufView.m_size = size;
     bufView.m_count = accessor.count;
@@ -107,40 +109,41 @@ BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst, int type,
 }
 
 template <typename RequireT>
-BufferView RecordBufferView(const tinygltf::Model& model,
-                            const tinygltf::Accessor& accessor,
-                            std::vector<unsigned char>& buffer, int type) {
-    BufferView view;
+graphics::BufferView RecordBufferView(const tinygltf::Model& model,
+                                      const tinygltf::Accessor& accessor,
+                                      std::vector<unsigned char>& buffer,
+                                      int type) {
+    graphics::BufferView view;
     view = CopyBufferFromGLTF<RequireT>(buffer, type, accessor, model);
     return view;
 }
 
-inline Filter GLTFFilter2RHI(int type) {
+inline graphics::Filter GLTFFilter2RHI(int type) {
     switch (type) {
         case TINYGLTF_TEXTURE_FILTER_LINEAR:
         // TODO: support mipmap;
         case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
         case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
-            return Filter::Linear;
+            return graphics::Filter::Linear;
         case TINYGLTF_TEXTURE_FILTER_NEAREST:
         // TODO: support mipmap;
         case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
         case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-            return Filter::Nearest;
+            return graphics::Filter::Nearest;
     }
-    return Filter::Linear;
+    return graphics::Filter::Linear;
 }
 
-inline SamplerAddressMode GLTFWrapper2RHI(int type) {
+inline graphics::SamplerAddressMode GLTFWrapper2RHI(int type) {
     switch (type) {
         case TINYGLTF_TEXTURE_WRAP_REPEAT:
-            return SamplerAddressMode::Repeat;
+            return graphics::SamplerAddressMode::Repeat;
         case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-            return SamplerAddressMode::MirrorRepeat;
+            return graphics::SamplerAddressMode::MirrorRepeat;
         case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-            return SamplerAddressMode::ClampToEdge;
+            return graphics::SamplerAddressMode::ClampToEdge;
         default:
-            return SamplerAddressMode::ClampToEdge;
+            return graphics::SamplerAddressMode::ClampToEdge;
     }
 }
 
@@ -181,89 +184,56 @@ inline Transform CalcNodeTransform(const tinygltf::Node& node) {
         transform.scale = Vec3(node.scale[0], node.scale[1], node.scale[2]);
     }
     if (!node.rotation.empty()) {
-        transform.q = Quat(node.rotation[0], node.rotation[1],
-                           node.rotation[2], node.rotation[3]);
+        transform.q = Quat(node.rotation[0], node.rotation[1], node.rotation[2],
+                           node.rotation[3]);
     }
     if (!node.translation.empty()) {
-        transform.p = Vec3(node.translation[0], node.translation[1],
-                           node.translation[2]);
+        transform.p =
+            Vec3(node.translation[0], node.translation[1], node.translation[2]);
     }
     return transform;
 }
 
-struct Node {
-    enum class Flag {
-        None = 0x00,
-        HasMesh = 0x01,
-        HasBone = 0x02, 
-    };
-    
-    std::string m_name;
-    Flags<Flag> m_flags = Flag::None;
-    Transform m_local_transform;
-    Transform m_global_transform;
-    std::vector<uint32_t> m_children;
-
-    std::optional<uint32_t> m_mesh;
-
-    bool HasMesh() const { return m_flags & Flag::HasMesh; }
-    bool HasBone() const { return m_flags & Flag::HasBone; }
-};
-
-struct Skin {
-    std::string m_name;
-    uint32_t m_root;
-    std::set<uint32_t> m_bone_indices;
-};
-
-struct GLTFLoadData {
-    Path m_filename;
-    
-    std::vector<Node> m_nodes;
-    std::vector<uint32_t> m_root_nodes;
-
-    GLTFModelResource m_resource;
-    std::vector<Mesh> m_meshes;
-
-    std::vector<Skin> m_skins;
-};
-
 class GLTFLoader {
 public:
     explicit GLTFLoader(const tinygltf::Model& model);
-    GLTFLoadData Load(const Path& filename, const Adapter& adapter,
-                      GLTFManagerImpl& mgr);
+    GLTFImportData Load(const Path& filename, const graphics::Adapter& adapter,
+                      graphics::GLTFModelManagerImpl& mgr);
 
 private:
     const tinygltf::Model& m_gltf_model;
 
-    GLTFLoadData loadGLTF(const Path& filename, const Adapter& adapter,
-                          GLTFManagerImpl& gltf_manager,
-                          GLTFRenderPass& render_pass,
-                          TextureManager& texture_mgr,
-                          CommonResource& common_res);
+    GLTFImportData loadGLTF(const Path& filename,
+                          const graphics::Adapter& adapter,
+                          graphics::GLTFModelManagerImpl& gltf_manager,
+                          graphics::GLTFRenderPass& render_pass,
+                          graphics::TextureManager& texture_mgr,
+                          graphics::CommonResource& common_res);
 
-    Material3D::TextureInfo parseTextureInfo(int idx,
-                                             std::vector<Texture>& textures,
-                                             ImageView& default_texture,
-                                             std::vector<Sampler>& samplers,
-                                             Sampler& default_sampler);
+    graphics::Material3D::TextureInfo parseTextureInfo(
+        int idx, std::vector<graphics::Texture>& textures,
+        graphics::ImageView& default_texture,
+        std::vector<graphics::Sampler>& samplers,
+        graphics::Sampler& default_sampler);
 
-    Sampler createSampler(Device device, const tinygltf::Sampler& gltfSampler);
+    graphics::Sampler createSampler(graphics::Device device,
+                                    const tinygltf::Sampler& gltfSampler);
 
-    Mesh createMesh(const tinygltf::Mesh& gltf_mesh, GLTFManagerImpl* mgr,
-                    std::vector<unsigned char>& vertex_buffer,
-                    std::vector<unsigned char>& indices_buffer,
-                    const std::vector<BufferView>& accessors,
-                    std::vector<Material3D>& materials,
-                    Material3DImpl& default_material) const;
+    graphics::Mesh createMesh(
+        const tinygltf::Mesh& gltf_mesh, graphics::GLTFModelManagerImpl* mgr,
+        std::vector<unsigned char>& vertex_buffer,
+        std::vector<unsigned char>& indices_buffer,
+        const std::vector<graphics::BufferView>& accessors,
+        std::vector<graphics::Material3D>& materials,
+        graphics::Material3DImpl& default_material) const;
 
-    Primitive recordPrimInfo(std::vector<unsigned char>& vertex_buffer,
-                             std::vector<unsigned char>& indices_buffer,
-                             const std::vector<BufferView>& buffer_views,
-                             const tinygltf::Primitive& prim,
-                             std::vector<Material3D>& materials,
-                             Material3DImpl& default_material) const;
+    graphics::Primitive recordPrimInfo(
+        std::vector<unsigned char>& vertex_buffer,
+        std::vector<unsigned char>& indices_buffer,
+        const std::vector<graphics::BufferView>& buffer_views,
+        const tinygltf::Primitive& prim,
+        std::vector<graphics::Material3D>& materials,
+        graphics::Material3DImpl& default_material) const;
 
     void analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
                               std::set<uint32_t>& out_index_accessors,
@@ -275,16 +245,20 @@ private:
                            std::set<uint32_t>& out_metallic_roughness_texture,
                            std::set<uint32_t>& out_emissive_texture) const;
 
-    std::vector<Texture> loadTextures(const Path& root_dir,
-                                      TextureManager& texture_mgr,
-                                      const std::set<uint32_t>& color_textures);
-    std::vector<Sampler> loadSamplers(Device& device);
-    std::vector<Material3D> loadMaterials(
-        const Adapter& adapter, GLTFManagerImpl& gltf_mgr,
-        GLTFRenderPass& render_pass, std::vector<PBRParameters>& pbr_parameters,
-        std::vector<unsigned char>& data_buffer, std::vector<Texture>& textures,
-        std::vector<Sampler>& samplers, CommonResource& common_res);
-    std::vector<BufferView> loadVertexBuffer(
+    std::vector<graphics::Texture> loadTextures(
+        const Path& root_dir, graphics::TextureManager& texture_mgr,
+        const std::set<uint32_t>& color_textures);
+    std::vector<graphics::Sampler> loadSamplers(graphics::Device& device);
+    std::vector<graphics::Material3D> loadMaterials(
+        const graphics::Adapter& adapter,
+        graphics::GLTFModelManagerImpl& gltf_mgr,
+        graphics::GLTFRenderPass& render_pass,
+        std::vector<graphics::PBRParameters>& pbr_parameters,
+        std::vector<unsigned char>& data_buffer,
+        std::vector<graphics::Texture>& textures,
+        std::vector<graphics::Sampler>& samplers,
+        graphics::CommonResource& common_res);
+    std::vector<graphics::BufferView> loadVertexBuffer(
         std::vector<unsigned char>& out_vertex_buffer,
         std::vector<unsigned char>& out_index_buffer,
         const std::set<uint32_t>& vertex_accessor,
@@ -294,8 +268,9 @@ private:
      * 1. calculate node global transform
      * 2. record wether node/subtree is a mesh node or bone node
      */
-    Flags<Node::Flag> recordNodeInfoRecursive(std::vector<Node>& nodes, Node& node,
-                                 Transform* parent_transform) const;
+    Flags<Node::Flag> recordNodeInfoRecursive(
+        std::vector<Node>& nodes, Node& node,
+        Transform* parent_transform) const;
 };
 
-}  // namespace nickel::graphics
+}  // namespace nickel

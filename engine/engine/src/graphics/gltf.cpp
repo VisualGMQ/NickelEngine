@@ -1,43 +1,47 @@
 ﻿#include "nickel/graphics/gltf.hpp"
 
-#include "nickel/graphics/internal/gltf_loader.hpp"
 #include "nickel/graphics/internal/gltf_manager_impl.hpp"
 #include "nickel/graphics/texture_manager.hpp"
+#include "nickel/importer/internal/gltf_importer_impl.hpp"
 #include "tiny_gltf.h"
 
 namespace nickel::graphics {
 
-bool GLTFManager::Load(const Path& filename,
-                       const GLTFLoadConfig& load_config) {
-    return m_impl->Load(filename, load_config);
-}
-
-bool GLTFManager::Load(const GLTFLoadData& load_data,
-                       const GLTFLoadConfig& load_config) {
+bool GLTFModelManager::Load(const GLTFImportData& load_data,
+                            const GLTFLoadConfig& load_config) {
     return m_impl->Load(load_data, load_config);
 }
 
-GLTFModel GLTFManager::Find(const std::string& name) {
+GLTFModel GLTFModelManager::Find(const std::string& name) {
     return m_impl->Find(name);
 }
 
-void GLTFManager::GC() {
+void GLTFModelManager::GC() {
     m_impl->GC();
 }
 
-void GLTFManager::Clear() {
+void GLTFModelManager::Clear() {
     m_impl->Clear();
 }
 
-std::vector<std::string> GLTFManager::GetAllGLTFModelNames() const {
+std::vector<std::string> GLTFModelManager::GetAllGLTFModelNames() const {
     return m_impl->GetAllGLTFModelNames();
 }
 
-GLTFManager::GLTFManager(Device device, CommonResource& res,
-                         GLTFRenderPass& render_pass)
-    : m_impl{std::make_unique<GLTFManagerImpl>(device, res, render_pass)} {}
+GLTFModelManagerImpl* GLTFModelManager::GetImpl() {
+    return m_impl.get();
+}
 
-GLTFManager::~GLTFManager() {}
+const GLTFModelManagerImpl* GLTFModelManager::GetImpl() const {
+    return m_impl.get();
+}
+
+GLTFModelManager::GLTFModelManager(Device device, CommonResource& res,
+                                   GLTFRenderPass& render_pass)
+    : m_impl{std::make_unique<GLTFModelManagerImpl>(device, res, render_pass)} {
+}
+
+GLTFModelManager::~GLTFModelManager() {}
 
 std::vector<GLTFVertexData> GLTFVertexDataLoader::Load(const Path& filename,
                                                        bool apply_transform) {

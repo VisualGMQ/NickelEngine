@@ -1,5 +1,6 @@
 #include "nickel/common/macro.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
+#include "nickel/importer/gltf_importer.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 #include "nickel/physics/cct.hpp"
@@ -20,15 +21,16 @@ public:
         auto engine_relative_path = ctx.GetEngineRelativePath();
 
         auto& mgr = ctx.GetGLTFManager();
-        mgr.Load(engine_relative_path /
-                 "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
-        mgr.Load(engine_relative_path /
+        ImportGLTF2Engine(
+            engine_relative_path /
+            "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        ImportGLTF2Engine(engine_relative_path /
                  "engine/assets/models/CesiumMan/CesiumMan.gltf");
-        mgr.Load(engine_relative_path /
+        ImportGLTF2Engine(engine_relative_path /
                  "engine/assets/models/unit_box/unit_box.gltf");
-        mgr.Load(engine_relative_path /
+        ImportGLTF2Engine(engine_relative_path /
                  "engine/assets/models/unit_sphere/unit_sphere.gltf");
-        mgr.Load(engine_relative_path / "tests/sandbox/assets/door/door.gltf");
+        ImportGLTF2Engine(engine_relative_path / "tests/sandbox/assets/door/door.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         auto& physics_ctx = ctx.GetPhysicsContext();

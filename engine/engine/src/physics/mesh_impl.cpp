@@ -3,7 +3,7 @@
 
 namespace nickel::graphics {
 
-MeshImpl::MeshImpl(GLTFManagerImpl* mgr) : m_mgr{mgr} {}
+MeshImpl::MeshImpl(GLTFModelManagerImpl* mgr) : m_mgr{mgr} {}
 
 void MeshImpl::DecRefcount() {
     RefCountable::DecRefcount();

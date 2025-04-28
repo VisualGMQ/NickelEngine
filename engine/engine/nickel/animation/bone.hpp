@@ -6,8 +6,7 @@ namespace nickel {
 struct Bone {
     Transform m_transform;
     Transform m_origin_trans;
-
-    std::vector<Bone> m_children;
+    Transform m_global_transform;
 };
 
 }

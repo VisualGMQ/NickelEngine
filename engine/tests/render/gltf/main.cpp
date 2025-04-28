@@ -1,4 +1,5 @@
 #include "nickel/common/macro.hpp"
+#include "nickel/importer/gltf_importer.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
@@ -17,8 +18,10 @@ public:
 
         auto& mgr = ctx.GetGLTFManager();
         auto engine_relative_path = ctx.GetEngineRelativePath();
-        mgr.Load(engine_relative_path /
-                 "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+        ImportGLTF2Engine(
+            engine_relative_path /
+                "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf",
+            {});
         m_model = mgr.Find("engine/assets/models/CesiumMilkTruck/CesiumMilkTruck");
     }
 

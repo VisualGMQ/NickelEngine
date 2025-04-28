@@ -5,19 +5,22 @@
 #include "nickel/graphics/internal/material3d_impl.hpp"
 #include "nickel/graphics/internal/mesh_impl.hpp"
 
+namespace nickel {
+struct GLTFImportData;
+class Node;
+}  // namespace nickel
+
 namespace nickel::graphics {
 class CommonResource;
 class GLTFRenderPass;
-class Node;
-struct GLTFLoadData;
 
-class GLTFManagerImpl {
+class GLTFModelManagerImpl {
 public:
-    explicit GLTFManagerImpl(Device device, CommonResource&, GLTFRenderPass&);
-    ~GLTFManagerImpl();
+    explicit GLTFModelManagerImpl(Device device, CommonResource&,
+                                  GLTFRenderPass&);
+    ~GLTFModelManagerImpl();
 
-    bool Load(const GLTFLoadData&, const GLTFLoadConfig&);
-    bool Load(const Path&, const GLTFLoadConfig&);
+    bool Load(const GLTFImportData&, const GLTFLoadConfig&);
     GLTFModel Find(const std::string&);
     void GC();
     void Remove(GLTFModelImpl&);
@@ -39,9 +42,9 @@ public:
     std::set<std::string> m_pending_delete;
 
 private:
-    void preorderNode(const GLTFLoadData& load_data,
-                      const Node& node,
-                      const GLTFModelResource& resource, std::span<const Mesh> meshes,
+    void preorderNode(const nickel::GLTFImportData& load_data, const Node& node,
+                      const GLTFModelResource& resource,
+                      std::span<const Mesh> meshes,
                       GLTFModelImpl& parent_model);
 };
 

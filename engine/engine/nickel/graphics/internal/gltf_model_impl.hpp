@@ -6,19 +6,19 @@
 namespace nickel::graphics {
 
 struct GLTFModelResourceImpl : public RefCountable {
-    explicit GLTFModelResourceImpl(GLTFManagerImpl* mgr);
+    explicit GLTFModelResourceImpl(GLTFModelManagerImpl* mgr);
 
     GLTFCPUData m_cpu_data;
 
     void DecRefcount() override;
 
 private:
-    GLTFManagerImpl* m_mgr;
+    GLTFModelManagerImpl* m_mgr;
 };
 
 class GLTFModelImpl final : public RefCountable {
 public:
-    GLTFModelImpl(GLTFManagerImpl* mgr);
+    GLTFModelImpl(GLTFModelManagerImpl* mgr);
 
     void DecRefcount() override;
 
@@ -29,7 +29,7 @@ public:
     GLTFModelResource m_resource;
 
 private:
-    GLTFManagerImpl* m_mgr{};
+    GLTFModelManagerImpl* m_mgr{};
 };
 
 }  // namespace nickel::graphics

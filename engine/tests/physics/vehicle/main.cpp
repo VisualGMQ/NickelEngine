@@ -1,5 +1,6 @@
 #include "nickel/common/macro.hpp"
 #include "nickel/graphics/internal/gltf_model_impl.hpp"
+#include "nickel/importer/gltf_importer.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
 
@@ -20,8 +21,9 @@ public:
 
         auto& mgr = ctx.GetGLTFManager();
         auto engine_relative_path = ctx.GetEngineRelativePath();
-        mgr.Load(engine_relative_path /
-                 "tests/physics/vehicle/assets/car/car.gltf");
+        ImportGLTF2Engine(
+            engine_relative_path / "tests/physics/vehicle/assets/car/car.gltf",
+            {});
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         auto& physics_ctx = ctx.GetPhysicsContext();

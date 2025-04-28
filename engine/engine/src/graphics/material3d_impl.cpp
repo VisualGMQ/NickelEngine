@@ -4,7 +4,7 @@
 
 namespace nickel::graphics {
 
-Material3DImpl::Material3DImpl(GLTFManagerImpl* mgr,
+Material3DImpl::Material3DImpl(GLTFModelManagerImpl* mgr,
                                const Material3D::Descriptor& mtl_desc,
                                Buffer& camera_buffer, Buffer& view_buffer,
                                BindGroupLayout layout)

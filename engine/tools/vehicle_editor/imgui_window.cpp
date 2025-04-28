@@ -1,6 +1,7 @@
 ﻿#include "imgui_window.hpp"
 
 #include "nickel/common/macro.hpp"
+#include "nickel/importer/gltf_importer.hpp"
 #include "spdlog/fmt/bundled/printf.h"
 
 namespace imgui_window {
@@ -74,9 +75,9 @@ void TunningPanel::loadGLTFModel(const nickel::Path& path) {
     auto& gltf_mgr = nickel::Context::GetInst().GetGLTFManager();
     gltf_mgr.Clear();
 
-    nickel::graphics::GLTFLoadConfig config;
-    config.m_combine_mesh = false;
-    if (!gltf_mgr.Load(path, config)) {
+    nickel::GLTFLoadConfig config;
+    config.m_combine_meshes = false;
+    if (!nickel::ImportGLTF2Engine(path, {})) {
         if (ImGui::BeginPopupModal("error")) {
             ImGui::Text("load gltf failed");
             ImGui::EndPopup();

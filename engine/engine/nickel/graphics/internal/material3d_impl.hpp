@@ -7,13 +7,13 @@
 
 namespace nickel::graphics {
 
-class GLTFManagerImpl;
+class GLTFModelManagerImpl;
 
 class Material3DImpl : public RefCountable {
 public:
     BindGroup m_bind_group;
 
-    Material3DImpl(GLTFManagerImpl*, const Material3D::Descriptor&,
+    Material3DImpl(GLTFModelManagerImpl*, const Material3D::Descriptor&,
                    Buffer& camera_buffer, Buffer& view_buffer,
                    BindGroupLayout layout);
     Material3DImpl(Material3D&&) = delete;
@@ -24,7 +24,7 @@ public:
     void DecRefcount() override;
 
 private:
-    GLTFManagerImpl* m_mgr;
+    GLTFModelManagerImpl* m_mgr;
 
     void pushTextureInfoBinding(BindGroup::Descriptor& desc,
                                 const Material3D::TextureInfo& info,

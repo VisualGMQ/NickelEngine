@@ -5,7 +5,7 @@
 
 namespace nickel::graphics {
 
-GLTFModelResourceImpl::GLTFModelResourceImpl(GLTFManagerImpl* mgr)
+GLTFModelResourceImpl::GLTFModelResourceImpl(GLTFModelManagerImpl* mgr)
     : m_mgr{mgr} {}
 
 void GLTFModelResourceImpl::DecRefcount() {
@@ -16,7 +16,7 @@ void GLTFModelResourceImpl::DecRefcount() {
     }
 }
 
-GLTFModelImpl::GLTFModelImpl(GLTFManagerImpl* mgr) : m_mgr{mgr} {}
+GLTFModelImpl::GLTFModelImpl(GLTFModelManagerImpl* mgr) : m_mgr{mgr} {}
 
 void GLTFModelImpl::DecRefcount() {
     RefCountable::DecRefcount();
