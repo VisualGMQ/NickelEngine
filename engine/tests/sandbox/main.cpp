@@ -23,14 +23,13 @@ public:
         auto& mgr = ctx.GetGLTFManager();
         ImportGLTF2Engine(
             engine_relative_path /
-            "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck.gltf");
+            "tests/sandbox/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
         ImportGLTF2Engine(engine_relative_path /
-                 "engine/assets/models/CesiumMan/CesiumMan.gltf");
+                 "tests/sandbox/assets/CesiumMan/CesiumMan.gltf");
         ImportGLTF2Engine(engine_relative_path /
-                 "engine/assets/models/unit_box/unit_box.gltf");
+                          "engine/assets/models/unit_sphere/unit_sphere.gltf");
         ImportGLTF2Engine(engine_relative_path /
-                 "engine/assets/models/unit_sphere/unit_sphere.gltf");
-        ImportGLTF2Engine(engine_relative_path / "tests/sandbox/assets/door/door.gltf");
+                          "tests/sandbox/assets/door/door.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
         auto& physics_ctx = ctx.GetPhysicsContext();
@@ -40,7 +39,7 @@ public:
             go.m_name = "car";
             go.m_model = mgr.Find(
                 (engine_relative_path /
-                 "engine/assets/models/CesiumMilkTruck/CesiumMilkTruck")
+                 "tests/sandbox/assets/CesiumMilkTruck/CesiumMilkTruck")
                     .ToString());
             go.m_rigid_actor =
                 nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
@@ -74,9 +73,9 @@ public:
         // create man
         {
             nickel::GameObject go;
-            go.m_name = "saw";
+            go.m_name = "man";
             go.m_model = mgr.Find((engine_relative_path /
-                                   "engine/assets/models/CesiumMan/CesiumMan")
+                                   "tests/sandbox/assets/CesiumMan/CesiumMan")
                                       .ToString());
             go.m_transform.scale = nickel::Vec3{0.7};
 

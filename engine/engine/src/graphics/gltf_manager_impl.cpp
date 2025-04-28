@@ -63,15 +63,48 @@ bool GLTFModelManagerImpl::Load(const GLTFImportData& load_data,
 
     if (load_config.ShouldCombineMeshes()) {
         // NOTE: currently we only load one scene
-        for (auto& root_node_idx : load_data.m_root_nodes) {
-            auto& root_node = load_data.m_nodes[root_node_idx];
-            NICKEL_CONTINUE_IF_FALSE(root_node.IsInMeshTree());
-            GLTFModelImpl* root_model_impl = m_model_allocator.Allocate(this);
-            preorderNode(load_data, root_node, load_data.m_resource,
-                         std::span{load_data.m_meshes}, *root_model_impl);
-            root_model_impl->m_name = root_node.m_name;
-            m_models[load_data.m_asset_name] = root_model_impl;
+        GLTFModelImpl* root_model_impl = m_model_allocator.Allocate(this);
+        std::optional<uint32_t> unique_mesh_root_node;
+        for (auto idx : load_data.m_root_nodes) {
+            auto& root_node = load_data.m_nodes[idx];
+            if (root_node.IsInMeshTree()) {
+                if (!unique_mesh_root_node) {
+                    unique_mesh_root_node = idx;
+                } else {
+                    unique_mesh_root_node = std::nullopt;
+                    break;
+                }
+            }
         }
+
+        if (unique_mesh_root_node) {
+            auto& node = load_data.m_nodes[*unique_mesh_root_node];
+            if (node.m_mesh) {
+                root_model_impl->m_mesh = load_data.m_meshes[node.m_mesh.value()];
+            }
+            root_model_impl->m_resource = load_data.m_resource;
+            root_model_impl->m_name = node.m_name;
+            root_model_impl->m_transform = node.m_local_transform.ToMat();
+            for (auto& node_idx : node.m_children) {
+                auto& root_node = load_data.m_nodes[node_idx];
+                NICKEL_CONTINUE_IF_FALSE(root_node.IsInMeshTree());
+                preorderNode(load_data, root_node, load_data.m_resource,
+                             std::span{load_data.m_meshes}, *root_model_impl);
+                root_model_impl->m_name = root_node.m_name;
+            }
+        } else {
+            root_model_impl->m_name = "gltf_import_root";
+            for (auto& root_node_idx : load_data.m_root_nodes) {
+                auto& root_node = load_data.m_nodes[root_node_idx];
+                NICKEL_CONTINUE_IF_FALSE(root_node.IsInMeshTree());
+                preorderNode(load_data, root_node, load_data.m_resource,
+                             std::span{load_data.m_meshes}, *root_model_impl);
+                root_model_impl->m_name = root_node.m_name;
+            }
+        }
+
+        
+        m_models[load_data.m_asset_name] = root_model_impl;
     } else {
         std::unordered_set<std::string> mesh_names;
         const std::unordered_set<std::string>* using_mesh_set =
@@ -152,7 +185,7 @@ std::vector<std::string> GLTFModelManagerImpl::GetAllGLTFModelNames() const {
     return names;
 }
 
-void GLTFModelManagerImpl::preorderNode(const nickel::GLTFImportData& load_data,
+void GLTFModelManagerImpl::preorderNode(const GLTFImportData& load_data,
                                         const Node& node,
                                         const GLTFModelResource& resource,
                                         std::span<const Mesh> meshes,

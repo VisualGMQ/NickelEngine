@@ -9,8 +9,8 @@ namespace nickel {
 
 GLTFImportData ImportGLTF(const Path& filename) {
     auto content = ReadWholeFile(filename);
-    NICKEL_RETURN_VALUE_IF_FALSE_LOGW({}, !content.empty(), "read ", filename,
-                                      " failed");
+    NICKEL_RETURN_VALUE_IF_FALSE_LOGW({}, !content.empty(), "read {} failed",
+                                      filename);
 
     tinygltf::TinyGLTF tiny_gltf_loader;
     std::string err, warn;
