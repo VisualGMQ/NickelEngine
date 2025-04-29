@@ -8,10 +8,11 @@
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/input/device/device_manager.hpp"
-#include "nickel/video/window.hpp"
 #include "nickel/time/time.hpp"
+#include "nickel/video/window.hpp"
 
 #include "animation/skeleton.hpp"
+#include "debugger/debugger.hpp"
 #include "imgui.h"
 #include "implot.h"
 #include "misc/Level.hpp"
@@ -60,6 +61,8 @@ public:
     graphics::DebugDrawer& GetDebugDrawer();
     physics::Context& GetPhysicsContext();
     const physics::Context& GetPhysicsContext() const;
+    debugger::DebugManager& GetDebugManager();
+    const debugger::DebugManager& GetDebugManager() const;
     const Time& GetTime() const;
     Camera& GetCamera();
     void ChangeCamera(std::unique_ptr<Camera>&&);
@@ -88,6 +91,7 @@ private:
     std::unique_ptr<graphics::GLTFModelManager> m_gltf_mgr;
     std::unique_ptr<SkeletonManager> m_skeleton_mgr;
     std::unique_ptr<Level> m_level;
+    std::unique_ptr<debugger::DebugManager> m_debug_mgr;
 
     std::unique_ptr<Application> m_application;
 

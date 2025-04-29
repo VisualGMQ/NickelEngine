@@ -194,9 +194,9 @@ inline Transform CalcNodeTransform(const tinygltf::Node& node) {
     return transform;
 }
 
-class GLTFLoader {
+class GLTFImporter {
 public:
-    explicit GLTFLoader(const tinygltf::Model& model);
+    explicit GLTFImporter(const tinygltf::Model& model);
     GLTFImportData Load(const Path& filename, const graphics::Adapter& adapter,
                       graphics::GLTFModelManagerImpl& mgr);
 

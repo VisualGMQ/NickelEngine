@@ -26,9 +26,9 @@ static graphics::Buffer copyBuffer2GPU(graphics::Device device,
     return buffer;
 }
 
-GLTFLoader::GLTFLoader(const tinygltf::Model& model) : m_gltf_model{model} {}
+GLTFImporter::GLTFImporter(const tinygltf::Model& model) : m_gltf_model{model} {}
 
-GLTFImportData GLTFLoader::Load(const Path& filename,
+GLTFImportData GLTFImporter::Load(const Path& filename,
                               const graphics::Adapter& adapter,
                               graphics::GLTFModelManagerImpl& gltf_manager) {
     auto graphics_ctx = Context::GetInst().GetGraphicsContext().GetImpl();
@@ -39,7 +39,7 @@ GLTFImportData GLTFLoader::Load(const Path& filename,
         Context::GetInst().GetGraphicsContext().GetImpl()->GetCommonResource());
 }
 
-GLTFImportData GLTFLoader::loadGLTF(const Path& filename,
+GLTFImportData GLTFImporter::loadGLTF(const Path& filename,
                                   const graphics::Adapter& adapter,
                                   graphics::GLTFModelManagerImpl& gltf_manager,
                                   graphics::GLTFRenderPass& render_pass,
@@ -152,20 +152,26 @@ GLTFImportData GLTFLoader::loadGLTF(const Path& filename,
         auto& gltf_skin = m_gltf_model.skins[i];
         Skin skin;
         skin.m_name = gltf_skin.name;
-        if (gltf_skin.skeleton == -1) {
-            skin.m_root = gltf_skin.skeleton;
-        } else {
-            for (auto& node : m_gltf_model.nodes) {
-                NICKEL_CONTINUE_IF_FALSE(node.skin != -1 && node.skin == i);
-                skin.m_root = node.skin;
-            }
-        }
-
-        skin.m_bone_indices.resize(gltf_skin.joints.size());
+       
+        skin.m_bone_indices.reserve(gltf_skin.joints.size());
         for (int j : gltf_skin.joints) {
             load_data.m_nodes[j].m_flags |= Node::Flag::HasBone;
+            skin.m_mapped_bone_indices.emplace(
+                static_cast<uint32_t>(j),
+                static_cast<uint32_t>(skin.m_bone_indices.size()));
             skin.m_bone_indices.push_back(j);
         }
+
+        if (gltf_skin.skeleton != -1) {
+            skin.m_root = gltf_skin.skeleton;
+        } else {
+            for (uint32_t j = 0; j < m_gltf_model.nodes.size(); j++) {
+                auto& node = m_gltf_model.nodes[j];
+                NICKEL_CONTINUE_IF_FALSE(node.skin == i);
+                skin.m_root = j;
+            }
+        }
+        
         if (skin) {
             load_data.m_skins.emplace_back(std::move(skin));
         }
@@ -185,7 +191,7 @@ GLTFImportData GLTFLoader::loadGLTF(const Path& filename,
     return load_data;
 }
 
-graphics::Material3D::TextureInfo GLTFLoader::parseTextureInfo(
+graphics::Material3D::TextureInfo GLTFImporter::parseTextureInfo(
     int idx, std::vector<graphics::Texture>& textures,
     graphics::ImageView& default_texture,
     std::vector<graphics::Sampler>& samplers,
@@ -206,7 +212,7 @@ graphics::Material3D::TextureInfo GLTFLoader::parseTextureInfo(
     return texture_info;
 }
 
-graphics::Sampler GLTFLoader::createSampler(
+graphics::Sampler GLTFImporter::createSampler(
     graphics::Device device, const tinygltf::Sampler& gltfSampler) {
     graphics::Sampler::Descriptor desc;
     desc.m_min_filter = GLTFFilter2RHI(gltfSampler.minFilter);
@@ -240,7 +246,7 @@ int ComponentType2GLTF() {
     }
 }
 
-graphics::Mesh GLTFLoader::createMesh(
+graphics::Mesh GLTFImporter::createMesh(
     const tinygltf::Mesh& gltf_mesh, graphics::GLTFModelManagerImpl* mgr,
     std::vector<unsigned char>& vertex_buffer,
     std::vector<unsigned char>& indices_buffer,
@@ -259,7 +265,7 @@ graphics::Mesh GLTFLoader::createMesh(
     return newNode;
 }
 
-graphics::Primitive GLTFLoader::recordPrimInfo(
+graphics::Primitive GLTFImporter::recordPrimInfo(
     std::vector<unsigned char>& vertex_buffer,
     std::vector<unsigned char>& indices_buffer,
     const std::vector<graphics::BufferView>& buffer_views,
@@ -460,7 +466,7 @@ graphics::Primitive GLTFLoader::recordPrimInfo(
     return primitive;
 }
 
-void GLTFLoader::analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
+void GLTFImporter::analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
                                       std::set<uint32_t>& out_index_accessors,
                                       size_t& out_vertex_buffer_size,
                                       size_t& out_index_buffer_size) {
@@ -519,7 +525,7 @@ void GLTFLoader::analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
     }
 }
 
-void GLTFLoader::analyzeImageUsage(
+void GLTFImporter::analyzeImageUsage(
     std::set<uint32_t>& out_color_texture,
     std::set<uint32_t>& out_normal_texture,
     std::set<uint32_t>& out_occlusion_texture,
@@ -546,7 +552,7 @@ void GLTFLoader::analyzeImageUsage(
     }
 }
 
-std::vector<graphics::Texture> GLTFLoader::loadTextures(
+std::vector<graphics::Texture> GLTFImporter::loadTextures(
     const Path& root_dir, graphics::TextureManager& texture_mgr,
     const std::set<uint32_t>& color_textures) {
     std::vector<graphics::Texture> textures;
@@ -563,7 +569,7 @@ std::vector<graphics::Texture> GLTFLoader::loadTextures(
     return textures;
 }
 
-std::vector<graphics::Sampler> GLTFLoader::loadSamplers(
+std::vector<graphics::Sampler> GLTFImporter::loadSamplers(
     graphics::Device& device) {
     std::vector<graphics::Sampler> samplers;
     for (auto& sampler : m_gltf_model.samplers) {
@@ -577,7 +583,7 @@ std::vector<graphics::Sampler> GLTFLoader::loadSamplers(
     return samplers;
 }
 
-std::vector<graphics::Material3D> GLTFLoader::loadMaterials(
+std::vector<graphics::Material3D> GLTFImporter::loadMaterials(
     const graphics::Adapter& adapter, graphics::GLTFModelManagerImpl& gltf_mgr,
     graphics::GLTFRenderPass& render_pass,
     std::vector<graphics::PBRParameters>& pbr_parameters,
@@ -659,7 +665,7 @@ std::vector<graphics::Material3D> GLTFLoader::loadMaterials(
     return materials;
 }
 
-std::vector<graphics::BufferView> GLTFLoader::loadVertexBuffer(
+std::vector<graphics::BufferView> GLTFImporter::loadVertexBuffer(
     std::vector<unsigned char>& out_vertex_buffer,
     std::vector<unsigned char>& out_index_buffer,
     const std::set<uint32_t>& vertex_accessor,
@@ -717,7 +723,7 @@ std::vector<graphics::BufferView> GLTFLoader::loadVertexBuffer(
     return views;
 }
 
-Flags<Node::Flag> GLTFLoader::recordNodeInfoRecursive(
+Flags<Node::Flag> GLTFImporter::recordNodeInfoRecursive(
     std::vector<Node>& nodes, Node& node, Transform* parent_transform) const {
     if (!parent_transform) {
         node.m_global_transform = node.m_local_transform;

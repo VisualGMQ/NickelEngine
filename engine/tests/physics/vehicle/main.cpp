@@ -257,8 +257,6 @@ public:
         if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
             mouse.RelativeMode(mouse.IsRelativeMode() ? false : true);
         }
-
-        ImGui::ShowDemoWindow();
     }
 
 private:

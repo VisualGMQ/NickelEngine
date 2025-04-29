@@ -18,6 +18,9 @@ Context::~Context() {
 
     m_level.reset();
 
+    LOGI("release debug manager");
+    m_debug_mgr.reset();
+
     LOGI("release debug drawer");
     m_debug_drawer.reset();
 
@@ -76,6 +79,9 @@ void Context::Initialize() {
 
     LOGI("init debug drawer");
     m_debug_drawer = std::make_unique<graphics::DebugDrawer>();
+
+    LOGI("init debugger manager");
+    m_debug_mgr = std::make_unique<debugger::DebugManager>();
 
     LOGI("init game level");
     m_level = std::make_unique<Level>();
@@ -189,6 +195,14 @@ const physics::Context& Context::GetPhysicsContext() const {
     return *m_physics;
 }
 
+debugger::DebugManager& Context::GetDebugManager() {
+    return *m_debug_mgr;
+}
+
+const debugger::DebugManager& Context::GetDebugManager() const {
+    return *m_debug_mgr;
+}
+
 const Time& Context::GetTime() const {
     return m_time;
 }
@@ -244,6 +258,8 @@ void Context::Update() {
     if (delta_time > 0) {
         m_physics->Update(delta_time);
     }
+
+    m_debug_mgr->Update();
 
     m_graphics_ctx->EndFrame();
 

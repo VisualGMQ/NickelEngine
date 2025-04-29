@@ -28,7 +28,7 @@ GLTFImportData ImportGLTF(const Path& filename) {
         return {};
     }
 
-    GLTFLoader loader(gltf_model);
+    GLTFImporter loader(gltf_model);
     return loader.Load(filename, Context::GetInst().GetGPUAdapter(),
                        *Context::GetInst().GetGLTFManager().GetImpl());
 }

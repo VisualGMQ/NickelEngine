@@ -2,6 +2,7 @@
 #include "nickel/animation/bone.hpp"
 #include "nickel/animation/skeleton.hpp"
 #include "nickel/common/memory/memory.hpp"
+#include "nickel/graphics/lowlevel/buffer.hpp"
 
 namespace nickel {
 struct Skin;
@@ -18,6 +19,7 @@ public:
     std::vector<Bone> m_bones;
     uint32_t m_root_bone_idx{};
     std::vector<BoneChildren> m_hierarchy;
+    graphics::Buffer m_inverse_bind_matrices;
 
     void UpdateTransformByRoot(const Transform&);
 
@@ -40,7 +42,7 @@ public:
     std::unordered_map<std::string, SkeletonImpl*> m_skeletons;
 
 private:
-    SkeletonImpl* loadOneSkeleton(const GLTFImportData&, const Skin&);
+    SkeletonImpl* loadOneSkeleton(const GLTFImportData&, const Skin&, const std::string& skin_name);
 };
 
 }  // namespace nickel

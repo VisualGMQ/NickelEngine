@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "nickel/animation/skeleton.hpp"
 #include "nickel/common/transform.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/physics/cct.hpp"
@@ -22,8 +23,12 @@ public:
 
     physics::RigidActor m_rigid_actor;
     graphics::GLTFModel m_model;
+    Skeleton m_skeleton;
     physics::CapsuleController m_controller;
     physics::Vehicle m_vehicle;
+
+    // temporary for debug
+    bool m_enable_render_model = true;
 
     const Transform& GetGlobalTransform() const { return m_transform; }
 

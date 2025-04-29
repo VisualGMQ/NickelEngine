@@ -40,10 +40,10 @@ void SkeletonImpl::updateTransformRecursive(uint32_t bone_idx,
 
 bool SkeletonManagerImpl::Load(const GLTFImportData& load_data,
                                const GLTFLoadConfig& config) {
-    if (config.ShouldLoadSkeleton()) {
+    if (!config.ShouldLoadSkeleton()) {
         return true;
     }
-    
+
     std::unordered_set<std::string> skeleton_names;
     const std::unordered_set<std::string>* using_skeleton_set =
         &config.m_skeletons;
@@ -55,9 +55,22 @@ bool SkeletonManagerImpl::Load(const GLTFImportData& load_data,
         using_skeleton_set = &skeleton_names;
     }
 
+    uint32_t name_idx = 0;
     for (auto& skin : load_data.m_skins) {
         NICKEL_CONTINUE_IF_FALSE(using_skeleton_set->contains(skin.m_name));
-        SkeletonImpl* skeleton = loadOneSkeleton(load_data, skin);
+        std::string skin_name = skin.m_name;
+        if (load_data.m_skins.size() == 1) {
+            skin_name.clear();
+        } else if (skin_name.empty()) {
+            auto it = load_data.m_skins.end();
+            do {
+                skin_name = "skeleton_" + std::to_string(name_idx++);
+                it = std::ranges::find_if(
+                    load_data.m_skins,
+                    [&](const Skin& s) { return s.m_name == skin_name; });
+            } while (it != load_data.m_skins.end());
+        }
+        SkeletonImpl* skeleton = loadOneSkeleton(load_data, skin, skin_name);
         m_skeletons.emplace(skeleton->m_name, skeleton);
     }
     return true;
@@ -70,7 +83,8 @@ bool SkeletonManagerImpl::Load(const GLTFImportData& load_data,
         return skin.m_name == load_skeleton_name;
     });
     if (result != skins.end()) {
-        SkeletonImpl* skeleton = loadOneSkeleton(load_data, *result);
+        SkeletonImpl* skeleton =
+            loadOneSkeleton(load_data, *result, load_skeleton_name);
         m_skeletons.emplace(skeleton->m_name, skeleton);
         return true;
     }
@@ -102,12 +116,10 @@ void SkeletonManagerImpl::Clear() {
 }
 
 SkeletonImpl* SkeletonManagerImpl::loadOneSkeleton(
-    const GLTFImportData& load_data, const Skin& skin) {
+    const GLTFImportData& load_data, const Skin& skin,
+    const std::string& skin_name) {
     std::vector<Bone> bones;
     bones.resize(skin.m_bone_indices.size());
-
-    // mapping load_data indices to store indices
-    std::unordered_map<uint32_t, uint32_t> bone_idx_mapping;
 
     for (auto& bone_idx : skin.m_bone_indices) {
         auto& node = load_data.m_nodes[bone_idx];
@@ -115,29 +127,35 @@ SkeletonImpl* SkeletonManagerImpl::loadOneSkeleton(
         bone.m_origin_trans = node.m_local_transform;
         bone.m_transform = node.m_local_transform;
         bone.m_global_transform = node.m_global_transform;
-        bone_idx_mapping.emplace(bone_idx, bones.size());
-        bones.emplace_back(std::move(bone));
+        bones[skin.m_mapped_bone_indices.at(bone_idx)] = std::move(bone);
     }
 
     std::vector<SkeletonImpl::BoneChildren> children_list;
     children_list.resize(skin.m_bone_indices.size());
     for (auto& bone_idx : skin.m_bone_indices) {
-        uint32_t bone_store_idx = bone_idx_mapping[bone_idx];
+        uint32_t bone_store_idx = skin.m_mapped_bone_indices.at(bone_idx);
         auto& children = children_list[bone_store_idx];
         auto& node = load_data.m_nodes[bone_idx];
 
         for (uint32_t child_idx : node.m_children) {
-            uint32_t child_store_idx = bone_idx_mapping[child_idx];
+            uint32_t child_store_idx = skin.m_mapped_bone_indices.at(child_idx);
             children.push_back(child_store_idx);
         }
     }
 
     SkeletonImpl* skeleton = m_skeleton_allocator.Allocate(this);
-    std::string name = load_data.m_asset_name + "." + skin.m_name;
+    std::string name = load_data.m_asset_name;
+    if (!skin_name.empty()) {
+        name += "." + skin_name;
+    }
     skeleton->m_name = name;
     skeleton->m_bones = std::move(bones);
     skeleton->m_hierarchy = std::move(children_list);
-    skeleton->m_root_bone_idx = bone_idx_mapping[skin.m_root.value()];
+    skeleton->m_root_bone_idx =
+        skin.m_mapped_bone_indices.at(skin.m_root.value());
+    auto& root_bone = skeleton->m_bones[skeleton->m_root_bone_idx];
+    root_bone.m_origin_trans = root_bone.m_global_transform;
+    root_bone.m_transform = root_bone.m_global_transform;
     return skeleton;
 }
 

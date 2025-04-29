@@ -20,7 +20,6 @@ public:
 
         auto engine_relative_path = ctx.GetEngineRelativePath();
 
-        auto& mgr = ctx.GetGLTFManager();
         ImportGLTF2Engine(
             engine_relative_path /
             "tests/sandbox/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
@@ -30,14 +29,18 @@ public:
                           "engine/assets/models/unit_sphere/unit_sphere.gltf");
         ImportGLTF2Engine(engine_relative_path /
                           "tests/sandbox/assets/door/door.gltf");
+        ImportGLTF2Engine(engine_relative_path /
+                          "tests/sandbox/assets/Fox/glTF/Fox.gltf");
         auto& root_go = ctx.GetCurrentLevel().GetRootGO();
 
+        auto& model_mgr = ctx.GetGLTFManager();
+        auto& skeleton_mgr = ctx.GetSkeletonManager();
         auto& physics_ctx = ctx.GetPhysicsContext();
         // create car
         {
             nickel::GameObject go;
             go.m_name = "car";
-            go.m_model = mgr.Find(
+            go.m_model = model_mgr.Find(
                 (engine_relative_path /
                  "tests/sandbox/assets/CesiumMilkTruck/CesiumMilkTruck")
                     .ToString());
@@ -74,7 +77,7 @@ public:
         {
             nickel::GameObject go;
             go.m_name = "man";
-            go.m_model = mgr.Find((engine_relative_path /
+            go.m_model = model_mgr.Find((engine_relative_path /
                                    "tests/sandbox/assets/CesiumMan/CesiumMan")
                                       .ToString());
             go.m_transform.scale = nickel::Vec3{0.7};
@@ -91,6 +94,10 @@ public:
             desc.m_material = physics_ctx.CreateMaterial(0.01, 0.01, 0.01);
             go.m_controller =
                 physics_ctx.GetMainScene().CreateCapsuleController(desc);
+            go.m_skeleton =
+                skeleton_mgr.Find((engine_relative_path /
+                                   "tests/sandbox/assets/CesiumMan/CesiumMan")
+                                      .ToString());
 
             root_go.m_children.emplace_back(std::move(go));
         }
@@ -99,7 +106,7 @@ public:
         {
             nickel::GameObject go;
             go.m_name = "wall";
-            go.m_model = mgr.Find(
+            go.m_model = model_mgr.Find(
                 (engine_relative_path / "tests/sandbox/assets/door/door")
                     .ToString());
             go.m_rigid_actor =
@@ -148,8 +155,6 @@ public:
         if (keyboard.GetKey(nickel::input::Key::LAlt).IsPressed()) {
             mouse.RelativeMode(mouse.IsRelativeMode() ? false : true);
         }
-
-        ImGui::ShowDemoWindow();
     }
 
 private:
