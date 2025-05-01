@@ -42,8 +42,7 @@ void ConvertRangeData(const unsigned char* src, DstT* dst, size_t blockCount,
  * @param model model
  */
 template <typename ComponentType>
-graphics::BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
-                                        int type,
+graphics::BufferView CopyBufferFromGLTF(std::span<unsigned char> dst, int type,
                                         const tinygltf::Accessor& accessor,
                                         const tinygltf::Model& model) {
     auto& view = model.bufferViews[accessor.bufferView];
@@ -51,12 +50,12 @@ graphics::BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
     auto src_offset = accessor.byteOffset + view.byteOffset;
     auto size = accessor.count * sizeof(ComponentType) *
                 tinygltf::GetNumComponentsInType(type);
+    NICKEL_ASSERT(dst.size() >= size);
     graphics::BufferView bufView;
     bufView.m_offset = dst.size();
     bufView.m_size = size;
     bufView.m_count = accessor.count;
 
-    dst.resize(dst.size() + size);
     auto copySrc = buffer.data.data() + src_offset;
     auto dstSrc = dst.data() + dst.size() - size;
     auto srcComponentNum = tinygltf::GetNumComponentsInType(accessor.type);
@@ -106,6 +105,35 @@ graphics::BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
     }
 
     return bufView;
+}
+
+/**
+ * @brief Copy gltf buffer to custom buffer. It will convert data from
+ * `accessor.type` to `type`, and for single element in type, copy
+ * `accessor.componentType` to RequireT
+ *
+ * @tparam ComponentType the component type you want
+ * @param dst copy destination
+ * @param type TINYGLTF_TYPE_XXX, the destination type you want
+ * @param accessor
+ * @param model model
+ */
+template <typename ComponentType>
+graphics::BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
+                                        int type,
+                                        const tinygltf::Accessor& accessor,
+                                        const tinygltf::Model& model) {
+    auto size = accessor.count * sizeof(ComponentType) *
+                tinygltf::GetNumComponentsInType(type);
+    graphics::BufferView bufView;
+    bufView.m_offset = dst.size();
+    bufView.m_size = size;
+    bufView.m_count = accessor.count;
+
+    dst.resize(dst.size() + size);
+
+    return CopyBufferFromGLTF<ComponentType>(std::span{dst}, type, accessor,
+                                             model);
 }
 
 template <typename RequireT>
@@ -198,17 +226,17 @@ class GLTFImporter {
 public:
     explicit GLTFImporter(const tinygltf::Model& model);
     GLTFImportData Load(const Path& filename, const graphics::Adapter& adapter,
-                      graphics::GLTFModelManagerImpl& mgr);
+                        graphics::GLTFModelManagerImpl& mgr);
 
 private:
     const tinygltf::Model& m_gltf_model;
 
     GLTFImportData loadGLTF(const Path& filename,
-                          const graphics::Adapter& adapter,
-                          graphics::GLTFModelManagerImpl& gltf_manager,
-                          graphics::GLTFRenderPass& render_pass,
-                          graphics::TextureManager& texture_mgr,
-                          graphics::CommonResource& common_res);
+                            const graphics::Adapter& adapter,
+                            graphics::GLTFModelManagerImpl& gltf_manager,
+                            graphics::GLTFRenderPass& render_pass,
+                            graphics::TextureManager& texture_mgr,
+                            graphics::CommonResource& common_res);
 
     graphics::Material3D::TextureInfo parseTextureInfo(
         int idx, std::vector<graphics::Texture>& textures,
@@ -237,6 +265,8 @@ private:
 
     void analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
                               std::set<uint32_t>& out_index_accessors,
+                              std::set<uint32_t>& out_bone_indices_accessor,
+                              std::set<uint32_t>& out_weight_accessor,
                               size_t& out_vertex_buffer_size,
                               size_t& out_index_buffer_size);
     void analyzeImageUsage(std::set<uint32_t>& out_color_texture,
@@ -258,11 +288,14 @@ private:
         std::vector<graphics::Texture>& textures,
         std::vector<graphics::Sampler>& samplers,
         graphics::CommonResource& common_res);
-    std::vector<graphics::BufferView> loadVertexBuffer(
+    std::vector<graphics::BufferView> loadBuffer(
         std::vector<unsigned char>& out_vertex_buffer,
         std::vector<unsigned char>& out_index_buffer,
+        std::vector<unsigned char>& out_bone_weight_buffer,
         const std::set<uint32_t>& vertex_accessor,
-        const std::set<uint32_t>& index_accessor) const;
+        const std::set<uint32_t>& index_accessor,
+        const std::set<uint32_t>& bone_indices_accessor,
+        const std::set<uint32_t>& weight_accessor) const;
 
     /*
      * 1. calculate node global transform

@@ -28,6 +28,7 @@ struct Skin {
     std::string m_name;
     std::optional<uint32_t> m_root;
     std::vector<uint32_t> m_bone_indices;
+    graphics::Buffer m_inverse_bind_matrices_buffer;
     std::unordered_map<uint32_t, uint32_t>
         m_mapped_bone_indices;  // gltf bone indices to packed bone indices
 

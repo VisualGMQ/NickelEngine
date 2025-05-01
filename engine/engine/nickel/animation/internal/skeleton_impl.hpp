@@ -19,7 +19,9 @@ public:
     std::vector<Bone> m_bones;
     uint32_t m_root_bone_idx{};
     std::vector<BoneChildren> m_hierarchy;
+    
     graphics::Buffer m_inverse_bind_matrices;
+    // graphics::Buffer m_bone_global_pose_matrices;
 
     void UpdateTransformByRoot(const Transform&);
 

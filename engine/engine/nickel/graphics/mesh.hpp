@@ -8,6 +8,8 @@ struct Primitive final {
     BufferView m_tan_buf_view;
     BufferView m_uv_buf_view;
     BufferView m_indices_buf_view;
+    BufferView m_bone_indices_buf_view;
+    BufferView m_weight_buf_view;
     IndexType m_index_type;
     Material3D m_material;
 };

@@ -13,6 +13,9 @@
 
 namespace nickel {
 
+using BoneIndicesStoreType = uint8_t;
+using WeightStoreType = float;
+
 template <typename T>
 static graphics::Buffer copyBuffer2GPU(graphics::Device device,
                                        std::span<T> src,
@@ -26,11 +29,12 @@ static graphics::Buffer copyBuffer2GPU(graphics::Device device,
     return buffer;
 }
 
-GLTFImporter::GLTFImporter(const tinygltf::Model& model) : m_gltf_model{model} {}
+GLTFImporter::GLTFImporter(const tinygltf::Model& model)
+    : m_gltf_model{model} {}
 
-GLTFImportData GLTFImporter::Load(const Path& filename,
-                              const graphics::Adapter& adapter,
-                              graphics::GLTFModelManagerImpl& gltf_manager) {
+GLTFImportData GLTFImporter::Load(
+    const Path& filename, const graphics::Adapter& adapter,
+    graphics::GLTFModelManagerImpl& gltf_manager) {
     auto graphics_ctx = Context::GetInst().GetGraphicsContext().GetImpl();
     auto& gltf_render_pass = graphics_ctx->GetGLTFRenderPass();
     return loadGLTF(
@@ -39,12 +43,12 @@ GLTFImportData GLTFImporter::Load(const Path& filename,
         Context::GetInst().GetGraphicsContext().GetImpl()->GetCommonResource());
 }
 
-GLTFImportData GLTFImporter::loadGLTF(const Path& filename,
-                                  const graphics::Adapter& adapter,
-                                  graphics::GLTFModelManagerImpl& gltf_manager,
-                                  graphics::GLTFRenderPass& render_pass,
-                                  graphics::TextureManager& texture_mgr,
-                                  graphics::CommonResource& common_res) {
+GLTFImportData GLTFImporter::loadGLTF(
+    const Path& filename, const graphics::Adapter& adapter,
+    graphics::GLTFModelManagerImpl& gltf_manager,
+    graphics::GLTFRenderPass& render_pass,
+    graphics::TextureManager& texture_mgr,
+    graphics::CommonResource& common_res) {
     graphics::Device device = adapter.GetDevice();
 
     Path root_dir = filename.ParentPath();
@@ -89,49 +93,18 @@ GLTFImportData GLTFImporter::loadGLTF(const Path& filename,
 
     load_data.m_meshes.reserve(m_gltf_model.meshes.size());
 
-    std::set<uint32_t> vertex_accessors, index_accessors;
+    std::set<uint32_t> vertex_accessors, index_accessors,
+        bone_indices_accessors, weight_accessors;
     size_t vertex_buffer_size{}, index_buffer_size{};
-    analyzeAccessorUsage(vertex_accessors, index_accessors, vertex_buffer_size,
-                         index_buffer_size);
+    analyzeAccessorUsage(vertex_accessors, index_accessors,
+                         bone_indices_accessors, weight_accessors,
+                         vertex_buffer_size, index_buffer_size);
     resource->m_cpu_data.vertex_buffer.reserve(vertex_buffer_size);
     resource->m_cpu_data.indices_buffer.reserve(index_buffer_size);
-    auto accessors = loadVertexBuffer(resource->m_cpu_data.vertex_buffer,
-                                      resource->m_cpu_data.indices_buffer,
-                                      vertex_accessors, index_accessors);
-
-    for (auto& m : m_gltf_model.meshes) {
-        graphics::Mesh mesh =
-            createMesh(m, &gltf_manager, resource->m_cpu_data.vertex_buffer,
-                       resource->m_cpu_data.indices_buffer, accessors,
-                       materials, *gltf_manager.m_default_material);
-        load_data.m_meshes.push_back(mesh);
-    }
-
-    graphics::Buffer gpu_vertex_buffer = copyBuffer2GPU(
-        device, std::span{resource->m_cpu_data.vertex_buffer},
-        Flags{graphics::BufferUsage::Vertex} | graphics::BufferUsage::CopyDst);
-
-    graphics::Buffer gpu_index_buffer;
-    if (!resource->m_cpu_data.indices_buffer.empty()) {
-        gpu_index_buffer = copyBuffer2GPU(
-            device, std::span{resource->m_cpu_data.indices_buffer},
-            Flags{graphics::BufferUsage::Index} |
-                graphics::BufferUsage::CopyDst);
-    }
-
-    for (auto& m : load_data.m_meshes) {
-        for (auto& prim : m.GetImpl()->m_primitives) {
-            if (prim.m_indices_buf_view.m_size > 0) {
-                prim.m_indices_buf_view.m_buffer = gpu_index_buffer;
-            }
-            prim.m_norm_buf_view.m_buffer = gpu_vertex_buffer;
-            prim.m_pos_buf_view.m_buffer = gpu_vertex_buffer;
-            prim.m_tan_buf_view.m_buffer = gpu_vertex_buffer;
-            prim.m_uv_buf_view.m_buffer = gpu_vertex_buffer;
-        }
-    }
-
-    load_data.m_resource = resource;
+    auto accessors = loadBuffer(
+        resource->m_cpu_data.vertex_buffer, resource->m_cpu_data.indices_buffer,
+        resource->m_cpu_data.bone_weight_buffer, vertex_accessors,
+        index_accessors, bone_indices_accessors, weight_accessors);
 
     for (auto& gltf_node : m_gltf_model.nodes) {
         Node node;
@@ -152,7 +125,7 @@ GLTFImportData GLTFImporter::loadGLTF(const Path& filename,
         auto& gltf_skin = m_gltf_model.skins[i];
         Skin skin;
         skin.m_name = gltf_skin.name;
-       
+
         skin.m_bone_indices.reserve(gltf_skin.joints.size());
         for (int j : gltf_skin.joints) {
             load_data.m_nodes[j].m_flags |= Node::Flag::HasBone;
@@ -171,11 +144,67 @@ GLTFImportData GLTFImporter::loadGLTF(const Path& filename,
                 skin.m_root = j;
             }
         }
-        
+
+        // copy inverse matrices
+        auto& accessor = m_gltf_model.accessors[gltf_skin.inverseBindMatrices];
+        std::vector<Mat44> inverse_matrix_data;
+        inverse_matrix_data.resize(accessor.count);
+        auto record_buffer_view = CopyBufferFromGLTF<float>(
+            std::span{(unsigned char*)inverse_matrix_data.data(),
+                      inverse_matrix_data.size() * sizeof(float)},
+            accessor.type, accessor, m_gltf_model);
+        skin.m_inverse_bind_matrices_buffer =
+            copyBuffer2GPU(device, std::span{inverse_matrix_data},
+                           graphics::BufferUsage::Uniform);
+
         if (skin) {
             load_data.m_skins.emplace_back(std::move(skin));
         }
     }
+
+    for (auto& m : m_gltf_model.meshes) {
+        graphics::Mesh mesh =
+            createMesh(m, &gltf_manager, resource->m_cpu_data.vertex_buffer,
+                       resource->m_cpu_data.indices_buffer, accessors,
+                       materials, *gltf_manager.m_default_material);
+        load_data.m_meshes.push_back(mesh);
+    }
+
+    graphics::Buffer gpu_vertex_buffer = copyBuffer2GPU(
+        device, std::span{resource->m_cpu_data.vertex_buffer},
+        Flags{graphics::BufferUsage::Vertex} | graphics::BufferUsage::CopyDst);
+
+    graphics::Buffer gpu_bone_weight_buffer = copyBuffer2GPU(
+        device, std::span{resource->m_cpu_data.bone_weight_buffer},
+        Flags{graphics::BufferUsage::Vertex} | graphics::BufferUsage::CopyDst);
+
+    graphics::Buffer gpu_index_buffer;
+    if (!resource->m_cpu_data.indices_buffer.empty()) {
+        gpu_index_buffer = copyBuffer2GPU(
+            device, std::span{resource->m_cpu_data.indices_buffer},
+            Flags{graphics::BufferUsage::Index} |
+                graphics::BufferUsage::CopyDst);
+    }
+
+    for (auto& m : load_data.m_meshes) {
+        for (auto& prim : m.GetImpl()->m_primitives) {
+            if (prim.m_indices_buf_view.m_size > 0) {
+                prim.m_indices_buf_view.m_buffer = gpu_index_buffer;
+            }
+            prim.m_norm_buf_view.m_buffer = gpu_vertex_buffer;
+            prim.m_pos_buf_view.m_buffer = gpu_vertex_buffer;
+            prim.m_tan_buf_view.m_buffer = gpu_vertex_buffer;
+            prim.m_uv_buf_view.m_buffer = gpu_vertex_buffer;
+            if (prim.m_bone_indices_buf_view.m_size > 0) {
+                prim.m_bone_indices_buf_view.m_buffer = gpu_bone_weight_buffer;
+            }
+            if (prim.m_weight_buf_view.m_size > 0) {
+                prim.m_weight_buf_view.m_buffer = gpu_bone_weight_buffer;
+            }
+        }
+    }
+
+    load_data.m_resource = resource;
 
     // currently we only load one scene
     const tinygltf::Scene& scene = m_gltf_model.scenes[0];
@@ -459,6 +488,13 @@ graphics::Primitive GLTFImporter::recordPrimInfo(
         }
     }
 
+    if (auto it = attrs.find("JOINTS_0"); it != attrs.end()) {
+        primitive.m_bone_indices_buf_view = buffer_views[it->second];
+    }
+    if (auto it = attrs.find("WEIGHTS_0"); it != attrs.end()) {
+        primitive.m_weight_buf_view = buffer_views[it->second];
+    }
+
     default_material.IncRefcount();
     graphics::Material3D mtl{&default_material};
     primitive.m_material = prim.material != -1 ? materials[prim.material] : mtl;
@@ -466,10 +502,12 @@ graphics::Primitive GLTFImporter::recordPrimInfo(
     return primitive;
 }
 
-void GLTFImporter::analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors,
-                                      std::set<uint32_t>& out_index_accessors,
-                                      size_t& out_vertex_buffer_size,
-                                      size_t& out_index_buffer_size) {
+void GLTFImporter::analyzeAccessorUsage(
+    std::set<uint32_t>& out_vertex_accessors,
+    std::set<uint32_t>& out_index_accessors,
+    std::set<uint32_t>& out_bone_indices_accessor,
+    std::set<uint32_t>& out_weight_accessor, size_t& out_vertex_buffer_size,
+    size_t& out_index_buffer_size) {
     for (auto& mesh : m_gltf_model.meshes) {
         uint32_t vertex_count{};
         for (auto& primitive : mesh.primitives) {
@@ -511,6 +549,24 @@ void GLTFImporter::analyzeAccessorUsage(std::set<uint32_t>& out_vertex_accessors
                 out_vertex_accessors.insert(it->second);
             }
             out_vertex_buffer_size += sizeof(Vec4) * vertex_count;
+
+            if (auto it = primitive.attributes.find("JOINTS_0");
+                it != primitive.attributes.end()) {
+                out_bone_indices_accessor.insert(it->second);
+                auto& accessor = m_gltf_model.accessors[it->second];
+                out_vertex_buffer_size +=
+                    tinygltf::GetNumComponentsInType(accessor.type) *
+                    sizeof(BoneIndicesStoreType) * accessor.count;
+            }
+
+            if (auto it = primitive.attributes.find("WEIGHTS_0");
+                it != primitive.attributes.end()) {
+                out_weight_accessor.insert(it->second);
+                auto& accessor = m_gltf_model.accessors[it->second];
+                out_vertex_buffer_size +=
+                    tinygltf::GetNumComponentsInType(accessor.type) *
+                    sizeof(WeightStoreType) * accessor.count;
+            }
 
             if (primitive.indices != -1) {
                 out_index_accessors.insert(primitive.indices);
@@ -665,19 +721,30 @@ std::vector<graphics::Material3D> GLTFImporter::loadMaterials(
     return materials;
 }
 
-std::vector<graphics::BufferView> GLTFImporter::loadVertexBuffer(
+std::vector<graphics::BufferView> GLTFImporter::loadBuffer(
     std::vector<unsigned char>& out_vertex_buffer,
     std::vector<unsigned char>& out_index_buffer,
+    std::vector<unsigned char>& out_bone_weight_buffer,
     const std::set<uint32_t>& vertex_accessor,
-    const std::set<uint32_t>& index_accessor) const {
+    const std::set<uint32_t>& index_accessor,
+    const std::set<uint32_t>& bone_indices_accessor,
+    const std::set<uint32_t>& weight_accessor) const {
     NICKEL_ASSERT(out_vertex_buffer.empty());
 
     std::vector<graphics::BufferView> views;
     views.reserve(m_gltf_model.accessors.size());
 
     for (int i = 0; i < m_gltf_model.accessors.size(); i++) {
-        std::vector<unsigned char>* buffer =
-            index_accessor.contains(i) ? &out_index_buffer : &out_vertex_buffer;
+        NICKEL_CONTINUE_IF_FALSE(vertex_accessor.contains(i) ||
+                                 index_accessor.contains(i));
+        std::vector<unsigned char>* buffer = &out_vertex_buffer;
+        if (index_accessor.contains(i)) {
+            buffer = &out_index_buffer;
+        }
+        if (bone_indices_accessor.contains(i) || weight_accessor.contains(i)) {
+            buffer = &out_bone_weight_buffer;
+        }
+        bool should_convert_weight_data = false;
 
         auto& accessor = m_gltf_model.accessors[i];
         graphics::BufferView buffer_view;
@@ -707,16 +774,53 @@ std::vector<graphics::BufferView> GLTFImporter::loadVertexBuffer(
                     *buffer, accessor.type, accessor, m_gltf_model);
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                buffer_view = CopyBufferFromGLTF<uint16_t>(
-                    *buffer, accessor.type, accessor, m_gltf_model);
+                if (bone_indices_accessor.contains(i)) {
+                    buffer_view = CopyBufferFromGLTF<BoneIndicesStoreType>(
+                        *buffer, accessor.type, accessor, m_gltf_model);
+                } else if (weight_accessor.contains(i)) {
+                    buffer_view = CopyBufferFromGLTF<WeightStoreType>(
+                        *buffer, accessor.type, accessor, m_gltf_model);
+                    should_convert_weight_data = true;
+                } else {
+                    buffer_view = CopyBufferFromGLTF<uint16_t>(
+                        *buffer, accessor.type, accessor, m_gltf_model);
+                }
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                buffer_view = CopyBufferFromGLTF<uint8_t>(
-                    *buffer, accessor.type, accessor, m_gltf_model);
+                if (weight_accessor.contains(i)) {
+                    buffer_view = CopyBufferFromGLTF<WeightStoreType>(
+                        *buffer, accessor.type, accessor, m_gltf_model);
+                    should_convert_weight_data = true;
+                } else {
+                    buffer_view = CopyBufferFromGLTF<uint8_t>(
+                        *buffer, accessor.type, accessor, m_gltf_model);
+                }
                 break;
             default:
                 NICKEL_CANT_REACH();
         }
+
+        static_assert(
+            std::is_same_v<WeightStoreType, float>,
+            "weight store type changed? don't forget change convert code!");
+        if (should_convert_weight_data) {
+            if (accessor.componentType ==
+                TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+                WeightStoreType* ptr =
+                    (WeightStoreType*)(buffer->data() + accessor.byteOffset);
+                for (int i = 0; i < accessor.count * 4; i++) {
+                    *ptr /= 65535;
+                }
+            } else if (accessor.componentType ==
+                       TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+                WeightStoreType* ptr =
+                    (WeightStoreType*)(buffer->data() + accessor.byteOffset);
+                for (int i = 0; i < accessor.count * 4; i++) {
+                    *ptr /= 255;
+                }
+            }
+        }
+
         views.push_back(buffer_view);
     }
 

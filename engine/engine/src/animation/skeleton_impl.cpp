@@ -71,7 +71,7 @@ bool SkeletonManagerImpl::Load(const GLTFImportData& load_data,
             } while (it != load_data.m_skins.end());
         }
         SkeletonImpl* skeleton = loadOneSkeleton(load_data, skin, skin_name);
-        m_skeletons.emplace(skeleton->m_name, skeleton);
+        m_skeletons.emplace(skeleton->m_name, std::move(skeleton));
     }
     return true;
 }
@@ -153,6 +153,7 @@ SkeletonImpl* SkeletonManagerImpl::loadOneSkeleton(
     skeleton->m_hierarchy = std::move(children_list);
     skeleton->m_root_bone_idx =
         skin.m_mapped_bone_indices.at(skin.m_root.value());
+    skeleton->m_inverse_bind_matrices = skin.m_inverse_bind_matrices_buffer;
     auto& root_bone = skeleton->m_bones[skeleton->m_root_bone_idx];
     root_bone.m_origin_trans = root_bone.m_global_transform;
     root_bone.m_transform = root_bone.m_global_transform;

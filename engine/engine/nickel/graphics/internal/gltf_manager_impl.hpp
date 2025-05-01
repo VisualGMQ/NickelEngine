@@ -42,7 +42,7 @@ public:
     std::set<std::string> m_pending_delete;
 
 private:
-    void preorderNode(const nickel::GLTFImportData& load_data, const Node& node,
+    void preorderNode(const GLTFImportData& load_data, const Node& node,
                       const GLTFModelResource& resource,
                       std::span<const Mesh> meshes,
                       GLTFModelImpl& parent_model);
