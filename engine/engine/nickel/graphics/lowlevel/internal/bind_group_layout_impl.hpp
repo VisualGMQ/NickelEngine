@@ -8,12 +8,15 @@
 namespace nickel::graphics {
 
 class DeviceImpl;
+class BindGroupPool;
 
 class BindGroupLayoutImpl final : public RefCountable {
 public:
     VkDescriptorSetLayout m_layout = VK_NULL_HANDLE;
 
-    BindGroupLayoutImpl(DeviceImpl&, const BindGroupLayout::Descriptor&);
+    BindGroupLayoutImpl(DeviceImpl& dev,
+                        const BindGroupLayout::Descriptor& desc,
+                        BindGroupPool& pool, uint32_t descriptor_set_count);
     BindGroupLayoutImpl(const BindGroupLayoutImpl&) = delete;
     BindGroupLayoutImpl(BindGroupLayoutImpl&&) = delete;
     BindGroupLayoutImpl& operator=(const BindGroupLayoutImpl&) = delete;
@@ -25,14 +28,22 @@ public:
 
     void DecRefcount() override;
     void GC();
+    void RecycleBindGroup(const BindGroupImpl&);
 
     BlockMemoryAllocator<BindGroupImpl> m_bind_group_allocator;
+    std::vector<VkDescriptorSet> m_descriptor_sets;
 
 private:
     DeviceImpl& m_device;
+    std::vector<uint32_t> m_unused_descriptor_set;
 
     VkDescriptorSetLayoutBinding getBinding(uint32_t slot,
                                             const BindGroupLayout::Entry&);
+
+    VkDescriptorSetLayout createLayout(DeviceImpl&,
+                                       const BindGroupLayout::Descriptor&);
+    void createSets(DeviceImpl&, VkDescriptorPool,
+                    uint32_t descriptor_set_count);
 };
 
 }  // namespace nickel::graphics

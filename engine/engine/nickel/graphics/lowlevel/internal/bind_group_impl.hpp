@@ -32,28 +32,31 @@ private:
     std::forward_list<VkDescriptorImageInfo> m_image_infos;
 };
 
-class BindGroupImpl {
+class BindGroupImpl: public RefCountable {
 public:
     BindGroupImpl(DeviceImpl&, BindGroupLayoutImpl& layout,
-                  const BindGroup::Descriptor&);
+                  const BindGroup::Descriptor&,
+                  VkDescriptorSet descriptor_set,
+                  uint32_t id);
     BindGroupImpl(const BindGroupImpl&) = delete;
     BindGroupImpl(BindGroupImpl&&) = delete;
     BindGroupImpl& operator=(const BindGroupImpl&) = delete;
     BindGroupImpl& operator=(BindGroupImpl&&) = delete;
 
     const BindGroup::Descriptor& GetDescriptor() const;
-    void PendingDelete();
+    void DecRefcount() override;
 
-    BindGroupLayoutImpl* m_layout{};
+    BindGroupLayout m_layout{};
+    VkDescriptorSet m_descriptor_set;
 
-    const DescriptorSetWriteInfo& GetWriteInfo() const;
+    uint32_t GetID() const;
 
 private:
+    uint32_t m_id;
     DeviceImpl& m_device;
     BindGroup::Descriptor m_desc;
-    DescriptorSetWriteInfo m_write_infos;
 
-    void writeDescriptors();
+    void writeDescriptors(const BindGroup::Descriptor&) const;
 };
 
 }  // namespace nickel::graphics

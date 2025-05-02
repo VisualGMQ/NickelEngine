@@ -23,6 +23,8 @@
 
 namespace nickel::graphics {
 
+constexpr uint32_t MaxDescriptorSetPerTypePerFrame = 512;
+
 class DeviceImpl {
 public:
     struct QueueFamilyIndices {
@@ -78,6 +80,7 @@ public:
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
     std::vector<ImageView> m_swapchain_image_views;
     QueueFamilyIndices m_queue_indices;
+    std::unique_ptr<BindGroupPool> m_bind_group_pool;
 
     Buffer CreateBuffer(const Buffer::Descriptor&);
     Image CreateImage(const Image::Descriptor&);
@@ -138,6 +141,7 @@ private:
                                       VkSurfaceKHR);
     VkPresentModeKHR queryPresentMode(VkPhysicalDevice, VkSurfaceKHR);
     void createCmdPools();
+    void createBindGroupPool();
 
     void getAndCreateSwapchainImageViews();
     void cleanUpOneFrame();

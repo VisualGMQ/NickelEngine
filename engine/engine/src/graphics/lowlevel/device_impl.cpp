@@ -3,11 +3,12 @@
 #include "nickel/common/macro.hpp"
 #include "nickel/graphics/lowlevel/fence.hpp"
 #include "nickel/graphics/lowlevel/internal/adapter_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/bind_group_pool.hpp"
 #include "nickel/graphics/lowlevel/internal/cmd_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
 #include "nickel/graphics/lowlevel/internal/fence_impl.hpp"
-#include "nickel/graphics/lowlevel/internal/vk_call.hpp"
 #include "nickel/graphics/lowlevel/internal/semaphore_impl.hpp"
+#include "nickel/graphics/lowlevel/internal/vk_call.hpp"
 
 namespace nickel::graphics {
 
@@ -41,7 +42,7 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     device_ci.pQueueCreateInfos = queueCreateInfos.data();
 
     std::vector<const char*> requireExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME};
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     std::vector<VkExtensionProperties> extension_props;
     uint32_t extensionCount = 0;
     VK_CALL(vkEnumerateDeviceExtensionProperties(impl.m_phy_device, nullptr,
@@ -96,6 +97,7 @@ DeviceImpl::DeviceImpl(const AdapterImpl& impl,
     m_image_info =
         queryImageInfo(impl.m_phy_device, window_size, impl.m_surface);
     createCmdPools();
+    createBindGroupPool();
     createSwapchain(impl.m_phy_device, impl.m_surface);
 }
 
@@ -245,6 +247,11 @@ void DeviceImpl::createCmdPools() {
     }
 }
 
+void DeviceImpl::createBindGroupPool() {
+    m_bind_group_pool = std::make_unique<BindGroupPool>(
+        *this, MaxDescriptorSetPerTypePerFrame);
+}
+
 void DeviceImpl::getAndCreateSwapchainImageViews() {
     std::vector<VkImage> images;
     uint32_t count = 0;
@@ -331,9 +338,9 @@ DeviceImpl::~DeviceImpl() {
 
     m_swapchain_image_views.clear();
     m_bind_group_layout_allocator.FreeAll();
+    m_bind_group_pool.reset();
 
     m_framebuffer_allocator.FreeAll();
-    m_bind_group_layout_allocator.FreeAll();
     m_image_view_allocator.FreeAll();
     m_image_allocator.FreeAll();
 
@@ -389,7 +396,8 @@ ImageView DeviceImpl::CreateImageView(const Image& image,
 
 BindGroupLayout DeviceImpl::CreateBindGroupLayout(
     const BindGroupLayout::Descriptor& desc) {
-    return BindGroupLayout{m_bind_group_layout_allocator.Allocate(*this, desc)};
+    return m_bind_group_layout_allocator.Allocate(
+        *this, desc, *m_bind_group_pool, MaxDescriptorSetPerTypePerFrame);
 }
 
 PipelineLayout DeviceImpl::CreatePipelineLayout(
