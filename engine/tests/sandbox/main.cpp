@@ -47,6 +47,8 @@ public:
             go.m_rigid_actor =
                 nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
                     nickel::Vec3{3, 0, 0}, nickel::Quat{})};
+            static_cast<nickel::physics::RigidDynamic&>(go.m_rigid_actor)
+                .SetCenterOfMassLocalPose({0, 1.5, 0}, {});
             auto material = physics_ctx.CreateMaterial(0.3, 0.3, 0.1);
             auto shape = physics_ctx.CreateShape(
                 nickel::physics::BoxGeometry{
