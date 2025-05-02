@@ -151,11 +151,12 @@ GLTFImportData GLTFImporter::loadGLTF(
         inverse_matrix_data.resize(accessor.count);
         auto record_buffer_view = CopyBufferFromGLTF<float>(
             std::span{(unsigned char*)inverse_matrix_data.data(),
-                      inverse_matrix_data.size() * sizeof(float)},
+                      inverse_matrix_data.size() * sizeof(Mat44)},
             accessor.type, accessor, m_gltf_model);
         skin.m_inverse_bind_matrices_buffer =
             copyBuffer2GPU(device, std::span{inverse_matrix_data},
-                           graphics::BufferUsage::Uniform);
+                           Flags{graphics::BufferUsage::Uniform} |
+                               graphics::BufferUsage::CopyDst);
 
         if (skin) {
             load_data.m_skins.emplace_back(std::move(skin));
@@ -174,9 +175,13 @@ GLTFImportData GLTFImporter::loadGLTF(
         device, std::span{resource->m_cpu_data.vertex_buffer},
         Flags{graphics::BufferUsage::Vertex} | graphics::BufferUsage::CopyDst);
 
-    graphics::Buffer gpu_bone_weight_buffer = copyBuffer2GPU(
-        device, std::span{resource->m_cpu_data.bone_weight_buffer},
-        Flags{graphics::BufferUsage::Vertex} | graphics::BufferUsage::CopyDst);
+    graphics::Buffer gpu_bone_weight_buffer;
+    if (!resource->m_cpu_data.bone_weight_buffer.empty()) {
+        gpu_bone_weight_buffer = copyBuffer2GPU(
+            device, std::span{resource->m_cpu_data.bone_weight_buffer},
+            Flags{graphics::BufferUsage::Vertex} |
+                graphics::BufferUsage::CopyDst);
+    }
 
     graphics::Buffer gpu_index_buffer;
     if (!resource->m_cpu_data.indices_buffer.empty()) {
@@ -735,8 +740,9 @@ std::vector<graphics::BufferView> GLTFImporter::loadBuffer(
     views.reserve(m_gltf_model.accessors.size());
 
     for (int i = 0; i < m_gltf_model.accessors.size(); i++) {
-        NICKEL_CONTINUE_IF_FALSE(vertex_accessor.contains(i) ||
-                                 index_accessor.contains(i));
+        NICKEL_CONTINUE_IF_FALSE(
+            vertex_accessor.contains(i) || index_accessor.contains(i) ||
+            bone_indices_accessor.contains(i) || weight_accessor.contains(i));
         std::vector<unsigned char>* buffer = &out_vertex_buffer;
         if (index_accessor.contains(i)) {
             buffer = &out_index_buffer;

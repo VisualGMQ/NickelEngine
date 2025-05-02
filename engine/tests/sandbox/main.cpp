@@ -24,7 +24,7 @@ public:
             engine_relative_path /
             "tests/sandbox/assets/CesiumMilkTruck/CesiumMilkTruck.gltf");
         ImportGLTF2Engine(engine_relative_path /
-                 "tests/sandbox/assets/CesiumMan/CesiumMan.gltf");
+                          "tests/sandbox/assets/CesiumMan/CesiumMan.gltf");
         ImportGLTF2Engine(engine_relative_path /
                           "engine/assets/models/unit_sphere/unit_sphere.gltf");
         ImportGLTF2Engine(engine_relative_path /
@@ -47,7 +47,7 @@ public:
             go.m_rigid_actor =
                 nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
                     nickel::Vec3{3, 0, 0}, nickel::Quat{})};
-            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
+            auto material = physics_ctx.CreateMaterial(0.3, 0.3, 0.1);
             auto shape = physics_ctx.CreateShape(
                 nickel::physics::BoxGeometry{
                     nickel::Vec3{1.2, 1.2, 2.2}
@@ -73,34 +73,35 @@ public:
             physics_ctx.GetMainScene().AddRigidActor(go.m_rigid_actor);
             root_go.m_children.emplace_back(std::move(go));
         }
+        
         // create man
-        {
-            nickel::GameObject go;
-            go.m_name = "man";
-            go.m_model = model_mgr.Find((engine_relative_path /
-                                   "tests/sandbox/assets/CesiumMan/CesiumMan")
-                                      .ToString());
-            go.m_transform.scale = nickel::Vec3{0.7};
+        // {
+        //     nickel::GameObject go;
+        //     go.m_name = "man";
+        //     go.m_model = model_mgr.Find((engine_relative_path /
+        //                            "tests/sandbox/assets/CesiumMan/CesiumMan")
+        //                               .ToString());
+        //     go.m_transform.scale = nickel::Vec3{0.7};
 
-            nickel::physics::CapsuleController::Descriptor desc;
-            desc.m_radius = 0.25;
-            desc.m_height = 0.5;
-            desc.m_up_dir = nickel::Vec3{0, 1, 0};
-            desc.m_scale_coeff = 1;
-            desc.m_contact_offset = 0.01;
-            desc.m_climbing_mode = nickel::physics::CapsuleController::
-                Descriptor::ClimbingMode::Easy;
-            desc.m_step_offset = 0;
-            desc.m_material = physics_ctx.CreateMaterial(0.01, 0.01, 0.01);
-            go.m_controller =
-                physics_ctx.GetMainScene().CreateCapsuleController(desc);
-            go.m_skeleton =
-                skeleton_mgr.Find((engine_relative_path /
-                                   "tests/sandbox/assets/CesiumMan/CesiumMan")
-                                      .ToString());
+        //     nickel::physics::CapsuleController::Descriptor desc;
+        //     desc.m_radius = 0.25;
+        //     desc.m_height = 0.5;
+        //     desc.m_up_dir = nickel::Vec3{0, 1, 0};
+        //     desc.m_scale_coeff = 1;
+        //     desc.m_contact_offset = 0.01;
+        //     desc.m_climbing_mode = nickel::physics::CapsuleController::
+        //         Descriptor::ClimbingMode::Easy;
+        //     desc.m_step_offset = 0;
+        //     desc.m_material = physics_ctx.CreateMaterial(0.01, 0.01, 0.01);
+        //     go.m_controller =
+        //         physics_ctx.GetMainScene().CreateCapsuleController(desc);
+        //     go.m_skeleton =
+        //         skeleton_mgr.Find((engine_relative_path /
+        //                            "tests/sandbox/assets/CesiumMan/CesiumMan")
+        //                               .ToString());
 
-            root_go.m_children.emplace_back(std::move(go));
-        }
+        //     root_go.m_children.emplace_back(std::move(go));
+        // }
 
         // create door
         {
@@ -141,7 +142,7 @@ public:
         updateCamera();
         if (mode == Mode::Character) {
             shootBall();
-            moveCharacter();
+            // moveCharacter();
         }
         if (keyboard.GetKey(nickel::input::Key::P).IsPressed()) {
             if (mode == Mode::Character) {
@@ -223,7 +224,7 @@ private:
                 nickel::physics::RigidActor{physics_ctx.CreateRigidDynamic(
                     camera.GetPosition() + camera.GetForward() * 1,
                     nickel::Quat{})};
-            auto material = physics_ctx.CreateMaterial(1.0, 1.0, 0.1);
+            auto material = physics_ctx.CreateMaterial(0.5, 0.45, 0.1);
             auto shape = physics_ctx.CreateShape(
                 nickel::physics::SphereGeometry{0.3}, material);
             ball_go.m_rigid_actor.AttachShape(shape);

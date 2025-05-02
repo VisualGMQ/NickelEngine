@@ -165,7 +165,7 @@ Scene ContextImpl::CreateScene(const std::string& name, const Vec3& gravity) {
     desc.gravity = Vec3ToPhysX(gravity);
     desc.frictionType = physx::PxFrictionType::ePATCH;
     desc.solverType = physx::PxSolverType::eTGS;
-    desc.filterShader = SimulateFilterShader;
+    desc.filterShader = physx::PxDefaultSimulationFilterShader; // SimulateFilterShader;
     desc.flags |= physx::PxSceneFlag::eENABLE_CCD;
 
     m_cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(4);

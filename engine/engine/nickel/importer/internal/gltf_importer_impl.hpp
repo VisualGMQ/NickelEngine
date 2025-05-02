@@ -132,8 +132,9 @@ graphics::BufferView CopyBufferFromGLTF(std::vector<unsigned char>& dst,
 
     dst.resize(dst.size() + size);
 
-    return CopyBufferFromGLTF<ComponentType>(std::span{dst}, type, accessor,
+    CopyBufferFromGLTF<ComponentType>(std::span{dst}, type, accessor,
                                              model);
+    return bufView;
 }
 
 template <typename RequireT>
