@@ -17,7 +17,7 @@ public:
     };
 
     struct Descriptor final {
-        std::unordered_map<uint32_t, Entry> m_entries;
+        std::map<uint32_t, Entry> m_entries;
     };
 
     using ImplWrapper::ImplWrapper;

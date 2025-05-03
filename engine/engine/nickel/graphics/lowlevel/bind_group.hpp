@@ -13,8 +13,10 @@ namespace nickel::graphics {
 
 class BindGroupImpl;
 
-class NICKEL_API BindGroup final {
+class NICKEL_API BindGroup final: public ImplWrapper<BindGroupImpl> {
 public:
+    using ImplWrapper::ImplWrapper;
+    
     struct BufferBinding final {
         enum class Type {
             Storage,
@@ -64,21 +66,7 @@ public:
         std::map<uint32_t, Entry> m_entries;
     };
 
-    BindGroup() = default;
-    explicit BindGroup(BindGroupImpl*);
-    BindGroup(BindGroup&&) noexcept;
-    BindGroup& operator=(BindGroup&&) noexcept;
-    ~BindGroup();
-
-    const BindGroupImpl& Impl() const noexcept;
-    BindGroupImpl& Impl() noexcept;
-    
-    operator bool() const noexcept;
-
     const Descriptor& GetDescriptor() const;
-
-private:
-    BindGroupImpl* m_impl{};
 };
 
 }  // namespace nickel::graphics

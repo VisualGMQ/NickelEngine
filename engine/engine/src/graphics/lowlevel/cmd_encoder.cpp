@@ -1,5 +1,6 @@
 ﻿#include "nickel/graphics/lowlevel/cmd_encoder.hpp"
 
+#include "nickel/common/macro.hpp"
 #include "nickel/graphics/lowlevel/framebuffer.hpp"
 #include "nickel/graphics/lowlevel/internal/bind_group_impl.hpp"
 #include "nickel/graphics/lowlevel/internal/buffer_impl.hpp"
@@ -13,6 +14,7 @@
 #include "nickel/graphics/lowlevel/internal/vk_call.hpp"
 
 namespace nickel::graphics {
+
 struct RenderPassEncoder::ApplyRenderCmd {
     explicit ApplyRenderCmd(CommandEncoderImpl& cmd) : m_cmd{cmd} {}
 
@@ -82,13 +84,30 @@ struct RenderPassEncoder::ApplyRenderCmd {
     }
 
     void operator()(const SetBindGroupCmd& cmd) {
-        auto& write_infos =
-            cmd.m_bind_group->Impl().GetWriteInfo().GetWriteDescriptorSets();
+        auto& desc = cmd.m_bind_group->GetDescriptor();
+        std::vector<uint32_t> dynamic_offsets;
+        std::vector<uint32_t> slots;
+        for (auto& [slot, entry] : desc.m_entries) {
+            slots.push_back(slot);
+        }
 
-        vkCmdPushDescriptorSetKHR(
+        std::ranges::sort(slots);
+
+        for (auto& slot : slots) {
+            auto& entry = desc.m_entries.at(slot).m_binding.m_entry;
+            auto buffer_binding = std::get_if<BindGroup::BufferBinding>(&entry);
+            NICKEL_CONTINUE_IF_FALSE(buffer_binding);
+
+            if (buffer_binding->m_offset) {
+                dynamic_offsets.push_back(buffer_binding->m_offset.value());
+            }
+        }
+
+        vkCmdBindDescriptorSets(
             m_cmd.m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
             m_pipeline->GetImpl()->m_layout.GetImpl()->m_pipeline_layout,
-            cmd.m_set, write_infos.size(), write_infos.data());
+            cmd.m_set, 1, &cmd.m_bind_group->GetImpl()->m_descriptor_set,
+            dynamic_offsets.size(), dynamic_offsets.data());
     }
 
 private:
@@ -231,7 +250,7 @@ void RenderPassEncoder::End() {
 
 void RenderPassEncoder::transferImageLayoutInBindGroup(
     BindGroup& bind_group) const {
-    auto& desc = bind_group.Impl().GetDescriptor();
+    auto& desc = bind_group.GetImpl()->GetDescriptor();
     for (auto& [_, entry] : desc.m_entries) {
         auto& bind_entry = entry.m_binding.m_entry;
         ImageImpl* image_impl{};

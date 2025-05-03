@@ -328,9 +328,9 @@ inline VkDescriptorType BindGroupEntryType2Vk(BindGroupEntryType type) {
         CASE(BindGroupEntryType::StorageBuffer,
              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
         CASE(BindGroupEntryType::UniformBufferDynamic,
-             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
         CASE(BindGroupEntryType::StoragesBufferDynamic,
-             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
         CASE(BindGroupEntryType::InputAttachment,
              VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
         CASE(BindGroupEntryType::InlineUniformBlock,

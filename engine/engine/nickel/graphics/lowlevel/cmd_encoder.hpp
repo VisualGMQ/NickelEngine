@@ -67,7 +67,6 @@ private:
     struct SetBindGroupCmd {
         uint32_t m_set = 0;
         const BindGroup* m_bind_group{};
-        std::vector<uint32_t> m_dynamic_offsets;
     };
 
     struct NextSubpassCmd {
