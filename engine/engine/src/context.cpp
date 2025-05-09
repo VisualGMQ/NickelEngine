@@ -39,8 +39,16 @@ Context::~Context() {
 }
 
 void Context::Initialize() {
+    Initialize(nullptr);
+}
+
+void Context::Initialize(void* window_handle) {
     LOGI("init video system");
-    m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
+    if (window_handle) {
+        m_window = std::make_unique<video::Window>(window_handle);
+    } else {
+        m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
+    }
     m_old_window_size = {1024, 720};
 
     LOGI("init graphics system");
@@ -53,7 +61,7 @@ void Context::Initialize() {
     // TODO: change org & app from config
     m_storage_mgr =
         std::make_unique<StorageManager>("visualgmq", "nickelengine");
-    
+
     LOGI("read project path config");
     m_engine_relative_path = parseEngineProjectPath();
     LOGI("engine project path: ", m_engine_relative_path);
@@ -218,6 +226,7 @@ void Context::Update() {
         app->OnUpdate(m_time.DeltaTime());
     }
     m_level->Update();
+    ImGui::ShowDemoWindow();
 
     GetDeviceManager().Update();
 

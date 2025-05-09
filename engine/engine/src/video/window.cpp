@@ -7,6 +7,8 @@ namespace nickel::video {
 Window::Window(const std::string& title, int w, int h)
     : m_impl{std::make_unique<Impl>(title, w, h)} {}
 
+Window::Window(void* handle) : m_impl{std::make_unique<Impl>(handle)} {}
+
 Window::Impl& Window::GetImpl() {
     return *m_impl;
 }

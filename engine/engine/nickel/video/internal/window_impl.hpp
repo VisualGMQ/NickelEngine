@@ -8,6 +8,7 @@ namespace nickel::video {
 class Window::Impl {
 public:
     Impl(const std::string& title, int w, int h);
+    Impl(void* handle);
     SDL_Window* GetWindow() const;
     SVector<uint32_t, 2> GetSize() const noexcept;
     

@@ -12,6 +12,7 @@ public:
     class Impl;
     
     Window(const std::string& title, int w, int h);
+    Window(void* handle);
     ~Window();
 
     Impl& GetImpl();

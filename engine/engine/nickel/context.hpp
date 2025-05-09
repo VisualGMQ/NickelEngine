@@ -30,6 +30,7 @@ public:
     ~Context();
 
     void Initialize();
+    void Initialize(void* window_handle);
 
     void HandleEvent(const SDL_Event&);
 

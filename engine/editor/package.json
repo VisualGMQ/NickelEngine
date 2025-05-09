@@ -5,7 +5,7 @@
   "license": "MIT",
   "author": "VisualGMQ",
   "type": "commonjs",
-  "main": "main.js",
+  "main": "js/main.js",
   "scripts": {
     "start": "electron .",
     "cmake-compile": "cmake-js compile --out cmake-js-build"
@@ -17,5 +17,8 @@
   },
   "binary": {
     "napi_versions": [7]
-  }
+  },
+  "cmake-js": {
+		"runtime": "electron"
+	}
 }
