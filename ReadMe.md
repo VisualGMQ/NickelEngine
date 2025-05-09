@@ -17,10 +17,14 @@ NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.c
 
 ## How To Build
 
-使用CMake进行编译（非安卓平台在`engine`目录下执行：）
+使用CMakeJs进行配置，CMake进行编译（非安卓平台在`engine`目录下执行：）
 
 ```bash
-cmake --preset=default
+# 安装cmake-js
+npm install -g cmake-js
+
+# 编译工程
+cmake-js configure --out cmake-build --CDNICKEL_BUILD_TESTS=ON --CDNICKEL_BUILD_EDITOR=ON
 cmake --build cmake-build
 ```
 
