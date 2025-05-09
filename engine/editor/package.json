@@ -1,0 +1,21 @@
+{
+  "name": "nickelengine-editor",
+  "version": "0.1.0",
+  "description": "NickelEngine Editor",
+  "license": "MIT",
+  "author": "VisualGMQ",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "cmake-compile": "cmake-js compile --out cmake-js-build"
+  },
+  "devDependencies": {
+    "electron": "^36.2.0",
+    "bindings": "^1.5.0",
+    "node-addon-api": "^8.3.0"
+  },
+  "binary": {
+    "napi_versions": [7]
+  }
+}

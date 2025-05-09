@@ -6,6 +6,7 @@ android/.idea
 android/app/src/main/assets/*
 android/app/.cxx/
 cmake-build/
+cmake-js-build/
 .cache
 imgui.ini
 local.properties

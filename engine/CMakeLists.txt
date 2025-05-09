@@ -6,7 +6,8 @@ project(NickelEngine
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(NICKEL_BUILD_TESTS "build tests" OFF)
-option(NICKEL_BUILD_TOOLS "build tests" OFF)
+option(NICKEL_BUILD_TOOLS "build tools" OFF)
+option(NICKEL_BUILD_EDITOR "build editor" OFF)
 
 set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -42,4 +43,12 @@ endif()
 if (NICKEL_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if (NICKEL_BUILD_EDITOR)
+    if (CMAKE_JS_VERSION)
+        add_subdirectory(editor)
+    else()
+        message(WARN "can't compile engine editor, please use `cmake-js compile` to build!")
+    endif()
 endif()
