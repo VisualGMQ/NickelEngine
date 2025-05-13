@@ -4,7 +4,7 @@
 #include "nickel/refl/drefl/raw_type.hpp"
 #include "nickel/refl/util/misc.hpp"
 
-#include "nickel/refl/drefl/Factory.hpp"
+#include "nickel/refl/drefl/factory.hpp"
 #include "nickel/refl/drefl/cast_any.hpp"
 #include "nickel/refl/drefl/make_any.hpp"
 #include "nickel/refl/drefl/type.hpp"
