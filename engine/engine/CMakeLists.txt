@@ -1,6 +1,5 @@
 add_subdirectory(3rdlibs)
 
-
 option(NICKEL_BUILD_SHARED "build shared engine library" OFF)
 option(NICKEL_BUILD_STATIC "build static engine library" ON)
 
@@ -23,6 +22,8 @@ compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
 compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridline.vert.spv)
 compile_shader(assets/shaders/shader_gridline.frag assets/shaders/shader_gridline.frag.spv)
+
+add_subdirectory(refl_code_generator)
 
 macro(attach_common_config_on_engine target_name)
     target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_MODEL_FILES} ${ENGINE_SHADER_FILES})
@@ -49,6 +50,7 @@ macro(attach_common_config_on_engine target_name)
         NvBlast::ExtStress
     )
     target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui implot)
+    add_dependencies(${target_name} refl_code_generate)
 
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp nickel/physics/internal/pch.hpp)
     target_compile_definitions(${target_name} PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -93,10 +95,3 @@ endif()
 add_subdirectory(main_entry)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
-
-add_custom_command(TARGET ${NICKEL_ENGINE_NAME}
-    PRE_BUILD
-    COMMAND Python3::Interpreter tools/refl_code_generator/parser.py
-    COMMENT "parser cpp headers and generate reflection codes..."
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    VERBATIM)
