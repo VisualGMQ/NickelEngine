@@ -1,0 +1,2 @@
+AddReflTest(drefl_serd)
+target_link_libraries(drefl_serd PRIVATE tomlplusplus::tomlplusplus)

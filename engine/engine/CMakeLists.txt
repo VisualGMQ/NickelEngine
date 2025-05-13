@@ -12,6 +12,7 @@ file(GLOB_RECURSE ENGINE_INTERNAL_HEADERS
         nickel/graphics/internal/*.hpp
         nickel/physics/internal/*.hpp
         nickel/video/internal/*.hpp
+        nickel/refl/internal/*.hpp
         nickel/main_entry/*.hpp)
 set(ENGINE_EXPORT_HEADERS ${ENGINE_ALL_HEADERS})
 list(REMOVE_ITEM ENGINE_EXPORT_HEADERS ${ENGINE_INTERNAL_HEADERS})
