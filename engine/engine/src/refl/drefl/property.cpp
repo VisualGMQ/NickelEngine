@@ -1,5 +1,5 @@
 #include "nickel/refl/drefl/factory.hpp"
-#include "nickel/refl/drefl/class_Visitor.hpp"
+#include "nickel/refl/drefl/class_visitor.hpp"
 
 namespace nickel::refl {
 
