@@ -28,6 +28,15 @@ jobs:
     - name: Prepare cmake
       uses: lukka/get-cmake@latest
 
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: 'pip' # caching pip dependencies
+
+    - name: Pip install requirements
+      run: |
+        python -m pip install -r ./engine/engine/refl_code_generator/requirements.txt
+
     - name: Prepare Ubuntu
       if: contains(matrix.os, 'ubuntu') && matrix.android == 'none'
       run: |
@@ -38,10 +47,6 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew install ninja
-
-    - name: Pip install requirements
-      run: |
-        python -m pip install -r ./engine/engine/refl_code_generator/requirements.txt
 
     - name: Config cmake(Ubuntu&MacOS)
       if: ${{ !contains(matrix.os, 'windows') && matrix.android == 'none' }}
