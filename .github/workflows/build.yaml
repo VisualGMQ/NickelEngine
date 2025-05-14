@@ -41,7 +41,7 @@ jobs:
 
     - name: Pip install requirements
       run: |
-        pip3 install -r ./engine/engine/refl_code_generator/requirements.txt
+        python -m pip install -r ./engine/engine/refl_code_generator/requirements.txt
 
     - name: Config cmake(Ubuntu&MacOS)
       if: ${{ !contains(matrix.os, 'windows') && matrix.android == 'none' }}
