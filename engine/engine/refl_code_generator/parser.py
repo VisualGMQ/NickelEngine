@@ -1,10 +1,9 @@
 import sys
 import os
-import tomllib
 import chevron
 import pathlib
 import clang.cindex
-from clang.cindex import CursorKind, AccessSpecifier, StorageClass, TranslationUnit, TranslationUnitLoadError
+from clang.cindex import CursorKind, AccessSpecifier, StorageClass, TranslationUnitLoadError
 
 
 class ReflAttribute:
@@ -94,7 +93,7 @@ class EnumNode(Node):
         self.items: list[str] = []
         
         
-g_node_list: list[Node] = []
+# g_node_list: list[Node] = []
 
 def parse_attributes(attr_str: str) -> ReflAttribute:
     prefix = 'nickel('
@@ -119,35 +118,27 @@ def transform_attributes_by_parent(attrs: ReflAttribute, parent_attrs: ReflAttri
     final_attrs.need_refl = not final_attrs.force_no_refl and (attrs.need_refl or parent_attributes.need_refl)
     return final_attrs
 
-def record_node(node: Node, parent: Node|None, global_record_table: list[Node]):
+def record_node(node: Node, parent: Node):
     if isinstance(node, NamespaceNode) and len(node.children) == 0:
         return
     
-    if parent is not None:
-        mach: Node = next((x for x in parent.children if x.name == node.name and type(x) == type(node)), None)
-        if mach is None:
-            parent.children.append(node)
-        else:
-            mach.merge(node)
+    mach: Node = next((x for x in parent.children if x.name == node.name and type(x) == type(node)), None)
+    if mach is None:
+        parent.children.append(node)
     else:
-        mach: Node = next((x for x in global_record_table if x.name == node.name and type(x) == type(node)), None)
-        if mach is None:
-            global_record_table.append(node)
-        else:
-            mach.merge(node)
-            
+        mach.merge(node)
 
-def parse_namespace(cursor: clang.cindex.Cursor, parent: Node|None) -> NamespaceNode:
+def parse_namespace(cursor: clang.cindex.Cursor, parent: Node) -> NamespaceNode:
     assert cursor.kind == CursorKind.NAMESPACE
     node = NamespaceNode(cursor.spelling)
     
     if node is not None:
         for child in cursor.get_children():
             recurse_visit_cursor(child, node)
-        record_node(node, parent, g_node_list)
+        record_node(node, parent)
     return node
 
-def parse_variable(cursor: clang.cindex.Cursor, parent: Node|None) -> VariableNode:
+def parse_variable(cursor: clang.cindex.Cursor, parent: Node) -> VariableNode:
     assert cursor.kind == CursorKind.FIELD_DECL
     node = VariableNode(cursor.spelling)
     if isinstance(parent, ClassNode):
@@ -175,7 +166,7 @@ def parse_function(cursor: clang.cindex.Cursor, parent: Node) -> FunctionNode:
     node.attrs = transform_attributes_by_parent(node.attrs, None if parent is None else parent.attrs)
     return node
 
-def parse_class(cursor: clang.cindex.Cursor, parent: Node|None) -> ClassNode:
+def parse_class(cursor: clang.cindex.Cursor, parent: Node) -> ClassNode:
     assert cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL
     class_node = ClassNode(cursor.spelling)
     for child in cursor.get_children():
@@ -205,19 +196,18 @@ def parse_class(cursor: clang.cindex.Cursor, parent: Node|None) -> ClassNode:
                 class_node.private_enums.append(enum_node)
         elif child.kind == CursorKind.ANNOTATE_ATTR:
             class_node.attrs = parse_attributes(child.spelling)
+        elif child.kind == CursorKind.CLASS_DECL:
+            parse_class(child, class_node)
     class_node.attrs = transform_attributes_by_parent(class_node.attrs, None if parent is None else parent.attrs)
     
     if not class_node.attrs.need_refl:
         return class_node
     
-    for child in cursor.get_children():
-        recurse_visit_cursor(child, class_node)
-
-    record_node(class_node, parent, g_node_list)
+    record_node(class_node, parent)
     
     return class_node
 
-def parse_enum(cursor: clang.cindex.Cursor, parent: Node|None) -> EnumNode:
+def parse_enum(cursor: clang.cindex.Cursor, parent: Node) -> EnumNode:
     assert cursor.kind == CursorKind.ENUM_DECL
     enum_node = EnumNode(cursor.spelling)
     
@@ -228,10 +218,10 @@ def parse_enum(cursor: clang.cindex.Cursor, parent: Node|None) -> EnumNode:
             enum_node.attrs = parse_attributes(child.spelling)
 
     if enum_node.attrs.need_refl:
-        record_node(enum_node, parent, g_node_list)
+        record_node(enum_node, parent)
     return enum_node
 
-def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node|None):
+def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node):
     node: Node|None = None
     # print(cursor.spelling, " ", cursor.kind, " ", cursor.spelling)
     if cursor.kind == CursorKind.NAMESPACE:
@@ -243,17 +233,19 @@ def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node|None):
         
     if node is None:
         for child in cursor.get_children():
-            recurse_visit_cursor(child, node)
+            recurse_visit_cursor(child, parent)
 
-def parse_one_file(filename: str, include_dir: str):
+def parse_one_file(filename: str, include_dir: str) -> Node:
     print('parsing %s ...' % filename)
     index = clang.cindex.Index.create()
+    root_node = Node("")
     try:
         tu = index.parse(filename, args=['-std=c++20', '-D_NICKEL_REFLECTION_', '-I' + include_dir])
     except TranslationUnitLoadError as e:
         print('parsing %s failed!' % filename)
-        return
-    recurse_visit_cursor(tu.cursor, None)
+        return root_node
+    recurse_visit_cursor(tu.cursor, root_node)
+    return root_node
    
 g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text(encoding='utf-8')
 g_enum_refl_mustache = pathlib.Path('./mustache/enum_refl.mustache').read_text(encoding='utf-8')
@@ -278,5 +270,5 @@ if __name__ == '__main__':
     filename = pathlib.Path('physics/vehicle.hpp')
     
     parse_filename = root_path / parse_dir / filename
-    parse_one_file(str(parse_filename), str(parse_dir.parent))
-    code = code_generate(str(filename), output_dir, g_node_list)
+    node = parse_one_file(str(parse_filename), str(parse_dir.parent))
+    code = code_generate(str(filename), output_dir, node.children)
