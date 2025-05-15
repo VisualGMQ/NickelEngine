@@ -1,6 +1,11 @@
+import sys
+import os
+import tomllib
+import chevron
+import pathlib
 import clang.cindex
-# import chevron
-from clang.cindex import CursorKind, AccessSpecifier, StorageClass
+from clang.cindex import CursorKind, AccessSpecifier, StorageClass, TranslationUnit, TranslationUnitLoadError
+
 
 class ReflAttribute:
     def __init__(self):
@@ -25,8 +30,10 @@ class NamespaceNode(Node):
                 name = name + '::namespace' 
             elif isinstance(child, ClassNode):
                 name = name + '::class'
+            elif isinstance(child, EnumNode):
+                name = name + '::enum'
             else:
-                print('not support type')
+                print("unsupport node type")
                 assert False
             if name not in name_map:
                 name_map[name] = [child]
@@ -66,6 +73,10 @@ class ClassNode(Node):
         self.public_functions = []
         self.protected_functions = []
         self.private_functions = []
+
+        self.public_enums = []
+        self.protected_enums = []
+        self.private_enums = []
         
     def merge(self, n: Node):
         assert isinstance(n, ClassNode)
@@ -76,6 +87,11 @@ class ClassNode(Node):
         self.public_functions += n.public_functions
         self.protected_functions += n.protected_functions
         self.private_functions += n.private_functions
+        
+class EnumNode(Node):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.items: list[str] = []
         
         
 g_node_list: list[Node] = []
@@ -179,6 +195,14 @@ def parse_class(cursor: clang.cindex.Cursor, parent: Node|None) -> ClassNode:
                 class_node.protected_functions.append(fn_node)
             elif child.access_specifier == AccessSpecifier.PRIVATE:
                 class_node.private_functions.append(fn_node)
+        elif child.kind == CursorKind.ENUM_DECL:
+            enum_node = parse_enum(child, class_node)
+            if child.access_specifier == AccessSpecifier.PUBLIC:
+                class_node.public_enums.append(enum_node)
+            elif child.access_specifier == AccessSpecifier.PROTECTED:
+                class_node.protected_enums.append(enum_node)
+            elif child.access_specifier == AccessSpecifier.PRIVATE:
+                class_node.private_enums.append(enum_node)
         elif child.kind == CursorKind.ANNOTATE_ATTR:
             class_node.attrs = parse_attributes(child.spelling)
     class_node.attrs = transform_attributes_by_parent(class_node.attrs, None if parent is None else parent.attrs)
@@ -193,27 +217,66 @@ def parse_class(cursor: clang.cindex.Cursor, parent: Node|None) -> ClassNode:
     
     return class_node
 
+def parse_enum(cursor: clang.cindex.Cursor, parent: Node|None) -> EnumNode:
+    assert cursor.kind == CursorKind.ENUM_DECL
+    enum_node = EnumNode(cursor.spelling)
+    
+    for child in cursor.get_children():
+        if child.kind == CursorKind.ENUM_CONSTANT_DECL:
+            enum_node.items.append(child.spelling)
+        elif child.kind == CursorKind.ANNOTATE_ATTR:
+            enum_node.attrs = parse_attributes(child.spelling)
+
+    if enum_node.attrs.need_refl:
+        record_node(enum_node, parent, g_node_list)
+    return enum_node
+
 def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node|None):
     node: Node|None = None
-    print(cursor.spelling, " ", cursor.kind, " ", cursor.spelling)
+    # print(cursor.spelling, " ", cursor.kind, " ", cursor.spelling)
     if cursor.kind == CursorKind.NAMESPACE:
         node = parse_namespace(cursor, parent)
     if cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL:
         node = parse_class(cursor, parent)
+    if cursor.kind == CursorKind.ENUM_DECL:
+        node = parse_enum(cursor, parent)
         
     if node is None:
         for child in cursor.get_children():
             recurse_visit_cursor(child, node)
 
-def parse_one_file(filename: str):
-    index = clang.cindex.Index.create()
-    tu = index.parse(filename, args=['-std=c++20', '-D_NICKEL_REFLECTION_', '-I..'])
-    if tu is None:
-        print('parsing %s failed!' % filename)
+def parse_one_file(filename: str, include_dir: str):
     print('parsing %s ...' % filename)
+    index = clang.cindex.Index.create()
+    try:
+        tu = index.parse(filename, args=['-std=c++20', '-D_NICKEL_REFLECTION_', '-I' + include_dir])
+    except TranslationUnitLoadError as e:
+        print('parsing %s failed!' % filename)
+        return
     recurse_visit_cursor(tu.cursor, None)
+   
+g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text(encoding='utf-8')
+g_enum_refl_mustache = pathlib.Path('./mustache/enum_refl.mustache').read_text(encoding='utf-8')
+g_refl_mustache = pathlib.Path('./mustache/refl.mustache').read_text(encoding='utf-8')
+
+
+def code_generate(filename: str, output_dir: pathlib.Path, node_list: list[Node]) -> str:
+    print(node_list)
 
 if __name__ == '__main__':
-    parse_one_file('../nickel/physics/vehicle.hpp')
-    for node in g_node_list:
-        print(node.name)
+    if len(sys.argv) != 3:
+        print('usage: parser.py parse_dir output_dir')
+        raise RuntimeError('invalid parameter')
+    
+    root_path = pathlib.Path(os.getcwd())
+    parse_dir = pathlib.Path(sys.argv[1])
+    output_dir = pathlib.Path(sys.argv[2])
+    
+    print('parse dir: ', parse_dir)
+    print('output dir:', output_dir)
+    
+    filename = pathlib.Path('physics/vehicle.hpp')
+    
+    parse_filename = root_path / parse_dir / filename
+    parse_one_file(str(parse_filename), str(parse_dir.parent))
+    code = code_generate(str(filename), output_dir, g_node_list)

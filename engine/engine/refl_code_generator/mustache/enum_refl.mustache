@@ -1,0 +1,6 @@
+mirrow::drefl::factory<{{class_name}}>::instance()
+    .regist("{{class_register_name}}")
+    {{#enums}}
+    .add("{{enum_register_name}}", {{enum_name}})
+    {{/enums}}
+    ;

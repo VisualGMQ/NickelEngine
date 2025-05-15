@@ -127,7 +127,7 @@ struct VehicleClutchDescriptor {
     uint32_t m_estimate_iterations = 5;
 };
 
-struct VehicleDriveSimDescriptor {
+struct NICKEL_REFL_ATTR(refl) VehicleDriveSimDescriptor {
     enum class Type {
         FourWheel,
         ArbitraryWheel,

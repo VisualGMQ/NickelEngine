@@ -1,13 +1,14 @@
 find_package(Python3 COMPONENTS Interpreter)
 
-file(GLOB_RECURSE PARSER_TEST ./test/*.hpp ./test/*.cpp)
+file(GLOB_RECURSE PARSER_FILES ./test/*.hpp ./test/*.cpp ./mustache/*.mustache)
 
 add_custom_target(
     refl_code_generate
-    COMMAND Python3::Interpreter parser.py
+    COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/parser.py ${CMAKE_CURRENT_SOURCE_DIR}/../nickel ${CMAKE_BINARY_DIR}/refl_generate
     VERBATIM
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    SOURCES parser.py requirements.txt ${PARSER_TEST})
+    COMMENT "running refl code generator"
+    SOURCES parser.py requirements.txt ${PARSER_FILES})
 
 set_target_properties(refl_code_generate
     PROPERTIES
