@@ -2,6 +2,7 @@
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/filter.hpp"
+#include "nickel/common/refl_macro.hpp"
 
 #include <optional>
 #include <span>
@@ -12,7 +13,7 @@ class RigidDynamic;
 
 constexpr uint32_t VehicleMaxWheelNum = 20;
 
-struct VehicleWheelSimDescriptor {
+struct NICKEL_REFL_ATTR(refl) VehicleWheelSimDescriptor {
     enum class Type {
         FourWheel,
         ArbitraryWheel,
