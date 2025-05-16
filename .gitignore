@@ -13,3 +13,4 @@ log/
 *.spv
 .vscode
 nickel_engine_project_path.toml
+engine/engine/refl_code_generator/output_dir

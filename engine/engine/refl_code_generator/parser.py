@@ -251,9 +251,66 @@ g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text
 g_enum_refl_mustache = pathlib.Path('./mustache/enum_refl.mustache').read_text(encoding='utf-8')
 g_refl_mustache = pathlib.Path('./mustache/refl.mustache').read_text(encoding='utf-8')
 
+def node_code_generate(parsed_filename: str, node: Node) -> (str, str):
+    final_filename = parsed_filename.replace('../', '').replace('./', '').replace('\\', '/')
+    final_filename = final_filename[:final_filename.find('.')]
+    final_filename = final_filename.replace('/', '_')
+    
+    fmt = {'parsed_filename': parsed_filename.replace('\\', '/'),
+           'refl_func_name': final_filename,
+           'enums': [], 'classes': []}
+    for child in node.children:
+        node_code_generate_recursive('', child, fmt)
+        
+    return final_filename, chevron.render(g_refl_mustache, fmt)
+    
+def node_code_generate_recursive(prefix: str, node: Node, out_fmt: dict[str, list]):
+    new_prefix  = prefix + '::' + node.name
+    
+    # first generate enum, then class content
+    if isinstance(node, EnumNode):
+        code = enum_node_code_generate(new_prefix, node)
+        out_fmt['enums'].append({'enum': code})
 
-def code_generate(filename: str, output_dir: pathlib.Path, node_list: list[Node]) -> str:
-    print(node_list)
+    if isinstance(node, ClassNode):
+        for child in node.public_enums:
+            code = os.linesep + enum_node_code_generate(new_prefix, child)
+            out_fmt['enums'].append({'enum': code})
+
+    for child in node.children:
+        node_code_generate_recursive(new_prefix, child, out_fmt)
+        
+    if isinstance(node, ClassNode):
+        code = os.linesep + class_node_code_generate(prefix, node)
+        out_fmt['classes'].append({'class': code})
+
+def class_node_code_generate(prefix: str, node: ClassNode) -> str:
+    class_name_with_prefix = prefix + '::' + node.name
+    fmt = {'class_name': class_name_with_prefix,
+           'class_register_name': node.name,
+           'properties': []}
+    for field in node.public_fields:
+        if not field.attrs.need_refl:
+            continue
+        fmt['properties'].append({'property_register_name': field.name,
+                                  'property_name': class_name_with_prefix + '::' + field.name})
+    
+    return chevron.render(g_class_refl_mustache, fmt)
+
+def enum_node_code_generate(full_class_name: str, node: EnumNode) -> str:
+    enum_name_with_prefix = full_class_name + '::' + node.name
+    fmt = {'enum_name': enum_name_with_prefix,
+           'enum_register_name': node.name,
+           'enums': []}
+    for item in node.items:
+        fmt['enums'].append({'enum_register_name': item,
+                             'enum_name': enum_name_with_prefix + '::' + item})
+
+    return chevron.render(g_enum_refl_mustache, fmt)
+
+def save_generated_code(filename: str, code: str):
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(code)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -271,4 +328,15 @@ if __name__ == '__main__':
     
     parse_filename = root_path / parse_dir / filename
     node = parse_one_file(str(parse_filename), str(parse_dir.parent))
-    code = code_generate(str(filename), output_dir, node.children)
+
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+    except FileExistsError:
+        print(f"Directory '{output_dir}' already exists.")
+    except PermissionError:
+        print(f"Permission denied: Unable to create '{output_dir}'.")
+    except Exception as e:
+        print(f"An error occurred when create dir {output_dir}: {e}")
+    
+    final_filename, code = node_code_generate(str(parse_dir.name / filename), node)
+    save_generated_code(output_dir / (final_filename + '.hpp'), code)
