@@ -41,7 +41,7 @@ Context::~Context() {
 
 void Context::Initialize() {
     LOGI("init reflection system");
-    refl_gen::RegisterReflectionInfo();
+    refl_generate::RegisterReflectionInfo();
     
     LOGI("init video system");
     m_window = std::make_unique<video::Window>("sandbox", 1024, 720);

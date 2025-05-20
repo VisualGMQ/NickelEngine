@@ -34,7 +34,7 @@ class NamespaceNode(Node):
             elif isinstance(child, EnumNode):
                 name = name + '::enum'
             else:
-                print("unsupport node type")
+                print("unsupport node type", flush=True)
                 assert False
             if name not in name_map:
                 name_map[name] = [child]
@@ -240,7 +240,7 @@ def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node, parsed_filen
             recurse_visit_cursor(child, parent, parsed_filename, parsed_file_dict)
 
 def parse_one_file(filename: pathlib.Path, include_dir: str, parsed_file_dict: dict[pathlib.Path, Node]) -> Node:
-    print(f'parsing {filename}')
+    print(f'parsing {filename}', flush=True)
     index = clang.cindex.Index.create()
     root_node = Node("")
     
@@ -251,7 +251,7 @@ def parse_one_file(filename: pathlib.Path, include_dir: str, parsed_file_dict: d
     try:
         tu = index.parse(str(filename), args=['-std=c++20', '-D_NICKEL_REFLECTION_', '-I' + include_dir])
     except TranslationUnitLoadError as e:
-        print(f'parsing {filename} failed!')
+        print(f'parsing {filename} failed!', flush=True)
         return root_node
     recurse_visit_cursor(tu.cursor, root_node, filename, parsed_file_dict)
     return root_node
@@ -287,7 +287,7 @@ def node_code_generate_recursive(prefix: str, node: Node, out_fmt: dict[str, lis
 
     if isinstance(node, ClassNode):
         for child in node.public_enums:
-            code = os.linesep + enum_node_code_generate(new_prefix, child)
+            code = os.linesep + enum_node_code_generate(new_prefix + '::' + child.name, child)
             out_fmt['enums'].append({'enum': code})
 
     for child in node.children:
@@ -310,8 +310,7 @@ def class_node_code_generate(prefix: str, node: ClassNode) -> str:
     
     return chevron.render(g_class_refl_mustache, fmt)
 
-def enum_node_code_generate(full_class_name: str, node: EnumNode) -> str:
-    enum_name_with_prefix = full_class_name + '::' + node.name
+def enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> str:
     fmt = {'enum_name': enum_name_with_prefix,
            'enum_register_name': node.name,
            'enums': []}
@@ -327,7 +326,7 @@ def save_generated_code(filename: str, code: str):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('usage: parser.py parse_dir output_dir')
+        print('usage: parser.py parse_dir output_dir', flush=True)
         raise RuntimeError('invalid parameter')
     
     root_path = pathlib.Path(os.getcwd())
@@ -338,8 +337,8 @@ if __name__ == '__main__':
     header_filename = 'refl_generate.hpp'
     impl_filename = 'refl_generate.cpp'
 
-    print(f'parse dir: {parse_dir}')
-    print(f'output dir: {output_dir}')
+    print(f'parse dir: {parse_dir}', flush=True)
+    print(f'output dir: {output_dir}', flush=True)
     
     c_cpp_header_file_extensions = ['h', 'hpp', 'hxx']
     
@@ -375,11 +374,11 @@ if __name__ == '__main__':
     try:
         os.makedirs(output_dir, exist_ok=True)
     except FileExistsError:
-        print(f"Directory '{output_dir}' already exists.")
+        print(f"Directory '{output_dir}' already exists.", flush=True)
     except PermissionError:
-        print(f"Permission denied: Unable to create '{output_dir}'.")
+        print(f"Permission denied: Unable to create '{output_dir}'.", flush=True)
     except Exception as e:
-        print(f"An error occurred when create dir {output_dir}: {e}")
+        print(f"An error occurred when create dir {output_dir}: {e}", flush=True)
 
     with open(time_record_file_path, 'wb') as f:
         pickle.dump(new_file_modification_times, f)
@@ -391,7 +390,7 @@ if __name__ == '__main__':
         refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
         # TODO: some magic string may refactory?
         refl_impl_data['func_calls'].append({'func_call': f'register_{func_name}_ReflInfo'})
-        print(f'generate code to {final_filename}')
+        print(f'generate code to {final_filename}', flush=True)
         save_generated_code(output_dir / final_filename, code)
         
     with open(output_dir/header_filename, 'w+', encoding='utf-8') as f:

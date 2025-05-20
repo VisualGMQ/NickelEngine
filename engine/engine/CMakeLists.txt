@@ -23,8 +23,6 @@ file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.ver
 file(GLOB_RECURSE ENGINE_MODEL_FILES assets/models/*)
 file(GLOB_RECURSE ENGINE_REFL_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/*.hpp ${NICKEL_REFL_GENERATE_DIR}/*.cpp)
 
-message("refl generate files: "${ENGINE_REFL_GENERATE_FILES})
-
 compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
 compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridline.vert.spv)
@@ -32,7 +30,8 @@ compile_shader(assets/shaders/shader_gridline.frag assets/shaders/shader_gridlin
 
 macro(attach_common_config_on_engine target_name)
     target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_MODEL_FILES} ${ENGINE_SHADER_FILES} ${ENGINE_REFL_GENERATE_FILES})
-    target_include_directories(${target_name} PUBLIC . ${NICKEL_REFL_GENERATE_INCLUDE_DIR})
+    target_include_directories(${target_name} PUBLIC .)
+    target_include_directories(${target_name} PRIVATE ${NICKEL_REFL_GENERATE_INCLUDE_DIR})
     target_compile_features(${target_name} PUBLIC cxx_std_20)
     target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus
         # PhysX

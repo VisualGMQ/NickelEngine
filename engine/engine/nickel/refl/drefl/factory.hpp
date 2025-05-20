@@ -333,7 +333,7 @@ public:
         : ClassProperty(
               name,
               &ClassFactory<remove_cvref_t<
-                   typename variable_traits<T>::Class>>::Instance()
+                   typename variable_traits<T>::clazz>>::Instance()
                    .Info(),
               GetQualifier<typename variable_traits<T>::type>()),
           m_pointer(accessor),

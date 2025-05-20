@@ -1,6 +1,6 @@
-::nickel::refl::factory<{{class_name}}>::instance()
-    .regist("{{class_register_name}}")
+::nickel::refl::ClassFactory<{{class_name}}>::Instance()
+    .Regist("{{class_register_name}}")
     {{#properties}}
-    .property("{{property_register_name}}", &{{property_name}})
+    .Property("{{property_register_name}}", &{{property_name}})
     {{/properties}}
     ;
