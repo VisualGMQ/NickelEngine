@@ -259,21 +259,23 @@ def parse_one_file(filename: pathlib.Path, include_dir: str, parsed_file_dict: d
 g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text(encoding='utf-8')
 g_enum_refl_mustache = pathlib.Path('./mustache/enum_refl.mustache').read_text(encoding='utf-8')
 g_refl_mustache = pathlib.Path('./mustache/refl.mustache').read_text(encoding='utf-8')
+g_header_mustache = pathlib.Path('./mustache/header.mustache').read_text(encoding='utf-8')
+g_impl_mustache = pathlib.Path('./mustache/impl.mustache').read_text(encoding='utf-8')
 
 def node_code_generate(parsed_filename: str, node: Node) -> (str, str):
     final_filename = (parsed_filename.replace('\\', '/')
                                      .replace('../', '')
                                      .replace('./', ''))
-    final_filename = final_filename[:final_filename.find('.')]
-    final_filename = final_filename.replace('/', '_')
+    func_name = final_filename[:final_filename.find('.')]
+    func_name = func_name.replace('/', '_')
     
-    fmt = {'parsed_filename': parsed_filename.replace('\\', '/'),
-           'refl_func_name': final_filename,
+    fmt = {'parsed_filename': final_filename,
+           'refl_func_name': func_name,
            'enums': [], 'classes': []}
     for child in node.children:
         node_code_generate_recursive('', child, fmt)
         
-    return final_filename, chevron.render(g_refl_mustache, fmt)
+    return func_name, chevron.render(g_refl_mustache, fmt)
     
 def node_code_generate_recursive(prefix: str, node: Node, out_fmt: dict[str, list]):
     new_prefix  = prefix + '::' + node.name
@@ -333,6 +335,8 @@ if __name__ == '__main__':
     output_dir = pathlib.Path(sys.argv[2])
     time_record_filename = 'time_record.pkl'
     time_record_file_path = output_dir / time_record_filename
+    header_filename = 'refl_generate.hpp'
+    impl_filename = 'refl_generate.cpp'
 
     print(f'parse dir: {parse_dir}')
     print(f'output dir: {output_dir}')
@@ -351,9 +355,9 @@ if __name__ == '__main__':
     file_modification_times: dict[pathlib.Path, float] = {}
     new_file_modification_times: dict[pathlib.Path, float] = {}
     
-    if time_record_file_path.exists():
-        with open(time_record_file_path, 'rb') as f:
-            file_modification_times = pickle.load(f)
+    # if time_record_file_path.exists():
+    #     with open(time_record_file_path, 'rb') as f:
+    #         file_modification_times = pickle.load(f)
     
     parsed_file_dict: dict[pathlib.Path, Node] = {}
     for file in files:
@@ -380,8 +384,18 @@ if __name__ == '__main__':
     with open(time_record_file_path, 'wb') as f:
         pickle.dump(new_file_modification_times, f)
 
+    refl_impl_data = {'header_file': output_dir/header_filename, 'refl_header_files': [], 'func_calls': []}
     for path, node in parsed_file_dict.items():
-        final_filename, code = node_code_generate(str(path), node)
-        final_filename = final_filename + '.hpp'
+        func_name, code = node_code_generate(str(path), node)
+        final_filename = func_name + '.hpp'
+        refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
+        # TODO: some magic string may refactory?
+        refl_impl_data['func_calls'].append({'func_call': f'register_{func_name}_ReflInfo'})
         print(f'generate code to {final_filename}')
         save_generated_code(output_dir / final_filename, code)
+        
+    with open(output_dir/header_filename, 'w+', encoding='utf-8') as f:
+        f.write(chevron.render(g_header_mustache, {}))
+
+    with open(output_dir/impl_filename, 'w+', encoding='utf-8') as f:
+        f.write(chevron.render(g_impl_mustache, refl_impl_data))
