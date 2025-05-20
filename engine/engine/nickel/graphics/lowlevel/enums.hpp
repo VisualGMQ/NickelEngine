@@ -1,14 +1,17 @@
 #pragma once
+#include "nickel/common/refl_macro.hpp"
 
 namespace nickel::graphics {
-enum class ImageAspect {
+
+
+enum  class NICKEL_REFL_ATTR(refl) ImageAspect {
     None = 0x00,
     Color = 0x01,
     Depth = 0x02,
     Stencil = 0x04,
 };
 
-enum class CompareOp {
+enum class NICKEL_REFL_ATTR(refl) CompareOp {
     Never,
     Less,
     Equal,
@@ -19,13 +22,13 @@ enum class CompareOp {
     Always,
 };
 
-enum class ImageType {
+enum class NICKEL_REFL_ATTR(refl) ImageType {
     Dim1,
     Dim2,
     Dim3,
 };
 
-enum class BufferUsage {
+enum class NICKEL_REFL_ATTR(refl) BufferUsage {
     CopySrc = 0x0004,
     CopyDst = 0x0008,
     Index = 0x0010,
@@ -35,24 +38,24 @@ enum class BufferUsage {
     Indirect = 0x0100,
 };
 
-enum class MemoryType {
+enum class NICKEL_REFL_ATTR(refl) MemoryType {
     CPULocal,
     Coherence,
     GPULocal,
 };
 
-enum class SamplerAddressMode {
+enum class NICKEL_REFL_ATTR(refl) SamplerAddressMode {
     ClampToEdge = 0,
     Repeat = 1,
     MirrorRepeat = 2,
 };
 
-enum class Filter {
+enum class NICKEL_REFL_ATTR(refl) Filter {
     Nearest = 0,
     Linear = 1,
 };
 
-enum class ImageViewType {
+enum class NICKEL_REFL_ATTR(refl) ImageViewType {
     Dim1,
     Dim2,
     Dim3,
@@ -61,7 +64,7 @@ enum class ImageViewType {
     CubeArray,
 };
 
-enum class ImageUsage {
+enum class NICKEL_REFL_ATTR(refl) ImageUsage {
     CopySrc = 0x01,
     CopyDst = 0x02,
     Sampled = 0x04,
@@ -70,7 +73,7 @@ enum class ImageUsage {
     DepthStencilAttachment = 0x20,
 };
 
-enum class SampleCount {
+enum class NICKEL_REFL_ATTR(refl) SampleCount {
     Count1,
     Count2,
     Count4,
@@ -81,7 +84,7 @@ enum class SampleCount {
 };
 
 // don't change value! copied from volk.hpp directly
-enum class Format {
+enum class NICKEL_REFL_ATTR(refl) Format {
     UNDEFINED = 0,
 
     R4G4_UNORM_PACK8 = 1,
@@ -332,7 +335,7 @@ enum class Format {
     PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
 };
 
-enum class DepthCompare {
+enum class NICKEL_REFL_ATTR(refl) DepthCompare {
     DecrementClamp,
     DecrementWrap,
     Invert,
@@ -343,7 +346,7 @@ enum class DepthCompare {
     Zero,
 };
 
-enum class StencilOp {
+enum class NICKEL_REFL_ATTR(refl) StencilOp {
     Keep,
     Zero,
     Replace,
@@ -354,23 +357,23 @@ enum class StencilOp {
     DecrementAndWrap,
 };
 
-enum class CullMode {
+enum class NICKEL_REFL_ATTR(refl) CullMode {
     None = 0,
     Back = 0x01,
     Front = 0x02,
 };
 
-enum class FrontFace {
+enum class NICKEL_REFL_ATTR(refl) FrontFace {
     CCW,
     CW,
 };
 
-enum class StripIndexFormat {
+enum class NICKEL_REFL_ATTR(refl) StripIndexFormat {
     Uint16,
     Uint32,
 };
 
-enum class Topology {
+enum class NICKEL_REFL_ATTR(refl) Topology {
     LineList,
     LineStrip,
     PointList,
@@ -379,7 +382,7 @@ enum class Topology {
     TriangleFan,
 };
 
-enum class FlagsConstant {
+enum class NICKEL_REFL_ATTR(refl) FlagsConstant {
     Red = 0x01,
     Green = 0x02,
     Blue = 0x04,
@@ -387,7 +390,7 @@ enum class FlagsConstant {
     All = Red | Green | Blue | Alpha,
 };
 
-enum class BlendFactor {
+enum class NICKEL_REFL_ATTR(refl) BlendFactor {
     Zero,
     One,
     SrcColor,
@@ -405,7 +408,7 @@ enum class BlendFactor {
     SrcAlphaSaturate,
 };
 
-enum class BlendOp {
+enum class NICKEL_REFL_ATTR(refl) BlendOp {
     Add,
     Subtract,
     ReverseSubtract,
@@ -413,29 +416,29 @@ enum class BlendOp {
     Max,
 };
 
-enum class PolygonMode {
+enum class NICKEL_REFL_ATTR(refl) PolygonMode {
     Line,
     Fill,
     Point,
 };
 
-enum class AttachmentLoadOp {
+enum class NICKEL_REFL_ATTR(refl) AttachmentLoadOp {
     Clear,
     Load,
     DontCare,
 };
 
-enum class AttachmentStoreOp {
+enum class NICKEL_REFL_ATTR(refl) AttachmentStoreOp {
     Store,
     DontCare,
 };
 
-enum class IndexType {
+enum class NICKEL_REFL_ATTR(refl) IndexType {
     Uint16,
     Uint32,
 };
 
-enum class ColorWriteMask {
+enum class NICKEL_REFL_ATTR(refl) ColorWriteMask {
     Red = 0x01,
     Green = 0x02,
     Blue = 0x04,
@@ -443,7 +446,7 @@ enum class ColorWriteMask {
     All = 0x01 | 0x02 | 0x04 | 0x08,
 };
 
-enum class VertexFormat {
+enum class NICKEL_REFL_ATTR(refl) VertexFormat {
     Uint8x2,
     Uint8x4,
     Sint8x2,
@@ -476,7 +479,7 @@ enum class VertexFormat {
     Sint32x4,
 };
 
-enum class ShaderStage {
+enum class NICKEL_REFL_ATTR(refl) ShaderStage {
     Vertex = 0x01,
     TessellationControl = 0x02,
     TessellationEvaluation = 0x04,
@@ -487,7 +490,7 @@ enum class ShaderStage {
     All = 0x7FFFFFFF,
 };
 
-enum class BorderColor {
+enum class NICKEL_REFL_ATTR(refl) BorderColor {
     FloatTransparentBlack,
     IntTransparentBlack,
     FloatOpaqueBlack,
@@ -496,12 +499,12 @@ enum class BorderColor {
     IntOpaqueWhite,
 };
 
-enum class SamplerMipmapMode {
+enum class NICKEL_REFL_ATTR(refl) SamplerMipmapMode {
     Nearest,
     Linear,
 };
 
-enum class BindGroupEntryType {
+enum class NICKEL_REFL_ATTR(refl) BindGroupEntryType {
     Sampler,
     CombinedImageSampler,
     SampledImage,
@@ -516,7 +519,7 @@ enum class BindGroupEntryType {
     InlineUniformBlock,
 };
 
-enum class PipelineStage {
+enum class NICKEL_REFL_ATTR(refl) PipelineStage {
     None = 0,
     TopOfPipe = 0x00000001,
     DrawIndirect = 0x00000002,
@@ -537,7 +540,7 @@ enum class PipelineStage {
     AllCommands = 0x00010000,
 };
 
-enum class Access {
+enum class NICKEL_REFL_ATTR(refl) Access {
     IndirectCommandRead = 0x00000001,
     IndexRead = 0x00000002,
     VertexAttributeRead = 0x00000004,
@@ -558,13 +561,13 @@ enum class Access {
     None = 0,
 };
 
-enum class Dependency {
+enum class NICKEL_REFL_ATTR(refl) Dependency {
     ByRegionBit = 0x00000001,
     DeviceGroupBit = 0x00000004,
     ViewLocalBit = 0x00000002,
 };
 
-enum class ImageLayout {
+enum class NICKEL_REFL_ATTR(refl) ImageLayout {
     Undefined = 0,
     General,
     PresentSrcKHR,
@@ -585,13 +588,13 @@ enum class ImageLayout {
     AttachmentOptimal,
 };
 
-enum class PipelineBindPoint { Graphics = 0, Compute };
+enum class NICKEL_REFL_ATTR(refl) PipelineBindPoint { Graphics = 0, Compute };
 
-enum class ImageTiling { Optimal = 0, Linear };
+enum class NICKEL_REFL_ATTR(refl) ImageTiling { Optimal = 0, Linear };
 
-enum class SharingMode { Exclusive = 0, Concurrent };
+enum class NICKEL_REFL_ATTR(refl) SharingMode { Exclusive = 0, Concurrent };
 
-enum class ComponentMapping {
+enum class NICKEL_REFL_ATTR(refl) ComponentMapping {
     SwizzleIdentity = 0,
     SwizzleZero,
     SwizzleOne,
@@ -601,7 +604,7 @@ enum class ComponentMapping {
     SwizzleA,
 };
 
-enum class ColorComponent {
+enum class NICKEL_REFL_ATTR(refl) ColorComponent {
     R = 0x00000001,
     G = 0x00000002,
     B = 0x00000004,
@@ -609,7 +612,7 @@ enum class ColorComponent {
     All = R | G | B | A,
 };
 
-enum class ImageColorSpace {
+enum class NICKEL_REFL_ATTR(refl) ImageColorSpace {
     SrgbNonlinearKHR = 0,
     DisplayP3NonlinearEXT,
     ExtendedSrgbLinearEXT,
@@ -628,7 +631,7 @@ enum class ImageColorSpace {
     DisplayNativeAMD,
 };
 
-enum class SubpassContent {
+enum class NICKEL_REFL_ATTR(refl) SubpassContent {
     Inline,
     SecondaryCommandBuffer,
 };

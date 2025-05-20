@@ -1,5 +1,7 @@
 import sys
+import pickle
 import os
+
 import chevron
 import pathlib
 import clang.cindex
@@ -128,13 +130,13 @@ def record_node(node: Node, parent: Node):
     else:
         mach.merge(node)
 
-def parse_namespace(cursor: clang.cindex.Cursor, parent: Node) -> NamespaceNode:
+def parse_namespace(cursor: clang.cindex.Cursor, parent: Node, parsed_filename: str, parsed_file_dict: dict[pathlib.Path, Node]) -> NamespaceNode:
     assert cursor.kind == CursorKind.NAMESPACE
     node = NamespaceNode(cursor.spelling)
     
     if node is not None:
         for child in cursor.get_children():
-            recurse_visit_cursor(child, node)
+            recurse_visit_cursor(child, node, parsed_filename, parsed_file_dict)
         record_node(node, parent)
     return node
 
@@ -221,30 +223,37 @@ def parse_enum(cursor: clang.cindex.Cursor, parent: Node) -> EnumNode:
         record_node(enum_node, parent)
     return enum_node
 
-def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node):
+def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node, parsed_filename: pathlib.Path, parsed_file_dict: dict[pathlib.Path, Node]):
     node: Node|None = None
     # print(cursor.spelling, " ", cursor.kind, " ", cursor.spelling)
-    if cursor.kind == CursorKind.NAMESPACE:
-        node = parse_namespace(cursor, parent)
-    if cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL:
-        node = parse_class(cursor, parent)
-    if cursor.kind == CursorKind.ENUM_DECL:
-        node = parse_enum(cursor, parent)
+    current_parsing_filename = pathlib.Path(cursor.location.file.name) if cursor.location.file else '' 
+    if not (cursor.location.is_in_system_header or cursor.location.file in parsed_file_dict or current_parsing_filename != parsed_filename):
+        if cursor.kind == CursorKind.NAMESPACE:
+            node = parse_namespace(cursor, parent, parsed_filename, parsed_file_dict)
+        if cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL:
+            node = parse_class(cursor, parent)
+        if cursor.kind == CursorKind.ENUM_DECL:
+            node = parse_enum(cursor, parent)
         
     if node is None:
         for child in cursor.get_children():
-            recurse_visit_cursor(child, parent)
+            recurse_visit_cursor(child, parent, parsed_filename, parsed_file_dict)
 
-def parse_one_file(filename: str, include_dir: str) -> Node:
-    print('parsing %s ...' % filename)
+def parse_one_file(filename: pathlib.Path, include_dir: str, parsed_file_dict: dict[pathlib.Path, Node]) -> Node:
+    print(f'parsing {filename}')
     index = clang.cindex.Index.create()
     root_node = Node("")
-    try:
-        tu = index.parse(filename, args=['-std=c++20', '-D_NICKEL_REFLECTION_', '-I' + include_dir])
-    except TranslationUnitLoadError as e:
-        print('parsing %s failed!' % filename)
+    
+    content = filename.read_text(encoding='utf-8')
+    if not content.find('NICKEL_REFL_ATTR'):
         return root_node
-    recurse_visit_cursor(tu.cursor, root_node)
+    
+    try:
+        tu = index.parse(str(filename), args=['-std=c++20', '-D_NICKEL_REFLECTION_', '-I' + include_dir])
+    except TranslationUnitLoadError as e:
+        print(f'parsing {filename} failed!')
+        return root_node
+    recurse_visit_cursor(tu.cursor, root_node, filename, parsed_file_dict)
     return root_node
    
 g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text(encoding='utf-8')
@@ -252,7 +261,9 @@ g_enum_refl_mustache = pathlib.Path('./mustache/enum_refl.mustache').read_text(e
 g_refl_mustache = pathlib.Path('./mustache/refl.mustache').read_text(encoding='utf-8')
 
 def node_code_generate(parsed_filename: str, node: Node) -> (str, str):
-    final_filename = parsed_filename.replace('../', '').replace('./', '').replace('\\', '/')
+    final_filename = (parsed_filename.replace('\\', '/')
+                                     .replace('../', '')
+                                     .replace('./', ''))
     final_filename = final_filename[:final_filename.find('.')]
     final_filename = final_filename.replace('/', '_')
     
@@ -320,15 +331,43 @@ if __name__ == '__main__':
     root_path = pathlib.Path(os.getcwd())
     parse_dir = pathlib.Path(sys.argv[1])
     output_dir = pathlib.Path(sys.argv[2])
-    
-    print('parse dir: ', parse_dir)
-    print('output dir:', output_dir)
-    
-    filename = pathlib.Path('physics/vehicle.hpp')
-    
-    parse_filename = root_path / parse_dir / filename
-    node = parse_one_file(str(parse_filename), str(parse_dir.parent))
+    time_record_filename = 'time_record.pkl'
+    time_record_file_path = output_dir / time_record_filename
 
+    print(f'parse dir: {parse_dir}')
+    print(f'output dir: {output_dir}')
+    
+    c_cpp_header_file_extensions = ['h', 'hpp', 'hxx']
+    
+    files: list[pathlib.Path] = []
+    for ext in c_cpp_header_file_extensions:
+        headers = list(parse_dir.glob('**/*.' + ext))
+        if files is not None:
+            files += headers
+
+    # for debug
+    # files = [pathlib.Path('../nickel/physics/vehicle.hpp')]
+
+    file_modification_times: dict[pathlib.Path, float] = {}
+    new_file_modification_times: dict[pathlib.Path, float] = {}
+    
+    if time_record_file_path.exists():
+        with open(time_record_file_path, 'rb') as f:
+            file_modification_times = pickle.load(f)
+    
+    parsed_file_dict: dict[pathlib.Path, Node] = {}
+    for file in files:
+        last_modification_time = os.path.getmtime(file)
+        new_file_modification_times[file] = last_modification_time
+        
+        if file in file_modification_times and file_modification_times[file] == last_modification_time:
+            continue
+
+        parse_filename = file
+        node = parse_one_file(file, str(parse_dir.parent), parsed_file_dict)
+        if len(node.children) != 0:
+            parsed_file_dict[file] = node
+           
     try:
         os.makedirs(output_dir, exist_ok=True)
     except FileExistsError:
@@ -337,6 +376,12 @@ if __name__ == '__main__':
         print(f"Permission denied: Unable to create '{output_dir}'.")
     except Exception as e:
         print(f"An error occurred when create dir {output_dir}: {e}")
-    
-    final_filename, code = node_code_generate(str(parse_dir.name / filename), node)
-    save_generated_code(output_dir / (final_filename + '.hpp'), code)
+
+    with open(time_record_file_path, 'wb') as f:
+        pickle.dump(new_file_modification_times, f)
+
+    for path, node in parsed_file_dict.items():
+        final_filename, code = node_code_generate(str(path), node)
+        final_filename = final_filename + '.hpp'
+        print(f'generate code to {final_filename}')
+        save_generated_code(output_dir / final_filename, code)

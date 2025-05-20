@@ -4,7 +4,7 @@ file(GLOB_RECURSE PARSER_FILES ./test/*.hpp ./test/*.cpp ./mustache/*.mustache)
 
 add_custom_target(
     refl_code_generate
-    COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/parser.py ${CMAKE_CURRENT_SOURCE_DIR}/../nickel ${CMAKE_BINARY_DIR}/refl_generate
+    COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/parser.py ../nickel ${CMAKE_BINARY_DIR}/refl_generate
     VERBATIM
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "running refl code generator"
