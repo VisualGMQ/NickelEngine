@@ -5,6 +5,10 @@ option(NICKEL_BUILD_STATIC "build static engine library" ON)
 
 set(NICKEL_REFL_GENERATE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/refl_generate)
 set(NICKEL_REFL_GENERATE_DIR ${NICKEL_REFL_GENERATE_INCLUDE_DIR}/nickel/refl_generate/)
+file(MAKE_DIRECTORY ${NICKEL_REFL_GENERATE_DIR})
+# copy tirvial file
+file(COPY_FILE refl_code_generator/mustache/trivial_header.hpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.hpp ONLY_IF_DIFFERENT)
+file(COPY_FILE refl_code_generator/mustache/trivial_impl.cpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ONLY_IF_DIFFERENT)
 add_subdirectory(refl_code_generator)
 
 file(GLOB_RECURSE ENGINE_SRC src/*.cpp)
@@ -22,8 +26,6 @@ list(REMOVE_ITEM ENGINE_EXPORT_HEADERS ${ENGINE_INTERNAL_HEADERS})
 file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.vert)
 file(GLOB_RECURSE ENGINE_MODEL_FILES assets/models/*)
 file(GLOB_RECURSE ENGINE_REFL_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/*.hpp ${NICKEL_REFL_GENERATE_DIR}/*.cpp)
-
-message(STATUS "---------nickel refl generate files: ${ENGINE_REFL_GENERATE_FILES}")
 
 compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
