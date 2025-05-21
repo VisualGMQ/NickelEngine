@@ -1,5 +1,7 @@
 NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.com/VisualGMQ/NickelEngine-backup)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/VisualGMQ/NickelEngine)
+
 更多信息请参阅[wiki](https://github.com/VisualGMQ/NickelEngine/wiki)
 
 新NickelEngine的特点：
