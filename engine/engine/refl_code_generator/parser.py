@@ -130,13 +130,13 @@ def record_node(node: Node, parent: Node):
     else:
         mach.merge(node)
 
-def parse_namespace(cursor: clang.cindex.Cursor, parent: Node, parsed_filename: str, parsed_file_dict: dict[pathlib.Path, Node]) -> NamespaceNode:
+def parse_namespace(cursor: clang.cindex.Cursor, parent: Node, parsed_filename: pathlib.Path) -> NamespaceNode:
     assert cursor.kind == CursorKind.NAMESPACE
     node = NamespaceNode(cursor.spelling)
     
     if node is not None:
         for child in cursor.get_children():
-            recurse_visit_cursor(child, node, parsed_filename, parsed_file_dict)
+            recurse_visit_cursor(child, node, parsed_filename)
         record_node(node, parent)
     return node
 
@@ -223,13 +223,13 @@ def parse_enum(cursor: clang.cindex.Cursor, parent: Node) -> EnumNode:
         record_node(enum_node, parent)
     return enum_node
 
-def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node, parsed_filename: pathlib.Path, parsed_file_dict: dict[pathlib.Path, Node]):
+def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node, parsed_filename: pathlib.Path):
     node: Node|None = None
     # print(cursor.spelling, " ", cursor.kind, " ", cursor.spelling)
     current_parsing_filename = pathlib.Path(cursor.location.file.name) if cursor.location.file else '' 
-    if not (cursor.location.is_in_system_header or cursor.location.file in parsed_file_dict or current_parsing_filename != parsed_filename):
+    if not (cursor.location.is_in_system_header or current_parsing_filename != parsed_filename):
         if cursor.kind == CursorKind.NAMESPACE:
-            node = parse_namespace(cursor, parent, parsed_filename, parsed_file_dict)
+            node = parse_namespace(cursor, parent, parsed_filename)
         if cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL:
             node = parse_class(cursor, parent)
         if cursor.kind == CursorKind.ENUM_DECL:
@@ -237,9 +237,9 @@ def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node, parsed_filen
         
     if node is None:
         for child in cursor.get_children():
-            recurse_visit_cursor(child, parent, parsed_filename, parsed_file_dict)
+            recurse_visit_cursor(child, parent, parsed_filename)
 
-def parse_one_file(filename: pathlib.Path, include_dir: str, parsed_file_dict: dict[pathlib.Path, Node]) -> Node:
+def parse_one_file(filename: pathlib.Path, include_dir: str) -> Node:
     print(f'parsing {filename}', flush=True)
     index = clang.cindex.Index.create()
     root_node = Node("")
@@ -253,7 +253,7 @@ def parse_one_file(filename: pathlib.Path, include_dir: str, parsed_file_dict: d
     except TranslationUnitLoadError as e:
         print(f'parsing {filename} failed!', flush=True)
         return root_node
-    recurse_visit_cursor(tu.cursor, root_node, filename, parsed_file_dict)
+    recurse_visit_cursor(tu.cursor, root_node, filename)
     return root_node
    
 g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text(encoding='utf-8')
@@ -324,6 +324,11 @@ def save_generated_code(filename: str, code: str):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(code)
 
+class NodeRecords:
+    def __init__(self):
+        self.mtime: dict[pathlib.Path, float] = {}
+        self.parsed_file_record: dict[pathlib.Path, Node] = {}
+
 if __name__ == '__main__':
     if len(sys.argv) != 3:
         print('usage: parser.py parse_dir output_dir', flush=True)
@@ -351,25 +356,29 @@ if __name__ == '__main__':
     # for debug
     # files = [pathlib.Path('../nickel/physics/vehicle.hpp')]
 
-    file_modification_times: dict[pathlib.Path, float] = {}
-    new_file_modification_times: dict[pathlib.Path, float] = {}
+    file_record = NodeRecords()
+    new_file_record = NodeRecords()
     
-    # if time_record_file_path.exists():
-    #     with open(time_record_file_path, 'rb') as f:
-    #         file_modification_times = pickle.load(f)
+    if time_record_file_path.exists():
+        with open(time_record_file_path, 'rb') as f:
+            file_record = pickle.load(f)
     
-    parsed_file_dict: dict[pathlib.Path, Node] = {}
     for file in files:
         last_modification_time = os.path.getmtime(file)
-        new_file_modification_times[file] = last_modification_time
-        
-        if file in file_modification_times and file_modification_times[file] == last_modification_time:
-            continue
+        if file in file_record.parsed_file_record:
+            new_file_record.parsed_file_record[file] = file_record.parsed_file_record[file]
+            new_file_record.mtime[file] = last_modification_time
+            if file_record.mtime[file] == last_modification_time:
+                continue
 
         parse_filename = file
-        node = parse_one_file(file, str(parse_dir.parent), parsed_file_dict)
+        node = parse_one_file(file, str(parse_dir.parent))
+        
+        # trivial null Node
+        new_file_record.parsed_file_record[file] = Node('')
+        new_file_record.mtime[file] = last_modification_time
         if len(node.children) != 0:
-            parsed_file_dict[file] = node
+            new_file_record.parsed_file_record[file] = node
            
     try:
         os.makedirs(output_dir, exist_ok=True)
@@ -381,13 +390,17 @@ if __name__ == '__main__':
         print(f"An error occurred when create dir {output_dir}: {e}", flush=True)
 
     with open(time_record_file_path, 'wb') as f:
-        pickle.dump(new_file_modification_times, f)
+        pickle.dump(new_file_record, f)
 
     refl_impl_data = {'header_file': output_dir/header_filename, 'refl_header_files': [], 'func_calls': []}
-    for path, node in parsed_file_dict.items():
+    for path, node in new_file_record.parsed_file_record.items():
+        if len(node.children) == 0:
+            continue
+            
         func_name, code = node_code_generate(str(path), node)
         final_filename = func_name + '.hpp'
         refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
+        
         # TODO: some magic string may refactory?
         refl_impl_data['func_calls'].append({'func_call': f'register_{func_name}_ReflInfo'})
         print(f'generate code to {final_filename}', flush=True)
