@@ -23,6 +23,8 @@ file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.ver
 file(GLOB_RECURSE ENGINE_MODEL_FILES assets/models/*)
 file(GLOB_RECURSE ENGINE_REFL_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/*.hpp ${NICKEL_REFL_GENERATE_DIR}/*.cpp)
 
+message(STATUS "---------nickel refl generate files: ${ENGINE_REFL_GENERATE_FILES}")
+
 compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
 compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridline.vert.spv)
