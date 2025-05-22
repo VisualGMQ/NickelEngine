@@ -28,6 +28,13 @@ jobs:
     - name: Prepare cmake
       uses: lukka/get-cmake@latest
 
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        #dir: # optional
+        version: 6.9.0
+        target: desktop
+
     - name: Prepare Ubuntu
       if: contains(matrix.os, 'ubuntu') && matrix.android == 'none'
       run: |
@@ -43,13 +50,14 @@ jobs:
       if: ${{ !contains(matrix.os, 'windows') && matrix.android == 'none' }}
       working-directory: ./engine
       run: |
-        ${{ matrix.cmake-path }}cmake --preset=CI-Linux
+        ${{ matrix.cmake-path }}cmake -S . -B cmake-build -DNICKEL_BUILD_TESTS=ON -DNICKEL_BUILD_TOOLS=ON -DQT6_PATH=$QT_ROOT_DIR
 
     - name: Config cmake(Windows)
       if: contains(matrix.os, 'windows')
       working-directory: ./engine
       run: |
-        ${{ matrix.cmake-path}}cmake --preset=CI-Windows
+        ${{ matrix.cmake-path }}cmake -S . -B cmake-build -DNICKEL_BUILD_TESTS=ON -DNICKEL_BUILD_TOOLS=ON -DCMAKE_SYSTEM_VERSION="10.0.26100.0" -DQT6_PATH=$env:QT_ROOT_DIR
+                
 
     - name: Build under PC
       if: matrix.android == 'none'
