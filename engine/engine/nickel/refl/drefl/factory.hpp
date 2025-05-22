@@ -817,6 +817,9 @@ public:
         if constexpr (std::is_fundamental_v<T>) {
             return &NumericFactory<T>::Instance().Info();
         }
+        if constexpr (std::is_class_v<T>) {
+            return &ClassFactory<T>::Instance().Info();
+        }
 
         return nullptr;
     }

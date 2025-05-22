@@ -23,8 +23,8 @@ struct NICKEL_REFL_ATTR(refl) VehicleWheelSimDescriptor {
         struct FrictionVsLongitudinalSlipConfig {
             float m_friction_at_zero_slip{1.0};
             
-            float m_slip_at_maximum_firction{0.1};
-            float m_max_firction{1.0};
+            float m_slip_at_maximum_friction{0.1};
+            float m_max_friction{1.0};
             
             float m_max_slip{1.0};
             float m_friction_at_max_slip{1.0};

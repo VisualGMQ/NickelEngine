@@ -22,7 +22,7 @@ PipelineLayoutImpl::PipelineLayoutImpl(DeviceImpl& device,
     ci.pSetLayouts = set_layouts.data();
 
     std::vector<VkPushConstantRange> push_constants;
-    for (auto& range : desc.m_push_contants) {
+    for (auto& range : desc.m_push_constants) {
         VkPushConstantRange r;
         r.offset = range.m_offset;
         r.size = range.m_size;

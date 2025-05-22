@@ -305,7 +305,7 @@ def class_node_code_generate(prefix: str, node: ClassNode) -> str:
     for field in node.public_fields:
         if not field.attrs.need_refl:
             continue
-        fmt['properties'].append({'property_register_name': field.name,
+        fmt['properties'].append({'property_register_name': field.name if len(field.name) <= 2 else field.name[2:],
                                   'property_name': class_name_with_prefix + '::' + field.name})
     
     return chevron.render(g_class_refl_mustache, fmt)
@@ -339,8 +339,8 @@ if __name__ == '__main__':
     output_dir = pathlib.Path(sys.argv[2])
     time_record_filename = 'time_record.pkl'
     time_record_file_path = output_dir / time_record_filename
-    header_filename = 'refl_generate.hpp'
-    impl_filename = 'refl_generate.cpp'
+    header_filename = output_dir / 'refl_generate.hpp'
+    impl_filename = output_dir / 'refl_generate.cpp'
 
     print(f'parse dir: {parse_dir}', flush=True)
     print(f'output dir: {output_dir}', flush=True)
@@ -362,6 +362,8 @@ if __name__ == '__main__':
     if time_record_file_path.exists():
         with open(time_record_file_path, 'rb') as f:
             file_record = pickle.load(f)
+            
+    has_refl_info_changed = False
     
     for file in files:
         last_modification_time = os.path.getmtime(file)
@@ -371,6 +373,7 @@ if __name__ == '__main__':
             if file_record.mtime[file] == last_modification_time:
                 continue
 
+        has_refl_info_changed = True
         parse_filename = file
         node = parse_one_file(file, str(parse_dir.parent))
         
@@ -391,23 +394,24 @@ if __name__ == '__main__':
 
     with open(time_record_file_path, 'wb') as f:
         pickle.dump(new_file_record, f)
-
-    refl_impl_data = {'header_file': output_dir/header_filename, 'refl_header_files': [], 'func_calls': []}
-    for path, node in new_file_record.parsed_file_record.items():
-        if len(node.children) == 0:
-            continue
+        
+    if has_refl_info_changed:
+        refl_impl_data = {'header_file': header_filename, 'refl_header_files': [], 'func_calls': []}
+        for path, node in new_file_record.parsed_file_record.items():
+            if len(node.children) == 0:
+                continue
+                
+            func_name, code = node_code_generate(str(path), node)
+            final_filename = func_name + '.hpp'
+            refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
             
-        func_name, code = node_code_generate(str(path), node)
-        final_filename = func_name + '.hpp'
-        refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
-        
-        # TODO: some magic string may refactory?
-        refl_impl_data['func_calls'].append({'func_call': f'register_{func_name}_ReflInfo'})
-        print(f'generate code to {final_filename}', flush=True)
-        save_generated_code(output_dir / final_filename, code)
-        
-    with open(output_dir/header_filename, 'w+', encoding='utf-8') as f:
-        f.write(chevron.render(g_header_mustache, {}))
+            # TODO: some magic string may refactory?
+            refl_impl_data['func_calls'].append({'func_call': f'register_{func_name}_ReflInfo'})
+            print(f'generate code to {final_filename}', flush=True)
+            save_generated_code(output_dir / final_filename, code)
 
-    with open(output_dir/impl_filename, 'w+', encoding='utf-8') as f:
-        f.write(chevron.render(g_impl_mustache, refl_impl_data))
+        with open(header_filename, 'w+', encoding='utf-8') as f:
+            f.write(chevron.render(g_header_mustache, {}))
+
+        with open(impl_filename, 'w+', encoding='utf-8') as f:
+            f.write(chevron.render(g_impl_mustache, refl_impl_data))

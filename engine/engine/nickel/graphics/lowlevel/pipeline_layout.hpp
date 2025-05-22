@@ -16,7 +16,7 @@ public:
         };
         
         std::vector<BindGroupLayout> m_layouts;
-        std::vector<PushConstantRange> m_push_contants;
+        std::vector<PushConstantRange> m_push_constants;
     };
 
     using ImplWrapper::ImplWrapper;

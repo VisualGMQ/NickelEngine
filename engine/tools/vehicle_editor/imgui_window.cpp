@@ -374,8 +374,8 @@ void TunningPanel::tunningWheelCommonConfig(
         std::array<ImPlotPoint, 3> points;
         points[0].x = 0;
         points[0].y = config.m_friction_at_zero_slip;
-        points[1].x = config.m_slip_at_maximum_firction;
-        points[1].y = config.m_max_firction;
+        points[1].x = config.m_slip_at_maximum_friction;
+        points[1].y = config.m_max_friction;
         points[2].x = config.m_max_slip;
         points[2].y = config.m_friction_at_max_slip;
         if (ImPlot::BeginPlot("friction-slip config")) {
@@ -399,8 +399,8 @@ void TunningPanel::tunningWheelCommonConfig(
         }
 
         config.m_friction_at_zero_slip = points[0].y;
-        config.m_slip_at_maximum_firction = points[1].x;
-        config.m_max_firction = points[1].y;
+        config.m_slip_at_maximum_friction = points[1].x;
+        config.m_max_friction = points[1].y;
         config.m_max_slip = points[2].x;
         config.m_friction_at_max_slip = points[2].y;
     }

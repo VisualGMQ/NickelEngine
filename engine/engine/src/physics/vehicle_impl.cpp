@@ -33,9 +33,9 @@ inline physx::PxVehicleTireData TireData2PhysX(
     data.mFrictionVsSlipGraph[0][1] =
         tire.m_friction_vs_slip_config.m_friction_at_zero_slip;
     data.mFrictionVsSlipGraph[1][0] =
-        tire.m_friction_vs_slip_config.m_slip_at_maximum_firction;
+        tire.m_friction_vs_slip_config.m_slip_at_maximum_friction;
     data.mFrictionVsSlipGraph[1][1] =
-        tire.m_friction_vs_slip_config.m_max_firction;
+        tire.m_friction_vs_slip_config.m_max_friction;
     data.mFrictionVsSlipGraph[2][0] = tire.m_friction_vs_slip_config.m_max_slip;
     data.mFrictionVsSlipGraph[2][1] =
         tire.m_friction_vs_slip_config.m_friction_at_max_slip;

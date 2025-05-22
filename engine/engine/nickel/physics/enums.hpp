@@ -1,17 +1,18 @@
 #pragma once
+#include "nickel/common/refl_macro.hpp"
 
 namespace nickel::physics {
 
-enum class ForceMode {
+enum class NICKEL_REFL_ATTR(refl) ForceMode {
     Force,
     Acceleration,
     Velocity,
     Impulse,
 };
 
-enum class CombineMode { Average, Min, Max, Multiply };
+enum class NICKEL_REFL_ATTR(refl) CombineMode { Average, Min, Max, Multiply };
 
-enum class RigidActorType {
+enum class NICKEL_REFL_ATTR(refl) RigidActorType {
     RigidStatic,
     RigidDynamic,
     ArticulationLink,
@@ -20,7 +21,7 @@ enum class RigidActorType {
     PbdParticleSystem,
 };
 
-enum class HitFlag {
+enum class NICKEL_REFL_ATTR(refl) HitFlag {
     Position = 1 << 0,
     Normal = 1 << 1,
     UV = 1 << 2,
@@ -34,7 +35,7 @@ enum class HitFlag {
     Default = Position | Normal | FaceIndex,
 };
 
-enum class QueryFlag {
+enum class NICKEL_REFL_ATTR(refl) QueryFlag {
     Static = 1 << 0,
     Dynamic = 1 << 1,
     PreFilter = 1 << 2,
@@ -45,7 +46,7 @@ enum class QueryFlag {
     DisableHardcodedFilter = 1 << 7,
 };
 
-enum class QueryHitType {
+enum class NICKEL_REFL_ATTR(refl) QueryHitType {
     None,
     Touch,
     Block,
