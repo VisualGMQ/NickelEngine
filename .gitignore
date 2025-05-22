@@ -13,3 +13,4 @@ log/
 *.spv
 .vscode
 nickel_engine_project_path.toml
+CMakeLists.txt.user

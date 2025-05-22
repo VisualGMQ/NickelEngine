@@ -6,7 +6,7 @@ project(NickelEngine
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(NICKEL_BUILD_TESTS "build tests" OFF)
-option(NICKEL_BUILD_TOOLS "build tests" OFF)
+option(NICKEL_BUILD_TOOLS "build tools" OFF)
 
 set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 

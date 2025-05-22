@@ -21,6 +21,19 @@ NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.c
 
 ```bash
 cmake --preset=default
+```
+
+若需要编译Editor，需要安装Qt6.9，使用Qt Creator打开并构建
+
+如果是纯CMake环境，需要指定Qt的工具链路径：
+
+```bash
+cmake -S . -B cmake-build -DNICKEL_BUILD_TOOLS=ON -DQT6_PATH=<your qt path>
+```
+
+使用CMake构建：
+
+```bash
 cmake --build cmake-build
 ```
 

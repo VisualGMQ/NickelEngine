@@ -1,1 +1,2 @@
 add_subdirectory(vehicle_editor)
+add_subdirectory(editor)
