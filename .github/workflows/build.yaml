@@ -25,7 +25,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Prepare cmake
+    - name: Install CMake
       uses: lukka/get-cmake@latest
 
     - name: Install Qt
@@ -34,6 +34,13 @@ jobs:
         #dir: # optional
         version: 6.9.0
         target: desktop
+
+    - name: Setup Vulkan SDK
+      uses: humbletim/setup-vulkan-sdk@v1.2.1
+      with:
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Glslang 
+          vulkan-use-cache: true
 
     - name: Prepare Ubuntu
       if: contains(matrix.os, 'ubuntu') && matrix.android == 'none'
