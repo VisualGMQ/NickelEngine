@@ -7,6 +7,7 @@ template <typename T>
 requires std::is_enum_v<T>
 class Flags {
 public:
+    using enum_type = T;
     using underlying_type = std::underlying_type_t<T>;
 
     Flags() = default;

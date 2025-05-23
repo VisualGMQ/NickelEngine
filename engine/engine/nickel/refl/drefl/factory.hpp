@@ -35,6 +35,9 @@ class Class;
 class ClassVisitor;
 
 template <typename>
+class PointerFactory;
+
+template <typename>
 class ClassFactory;
 
 template <typename>
@@ -54,6 +57,15 @@ class ArrayFactory;
 
 template <typename>
 class OptionalFactory;
+
+class ClassPropertyFactory;
+class NumericPropertyFactory;
+class EnumPropertyFactory;
+class PointerPropertyFactory;
+class OptionalPropertyFactory;
+class BooleanPropertyFactory;
+class StringPropertyFactory;
+class ArrayPropertyFactory;
 
 class BooleanFactory final {
 public:
@@ -443,6 +455,98 @@ private:
 };
 
 
+template <typename T>
+struct FactoryDeducer {
+    using type = ClassFactory<T>;
+};
+
+template <typename T>
+requires std::is_pointer_v<T>
+struct FactoryDeducer<T> {
+    using type = PointerFactory<T>;
+};
+
+template <typename T>
+requires is_optional_v<T>
+struct FactoryDeducer<T> {
+    using type = OptionalFactory<T>;
+};
+
+template <>
+struct FactoryDeducer<bool> {
+    using type = BooleanFactory;
+};
+
+template <typename T>
+requires is_string_v<T>
+struct FactoryDeducer<T> {
+    using type = StringFactory<T>;
+};
+
+template <typename T>
+requires std::is_enum_v<T>
+struct FactoryDeducer<T> {
+    using type = EnumFactory<T>;
+};
+
+template <typename T>
+requires internal::is_array_v<T>
+struct FactoryDeducer<T> {
+    using type = ArrayFactory<T>;
+};
+
+template <typename T>
+requires std::is_fundamental_v<T>
+struct FactoryDeducer<T> {
+    using type = NumericFactory<T>;
+};
+
+template <typename T>
+struct PropertyFactoryDeducer {
+    using type = ClassPropertyFactory;
+};
+
+template <typename T>
+requires std::is_fundamental_v<T>
+struct PropertyFactoryDeducer<T> {
+    using type = NumericPropertyFactory;
+};
+
+template <typename T>
+requires std::is_enum_v<T>
+struct PropertyFactoryDeducer<T> {
+    using type = EnumPropertyFactory;
+};
+
+template <typename T>
+requires is_string_v<T>
+struct PropertyFactoryDeducer<T> {
+    using type = StringPropertyFactory;
+};
+
+template <typename T>
+requires internal::is_array_v<T>
+struct PropertyFactoryDeducer<T> {
+    using type = ArrayPropertyFactory;
+};
+
+template <typename T>
+requires std::is_pointer_v<T>
+struct PropertyFactoryDeducer<T> {
+    using type = PointerPropertyFactory;
+};
+
+template <typename T>
+requires is_optional_v<T>
+struct PropertyFactoryDeducer<T> {
+    using type = OptionalPropertyFactory;
+};
+
+template <>
+struct PropertyFactoryDeducer<bool> {
+    using type = BooleanPropertyFactory;
+};
+
 class EnumPropertyFactory final {
 public:
     template <typename T>
@@ -600,23 +704,8 @@ public:
             using traits = variable_traits<T>;
             using type = remove_cvref_t<typename traits::type>;
 
-            if constexpr (std::is_pointer_v<type>) {
-                return PointerPropertyFactory{name, accessor}.Get();
-            } else if constexpr (is_optional_v<type>) {
-                return OptionalPropertyFactory{name, accessor}.Get();
-            } else if constexpr (std::is_same_v<bool, type>) {
-                return BooleanPropertyFactory{name, accessor}.Get();
-            } else if constexpr (std::is_enum_v<type>) {
-                return EnumPropertyFactory{name, accessor}.Get();
-            } else if constexpr (std::is_fundamental_v<type>) {
-                return NumericPropertyFactory{name, accessor}.Get();
-            } else if constexpr (internal::is_string_v<type>) {
-                return StringPropertyFactory{name, accessor}.Get();
-            } else if constexpr (internal::is_array_v<type>) {
-                return ArrayPropertyFactory{name, accessor}.Get();
-            } else {
-                return ClassPropertyFactory{name, accessor}.Get();
-            }
+            using factory_type = typename PropertyFactoryDeducer<type>::type;
+            return factory_type{name, accessor}.Get();
         }
     }
 };
@@ -796,32 +885,8 @@ template <typename T>
 class Factory final {
 public:
     static const Type* Info() noexcept {
-        if constexpr (std::is_pointer_v<T>) {
-            return &PointerFactory<T>::Instance().Info();
-        }
-        if constexpr (is_optional_v<T>) {
-            return &OptionalFactory<T>::Instance().Info();
-        }
-        if constexpr (std::is_same_v<bool, T>) {
-            return &BooleanFactory::Instance().Info();
-        }
-        if constexpr (internal::is_string_v<T>) {
-            return &StringFactory<T>::Instance().Info();
-        }
-        if constexpr (std::is_enum_v<T>) {
-            return &EnumFactory<T>::Instance().Info();
-        }
-        if constexpr (internal::is_array_v<T>) {
-            return &ArrayFactory<T>::Instance().Info();
-        }
-        if constexpr (std::is_fundamental_v<T>) {
-            return &NumericFactory<T>::Instance().Info();
-        }
-        if constexpr (std::is_class_v<T>) {
-            return &ClassFactory<T>::Instance().Info();
-        }
-
-        return nullptr;
+        using factory_type = typename FactoryDeducer<T>::type;
+        return &factory_type::Instance().Info();
     }
 };
 
@@ -859,9 +924,6 @@ public:
 
     template <typename U>
     auto& Property(const std::string& name, U accessor, std::vector<Attribute>&& attrs = {}) {
-        using traits = variable_traits<U>;
-        using type = typename traits::type;
-
         m_info.m_properties.emplace_back(
             PropertyFactory{}.Create(name, accessor));
         m_info.m_properties.back()->SetAttributes(std::move(attrs));

@@ -50,7 +50,9 @@ private:
     enum NumericKind m_kind;
 
     template <typename T>
-    static Numeric create() { return {GetKindFromType<T>(), getKind<T>(), getName<T>()};}
+    static Numeric create() {
+        return {ValueKind::Numeric, getKind<T>(), getName<T>()};
+    }
 
     template <typename T>
     static enum NumericKind getKind() {

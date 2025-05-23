@@ -18,6 +18,7 @@
 #include "nickel/graphics/debug_draw.hpp"
 #include "nickel/graphics/gltf.hpp"
 #include "nickel/physics/context.hpp"
+#include "nickel/refl/custom/flags_refl.hpp"
 
 union SDL_Event;
 
