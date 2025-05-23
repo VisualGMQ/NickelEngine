@@ -39,7 +39,8 @@ Any AnyMakeCopy(T&& value) noexcept(
         LOGE("make copy failed! due to allocate memory failed!");
         elem = nullptr;
     } catch (...) {
-        throw;
+        LOGE("make copy failed! unknown error!");
+        return {};
     }
     return {Any::AccessType::Copy, elem, &TypeOperationTraits<type>::GetOperations(),
             TypeInfo<remove_cvref_t<T>>()};

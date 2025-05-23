@@ -7,50 +7,51 @@ template <typename T>
 requires std::is_enum_v<T>
 class Flags {
 public:
+    using enum_type = T;
     using underlying_type = std::underlying_type_t<T>;
 
     Flags() = default;
 
-    Flags(T value) : value_{static_cast<underlying_type>(value)} {}
+    Flags(T value) : m_value{static_cast<underlying_type>(value)} {}
 
-    Flags(std::underlying_type_t<T> value) : value_{value} {}
+    Flags(std::underlying_type_t<T> value) : m_value{value} {}
 
     Flags(const Flags&) = default;
     Flags(Flags&&) = default;
 
     Flags operator|(T o) const {
-        return Flags{value_ | static_cast<underlying_type>(o)};
+        return Flags{m_value | static_cast<underlying_type>(o)};
     }
 
     Flags operator&(T o) const {
-        return Flags{value_ & static_cast<underlying_type>(o)};
+        return Flags{m_value & static_cast<underlying_type>(o)};
     }
 
     Flags& operator=(const Flags&) = default;
 
     Flags& operator=(T value) {
-        value_ = static_cast<underlying_type>(value);
+        m_value = static_cast<underlying_type>(value);
         return *this;
     }
 
     Flags& operator|=(T o) {
-        value_ |= static_cast<underlying_type>(o);
+        m_value |= static_cast<underlying_type>(o);
         return *this;
     }
 
     Flags& operator&=(T o) {
-        value_ &= static_cast<underlying_type>(o);
+        m_value &= static_cast<underlying_type>(o);
         return *this;
     }
 
-    Flags operator~() const noexcept { return ~value_; }
+    Flags operator~() const noexcept { return ~m_value; }
 
-    operator T() const { return static_cast<T>(value_); }
+    operator T() const { return static_cast<T>(m_value); }
 
-    operator underlying_type() const { return value_; }
+    operator underlying_type() const { return m_value; }
 
 private:
-    underlying_type value_{};
+    underlying_type m_value{};
 };
 
 }  // namespace tl

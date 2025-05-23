@@ -1,0 +1,6 @@
+::nickel::refl::EnumFactory<{{enum_name}}>::Instance()
+    .Regist("{{enum_register_name}}")
+    {{#enums}}
+    .Add("{{enum_register_name}}", {{enum_name}})
+    {{/enums}}
+    ;

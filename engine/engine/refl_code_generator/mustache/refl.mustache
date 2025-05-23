@@ -1,0 +1,19 @@
+#pragma once
+#include "nickel/refl/drefl/drefl.hpp"
+#include "{{parsed_filename}}"
+
+namespace nickel::refl_generate {
+
+inline void register_{{refl_func_name}}_ReflInfo() {
+    {{#enums}}
+        {{{enum}}} 
+        
+    {{/enums}}
+
+    {{#classes}}
+        {{{class}}}
+        
+    {{/classes}}
+}
+
+}

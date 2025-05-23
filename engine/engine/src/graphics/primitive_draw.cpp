@@ -237,7 +237,7 @@ void PrimitiveRenderPass::initPipelineLayout(Device& device) {
     range.m_offset = 0;
     range.m_shader_stage = ShaderStage::Vertex;
     range.m_size = sizeof(Mat44) * 2;
-    desc.m_push_contants.push_back(range);
+    desc.m_push_constants.push_back(range);
 
     m_pipeline_layout = device.CreatePipelineLayout(desc);
 }

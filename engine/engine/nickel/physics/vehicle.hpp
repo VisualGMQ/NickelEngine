@@ -2,6 +2,7 @@
 #include "nickel/common/impl_wrapper.hpp"
 #include "nickel/common/math/math.hpp"
 #include "nickel/physics/filter.hpp"
+#include "nickel/common/refl_macro.hpp"
 
 #include <optional>
 #include <span>
@@ -12,7 +13,7 @@ class RigidDynamic;
 
 constexpr uint32_t VehicleMaxWheelNum = 20;
 
-struct VehicleWheelSimDescriptor {
+struct NICKEL_REFL_ATTR(refl) VehicleWheelSimDescriptor {
     enum class Type {
         FourWheel,
         ArbitraryWheel,
@@ -22,8 +23,8 @@ struct VehicleWheelSimDescriptor {
         struct FrictionVsLongitudinalSlipConfig {
             float m_friction_at_zero_slip{1.0};
             
-            float m_slip_at_maximum_firction{0.1};
-            float m_max_firction{1.0};
+            float m_slip_at_maximum_friction{0.1};
+            float m_max_friction{1.0};
             
             float m_max_slip{1.0};
             float m_friction_at_max_slip{1.0};
@@ -126,7 +127,7 @@ struct VehicleClutchDescriptor {
     uint32_t m_estimate_iterations = 5;
 };
 
-struct VehicleDriveSimDescriptor {
+struct NICKEL_REFL_ATTR(refl) VehicleDriveSimDescriptor {
     enum class Type {
         FourWheel,
         ArbitraryWheel,

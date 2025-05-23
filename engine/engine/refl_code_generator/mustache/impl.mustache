@@ -1,0 +1,15 @@
+#include "{{header_file}}"
+
+{{#refl_header_files}}
+#include "{{refl_header_file}}"
+{{/refl_header_files}}
+
+namespace nickel::refl_generate {
+
+void RegisterReflectionInfo() {
+    {{#func_calls}}
+    {{func_call}}();
+    {{/func_calls}}
+}
+
+}

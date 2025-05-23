@@ -119,7 +119,7 @@ private:
         push_constant.m_offset = 0;
         push_constant.m_size = sizeof(float) * 3;
         push_constant.m_shader_stage = ShaderStage::Fragment;
-        desc.m_push_contants.push_back(push_constant);
+        desc.m_push_constants.push_back(push_constant);
         m_pipeline_layout = device.CreatePipelineLayout(desc);
     }
 

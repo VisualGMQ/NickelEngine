@@ -1,0 +1,6 @@
+::nickel::refl::ClassFactory<{{class_name}}>::Instance()
+    .Regist("{{class_register_name}}")
+    {{#properties}}
+    .Property("{{property_register_name}}", &{{property_name}})
+    {{/properties}}
+    ;

@@ -7,6 +7,7 @@
 #include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
 #include "nickel/graphics/lowlevel/internal/vk_call.hpp"
 #include "nickel/internal/pch.hpp"
+#include "nickel/refl_generate/refl_generate.hpp"
 
 namespace nickel {
 
@@ -39,6 +40,9 @@ Context::~Context() {
 }
 
 void Context::Initialize() {
+    LOGI("init reflection system");
+    refl_generate::RegisterReflectionInfo();
+    
     LOGI("init video system");
     m_window = std::make_unique<video::Window>("sandbox", 1024, 720);
     m_old_window_size = {1024, 720};

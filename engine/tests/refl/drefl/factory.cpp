@@ -258,7 +258,6 @@ TEST_CASE("std::list", "array") {
     }
 }
 
-
 TEST_CASE("class factory") {
     struct Person {
         std::string name;
