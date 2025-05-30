@@ -66,6 +66,7 @@ struct variable_traits;
 template <typename T>
 struct variable_traits<T*> : internal::basic_variable_traits<T> {
     using pointer = T*;
+    static constexpr bool is_member = false;
 };
 
 template <typename Class, typename T>
@@ -73,6 +74,7 @@ struct variable_traits<T Class::*>
     : internal::basic_variable_traits<T Class::*> {
     using pointer = T Class::*;
     using clazz = Class;
+    static constexpr bool is_member = true;
 };
 
 namespace detail {

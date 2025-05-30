@@ -104,6 +104,7 @@ struct function_traits<Ret (Class::*)(Args...)>
     using type = Ret (Class::*)(Args...);
     using args_with_class = type_list<Class*, Args...>;
     using pointer = Ret (Class::*)(Args...);
+    using clazz = Class;
     static constexpr bool is_member = true;
     static constexpr bool is_const = false;
 };
@@ -114,6 +115,7 @@ struct function_traits<Ret (Class::*)(Args...) const>
     using type = Ret (Class::*)(Args...) const;
     using args_with_class = type_list<Class*, Args...>;
     using pointer = Ret (Class::*)(Args...) const;
+    using clazz = Class;
     static constexpr bool is_member = true;
     static constexpr bool is_const = true;
 };
