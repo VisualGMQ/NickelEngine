@@ -11,6 +11,8 @@ struct NullComponent {
     bool operator==(ComponentID) const noexcept;
     bool operator!=(ComponentID) const noexcept;
 
+    operator ComponentID() const noexcept;
+
 private:
     static constexpr ComponentUnderlyingType null_component_id =
         ComponentIDMask.mask;

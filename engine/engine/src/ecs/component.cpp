@@ -19,6 +19,10 @@ bool NullComponent::operator!=(ComponentID c) const noexcept {
     return !(*this == c);
 }
 
+NullComponent::operator ComponentID() const noexcept {
+    return static_cast<ComponentID>(null_component_id);
+}
+
 bool operator==(ComponentID e, NullComponent n) {
     return n == e;
 }
