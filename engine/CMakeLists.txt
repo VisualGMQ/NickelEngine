@@ -8,7 +8,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(NICKEL_BUILD_TESTS "build tests" OFF)
 option(NICKEL_BUILD_TOOLS "build tools" OFF)
-option(NICKEL_BUILD_DOC "build doc" OFF)
 
 set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -41,9 +40,7 @@ if (NICKEL_BUILD_TOOLS)
     add_subdirectory(tools)
 endif()
 
-if (NICKEL_BUILD_DOC)
-    add_subdirectory(doc)
-endif()
+add_subdirectory(doc)
 
 if (NICKEL_BUILD_TESTS)
     enable_testing()
