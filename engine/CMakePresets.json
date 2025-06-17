@@ -7,7 +7,8 @@
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "NICKEL_BUILD_TESTS" : "ON",
-                "NICKEL_BUILD_TOOLS" : "ON"
+                "NICKEL_BUILD_TOOLS" : "ON",
+                "NICKEL_BUILD_DOC" : "ON"
             }
         },
         {
