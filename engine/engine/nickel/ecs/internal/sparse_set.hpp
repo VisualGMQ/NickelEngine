@@ -3,35 +3,28 @@
 
 #include <concepts>
 #include <numeric>
+#include <utility>
 
 namespace nickel::ecs {
-template <typename KeyT, typename ValueT>
-requires std::is_integral_v<KeyT> && std::is_integral_v<ValueT> &&
-         std::is_unsigned_v<ValueT> && std::is_unsigned_v<KeyT>
-class NumericSparseSetPolicy {
-    using numeric_type = std::common_type_t<KeyT, ValueT>;
 
-    numeric_type GetIndexFromKey(KeyT key) const { return key; }
+template <typename T>
+concept is_unsigned_integral = std::is_integral_v<T> && std::is_unsigned_v<T>;
 
-    numeric_type GetIndexFromValue(ValueT value) const { return value; }
-
-    consteval numeric_type GetInvalidKey() const noexcept {
-        return std::numeric_limits<numeric_type>::max();
-    }
-
-    consteval numeric_type GetInvalidValue() const noexcept {
-        return std::numeric_limits<numeric_type>::max();
-    }
-
-    void RecordDenseIndex(ValueT& value, size_t idx) noexcept { value = idx; }
-
-    void ReuseKey(KeyT& key) const noexcept {}
+template <typename KeyT, typename ValueT, typename Policy>
+concept is_sparse_set_policy = requires(Policy t, Policy& policy_ref, ValueT& value_ref, KeyT& key_ref)
+{
+    {t.GetIndexFromKey(KeyT{})} -> is_unsigned_integral;
+    {t.GetIndexFromValue(ValueT{})} -> is_unsigned_integral;
+    {t.GetInvalidKey()} -> is_unsigned_integral;
+    {t.GetInvalidValue()} -> std::same_as<ValueT>;
+    t.RecordDenseIndex(value_ref, size_t{});
+    t.ReuseKey(key_ref);
 };
 
 template <typename KeyT, typename ValueT,
-          typename Policy = NumericSparseSetPolicy<KeyT, ValueT>,
-          size_t PageSize = 1024>
-class SparseSet<KeyT, ValueT, Policy, PageSize> {
+          typename Policy, size_t PageSize = 1024>
+requires is_sparse_set_policy<KeyT, ValueT, Policy>
+class SparseSet {
 public:
     using key_type = KeyT;
     using value_type = ValueT;
@@ -50,8 +43,9 @@ public:
         if (m_alive_count > 0) {
             swap(m_dense[m_alive_count], m_dense.back());
         }
-        m_policy.RecordDenseIndex(value, m_alive_count++);
-        EnsurePage(k)[k % page_size] = value;
+        ValueT& new_value = EnsurePage(k)[k % page_size];
+        new_value = value;
+        m_policy.RecordDenseIndex(new_value, m_alive_count++);
     }
 
     void Emplace(KeyT&& key, ValueT&& value) noexcept {
@@ -66,7 +60,7 @@ public:
         EnsurePage(k)[k % page_size] = std::move(value);
     }
 
-    const KeyT* Reuse(const ValueT&& value) noexcept {
+    const KeyT* Reuse(ValueT&& value) noexcept {
         const KeyT* key = GetCachedKey();
         if (!key) {
             return nullptr;
@@ -88,7 +82,25 @@ public:
             return nullptr;
         }
 
-        return m_dense[m_alive_count];
+        return &m_dense[m_alive_count];
+    }
+
+    const ValueT* Get(const KeyT& key) const noexcept {
+        auto k = m_policy.GetIndexFromKey(key);
+        size_t page_idx = k / page_size;
+        if (page_idx >= m_sparse.size()) {
+            return nullptr;
+        }
+
+        auto& value = m_sparse[page_idx][k % page_size];
+        if (value == m_policy.GetInvalidValue()) {
+            return nullptr;
+        }
+        return &value;
+    }
+
+    ValueT* Get(const KeyT& key) noexcept {
+        return const_cast<ValueT*>(std::as_const(*this).Get(key));
     }
 
     void Remove(const KeyT& key) noexcept {
@@ -102,21 +114,21 @@ public:
         }
 
         size_t page_slot_idx = k % page_size;
-        const ValueT& value = m_sparse[page_idx][page_slot_idx];
+        ValueT& value = m_sparse[page_idx][page_slot_idx];
         if (value == m_policy.GetInvalidValue()) {
             return;
         }
 
-        size_t last_key_idx = --m_alive_count;
+        size_t last_key_idx = m_policy.GetIndexFromKey(m_dense[--m_alive_count]);
         size_t idx = m_policy.GetIndexFromValue(value);
-        const KeyT& last_key = m_dense[last_key_idx];
-        const ValueT& last_value =
+        ValueT& last_value =
             m_sparse[last_key_idx / page_size][last_key_idx % page_size];
-        value = std::move(last_value);
-        last_value = m_policy.GetInvalidValue();
+
+        value = m_policy.GetInvalidValue();
+        m_policy.RecordDenseIndex(last_value, idx);
 
         using std::swap;
-        swap(m_dense.back(), m_dense[idx]);
+        swap(m_dense[m_alive_count], m_dense[idx]);
     }
 
     bool Contains(const KeyT& key) const noexcept {
@@ -132,6 +144,12 @@ public:
         return value != m_policy.GetInvalidValue();
     }
 
+    auto& Dense() const noexcept { return m_dense; }
+
+    auto& Sparse() const noexcept { return m_sparse; }
+
+    size_t AliveCount() const noexcept { return m_alive_count; }
+
 protected:
     std::vector<KeyT> m_dense;
     std::vector<page_type> m_sparse;
@@ -141,7 +159,12 @@ protected:
     page_type& EnsurePage(size_t num) noexcept {
         size_t page_idx = num / page_size;
 
+        size_t old_size = m_sparse.size();
         m_sparse.resize(std::max(m_sparse.size(), page_idx + 1));
+
+        for (size_t i = old_size; i < m_sparse.size(); i++) {
+            m_sparse[i].fill(m_policy.GetInvalidValue());
+        }
         return m_sparse[page_idx];
     }
 };
