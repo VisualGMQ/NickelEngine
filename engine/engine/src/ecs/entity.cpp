@@ -19,6 +19,10 @@ bool NullEntity::operator!=(const Entity& e) const noexcept {
     return !(*this == e);
 }
 
+NullEntity::operator Entity() const noexcept {
+    return static_cast<Entity>(null_entity_id);
+}
+
 bool operator==(Entity e, NullEntity n) {
     return n == e;
 }
