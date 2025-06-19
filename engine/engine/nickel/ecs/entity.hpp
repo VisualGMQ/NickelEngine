@@ -12,6 +12,8 @@ struct NullEntity final {
     bool operator==(const Entity&) const noexcept;
     bool operator!=(const Entity&) const noexcept;
 
+    operator Entity() const noexcept;
+
 private:
     // entity is null when all used bits are 1
     static constexpr EntityUnderlyingType null_entity_id =
