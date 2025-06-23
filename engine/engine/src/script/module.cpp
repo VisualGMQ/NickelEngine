@@ -8,8 +8,9 @@
 #include "quickjs.h"
 
 namespace nickel::script {
-QJSModule::QJSModule(QJSContext& context, const std::string& name)
-    : m_context{context}, m_name{name} {
+QJSModule::QJSModule(QJSContext& context, QJSClassFactory& class_factory,
+                     const std::string& name)
+    : m_context{context}, m_class_factory{class_factory}, m_name{name} {
     NICKEL_ASSERT(context);
     m_module = JS_NewCModule(context, name.c_str(), moduleInitFunc);
     NICKEL_RETURN_IF_FALSE_LOGE(m_module, "create qjs module failed");

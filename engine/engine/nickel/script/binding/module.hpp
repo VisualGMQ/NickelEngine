@@ -8,7 +8,7 @@ class QJSContext;
 
 class QJSModule {
 public:
-    QJSModule(QJSContext&, const std::string& name);
+    QJSModule(QJSContext&, QJSClassFactory&, const std::string& name);
 
     QJSContext& EndModule() const;
 
@@ -24,8 +24,7 @@ public:
 
     template <typename T>
     QJSClass<T>& AddClass(const std::string& name) {
-        auto& qjs_class =
-            QJSClassFactory::GetInst().CreateOrGet<T>(m_context, name);
+        auto& qjs_class = m_class_factory.CreateOrGet<T>(m_context, name);
         qjs_class.ResetClassName(name);
         return static_cast<QJSClass<T>&>(*m_classes.emplace_back(&qjs_class));
     }
@@ -38,6 +37,7 @@ private:
         JSValue m_value;
     };
 
+    QJSClassFactory& m_class_factory;
     QJSContext& m_context;
     std::string m_name;
     JSModuleDef* m_module{};

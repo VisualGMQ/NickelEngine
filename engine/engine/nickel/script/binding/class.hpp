@@ -53,7 +53,7 @@ public:
         m_ref_def.class_name = m_ref_name.c_str();
         m_const_ref_def.class_name = m_const_ref_name.c_str();
 
-        auto& ids = QJSClassIDManager<T>::GetOrGen();
+        auto& ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(m_context));
 
         QJS_CALL(m_context,
                  JS_NewClass(JS_GetRuntime(m_context), ids.m_id, &m_def));

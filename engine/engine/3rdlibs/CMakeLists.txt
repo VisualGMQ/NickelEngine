@@ -51,6 +51,7 @@ add_subdirectory(implot)
 
 set(QJS_BUILD_COMPILER ON)
 set(QJS_BUILD_REPL ON)
+set(QJS_BUILD_LIBC ON)
 add_subdirectory(quickjs)
 
 mark_as_3rdlib(SDL3-static)

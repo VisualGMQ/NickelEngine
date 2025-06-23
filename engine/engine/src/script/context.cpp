@@ -3,6 +3,7 @@
 #include "nickel/script/binding/common.hpp"
 #include "nickel/script/binding/module.hpp"
 #include "nickel/script/binding/runtime.hpp"
+#include "quickjs-libc.h"
 #include "quickjs.h"
 
 namespace nickel::script {
@@ -12,6 +13,11 @@ QJSContext::QJSContext(QJSRuntime& runtime) : m_runtime{runtime} {
     if (!m_context) {
         LOGE("Failed to create JS context");
     }
+
+    js_std_add_helpers(m_context, 0, nullptr);
+    js_init_module_bjson(m_context, "bjson");
+    js_init_module_os(m_context, "os");
+    js_init_module_std(m_context, "std");
 }
 
 QJSContext::~QJSContext() {
@@ -37,15 +43,16 @@ JSValue QJSContext::Eval(std::span<const char> content, const Path& filename,
         JS_FreeValue(m_context, result);
     }
 
-    JSValue value = JS_Eval(m_context, content.data(), content.size(),
-                            filename.ToString().c_str(),
-                            strict_mode ? JS_EVAL_FLAG_STRICT : 0);
+    JSValue value = JS_Eval(
+        m_context, content.data(), content.size(), filename.ToString().c_str(),
+        JS_EVAL_TYPE_GLOBAL | (strict_mode ? JS_EVAL_FLAG_STRICT : 0));
     JS_VALUE_CHECK_RETURN_UNDEFINED(m_context, value);
     return value;
 }
 
 QJSModule& QJSContext::NewModule(const std::string& name) {
-    return *m_modules.emplace_back(std::make_unique<QJSModule>(*this, name));
+    return *m_modules.emplace_back(
+        std::make_unique<QJSModule>(*this, m_runtime.GetClassFactory(), name));
 }
 
 QJSRuntime& QJSContext::GetRuntime() const {

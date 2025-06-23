@@ -9,11 +9,11 @@ namespace nickel::script {
 template <typename T>
 class QJSClass;
 
-class QJSClassFactory : public Singlton<QJSClassFactory, false> {
+class QJSClassFactory {
 public:
     template <typename T>
     QJSClass<T>& CreateOrGet(JSContext* ctx, const std::string& name) {
-        QJSClassIDFamily ids = QJSClassIDManager<T>::GetOrGen();
+        QJSClassIDFamily ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx));
 
         if (ids.m_id != 0) {
             return static_cast<QJSClass<T>&>(*m_mutable_map[ids.m_id]);

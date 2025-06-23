@@ -19,7 +19,7 @@ struct JSConstructorTraits {
         Class* p = callConstructor(ctx, argv,
                                    std::make_index_sequence<sizeof...(Args)>{});
 
-        auto id = QJSClass<Class>::GetID();
+        auto id = QJSClassIDManager<Class>::GetOrGen(JS_GetRuntime(ctx)).m_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -71,29 +71,31 @@ private:
         JSClassID id = JS_GetClassID(self);
         NICKEL_ASSERT(id != 0, "call function on unregistered class");
 
-        if (id == QJSClass<clazz>::GetID()) {
+        auto ids = QJSClassIDManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
+
+        if (id == ids.m_id) {
             clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
             return doCallFn(self_obj, argv, indices);
         }
-        if (id == QJSClass<clazz>::GetConstTypeID()) {
+        if (id == ids.m_const_id) {
             const clazz* self_obj =
                 static_cast<const clazz*>(JS_GetOpaque(self, id));
             return doCallFn(self_obj, argv, indices);
         }
-        if (id == QJSClass<clazz>::GetRefTypeID()) {
+        if (id == ids.m_ref_id) {
             clazz& self_obj = *static_cast<clazz*>(JS_GetOpaque(self, id));
             return doCallFn(&self_obj, argv, indices);
         }
-        if (id == QJSClass<clazz>::GetConstRefTypeID()) {
+        if (id == ids.m_const_ref_id) {
             const clazz& self_obj =
                 *static_cast<const clazz*>(JS_GetOpaque(self, id));
             return doCallFn(&self_obj, argv, indices);
         }
-        if (id == QJSClass<clazz>::GetPointerTypeID()) {
+        if (id == ids.m_pointer_id) {
             clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
             return doCallFn(self_obj, argv, indices);
         }
-        if (id == QJSClass<clazz>::GetConstPointerTypeID()) {
+        if (id == ids.m_const_pointer_id) {
             const clazz* self_obj =
                 static_cast<const clazz*>(JS_GetOpaque(self, id));
             return doCallFn(self_obj, argv, indices);
@@ -159,8 +161,8 @@ struct JSMemberVariableTraits {
     static JSValue Getter(JSContext* ctx, JSValue this_val) {
         JSClassID id = JS_GetClassID(this_val);
 
-        NICKEL_ASSERT(id == QJSClass<clazz>::GetID() ||
-                      id == QJSClass<clazz>::GetConstTypeID());
+        auto& ids = QJSClassIDManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
+        NICKEL_ASSERT(id == ids.m_id || id == ids.m_const_id);
         const clazz* p =
             static_cast<const clazz*>(JS_GetOpaque2(ctx, this_val, id));
         if (!p) {
@@ -179,8 +181,9 @@ struct JSMemberVariableTraits {
             return JS_ThrowTypeError(ctx, "operate on unregistered cpp class");
         }
 
-        clazz* p = static_cast<clazz*>(
-            JS_GetOpaque2(ctx, this_val, QJSClass<clazz>::GetID()));
+        clazz* p = static_cast<clazz*>(JS_GetOpaque2(
+            ctx, this_val,
+            QJSClassIDManager<clazz>::GetOrGen(JS_GetRuntime(ctx)).m_id));
         if (!p) {
             LOGE("access class variable from nullptr");
             return JS_EXCEPTION;

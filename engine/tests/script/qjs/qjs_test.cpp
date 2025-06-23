@@ -6,25 +6,17 @@
 
 using namespace nickel;
 
-void ThrowWhenException(JSValue value) {
-    if (JS_IsException(value)) {
-        throw std::runtime_error("test failed");
-    }
-}
-
 struct Person {
     static int static_elem;
-    
+
     int age = 12;
     float height = 180;
     std::string name;
     const int const_value = 996;
 
-    Person(std::string name): name{name} {}
+    Person(std::string name) : name{name} {}
 
-    static void SayHello() {
-        LOGI("I am person");
-    }
+    static void SayHello() { LOGI("I am person"); }
 
     void Introduce() const {
         LOGI("I am {}, age = {}, height = {}", name, age, height);
@@ -49,9 +41,9 @@ TEST_CASE("binding") {
         std::string string_elem = "string";
 
         script::QJSRuntime runtime;
-        
-        auto& module =
-            runtime.GetContext().NewModule("test_module");
+        script::QJSContext& ctx = runtime.GetContext();
+
+        auto& module = runtime.GetContext().NewModule("test_module");
 
         module.AddProperty("int_elem", int_elem)
             .AddProperty("char_elem", char_elem)
@@ -67,7 +59,21 @@ TEST_CASE("binding") {
             .AddProperty("string_elem", string_elem)
             .EndModule();
 
-        script::QJSClassFactory::GetInst().DoRegister();
+        runtime.DoRegister();
+
+        {
+            std::string_view pre_code = R"(
+                import * as test_module from 'test_module'
+                globalThis.test_module = test_module
+            )";
+            JSValue value = JS_Eval(ctx, pre_code.data(), pre_code.size(),
+                                    "module import", JS_EVAL_TYPE_MODULE);
+            if (JS_IsException(value)) {
+                LogJSException(ctx);
+            }
+            REQUIRE_FALSE(JS_IsException(value));
+            JS_FreeValue(ctx, value);
+        }
 
         std::string_view code = R"(
             function CheckExists(value) {
@@ -90,28 +96,20 @@ TEST_CASE("binding") {
             CheckExists(test_module.string_elem)
         )";
 
-        JSValue value = JS_Eval(script::QJSRuntime::GetInst().GetContext(), code.data(),
-                code.size(), "test file",
-                JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+        JSValue value = JS_Eval(ctx, code.data(), code.size(), "test file",
+                                JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
 
+        if (JS_IsException(value)) {
+            LogJSException(ctx);
+        }
         REQUIRE_FALSE(JS_IsException(value));
+
+        JS_FreeValue(ctx, value);
     }
 
     /*
     auto& module =
         script::QJSRuntime::GetInst().GetContext().NewModule("test_module");
-    module.AddProperty("int_elem", int_elem)
-        .AddProperty("char_elem", char_elem)
-        .AddProperty("long_elem", long_elem)
-        .AddProperty("uint_elem", uint_elem)
-        .AddProperty("uchar_elem", uchar_elem)
-        .AddProperty("ulong_elem", ulong_elem)
-        .AddProperty("float_elem", float_elem)
-        .AddProperty("double_elem", double_elem)
-        .AddProperty("bool_elem", bool_elem)
-        .AddProperty("string_view", str_view_elem)
-        .AddProperty("str_literal", str_literal)
-        .AddProperty("string_elem", string_elem);
     module.AddClass<Person>("Person")
         .AddConstructor<std::string>()
         .AddField<&Person::age>("age")
@@ -125,7 +123,7 @@ TEST_CASE("binding") {
 
     script::QJSClassFactory::GetInst().DoRegister();
 
-    LOGI("id = {}", script::QJSClass<Person>::GetID());
+    LOGI("id = {}", script::QJSClassIDManager<Person>::GetOrGen().m_id);
     LOGI("const type id = {}", script::QJSClass<Person>::GetConstTypeID());
 
     std::ifstream file("tests/script/qjs/test.js",
