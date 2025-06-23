@@ -1,6 +1,6 @@
-﻿#include "nickel/script/internal/common.hpp"
-
+#include "nickel/script/binding/common.hpp"
 #include "nickel/common/log.hpp"
+#include "quickjs.h"
 
 namespace nickel::script {
 
@@ -26,4 +26,5 @@ void LogJSException(JSContext* ctx) {
     JS_FreeValue(ctx, exception);
 }
 
-}  // namespace nickel::script
+
+}

@@ -1,10 +1,5 @@
 #include "nickel/script/internal/qjs_script_impl.hpp"
 
-#include "nickel/common/common.hpp"
-#include "nickel/common/log.hpp"
-#include "nickel/common/macro.hpp"
-#include "nickel/script/internal/binding.hpp"
-
 namespace nickel::script {
 
 QuickJSScriptImpl::QuickJSScriptImpl(QJSContext& ctx, JSValue value)

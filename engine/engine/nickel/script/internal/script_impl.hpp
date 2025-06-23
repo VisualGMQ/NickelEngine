@@ -8,6 +8,9 @@ namespace nickel::script {
 class ScriptManagerImpl {
 public:
     ScriptManagerImpl();
+    void Eval(std::string_view code);
+    void EvalBinary(std::span<uint8_t> code);
+    
     QuickJSScript Load(const Path&);
     QuickJSScript Load(std::span<const char> content);
     

@@ -1,6 +1,6 @@
 #pragma once
-#include "nickel/script/internal/binding.hpp"
 #include "nickel/common/memory/refcountable.hpp"
+#include "nickel/script/binding/context.hpp"
 #include "quickjs.h"
 
 namespace nickel::script {
@@ -20,4 +20,4 @@ private:
     JSValue m_value;
 };
 
-}  // namespace nickel
+}  // namespace nickel::script
