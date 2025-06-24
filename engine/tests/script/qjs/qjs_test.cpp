@@ -35,6 +35,22 @@ enum class MyEnum {
     Value3,
 };
 
+Person& RefTest(Person& p) {
+    return p;
+}
+
+const Person& ConstRefTest(const Person& p) {
+    return p;
+}
+
+Person* PtrTest(Person* p) {
+    return p;
+}
+
+const Person* ConstPtrTest(const Person* p) {
+    return p;
+}
+
 TEST_CASE("binding") {
     SECTION("binding fundamental") {
         int int_elem = 1;
@@ -134,14 +150,10 @@ TEST_CASE("binding") {
                 .AddItem(Person::Enum::Value2, "Value2")
             .EndEnum()
         .EndClass()
-        .AddFunction<+[](const Person& p) -> const Person& { return p; }>(
-            "ConstRefTest")
-        .AddFunction<+[](Person& p) -> Person& {
-            return p;
-        }>("RefTest")
-        .AddFunction<+[](Person* p) -> Person* { return p; }>("PtrTest")
-        .AddFunction<+[](const Person* p) -> const Person* { return p; }>(
-            "ConstPtrTest")
+        .AddFunction<ConstRefTest>("ConstRefTest")
+        .AddFunction<RefTest>("RefTest")
+        .AddFunction<PtrTest>("PtrTest")
+        .AddFunction<ConstPtrTest>("ConstPtrTest")
         .AddEnum<MyEnum>("MyEnum")
             .AddItem(MyEnum::Value1, "Value1")
             .AddItem(MyEnum::Value2, "Value2")
