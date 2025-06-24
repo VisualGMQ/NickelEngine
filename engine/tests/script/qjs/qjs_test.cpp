@@ -55,18 +55,18 @@ TEST_CASE("binding") {
 
         auto& module = runtime.GetContext().NewModule("test_module");
 
-        module.AddProperty("int_elem", int_elem)
-            .AddProperty("char_elem", char_elem)
-            .AddProperty("long_elem", long_elem)
-            .AddProperty("uint_elem", uint_elem)
-            .AddProperty("uchar_elem", uchar_elem)
-            .AddProperty("ulong_elem", ulong_elem)
-            .AddProperty("float_elem", float_elem)
-            .AddProperty("double_elem", double_elem)
-            .AddProperty("bool_elem", bool_elem)
-            .AddProperty("string_view", str_view_elem)
-            .AddProperty("str_literal", str_literal)
-            .AddProperty("string_elem", string_elem)
+        module.AddField("int_elem", int_elem)
+            .AddField("char_elem", char_elem)
+            .AddField("long_elem", long_elem)
+            .AddField("uint_elem", uint_elem)
+            .AddField("uchar_elem", uchar_elem)
+            .AddField("ulong_elem", ulong_elem)
+            .AddField("float_elem", float_elem)
+            .AddField("double_elem", double_elem)
+            .AddField("bool_elem", bool_elem)
+            .AddField("string_view", str_view_elem)
+            .AddField("str_literal", str_literal)
+            .AddField("string_elem", string_elem)
             .EndModule();
 
         {
@@ -134,13 +134,13 @@ TEST_CASE("binding") {
                 .AddItem(Person::Enum::Value2, "Value2")
             .EndEnum()
         .EndClass()
-        .AddProperty<+[](const Person& p) -> const Person& { return p; }>(
+        .AddFunction<+[](const Person& p) -> const Person& { return p; }>(
             "ConstRefTest")
-        .AddProperty<+[](Person& p) -> Person& {
+        .AddFunction<+[](Person& p) -> Person& {
             return p;
         }>("RefTest")
-        .AddProperty<+[](Person* p) -> Person* { return p; }>("PtrTest")
-        .AddProperty<+[](const Person* p) -> const Person* { return p; }>(
+        .AddFunction<+[](Person* p) -> Person* { return p; }>("PtrTest")
+        .AddFunction<+[](const Person* p) -> const Person* { return p; }>(
             "ConstPtrTest")
         .AddEnum<MyEnum>("MyEnum")
             .AddItem(MyEnum::Value1, "Value1")

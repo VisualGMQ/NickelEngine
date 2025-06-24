@@ -7,8 +7,8 @@ set(NICKEL_REFL_GENERATE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/refl_generate)
 set(NICKEL_REFL_GENERATE_DIR ${NICKEL_REFL_GENERATE_INCLUDE_DIR}/nickel/refl_generate/)
 file(MAKE_DIRECTORY ${NICKEL_REFL_GENERATE_DIR})
 # copy tirvial file
-file(COPY_FILE refl_code_generator/mustache/trivial_header.hpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.hpp ONLY_IF_DIFFERENT)
-file(COPY_FILE refl_code_generator/mustache/trivial_impl.cpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ONLY_IF_DIFFERENT)
+file(COPY_FILE refl_code_generator/mustache/refl/trivial_header.hpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.hpp ONLY_IF_DIFFERENT)
+file(COPY_FILE refl_code_generator/mustache/refl/trivial_impl.cpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ONLY_IF_DIFFERENT)
 add_subdirectory(refl_code_generator)
 
 file(GLOB_RECURSE ENGINE_SRC src/*.cpp)

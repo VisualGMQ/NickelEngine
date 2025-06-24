@@ -14,7 +14,7 @@ public:
     QJSContext& EndModule() const;
 
     template <typename T>
-    QJSModule& AddProperty(const std::string& name, const T& value) {
+    QJSModule& AddField(const std::string& name, const T& value) {
         JSValueWrapper<T> wrapper;
         JSValue js_value = wrapper.Wrap(m_context, value);
         if (!JS_IsUndefined(js_value)) {
@@ -24,7 +24,7 @@ public:
     }
 
     template <auto F>
-    QJSModule& AddProperty(const std::string& name) {
+    QJSModule& AddFunction(const std::string& name) {
         using fn_traits = JSFnTraits<F>;
         JSValue value = JS_NewCFunction(m_context, fn_traits::Fn, name.c_str(),
                                         fn_traits::args_num);
