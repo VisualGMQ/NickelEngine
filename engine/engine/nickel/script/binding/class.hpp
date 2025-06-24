@@ -13,6 +13,8 @@
 
 namespace nickel::script {
 
+class QJSModule;
+
 template <typename T>
 class QJSClass : public QJSClassBase {
 public:
@@ -34,6 +36,8 @@ public:
         JS_VALUE_CHECK(ctx, m_const_ref_proto);
     }
 
+    void SetOwnerModule(QJSModule& module) { m_module = &module; }
+
     void ResetClassName(const std::string& name) {
         m_name = name;
         m_const_name = "const " + name;
@@ -43,7 +47,7 @@ public:
         m_const_ref_name = "const " + name + "&";
     }
 
-    void EndClass() override {
+    QJSModule& EndClass() {
         m_def.class_name = m_name.c_str();
         m_def.finalizer = jsFinalizer;
 
@@ -76,6 +80,21 @@ public:
                          m_const_pointer_proto);
         JS_SetClassProto(m_context, ids.m_ref_id, m_ref_proto);
         JS_SetClassProto(m_context, ids.m_const_ref_id, m_const_ref_proto);
+
+        // create trivial ctor to hold enum defs
+        if (!m_enums.empty() && JS_IsUndefined(m_ctor)) {
+            m_ctor = JS_NewCFunction(m_context, trivialCtor, m_name.c_str(), 0);
+
+            JS_SetConstructor(m_context, m_ctor, m_proto);
+        }
+        
+        for (auto& e : m_enums) {
+            QJS_CALL(m_context, JS_SetPropertyStr(m_context, m_ctor,
+                                                  e->GetName().c_str(),
+                                                  e->GetValue()));
+        }
+
+        return *m_module;
     }
 
     template <typename... Args>
@@ -219,6 +238,12 @@ public:
     }
 
     template <typename U>
+    QJSEnum<U, QJSClass>& AddEnum(const std::string& name) {
+        return static_cast<QJSEnum<U, QJSClass>&>(*m_enums.emplace_back(
+            std::make_unique<QJSEnum<U, QJSClass>>(*this, m_context, name)));
+    }
+
+    template <typename U>
     QJSClass& AddStaticField(const std::string& name, U* ptr) {
         JS_SetPropertyStr(m_context, m_ctor, name.c_str(),
                           JSValueWrapper<U>{}.Wrap(m_context, *ptr));
@@ -247,6 +272,7 @@ public:
 
 private:
     JSContext* m_context;
+    QJSModule* m_module;
 
     JSClassDef m_def{};
     JSClassDef m_const_type_def{};
@@ -271,9 +297,15 @@ private:
 
     JSValue m_ctor;
 
+    std::vector<std::unique_ptr<QJSEnumBase>> m_enums;
+
     static void jsFinalizer(JSRuntime* rt, JSValue val) {
         T* p = static_cast<T*>(JS_GetOpaque(val, JS_GetClassID(val)));
         if (p) delete p;
+    }
+
+    static JSValue trivialCtor(JSContext*, JSValue, int, JSValue*) {
+        return JS_UNDEFINED;
     }
 };
 

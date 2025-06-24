@@ -3,7 +3,6 @@
 #include "nickel/common/macro.hpp"
 #include "nickel/script/binding/common.hpp"
 #include "nickel/script/binding/context.hpp"
-#include "nickel/script/binding/runtime.hpp"
 #include "quickjs-libc.h"
 #include "quickjs.h"
 
@@ -21,6 +20,11 @@ QJSContext& QJSModule::EndModule() const {
         for (auto& property : m_properties) {
             QJS_CALL(m_context, JS_AddModuleExport(m_context, m_module,
                                                    property.m_name.c_str()));
+        }
+
+        for (auto& e : m_enums) {
+            QJS_CALL(m_context, JS_AddModuleExport(m_context, m_module,
+                                                   e->GetName().c_str()));
         }
 
         for (auto& clazz : m_classes) {
@@ -51,13 +55,22 @@ const std::string& QJSModule::GetName() const {
 }
 
 int QJSModule::moduleInitFunc(JSContext* ctx, JSModuleDef* m) {
-    for (auto& module : QJSRuntime::GetInst().GetContext().GetModules()) {
+    QJSContext* qjs_ctx = static_cast<QJSContext*>(JS_GetContextOpaque(ctx));
+    for (auto& module : qjs_ctx->GetModules()) {
         if (module->m_module == m) {
             bool success = true;
             for (auto& property : module->m_properties) {
                 if (JS_SetModuleExport(ctx, m, property.m_name.c_str(),
                                        property.m_value) == -1) {
                     LOGE("export {} from module {} failed!", property.m_name,
+                         module->m_name);
+                    success = false;
+                }
+            }
+            for (auto& e : module->m_enums) {
+                if (JS_SetModuleExport(ctx, m, e->GetName().c_str(),
+                                       e->GetValue()) == -1) {
+                    LOGE("export enum {} from module {} failed!", e->GetName(),
                          module->m_name);
                     success = false;
                 }

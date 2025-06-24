@@ -59,7 +59,8 @@ template <typename T>
 requires std::is_class_v<T>
 struct JSValueWrapper<const T*> {
     JSValue Wrap(JSContext* ctx, const T* value) {
-        JSClassID id = QJSClassIDManager<T>::GetOrGen().m_const_pointer_id;
+        JSClassID id = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
+                           .m_const_pointer_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -72,7 +73,8 @@ struct JSValueWrapper<const T*> {
         NICKEL_RETURN_VALUE_IF_FALSE_LOGE(nullptr, JS_IsObject(value),
                                           "js value is not object");
         return static_cast<const T*>(JS_GetOpaque(
-            value, QJSClassIDManager<T>::GetOrGen().m_const_pointer_id));
+            value, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
+                       .m_const_pointer_id));
     }
 };
 
@@ -80,7 +82,8 @@ template <typename T>
 requires std::is_class_v<T>
 struct JSValueWrapper<T*> {
     JSValue Wrap(JSContext* ctx, T* value) {
-        JSClassID id = QJSClassIDManager<T>::GetOrGen().m_pointer_id;
+        JSClassID id =
+            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -92,8 +95,9 @@ struct JSValueWrapper<T*> {
     T* Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_RETURN_VALUE_IF_FALSE_LOGE(nullptr, JS_IsObject(value),
                                           "js value is not object");
-        return static_cast<T*>(
-            JS_GetOpaque(value, QJSClassIDManager<T>::GetOrGen().m_pointer_id));
+        return static_cast<T*>(JS_GetOpaque(
+            value,
+            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id));
     }
 };
 
@@ -101,7 +105,8 @@ template <typename T>
 requires std::is_class_v<T>
 struct JSValueWrapper<T&> {
     JSValue Wrap(JSContext* ctx, T& value) {
-        JSClassID id = QJSClassIDManager<T>::GetOrGen().m_ref_id;
+        JSClassID id =
+            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_ref_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -112,8 +117,9 @@ struct JSValueWrapper<T&> {
 
     T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
-        return *static_cast<T*>(
-            JS_GetOpaque(value, QJSClassIDManager<T>::GetOrGen().m_ref_id));
+        return *static_cast<T*>(JS_GetOpaque(
+            value,
+            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_ref_id));
     }
 };
 
@@ -121,7 +127,8 @@ template <typename T>
 requires std::is_class_v<T>
 struct JSValueWrapper<const T&> {
     JSValue Wrap(JSContext* ctx, const T& value) {
-        JSClassID id = QJSClassIDManager<T>::GetOrGen().m_const_ref_id;
+        JSClassID id =
+            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_ref_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -133,7 +140,8 @@ struct JSValueWrapper<const T&> {
     const T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
         return *static_cast<const T*>(JS_GetOpaque(
-            value, QJSClassIDManager<T>::GetOrGen().m_const_ref_id));
+            value,
+            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_ref_id));
     }
 };
 

@@ -18,6 +18,8 @@ QJSContext::QJSContext(QJSRuntime& runtime) : m_runtime{runtime} {
     js_init_module_bjson(m_context, "bjson");
     js_init_module_os(m_context, "os");
     js_init_module_std(m_context, "std");
+
+    JS_SetContextOpaque(m_context, this);
 }
 
 QJSContext::~QJSContext() {

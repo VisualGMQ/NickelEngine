@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/common/log.hpp"
 
 struct JSContext;
 

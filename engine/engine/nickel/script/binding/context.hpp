@@ -34,4 +34,4 @@ private:
     std::vector<std::unique_ptr<QJSModule>> m_modules;
 };
 
-}
+}  // namespace nickel::script

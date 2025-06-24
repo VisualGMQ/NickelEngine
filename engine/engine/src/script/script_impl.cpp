@@ -10,12 +10,12 @@ ScriptManagerImpl::ScriptManagerImpl() {
 }
 
 void ScriptManagerImpl::Eval(std::string_view code) {
-    JS_Eval(QJSRuntime::GetInst().GetContext(), code.data(), code.size(),
-            nullptr, JS_EVAL_FLAG_STRICT | JS_EVAL_TYPE_GLOBAL);
+    JS_Eval(m_runtime.GetContext(), code.data(), code.size(), nullptr,
+            JS_EVAL_FLAG_STRICT | JS_EVAL_TYPE_GLOBAL);
 }
 
 void ScriptManagerImpl::EvalBinary(std::span<uint8_t> code) {
-    JSContext* ctx = QJSRuntime::GetInst().GetContext();
+    JSContext* ctx = m_runtime.GetContext();
     JSValue obj =
         JS_ReadObject(ctx, code.data(), code.size(), JS_READ_OBJ_BYTECODE);
 
@@ -32,14 +32,14 @@ QuickJSScript ScriptManagerImpl::Load(const Path& filename) {
     auto content =
         Context::GetInst().GetStorageManager().GetUserStorage().ReadStorageFile(
             filename);
-    auto& ctx = QJSRuntime::GetInst().GetContext();
+    auto& ctx = m_runtime.GetContext();
     // FIXME: remove new
     return QuickJSScript{
         new QuickJSScriptImpl(ctx, ctx.Eval(content, filename, true))};
 }
 
 QuickJSScript ScriptManagerImpl::Load(std::span<const char> content) {
-    auto& ctx = QJSRuntime::GetInst().GetContext();
+    auto& ctx = m_runtime.GetContext();
     // FIXME: remove new
     return QuickJSScript{
         new QuickJSScriptImpl{ctx, ctx.Eval(content, "", true)}
@@ -63,21 +63,7 @@ JSValue jsPrint2Console(JSContext* context, JSValue self, int argc,
 }
 
 void ScriptManagerImpl::bindingCpp() {
-    bindingConsoleFn();
-
     // TODO: bind other cpp
-}
-
-void ScriptManagerImpl::bindingConsoleFn() {
-    auto& ctx = QJSRuntime::GetInst().GetContext();
-    JSValue global_obj = JS_GetGlobalObject(ctx);
-
-    JSValue console_obj = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, console_obj, "log",
-                      JS_NewCFunction(ctx, jsPrint2Console, "log", 1));
-    JS_SetPropertyStr(ctx, global_obj, "console", console_obj);
-
-    JS_FreeValue(ctx, global_obj);
 }
 
 ScriptManager::ScriptManager()

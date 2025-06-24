@@ -42,8 +42,4 @@ QJSClassFactory& QJSRuntime::GetClassFactory() {
     return *m_class_factory;
 }
 
-void QJSRuntime::DoRegister() {
-    m_class_factory->DoRegister();
-}
-
 }  // namespace nickel::script

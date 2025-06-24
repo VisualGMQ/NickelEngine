@@ -1,5 +1,4 @@
 #pragma once
-#include "nickel/common/singleton.hpp"
 
 // forward declare
 struct JSRuntime;
@@ -10,8 +9,7 @@ class QJSClassFactory;
 
 class QJSContext;
 
-// TODO: remove singlton
-class QJSRuntime : public Singlton<QJSRuntime, false> {
+class QJSRuntime {
 public:
     QJSRuntime();
     ~QJSRuntime();
@@ -21,7 +19,6 @@ public:
     const QJSContext& GetContext() const;
     QJSContext& GetContext();
     QJSClassFactory& GetClassFactory();
-    void DoRegister();
 
 private:
     JSRuntime* m_runtime{};

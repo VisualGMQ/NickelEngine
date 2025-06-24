@@ -10,6 +10,57 @@ namespace nickel::script {
 template <typename>
 class QJSClass;
 
+template <typename T>
+struct FnParamConverter {
+    static T Convert(JSContext* ctx, JSValue value) {
+        return JSValueWrapper<T>{}.Unwrap(ctx, value);
+    }
+};
+
+template <typename T>
+requires std::is_class_v<T>
+struct FnParamConverter<T&> {
+    static T& Convert(JSContext* ctx, JSValue value) {
+        auto& ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        auto id = JS_GetClassID(value);
+        if (id == ids.m_id || id == ids.m_ref_id || id == ids.m_pointer_id) {
+            return *static_cast<T*>(JS_GetOpaque(value, id));
+        }
+
+        NICKEL_ASSERT(false, "[quickjs]: invalid argument convert");
+    }
+};
+
+template <typename T>
+requires std::is_class_v<T>
+struct FnParamConverter<T*> {
+    static T* Convert(JSContext* ctx, JSValue value) {
+        auto& ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        auto id = JS_GetClassID(value);
+        if (id == ids.m_id || id == ids.m_ref_id || id == ids.m_pointer_id) {
+            return static_cast<T*>(JS_GetOpaque(value, id));
+        }
+
+        NICKEL_ASSERT(false, "[quickjs]: invalid argument convert");
+    }
+};
+
+template <typename T>
+requires std::is_class_v<T>
+struct FnParamConverter<const T*> {
+    static const T* Convert(JSContext*, JSValue value) {
+        return static_cast<T*>(JS_GetOpaque(value, JS_GetClassID(value)));
+    }
+};
+
+template <typename T>
+requires std::is_class_v<T>
+struct FnParamConverter<const T&> {
+    static const T& Convert(JSContext*, JSValue value) {
+        return *static_cast<T*>(JS_GetOpaque(value, JS_GetClassID(value)));
+    }
+};
+
 template <typename Class, typename... Args>
 struct JSConstructorTraits {
     static JSValue Fn(JSContext* ctx, JSValueConst new_target, int argc,
@@ -35,7 +86,7 @@ private:
                                   std::index_sequence<Indices...>) {
         using args_list = refl::type_list<Args...>;
         return new Class{
-            JSValueWrapper<refl::list_element_t<args_list, Indices>>{}.Unwrap(
+            FnParamConverter<refl::list_element_t<args_list, Indices>>::Convert(
                 ctx, argv[Indices])...};
     }
 };
@@ -58,7 +109,7 @@ struct JSMemberFnTraits {
             callFn(ctx, self, argv, std::make_index_sequence<args_num>{});
             return JS_UNDEFINED;
         } else {
-            auto return_value =
+            auto&& return_value =
                 callFn(ctx, self, argv, std::make_index_sequence<args_num>{});
             return JSValueWrapper<return_type>{}.Wrap(ctx, return_value);
         }
@@ -75,43 +126,43 @@ private:
 
         if (id == ids.m_id) {
             clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
-            return doCallFn(self_obj, argv, indices);
+            return doCallFn(ctx, self_obj, argv, indices);
         }
         if (id == ids.m_const_id) {
             const clazz* self_obj =
                 static_cast<const clazz*>(JS_GetOpaque(self, id));
-            return doCallFn(self_obj, argv, indices);
+            return doCallFn(ctx, self_obj, argv, indices);
         }
         if (id == ids.m_ref_id) {
-            clazz& self_obj = *static_cast<clazz*>(JS_GetOpaque(self, id));
-            return doCallFn(&self_obj, argv, indices);
+            clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
+            return doCallFn(ctx, self_obj, argv, indices);
         }
         if (id == ids.m_const_ref_id) {
             const clazz& self_obj =
                 *static_cast<const clazz*>(JS_GetOpaque(self, id));
-            return doCallFn(&self_obj, argv, indices);
+            return doCallFn(ctx, &self_obj, argv, indices);
         }
         if (id == ids.m_pointer_id) {
             clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
-            return doCallFn(self_obj, argv, indices);
+            return doCallFn(ctx, self_obj, argv, indices);
         }
         if (id == ids.m_const_pointer_id) {
             const clazz* self_obj =
                 static_cast<const clazz*>(JS_GetOpaque(self, id));
-            return doCallFn(self_obj, argv, indices);
+            return doCallFn(ctx, self_obj, argv, indices);
         }
     }
 
     template <typename T, size_t... Indices>
-    static return_type doCallFn(T&& self, JSValue* argv,
+    static return_type doCallFn(JSContext* ctx, T&& self, JSValue* argv,
                                 std::index_sequence<Indices...>) {
         if constexpr (sizeof...(Indices) == 0) {
             return std::invoke(F, std::forward<T>(self));
         } else {
             return std::invoke(
                 F, std::forward<T>(self),
-                JSValueWrapper<refl::list_element_t<args_list, Indices>>{}
-                    .Unwrap(argv[Indices])...);
+                FnParamConverter<refl::list_element_t<args_list, Indices>>::
+                    Convert(ctx, argv[Indices])...);
         }
     }
 };
@@ -133,7 +184,7 @@ struct JSFnTraits {
             callFn(ctx, argv, std::make_index_sequence<args_num>{});
             return JS_UNDEFINED;
         } else {
-            auto return_value =
+            auto&& return_value =
                 callFn(ctx, argv, std::make_index_sequence<args_num>{});
             JSValueWrapper<return_type> wrapper;
             return wrapper.Wrap(ctx, return_value);
@@ -146,7 +197,7 @@ private:
                               std::index_sequence<Indices...>) {
         return std::invoke(
             F,
-            JSValueWrapper<refl::list_element_t<args_list, Indices>>{}.Unwrap(
+            FnParamConverter<refl::list_element_t<args_list, Indices>>::Convert(
                 ctx, argv[Indices])...);
     }
 };
