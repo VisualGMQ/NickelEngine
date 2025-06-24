@@ -12,6 +12,8 @@ class ReflAttribute:
     def __init__(self):
         self.need_refl = False
         self.force_no_refl = False
+        self.need_script_register = False
+        self.force_no_script_register  = False
 
 class Node:
     def __init__(self, name: str):
@@ -109,8 +111,12 @@ def parse_attributes(attr_str: str) -> ReflAttribute:
     refl_attrs = ReflAttribute()
     if 'refl' in split_attrs:
         refl_attrs.need_refl = True 
+    if 'script' in split_attrs:
+        refl_attrs.need_script_register = True 
     if 'norefl' in split_attrs:
-        refl_attrs.force_no_refl = False
+        refl_attrs.force_no_refl = True
+    if 'noscript' in split_attrs:
+        refl_attrs.force_no_script_register = True
     return refl_attrs
 
 def transform_attributes_by_parent(attrs: ReflAttribute, parent_attrs: ReflAttribute|None) -> ReflAttribute:
@@ -118,6 +124,8 @@ def transform_attributes_by_parent(attrs: ReflAttribute, parent_attrs: ReflAttri
     final_attrs = ReflAttribute()
     final_attrs.force_no_refl = attrs.force_no_refl or parent_attributes.force_no_refl
     final_attrs.need_refl = not final_attrs.force_no_refl and (attrs.need_refl or parent_attributes.need_refl)
+    final_attrs.force_no_script_register = attrs.force_no_script_register or parent_attributes.force_no_script_register
+    final_attrs.need_script_register = not final_attrs.force_no_script_register and (attrs.need_script_register or parent_attributes.need_script_register)
     return final_attrs
 
 def record_node(node: Node, parent: Node):
@@ -256,11 +264,17 @@ def parse_one_file(filename: pathlib.Path, include_dir: str) -> Node:
     recurse_visit_cursor(tu.cursor, root_node, filename)
     return root_node
    
-g_class_refl_mustache = pathlib.Path('./mustache/class_refl.mustache').read_text(encoding='utf-8')
-g_enum_refl_mustache = pathlib.Path('./mustache/enum_refl.mustache').read_text(encoding='utf-8')
-g_refl_mustache = pathlib.Path('./mustache/refl.mustache').read_text(encoding='utf-8')
-g_header_mustache = pathlib.Path('./mustache/header.mustache').read_text(encoding='utf-8')
-g_impl_mustache = pathlib.Path('./mustache/impl.mustache').read_text(encoding='utf-8')
+g_class_refl_mustache = pathlib.Path('./mustache/refl/class_refl.mustache').read_text(encoding='utf-8')
+g_enum_refl_mustache = pathlib.Path('./mustache/refl/enum_refl.mustache').read_text(encoding='utf-8')
+g_refl_mustache = pathlib.Path('./mustache/refl/refl.mustache').read_text(encoding='utf-8')
+g_refl_header_mustache = pathlib.Path('./mustache/refl/header.mustache').read_text(encoding='utf-8')
+g_refl_impl_mustache = pathlib.Path('./mustache/refl/impl.mustache').read_text(encoding='utf-8')
+ 
+g_class_script_binding_mustache = pathlib.Path('./mustache/script/class_binding.mustache').read_text(encoding='utf-8')
+g_enum_script_binding_mustache = pathlib.Path('./mustache/script/enum_binding.mustache').read_text(encoding='utf-8')
+g_script_binding_mustache = pathlib.Path('./mustache/script/binding.mustache').read_text(encoding='utf-8')
+g_script_binding_header_mustache = pathlib.Path('./mustache/script/header.mustache').read_text(encoding='utf-8')
+g_script_binding_impl_mustache = pathlib.Path('./mustache/script/impl.mustache').read_text(encoding='utf-8')
 
 def node_code_generate(parsed_filename: str, node: Node) -> (str, str):
     final_filename = (parsed_filename.replace('\\', '/')
@@ -400,7 +414,7 @@ if __name__ == '__main__':
         for path, node in new_file_record.parsed_file_record.items():
             if len(node.children) == 0:
                 continue
-                
+
             func_name, code = node_code_generate(str(path), node)
             final_filename = func_name + '.hpp'
             refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
@@ -411,7 +425,7 @@ if __name__ == '__main__':
             save_generated_code(output_dir / final_filename, code)
 
         with open(header_filename, 'w+', encoding='utf-8') as f:
-            f.write(chevron.render(g_header_mustache, {}))
+            f.write(chevron.render(g_refl_header_mustache, {}))
 
         with open(impl_filename, 'w+', encoding='utf-8') as f:
-            f.write(chevron.render(g_impl_mustache, refl_impl_data))
+            f.write(chevron.render(g_refl_impl_mustache, refl_impl_data))
