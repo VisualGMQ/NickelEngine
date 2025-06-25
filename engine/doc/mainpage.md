@@ -6,14 +6,20 @@ a game engine based on ECS
 
 This project rely on `glslc` & `python3`, so you need install them firstly.
 
-Use cmake to build:
+Install python dependencies:
+
+```bash
+pip install -r ./engine/engine/code_generator/requirements.txt
+```
+
+Then use cmake to build:
 
 ```bash
 cmake --preset=default
 cmake --build cmake-build
 
 # build this doc
-cmake --build cmake-build --target doc_generate
+cmake --build cmake-build --target doc
 ```
 
 ## Examples
