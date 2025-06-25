@@ -2,11 +2,12 @@
 #include "nickel/context.hpp"
 #include "nickel/script/binding/common.hpp"
 #include "nickel/script/binding/runtime.hpp"
+#include "nickel/generate/binding/script_binding.hpp"
 
 namespace nickel::script {
 
 ScriptManagerImpl::ScriptManagerImpl() {
-    bindingCpp();
+    script_binding::RegisterQJSScript(m_runtime);
 }
 
 void ScriptManagerImpl::Eval(std::string_view code) {
@@ -60,10 +61,6 @@ JSValue jsPrint2Console(JSContext* context, JSValue self, int argc,
     }
     LOGI("[QuickJS]: {}", text);
     return JS_UNDEFINED;
-}
-
-void ScriptManagerImpl::bindingCpp() {
-    // TODO: bind other cpp
 }
 
 ScriptManager::ScriptManager()

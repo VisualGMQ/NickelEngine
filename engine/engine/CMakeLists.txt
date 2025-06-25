@@ -9,11 +9,12 @@ set(NICKEL_REFL_GENERATE_DIR ${NICKEL_GENERATE_DIR}/refl/)
 set(NICKEL_BINDING_GENERATE_DIR ${NICKEL_GENERATE_DIR}/binding/)
 file(MAKE_DIRECTORY ${NICKEL_REFL_GENERATE_DIR})
 file(MAKE_DIRECTORY ${NICKEL_BINDING_GENERATE_DIR})
+
 # copy tirvial file
 file(COPY_FILE code_generator/mustache/refl/trivial_header.hpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.hpp ONLY_IF_DIFFERENT)
 file(COPY_FILE code_generator/mustache/refl/trivial_impl.cpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ONLY_IF_DIFFERENT)
-
-# TODO: copy binding trivial file
+file(COPY_FILE code_generator/mustache/script/trivial_header.hpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.hpp ONLY_IF_DIFFERENT)
+file(COPY_FILE code_generator/mustache/script/trivial_impl.cpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.cpp ONLY_IF_DIFFERENT)
 
 add_subdirectory(code_generator)
 
@@ -31,7 +32,7 @@ set(ENGINE_EXPORT_HEADERS ${ENGINE_ALL_HEADERS})
 list(REMOVE_ITEM ENGINE_EXPORT_HEADERS ${ENGINE_INTERNAL_HEADERS})
 file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.vert)
 file(GLOB_RECURSE ENGINE_MODEL_FILES assets/models/*)
-file(GLOB_RECURSE ENGINE_GENERATE_FILES ${NICKEL_GENERATE_DIR}/*.hpp ${NICKEL_GENERATE_DIR}/*.cpp)
+set(ENGINE_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.cpp)
 
 compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
@@ -64,7 +65,7 @@ macro(attach_common_config_on_engine target_name)
         NvBlast::ExtStress
     )
     target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui implot)
-    add_dependencies(${target_name} refl_code_generate)
+    add_dependencies(${target_name} code_generate)
 
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp nickel/physics/internal/pch.hpp)
     target_compile_definitions(${target_name} PRIVATE _CRT_SECURE_NO_WARNINGS)

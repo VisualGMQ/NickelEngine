@@ -4,19 +4,10 @@
 
 #include "script_binding.hpp"
 
-{{#binding_header_files}}
-#include "{{binding_header_file}}"
-{{/binding_header_files}}
-
 namespace nickel::script_binding {
 
 void RegisterQJSScript(script::QJSRuntime& runtime) {
     auto& module = runtime.GetContext().NewModule("NickelEngine");
-
-    {{#func_calls}}
-    {{func_call}}(module);
-    {{/func_calls}}
-
     module.EndModule();
 }
 

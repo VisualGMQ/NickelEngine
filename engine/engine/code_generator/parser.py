@@ -484,10 +484,10 @@ if __name__ == '__main__':
     with open(time_record_file_path, 'wb') as f:
         pickle.dump(new_file_record, f)
         
+    refl_impl_data = {'refl_header_files': [], 'func_calls': []}
+    script_impl_data = {'binding_header_files': [], 'func_calls': []}
     if has_info_changed:
         # refl code generate
-        refl_impl_data = {'header_file': refl_header_filename, 'refl_header_files': [], 'func_calls': []}
-        script_impl_data = {'header_file': binding_header_filename, 'binding_header_files': [], 'func_calls': []}
         for path, node in new_file_record.parsed_file_record.items():
             if len(node.children) == 0:
                 continue
@@ -505,14 +505,14 @@ if __name__ == '__main__':
             print(f'script binding generate code to {final_filename}', flush=True)
             save_generated_code(binding_output_dir / final_filename, binding_code)
 
-        with open(refl_header_filename, 'w+', encoding='utf-8') as f:
-            f.write(chevron.render(g_refl_header_mustache, {}))
+    with open(refl_header_filename, 'w+', encoding='utf-8') as f:
+        f.write(chevron.render(g_refl_header_mustache, {}))
 
-        with open(refl_impl_filename, 'w+', encoding='utf-8') as f:
-            f.write(chevron.render(g_refl_impl_mustache, refl_impl_data))
+    with open(refl_impl_filename, 'w+', encoding='utf-8') as f:
+        f.write(chevron.render(g_refl_impl_mustache, refl_impl_data))
 
-        with open(binding_header_filename, 'w+', encoding='utf-8') as f:
-            f.write(chevron.render(g_script_binding_header_mustache, {}))
+    with open(binding_header_filename, 'w+', encoding='utf-8') as f:
+        f.write(chevron.render(g_script_binding_header_mustache, {}))
 
-        with open(binding_impl_filename, 'w+', encoding='utf-8') as f:
-            f.write(chevron.render(g_script_binding_impl_mustache, script_impl_data))
+    with open(binding_impl_filename, 'w+', encoding='utf-8') as f:
+        f.write(chevron.render(g_script_binding_impl_mustache, script_impl_data))

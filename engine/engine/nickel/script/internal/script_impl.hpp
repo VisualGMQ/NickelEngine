@@ -18,8 +18,6 @@ public:
 private:
     QJSRuntime m_runtime;
     BlockMemoryAllocator<QuickJSScriptImpl> m_allocator;
-
-    void bindingCpp();
 };
 
 }  // namespace nickel::script
