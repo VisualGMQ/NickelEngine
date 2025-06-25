@@ -6,6 +6,7 @@
 
 using namespace nickel;
 
+//! [Binding Class Declare]
 struct Person {
     enum class Enum {
         Value1, Value2
@@ -50,9 +51,11 @@ Person* PtrTest(Person* p) {
 const Person* ConstPtrTest(const Person* p) {
     return p;
 }
+//! [Binding Class Declare]
 
 TEST_CASE("binding") {
     SECTION("binding fundamental") {
+        //! [Binding Fundamentals Declare]
         int int_elem = 1;
         char char_elem = 2;
         long long_elem = 3;
@@ -65,10 +68,12 @@ TEST_CASE("binding") {
         std::string_view str_view_elem = "string view";
         const char* str_literal = "string literal";
         std::string string_elem = "string";
+        //! [Binding Fundamentals Declare]
 
         script::QJSRuntime runtime;
         script::QJSContext& ctx = runtime.GetContext();
 
+        //! [Binding Fundamentals]
         auto& module = runtime.GetContext().NewModule("test_module");
 
         module.AddField("int_elem", int_elem)
@@ -84,7 +89,9 @@ TEST_CASE("binding") {
             .AddField("str_literal", str_literal)
             .AddField("string_elem", string_elem)
             .EndModule();
+        //! [Binding Fundamentals]
 
+        // preload module to global space
         {
             std::string_view pre_code = R"(
                 import * as test_module from 'test_module'
@@ -107,6 +114,7 @@ TEST_CASE("binding") {
         }
 
         std::string_view code = R"(
+            //! [Binding Fundamentals Usage]
             CheckExists(test_module.int_elem)
             CheckExists(test_module.uint_elem)
             CheckExists(test_module.char_elem)
@@ -119,6 +127,7 @@ TEST_CASE("binding") {
             CheckExists(test_module.string_view)
             CheckExists(test_module.str_literal)
             CheckExists(test_module.string_elem)
+            //! [Binding Fundamentals Usage]
         )";
 
         JSValue value = JS_Eval(ctx, code.data(), code.size(), "test file",
@@ -134,6 +143,7 @@ TEST_CASE("binding") {
 
     script::QJSRuntime runtime;
 
+    //! [Binding Class]
     auto& ctx = runtime.GetContext();
     auto& module = ctx.NewModule("test_module");
     module.AddClass<Person>("Person")
@@ -160,6 +170,7 @@ TEST_CASE("binding") {
             .AddItem("Value3", MyEnum::Value3)
         .EndEnum()
     .EndModule();
+    //! [Binding Class]
 
     {
         std::string_view pre_code = R"(
@@ -183,6 +194,7 @@ TEST_CASE("binding") {
 
     SECTION("binding class", "[new instance in js]") {
         std::string_view code = R"(
+            //! [Binding Class Usage]
             let person = new test_module.Person("John")
             CheckExists(person.const_value)
 
@@ -202,6 +214,7 @@ TEST_CASE("binding") {
                 throw new Error("test failed")
             }
             CheckExists(test_module.Person.static_elem)
+            //! [Binding Class Usage]
         )";
 
         JSValue value = JS_Eval(ctx, code.data(), code.size(), "test file",

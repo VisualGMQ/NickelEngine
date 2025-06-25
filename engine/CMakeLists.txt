@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(NickelEngine
+    DESCRIPTION "a game engine based on ECS"
     VERSION 0.1.0)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(NICKEL_BUILD_TESTS "build tests" OFF)
-option(NICKEL_BUILD_TOOLS "build tests" OFF)
+option(NICKEL_BUILD_TOOLS "build tools" OFF)
 
 set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -38,6 +39,8 @@ add_subdirectory(engine)
 if (NICKEL_BUILD_TOOLS)
     add_subdirectory(tools)
 endif()
+
+add_subdirectory(doc)
 
 if (NICKEL_BUILD_TESTS)
     enable_testing()

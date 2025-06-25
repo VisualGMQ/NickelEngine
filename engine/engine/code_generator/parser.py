@@ -1,3 +1,89 @@
+"""!
+@page code_generate_page Code Generator
+
+## What is code generator
+
+@ref code_generator is a program work with reflection & script system.
+
+This program using libclang to parse C++ header files, then generate reflection & script(quickjs) binding code.
+
+Currently it is hard binding with NickelEngine. But you can modify mustache & some string literal to change generate content for your project
+
+## How it works
+
+This program using python3 + libclang, due to:
+
+1. eazy to install libclang: if using C++ with libclang, we must compile libclang with NickelEngine(in fact, it is tooooo slow) or install libclang library from net.
+Both are very annoying. So I decide to use python
+2. eazy to write code: write python code is easier and faster than C++
+
+But the shortcut is it works slower than C++, most of build time spend here.
+
+### Header file parse
+
+Using libclang to parse C++ header files. It parse all header files, record all nodes should be reflect or binding
+
+### Code generate
+
+After parse header files, it will walk through all nodes and generate codes. Code generate using [mustache](https://mustache.github.io/).
+You can find all mustache files under `engine/code_generator/mustache`.
+
+### Trigger full regenerate
+
+To avoid run it every build even C++ header not change, it will store parsed result and file last modify time into a `.pkl` file (python pickle file).
+Everytime you run this program, it will read it and compare last modify time to determine whether to parse one file.
+
+Sometimes you want to re-parse all file and regenerate codes(it usually happens on this program changed, like you pulled new code).
+Delete generated C++ files is not work. You must delete `.pkl` file(will give cmake command to trigger regenerate in future)
+
+## How to run it
+
+First install packages:
+
+```bash
+pip install -r ./engine/engine/code_generator/requirements.txt
+```
+
+Then run `parser.py` as:
+
+```bash
+python parser.py <header_file_dir> <time_pkl_store_dir> <refl_code_generate_dir> <script_binding_code_generate_dir>
+```
+
+pass by `debug_mode` to tool will into [debug mode](#Debug Mode)
+
+This program will recursivly read all `.h|.hpp|.hxx` files under `header_file_dir`, parse them and generate codes to `refl_code_generator_dir` and `script_binding_code_generate_dir`.
+
+It will also auto include parsed file in generated code. It set header include directory to `<header_file_dir>`. For example, use `./nickel` will generate relate code:
+
+```cpp
+#include "nickel/common/common.hpp"
+```
+
+for `./engine/nickel` it will generate:
+
+```cpp
+#include "engine/nickel/common/common.hpp"
+```
+
+This program will generate only two source file: `refl_generate.cpp` & `script_binding.cpp`. So you can add these files to your target.
+
+The header file you need is `refl_generate.hpp` & `script_binding.hpp`, **you shouldn't include other generated header files!**
+
+## Debug Mode
+
+Debug mode is convenient for debug this tool.
+
+In debug mode this tool will parse test file under `engine/code_generator/test` and not load `.pkl` file.
+"""
+
+"""!
+@defgroup code_generator code generator
+@{
+
+@brief document see @ref code_generate_page
+"""
+
 import sys
 import pickle
 import os
@@ -502,9 +588,6 @@ if __name__ == '__main__':
         if files is not None:
             files += headers
 
-    # for debug
-    # files = [pathlib.Path('../nickel/physics/vehicle.hpp')]
-
     file_record = NodeRecords()
     new_file_record = NodeRecords()
     
@@ -585,3 +668,7 @@ if __name__ == '__main__':
 
     with open(binding_impl_filename, 'w+', encoding='utf-8') as f:
         f.write(chevron.render(g_script_binding_impl_mustache, script_impl_data))
+
+"""!
+@}
+"""

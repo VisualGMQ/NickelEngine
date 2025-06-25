@@ -1,3 +1,9 @@
+///////////////////////////////////////////////////////////////////
+/// \page GLTFTest gltf test
+/// this test will show a gltf model
+/// \includelineno ./main.cpp
+///////////////////////////////////////////////////////////////////
+
 #include "nickel/common/macro.hpp"
 #include "nickel/main_entry/runtime.hpp"
 #include "nickel/nickel.hpp"
