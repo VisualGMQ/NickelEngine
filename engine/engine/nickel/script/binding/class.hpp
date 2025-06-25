@@ -81,17 +81,45 @@ public:
         JS_SetClassProto(m_context, ids.m_ref_id, m_ref_proto);
         JS_SetClassProto(m_context, ids.m_const_ref_id, m_const_ref_proto);
 
-        // create trivial ctor to hold enum defs
-        if (!m_enums.empty() && JS_IsUndefined(m_ctor)) {
-            m_ctor = JS_NewCFunction(m_context, trivialCtor, m_name.c_str(), 0);
+        /* if default constructable, create one, else create trivial ctor to
+         hold enum & static var defs */
+        if (JS_IsUndefined(m_ctor)) {
+            if constexpr (std::is_default_constructible_v<T>) {
+                JSValue ctor = JS_NewCFunction(
+                    m_context,
+                    +[](JSContext* ctx, JSValue, int, JSValue*) {
+                        auto id =
+                            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
+                                .m_id;
+                        JSValue obj = JS_NewObjectClass(ctx, id);
+                        if (JS_IsException(obj)) {
+                            LogJSException(ctx);
+                            return JS_UNDEFINED;
+                        }
+                        QJS_CALL(ctx, JS_SetOpaque(obj, new T{}));
+                        return obj;
+                    },
+                    m_name, 0);
+                if (JS_IsException(m_ctor)) {
+                    LogJSException(m_context);
 
-            JS_SetConstructor(m_context, m_ctor, m_proto);
+                    m_ctor = JS_NewCFunction(m_context, trivialCtor, m_name.c_str(), 0);
+                    JS_VALUE_CHECK(m_context, ctor);
+                }
+                JS_SetConstructor(m_context, ctor, m_proto);
+            }
         }
-
+        
         for (auto& e : m_enums) {
             QJS_CALL(m_context,
                      JS_SetPropertyStr(m_context, m_ctor, e->GetName().c_str(),
                                        e->GetValue()));
+        }
+
+        for (auto& value : m_static_properties) {
+            QJS_CALL(m_context,
+                     JS_SetPropertyStr(m_context, m_ctor, value.m_name.c_str(),
+                                       value.m_value));
         }
 
         return *m_module;
@@ -125,8 +153,7 @@ public:
         JSValue fn = JS_NewCFunction2(
             m_context, JSFnTraits<F>::Fn, name.c_str(),
             refl::list_size_v<typename traits::args>, JS_CFUNC_generic, 0);
-        QJS_CALL(m_context,
-                 JS_SetPropertyStr(m_context, m_ctor, name.c_str(), fn));
+        m_static_properties.push_back({name, fn});
         return *this;
     }
 
@@ -277,8 +304,8 @@ public:
         static_assert(!traits::is_member,
                       "AddField can't register member variable");
 
-        JS_SetPropertyStr(m_context, m_ctor, name.c_str(),
-                          JSValueWrapper<U>{}.Wrap(m_context, ptr));
+        JSValue value = JSValueWrapper<U>{}.Wrap(m_context, ptr);
+        m_static_properties.push_back({name, value});
         return *this;
     }
 
@@ -329,7 +356,13 @@ private:
 
     JSValue m_ctor;
 
+    struct StaticProperty {
+        std::string m_name;
+        JSValue m_value;
+    };
+
     std::vector<std::unique_ptr<QJSEnumBase>> m_enums;
+    std::vector<StaticProperty> m_static_properties;
 
     static void jsFinalizer(JSRuntime* rt, JSValue val) {
         T* p = static_cast<T*>(JS_GetOpaque(val, JS_GetClassID(val)));
@@ -338,6 +371,10 @@ private:
 
     static JSValue trivialCtor(JSContext*, JSValue, int, JSValue*) {
         return JS_UNDEFINED;
+    }
+    
+    static JSValue defaultCtor(JSContext* ctx, JSValue, int, JSValue*) {
+
     }
 };
 

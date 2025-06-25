@@ -13,7 +13,7 @@ class RigidDynamic;
 
 constexpr uint32_t VehicleMaxWheelNum = 20;
 
-struct NICKEL_REFL_ATTR(refl) VehicleWheelSimDescriptor {
+struct NICKEL_REFL_ATTR(refl, script) VehicleWheelSimDescriptor {
     enum class Type {
         FourWheel,
         ArbitraryWheel,
@@ -127,7 +127,7 @@ struct VehicleClutchDescriptor {
     uint32_t m_estimate_iterations = 5;
 };
 
-struct NICKEL_REFL_ATTR(refl) VehicleDriveSimDescriptor {
+struct NICKEL_REFL_ATTR(refl, script) VehicleDriveSimDescriptor {
     enum class Type {
         FourWheel,
         ArbitraryWheel,

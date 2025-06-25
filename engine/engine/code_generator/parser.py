@@ -1,7 +1,6 @@
 import sys
 import pickle
 import os
-from winreg import REG_DWORD_LITTLE_ENDIAN
 
 import chevron
 import pathlib
@@ -21,6 +20,9 @@ class Node:
         self.name = name
         self.children: list[Node] = []
         self.attrs = ReflAttribute()
+        
+    def need_record(self):
+        return self.attrs.need_refl or self.attrs.need_script_register
         
 class NamespaceNode(Node):
     def merge(self, n: Node):
@@ -58,7 +60,12 @@ class VariableNode(Node):
         self.type = None
         self.is_static = False
         self.is_member = False
-        
+
+class ConstructorNode(Node):
+    def __init__(self):
+        super().__init__(None)
+        self.args_types: list[str] = []
+
 class FunctionNode(Node):
     def __init__(self, name: str):
         super().__init__(name)
@@ -74,13 +81,17 @@ class ClassNode(Node):
         self.protected_fields: list[VariableNode] = []
         self.private_fields: list[VariableNode] = []
         
-        self.public_functions = []
-        self.protected_functions = []
-        self.private_functions = []
+        self.public_functions: list[FunctionNode] = []
+        self.protected_functions: list[FunctionNode] = []
+        self.private_functions: list[FunctionNode] = []
 
-        self.public_enums = []
-        self.protected_enums = []
-        self.private_enums = []
+        self.public_enums: list[EnumNode] = []
+        self.protected_enums: list[EnumNode] = []
+        self.private_enums: list[EnumNode] = []
+        
+        self.public_ctors: list[ConstructorNode] = []
+        self.protected_ctors: list[ConstructorNode] = []
+        self.private_ctors: list[ConstructorNode] = []
         
     def merge(self, n: Node):
         assert isinstance(n, ClassNode)
@@ -161,6 +172,18 @@ def parse_variable(cursor: clang.cindex.Cursor, parent: Node) -> VariableNode:
     node.attrs = transform_attributes_by_parent(node.attrs, None if parent is None else parent.attrs)
     return node
 
+def parse_constructor(cursor: clang.cindex.Cursor, parent: Node) -> ConstructorNode:
+    assert cursor.kind == CursorKind.CONSTRUCTOR
+    
+    node = ConstructorNode()
+    for child in cursor.get_children():
+        if child.kind == CursorKind.PARM_DECL:
+            node.args_types.append(child.type.spelling)
+        elif child.kind == CursorKind.ANNOTATE_ATTR:
+            node.attrs = parse_attributes(child.spelling)
+    node.attrs = transform_attributes_by_parent(node.attrs, None if parent is None else parent.attrs)
+    return node
+
 def parse_function(cursor: clang.cindex.Cursor, parent: Node) -> FunctionNode:
     assert cursor.kind == CursorKind.CXX_METHOD
     node = FunctionNode(cursor.spelling)
@@ -179,7 +202,15 @@ def parse_class(cursor: clang.cindex.Cursor, parent: Node) -> ClassNode:
     assert cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL
     class_node = ClassNode(cursor.spelling)
     for child in cursor.get_children():
-        if child.kind == CursorKind.FIELD_DECL:
+        if child.kind == CursorKind.CONSTRUCTOR:
+            ctor_node = parse_constructor(child, class_node)
+            if child.access_specifier == AccessSpecifier.PUBLIC:
+                class_node.public_ctors.append(ctor_node)
+            elif child.access_specifier == AccessSpecifier.PROTECTED:
+                class_node.protected_ctors.append(ctor_node)
+            elif child.access_specifier == AccessSpecifier.PRIVATE:
+                class_node.private_ctors.append(ctor_node)
+        elif child.kind == CursorKind.FIELD_DECL:
             var_node = parse_variable(child, class_node)
             if child.access_specifier == AccessSpecifier.PUBLIC:
                 class_node.public_fields.append(var_node)
@@ -209,7 +240,7 @@ def parse_class(cursor: clang.cindex.Cursor, parent: Node) -> ClassNode:
             parse_class(child, class_node)
     class_node.attrs = transform_attributes_by_parent(class_node.attrs, None if parent is None else parent.attrs)
     
-    if not class_node.attrs.need_refl:
+    if not class_node.need_record():
         return class_node
     
     record_node(class_node, parent)
@@ -226,7 +257,9 @@ def parse_enum(cursor: clang.cindex.Cursor, parent: Node) -> EnumNode:
         elif child.kind == CursorKind.ANNOTATE_ATTR:
             enum_node.attrs = parse_attributes(child.spelling)
 
-    if enum_node.attrs.need_refl:
+    enum_node.attrs = transform_attributes_by_parent(enum_node.attrs, None if parent is None else parent.attrs)
+
+    if not isinstance(parent, ClassNode) and enum_node.need_record():
         record_node(enum_node, parent)
     return enum_node
 
@@ -239,7 +272,7 @@ def recurse_visit_cursor(cursor: clang.cindex.Cursor, parent: Node, parsed_filen
             node = parse_namespace(cursor, parent, parsed_filename)
         if cursor.kind == CursorKind.STRUCT_DECL or cursor.kind == CursorKind.CLASS_DECL:
             node = parse_class(cursor, parent)
-        if cursor.kind == CursorKind.ENUM_DECL:
+        if cursor.kind == CursorKind.ENUM_DECL and not isinstance(parent, ClassNode):
             node = parse_enum(cursor, parent)
         
     if node is None:
@@ -271,10 +304,10 @@ g_refl_impl_mustache = pathlib.Path('./mustache/refl/impl.mustache').read_text(e
  
 g_class_script_binding_mustache = pathlib.Path('./mustache/script/class_binding.mustache').read_text(encoding='utf-8')
 g_enum_script_binding_mustache = pathlib.Path('./mustache/script/enum_binding.mustache').read_text(encoding='utf-8')
+g_class_enum_script_binding_mustache = pathlib.Path('./mustache/script/class_enum_binding.mustache').read_text(encoding='utf-8')
 g_script_binding_mustache = pathlib.Path('./mustache/script/binding.mustache').read_text(encoding='utf-8')
 g_script_binding_header_mustache = pathlib.Path('./mustache/script/header.mustache').read_text(encoding='utf-8')
 g_script_binding_impl_mustache = pathlib.Path('./mustache/script/impl.mustache').read_text(encoding='utf-8')
-
 
 def node_code_generate(parsed_filename: str, node: Node) -> (str, str, str):
     final_filename = (parsed_filename.replace('\\', '/')
@@ -298,24 +331,19 @@ def node_code_generate(parsed_filename: str, node: Node) -> (str, str, str):
 def node_code_generate_recursive(prefix: str, node: Node, refl_out_fmt: dict[str, list], binding_out_fmt: dict[str, list]):
     new_prefix  = prefix + '::' + node.name
     
-    # first generate enum, then class content
     if isinstance(node, EnumNode):
-        refl_code, binding_code = enum_node_code_generate(new_prefix, node)
+        refl_code, binding_code = global_enum_node_code_generate(new_prefix, node)
         refl_out_fmt['enums'].append({'enum': refl_code})
         binding_out_fmt['enums'].append({'enum': binding_code})
-
-    if isinstance(node, ClassNode):
-        for child in node.public_enums:
-            refl_code, binding_code = enum_node_code_generate(new_prefix + '::' + child.name, child)
-            refl_code = os.linesep + refl_code
-            binding_code = os.linesep + binding_code
-            refl_out_fmt['enums'].append({'enum': refl_code})
-            binding_out_fmt['enums'].append({'enum': binding_code})
 
     for child in node.children:
         node_code_generate_recursive(new_prefix, child, refl_out_fmt, binding_out_fmt)
         
     if isinstance(node, ClassNode):
+        for e in node.public_enums: 
+            refl_code, _ = global_enum_node_code_generate(new_prefix + '::' + e.name, e)
+            refl_out_fmt['enums'].append({'enum': refl_code})
+        
         refl_code, binding_code = class_node_code_generate(prefix, node)
         refl_code = os.linesep + refl_code
         binding_code = os.linesep + binding_code
@@ -329,15 +357,38 @@ def class_node_code_generate(prefix: str, node: ClassNode) -> (str, str):
                 'properties': []}
     binding_fmt = {'class_type': class_name_with_prefix,
                    'class_name': node.name,
-                   'class_properties': []}
+                   'class_properties': [],
+                   'class_ctor': [],
+                   'class_enums': []}
     for field in node.public_fields:
+        field_name = field.name[2:] if len(field.name) > 2 and field.name[:2] == 'm_' else field.name
+        field_type = class_name_with_prefix + '::' + field.name
+        
         if field.attrs.need_refl:
-            refl_fmt['properties'].append({'property_register_name': field.name if len(field.name) <= 2 else field.name[2:],
-                                           'property_name': class_name_with_prefix + '::' + field.name})
+            if field.attrs.need_refl:
+                refl_fmt['properties'].append({'property_register_name': field_name,
+                                               'property_name': field_type})
 
         if field.attrs.need_script_register:
-            binding_fmt['class_properties'].append({'property_name': field.name if len(field.name) <= 2 else field.name[2:],
-                                                    'property_type': class_name_with_prefix + '::' + field.name})
+            if field.attrs.need_script_register:
+                binding_fmt['class_properties'].append({'property_name': field_name,
+                                                        'property_type': field_type})
+    
+    for fn in node.public_functions:
+        if not fn.attrs.need_script_register:
+            continue
+        binding_fmt['class_properties'].append({'property_type': class_name_with_prefix + '::' + fn.name,
+                                                'property_name': fn.name})
+        
+    for e in node.public_enums:
+        if not e.attrs.need_script_register:
+            continue
+        binding_fmt['class_enums'].append({'class_enum_binding': class_enum_node_code_generate(class_name_with_prefix + '::' + e.name, e)})
+            
+    if len(node.public_ctors) != 0 and node.public_ctors[0].attrs.need_script_register:
+        # FIXME: now we only support one ctor
+        param_str = ','.join(node.public_ctors[0].args_types)
+        binding_fmt['class_ctor'].append({'ctor_params': param_str})
 
     refl_code = ""
     binding_code = ""
@@ -347,9 +398,26 @@ def class_node_code_generate(prefix: str, node: ClassNode) -> (str, str):
         binding_code = chevron.render(g_class_script_binding_mustache, binding_fmt)
     return refl_code, binding_code
 
-def enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> (str, str):
-    binding_code = ""
+def class_enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> str:
+    binding_fmt = {'enum_type': enum_name_with_prefix,
+                   'enum_name': node.name,
+                   'enums': []}
+    binding_code = ''
+    
+    for item in node.items:
+        if node.attrs.need_script_register:
+            binding_fmt['enums'].append({'enum_item_name': item,
+                                         'enum_item_value': enum_name_with_prefix + '::' + item})
+
+    if node.attrs.need_script_register:
+        binding_code = chevron.render(g_class_enum_script_binding_mustache, binding_fmt)
+
+    return binding_code
+
+
+def global_enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> (str, str):
     refl_code = ""
+    binding_code = ""
 
     refl_fmt = {'enum_name': enum_name_with_prefix,
                 'enum_register_name': node.name,
@@ -357,13 +425,14 @@ def enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> (str,
     binding_fmt = {'enum_type': enum_name_with_prefix,
                    'enum_name': node.name,
                    'enums': []}
+
     for item in node.items:
         if node.attrs.need_refl:
             refl_fmt['enums'].append({'enum_register_name': item,
-                                    'enum_name': enum_name_with_prefix + '::' + item})
+                                      'enum_name': enum_name_with_prefix + '::' + item})
         if node.attrs.need_script_register:
             binding_fmt['enums'].append({'enum_item_name': item,
-                                        'enum_item_value': enum_name_with_prefix + '::' + item})
+                                         'enum_item_value': enum_name_with_prefix + '::' + item})
 
     if node.attrs.need_refl:
         refl_code = chevron.render(g_enum_refl_mustache, refl_fmt)
@@ -402,9 +471,9 @@ if __name__ == '__main__':
     if debug_mode:
         root_path = pathlib.Path(os.getcwd())
         parse_dir = pathlib.Path('test')
-        time_record_output_dir = pathlib.Path('./')
-        refl_output_dir = pathlib.Path('./refl')
-        binding_output_dir = pathlib.Path('./binding')
+        time_record_output_dir = pathlib.Path('./output')
+        refl_output_dir = pathlib.Path('./output/refl')
+        binding_output_dir = pathlib.Path('./output/binding')
     else:
         root_path = pathlib.Path(os.getcwd())
         parse_dir = pathlib.Path(sys.argv[1])
@@ -439,7 +508,7 @@ if __name__ == '__main__':
     file_record = NodeRecords()
     new_file_record = NodeRecords()
     
-    if time_record_file_path.exists():
+    if not debug_mode and time_record_file_path.exists():
         with open(time_record_file_path, 'rb') as f:
             file_record = pickle.load(f)
             

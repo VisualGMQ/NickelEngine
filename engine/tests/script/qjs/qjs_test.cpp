@@ -10,7 +10,7 @@ struct Person {
     enum class Enum {
         Value1, Value2
     };
-    
+
     static int static_elem;
 
     int age = 12;
