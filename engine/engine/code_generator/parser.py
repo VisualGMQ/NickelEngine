@@ -1,6 +1,7 @@
 import sys
 import pickle
 import os
+from winreg import REG_DWORD_LITTLE_ENDIAN
 
 import chevron
 import pathlib
@@ -97,8 +98,6 @@ class EnumNode(Node):
         self.items: list[str] = []
         
         
-# g_node_list: list[Node] = []
-
 def parse_attributes(attr_str: str) -> ReflAttribute:
     prefix = 'nickel('
     if len(attr_str) < len(prefix) or (attr_str[0:len(prefix)] != prefix and attr_str[-1] != ')'):
@@ -276,67 +275,109 @@ g_script_binding_mustache = pathlib.Path('./mustache/script/binding.mustache').r
 g_script_binding_header_mustache = pathlib.Path('./mustache/script/header.mustache').read_text(encoding='utf-8')
 g_script_binding_impl_mustache = pathlib.Path('./mustache/script/impl.mustache').read_text(encoding='utf-8')
 
-def node_code_generate(parsed_filename: str, node: Node) -> (str, str):
+
+def node_code_generate(parsed_filename: str, node: Node) -> (str, str, str):
     final_filename = (parsed_filename.replace('\\', '/')
-                                     .replace('../', '')
-                                     .replace('./', ''))
+                      .replace('../', '')
+                      .replace('./', ''))
     func_name = final_filename[:final_filename.find('.')]
     func_name = func_name.replace('/', '_')
-    
-    fmt = {'parsed_filename': final_filename,
-           'refl_func_name': func_name,
-           'enums': [], 'classes': []}
+
+    refl_fmt = {'parsed_filename': final_filename,
+                'func_name': func_name,
+                'enums': [], 'classes': []}
+    binding_fmt = {'parsed_filename': final_filename,
+                   'func_name': func_name,
+                   'enums': [], 'classes': []}
     for child in node.children:
-        node_code_generate_recursive('', child, fmt)
-        
-    return func_name, chevron.render(g_refl_mustache, fmt)
+        node_code_generate_recursive('', child, refl_fmt, binding_fmt)
+
+    return func_name, chevron.render(g_refl_mustache, refl_fmt), chevron.render(g_script_binding_mustache, binding_fmt)
+
     
-def node_code_generate_recursive(prefix: str, node: Node, out_fmt: dict[str, list]):
+def node_code_generate_recursive(prefix: str, node: Node, refl_out_fmt: dict[str, list], binding_out_fmt: dict[str, list]):
     new_prefix  = prefix + '::' + node.name
     
     # first generate enum, then class content
     if isinstance(node, EnumNode):
-        code = enum_node_code_generate(new_prefix, node)
-        out_fmt['enums'].append({'enum': code})
+        refl_code, binding_code = enum_node_code_generate(new_prefix, node)
+        refl_out_fmt['enums'].append({'enum': refl_code})
+        binding_out_fmt['enums'].append({'enum': binding_code})
 
     if isinstance(node, ClassNode):
         for child in node.public_enums:
-            code = os.linesep + enum_node_code_generate(new_prefix + '::' + child.name, child)
-            out_fmt['enums'].append({'enum': code})
+            refl_code, binding_code = enum_node_code_generate(new_prefix + '::' + child.name, child)
+            refl_code = os.linesep + refl_code
+            binding_code = os.linesep + binding_code
+            refl_out_fmt['enums'].append({'enum': refl_code})
+            binding_out_fmt['enums'].append({'enum': binding_code})
 
     for child in node.children:
-        node_code_generate_recursive(new_prefix, child, out_fmt)
+        node_code_generate_recursive(new_prefix, child, refl_out_fmt, binding_out_fmt)
         
     if isinstance(node, ClassNode):
-        code = os.linesep + class_node_code_generate(prefix, node)
-        out_fmt['classes'].append({'class': code})
+        refl_code, binding_code = class_node_code_generate(prefix, node)
+        refl_code = os.linesep + refl_code
+        binding_code = os.linesep + binding_code
+        refl_out_fmt['classes'].append({'class': refl_code})
+        binding_out_fmt['classes'].append({'class': binding_code})
 
-def class_node_code_generate(prefix: str, node: ClassNode) -> str:
+def class_node_code_generate(prefix: str, node: ClassNode) -> (str, str):
     class_name_with_prefix = prefix + '::' + node.name
-    fmt = {'class_name': class_name_with_prefix,
-           'class_register_name': node.name,
-           'properties': []}
+    refl_fmt = {'class_name': class_name_with_prefix,
+                'class_register_name': node.name,
+                'properties': []}
+    binding_fmt = {'class_type': class_name_with_prefix,
+                   'class_name': node.name,
+                   'class_properties': []}
     for field in node.public_fields:
-        if not field.attrs.need_refl:
-            continue
-        fmt['properties'].append({'property_register_name': field.name if len(field.name) <= 2 else field.name[2:],
-                                  'property_name': class_name_with_prefix + '::' + field.name})
-    
-    return chevron.render(g_class_refl_mustache, fmt)
+        if field.attrs.need_refl:
+            refl_fmt['properties'].append({'property_register_name': field.name if len(field.name) <= 2 else field.name[2:],
+                                           'property_name': class_name_with_prefix + '::' + field.name})
 
-def enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> str:
-    fmt = {'enum_name': enum_name_with_prefix,
-           'enum_register_name': node.name,
-           'enums': []}
+        if field.attrs.need_script_register:
+            binding_fmt['class_properties'].append({'property_name': field.name if len(field.name) <= 2 else field.name[2:],
+                                                    'property_type': class_name_with_prefix + '::' + field.name})
+
+    refl_code = ""
+    binding_code = ""
+    if node.attrs.need_refl:
+        refl_code = chevron.render(g_class_refl_mustache, refl_fmt)
+    if node.attrs.need_script_register:
+        binding_code = chevron.render(g_class_script_binding_mustache, binding_fmt)
+    return refl_code, binding_code
+
+def enum_node_code_generate(enum_name_with_prefix: str, node: EnumNode) -> (str, str):
+    binding_code = ""
+    refl_code = ""
+
+    refl_fmt = {'enum_name': enum_name_with_prefix,
+                'enum_register_name': node.name,
+                'enums': []}
+    binding_fmt = {'enum_type': enum_name_with_prefix,
+                   'enum_name': node.name,
+                   'enums': []}
     for item in node.items:
-        fmt['enums'].append({'enum_register_name': item,
-                             'enum_name': enum_name_with_prefix + '::' + item})
+        if node.attrs.need_refl:
+            refl_fmt['enums'].append({'enum_register_name': item,
+                                    'enum_name': enum_name_with_prefix + '::' + item})
+        if node.attrs.need_script_register:
+            binding_fmt['enums'].append({'enum_item_name': item,
+                                        'enum_item_value': enum_name_with_prefix + '::' + item})
 
-    return chevron.render(g_enum_refl_mustache, fmt)
+    if node.attrs.need_refl:
+        refl_code = chevron.render(g_enum_refl_mustache, refl_fmt)
+
+    if node.attrs.need_script_register:
+        binding_code = chevron.render(g_enum_script_binding_mustache, binding_fmt)
+
+    return refl_code, binding_code
 
 def save_generated_code(filename: str, code: str):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(code)
+        
+        
 
 class NodeRecords:
     def __init__(self):
@@ -344,20 +385,45 @@ class NodeRecords:
         self.parsed_file_record: dict[pathlib.Path, Node] = {}
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    debug_mode = False
+    if 'debug_mode' in sys.argv[1:]:
+        debug_mode = True
+    
+    if not debug_mode and len(sys.argv) != 5:
         print('usage: parser.py parse_dir output_dir', flush=True)
         raise RuntimeError('invalid parameter')
     
-    root_path = pathlib.Path(os.getcwd())
-    parse_dir = pathlib.Path(sys.argv[1])
-    output_dir = pathlib.Path(sys.argv[2])
+    root_path = None
+    parse_dir = None
+    time_record_output = None
+    refl_output_dir = None
+    binding_output_dir = None
+   
+    if debug_mode:
+        root_path = pathlib.Path(os.getcwd())
+        parse_dir = pathlib.Path('test')
+        time_record_output_dir = pathlib.Path('./')
+        refl_output_dir = pathlib.Path('./refl')
+        binding_output_dir = pathlib.Path('./binding')
+    else:
+        root_path = pathlib.Path(os.getcwd())
+        parse_dir = pathlib.Path(sys.argv[1])
+        time_record_output_dir = pathlib.Path(sys.argv[2])
+        refl_output_dir = pathlib.Path(sys.argv[3])
+        binding_output_dir = pathlib.Path(sys.argv[4])
+
     time_record_filename = 'time_record.pkl'
-    time_record_file_path = output_dir / time_record_filename
-    header_filename = output_dir / 'refl_generate.hpp'
-    impl_filename = output_dir / 'refl_generate.cpp'
+    time_record_file_path = time_record_output_dir / time_record_filename
+    
+    refl_header_filename = refl_output_dir / 'refl_generate.hpp'
+    refl_impl_filename = refl_output_dir / 'refl_generate.cpp'
+
+    binding_header_filename = binding_output_dir / 'script_binding.hpp'
+    binding_impl_filename = binding_output_dir / 'script_binding.cpp'
 
     print(f'parse dir: {parse_dir}', flush=True)
-    print(f'output dir: {output_dir}', flush=True)
+    print(f'refl output dir: {refl_output_dir}', flush=True)
+    print(f'binding output dir: {binding_output_dir}', flush=True)
     
     c_cpp_header_file_extensions = ['h', 'hpp', 'hxx']
     
@@ -377,7 +443,7 @@ if __name__ == '__main__':
         with open(time_record_file_path, 'rb') as f:
             file_record = pickle.load(f)
             
-    has_refl_info_changed = False
+    has_info_changed = False
     
     for file in files:
         last_modification_time = os.path.getmtime(file)
@@ -387,7 +453,7 @@ if __name__ == '__main__':
             if file_record.mtime[file] == last_modification_time:
                 continue
 
-        has_refl_info_changed = True
+        has_info_changed = True
         parse_filename = file
         node = parse_one_file(file, str(parse_dir.parent))
         
@@ -398,34 +464,55 @@ if __name__ == '__main__':
             new_file_record.parsed_file_record[file] = node
            
     try:
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(refl_output_dir, exist_ok=True)
     except FileExistsError:
-        print(f"Directory '{output_dir}' already exists.", flush=True)
+        print(f"Directory '{refl_output_dir}' already exists.", flush=True)
     except PermissionError:
-        print(f"Permission denied: Unable to create '{output_dir}'.", flush=True)
+        print(f"Permission denied: Unable to create '{refl_output_dir}'.", flush=True)
     except Exception as e:
-        print(f"An error occurred when create dir {output_dir}: {e}", flush=True)
+        print(f"An error occurred when create dir {refl_output_dir}: {e}", flush=True)
+
+    try:
+        os.makedirs(binding_output_dir, exist_ok=True)
+    except FileExistsError:
+        print(f"Directory '{binding_output_dir}' already exists.", flush=True)
+    except PermissionError:
+        print(f"Permission denied: Unable to create '{binding_output_dir}'.", flush=True)
+    except Exception as e:
+        print(f"An error occurred when create dir {binding_output_dir}: {e}", flush=True)
 
     with open(time_record_file_path, 'wb') as f:
         pickle.dump(new_file_record, f)
         
-    if has_refl_info_changed:
-        refl_impl_data = {'header_file': header_filename, 'refl_header_files': [], 'func_calls': []}
+    if has_info_changed:
+        # refl code generate
+        refl_impl_data = {'header_file': refl_header_filename, 'refl_header_files': [], 'func_calls': []}
+        script_impl_data = {'header_file': binding_header_filename, 'binding_header_files': [], 'func_calls': []}
         for path, node in new_file_record.parsed_file_record.items():
             if len(node.children) == 0:
                 continue
 
-            func_name, code = node_code_generate(str(path), node)
+            func_name, refl_code, binding_code = node_code_generate(str(path), node)
             final_filename = func_name + '.hpp'
             refl_impl_data['refl_header_files'].append({'refl_header_file': final_filename})
-            
-            # TODO: some magic string may refactory?
             refl_impl_data['func_calls'].append({'func_call': f'register_{func_name}_ReflInfo'})
-            print(f'generate code to {final_filename}', flush=True)
-            save_generated_code(output_dir / final_filename, code)
+            print(f'reflection generate code to {final_filename}', flush=True)
+            save_generated_code(refl_output_dir / final_filename, refl_code)
 
-        with open(header_filename, 'w+', encoding='utf-8') as f:
+            final_filename = func_name + '.hpp'
+            script_impl_data['binding_header_files'].append({'binding_header_file': final_filename})
+            script_impl_data['func_calls'].append({'func_call': f'register_{func_name}_QJSBinding'})
+            print(f'script binding generate code to {final_filename}', flush=True)
+            save_generated_code(binding_output_dir / final_filename, binding_code)
+
+        with open(refl_header_filename, 'w+', encoding='utf-8') as f:
             f.write(chevron.render(g_refl_header_mustache, {}))
 
-        with open(impl_filename, 'w+', encoding='utf-8') as f:
+        with open(refl_impl_filename, 'w+', encoding='utf-8') as f:
             f.write(chevron.render(g_refl_impl_mustache, refl_impl_data))
+
+        with open(binding_header_filename, 'w+', encoding='utf-8') as f:
+            f.write(chevron.render(g_script_binding_header_mustache, {}))
+
+        with open(binding_impl_filename, 'w+', encoding='utf-8') as f:
+            f.write(chevron.render(g_script_binding_impl_mustache, script_impl_data))

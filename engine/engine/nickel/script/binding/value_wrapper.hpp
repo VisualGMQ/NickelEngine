@@ -166,7 +166,7 @@ template <typename T>
 struct JSValueWrapper<T*> {
     JSValue Wrap(JSContext* ctx, T* value) {
         JSValue obj = JS_NewObjectClass(
-            ctx, QJSClassIDManager<T>::GetOrGen().m_pointer_id);
+            ctx, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }

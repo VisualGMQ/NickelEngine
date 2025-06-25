@@ -8,7 +8,7 @@
 
 namespace nickel::script_binding {
 
-inline void register_{{refl_func_name}}_QJSBinding(QJSModule& module) {
+inline void register_{{func_name}}_QJSBinding(script::QJSModule& module) {
     {{#enums}}
         {{{enum}}} 
     {{/enums}}

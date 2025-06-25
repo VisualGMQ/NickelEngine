@@ -20,7 +20,7 @@ public:
         JS_VALUE_CHECK(ctx, m_value);
     }
 
-    QJSEnum& AddItem(T value, const std::string& name) {
+    QJSEnum& AddItem(const std::string& name, T value) {
         JSValue item_value = JS_UNDEFINED;
         underlying_type numeric = static_cast<underlying_type>(value);
         if constexpr (sizeof(underlying_type) <= 4) {

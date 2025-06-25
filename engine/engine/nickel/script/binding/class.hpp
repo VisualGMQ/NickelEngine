@@ -87,11 +87,11 @@ public:
 
             JS_SetConstructor(m_context, m_ctor, m_proto);
         }
-        
+
         for (auto& e : m_enums) {
-            QJS_CALL(m_context, JS_SetPropertyStr(m_context, m_ctor,
-                                                  e->GetName().c_str(),
-                                                  e->GetValue()));
+            QJS_CALL(m_context,
+                     JS_SetPropertyStr(m_context, m_ctor, e->GetName().c_str(),
+                                       e->GetValue()));
         }
 
         return *m_module;
@@ -117,45 +117,52 @@ public:
     }
 
     template <auto F>
+    QJSClass& AddStaticFunction(const std::string& name) {
+        using traits = refl::function_pointer_traits<F>;
+        static_assert(!traits::is_member,
+                      "AddStaticFunction can't register member function");
+
+        JSValue fn = JS_NewCFunction2(
+            m_context, JSFnTraits<F>::Fn, name.c_str(),
+            refl::list_size_v<typename traits::args>, JS_CFUNC_generic, 0);
+        QJS_CALL(m_context,
+                 JS_SetPropertyStr(m_context, m_ctor, name.c_str(), fn));
+        return *this;
+    }
+
+    template <auto F>
     QJSClass& AddFunction(const std::string& name) {
         using traits = refl::function_pointer_traits<F>;
-        if constexpr (traits::is_member) {
-            JSValue fn = JS_NewCFunction2(
+        static_assert(traits::is_member,
+                      "AddFunction can only register member function");
+
+        JSValue fn = JS_NewCFunction2(
+            m_context, JSMemberFnTraits<F>::Fn, name.c_str(),
+            refl::list_size_v<typename traits::args>, JS_CFUNC_generic, 0);
+        QJS_CALL(m_context, JS_DefinePropertyValueStr(m_context, m_proto,
+                                                      name.c_str(), fn, 0));
+        QJS_CALL(m_context, JS_DefinePropertyValueStr(
+                                m_context, m_pointer_proto, name.c_str(),
+                                JS_DupValue(m_context, fn), 0));
+
+        QJS_CALL(m_context,
+                 JS_DefinePropertyValueStr(m_context, m_ref_proto, name.c_str(),
+                                           JS_DupValue(m_context, fn), 0));
+
+        if constexpr (traits::is_const) {
+            JSValue const_fn = JS_NewCFunction2(
                 m_context, JSMemberFnTraits<F>::Fn, name.c_str(),
                 refl::list_size_v<typename traits::args>, JS_CFUNC_generic, 0);
-            QJS_CALL(m_context, JS_DefinePropertyValueStr(m_context, m_proto,
-                                                          name.c_str(), fn, 0));
-            QJS_CALL(m_context, JS_DefinePropertyValueStr(
-                                    m_context, m_pointer_proto, name.c_str(),
-                                    JS_DupValue(m_context, fn), 0));
-
-            QJS_CALL(m_context, JS_DefinePropertyValueStr(
-                                    m_context, m_ref_proto, name.c_str(),
-                                    JS_DupValue(m_context, fn), 0));
-
-            if constexpr (traits::is_const) {
-                JSValue const_fn = JS_NewCFunction2(
-                    m_context, JSMemberFnTraits<F>::Fn, name.c_str(),
-                    refl::list_size_v<typename traits::args>, JS_CFUNC_generic,
-                    0);
-                QJS_CALL(m_context,
-                         JS_DefinePropertyValueStr(m_context, m_const_proto,
-                                                   name.c_str(), const_fn, 0));
-                QJS_CALL(m_context,
-                         JS_DefinePropertyValueStr(
-                             m_context, m_const_ref_proto, name.c_str(),
-                             JS_DupValue(m_context, const_fn), 0));
-                QJS_CALL(m_context,
-                         JS_DefinePropertyValueStr(
-                             m_context, m_const_pointer_proto, name.c_str(),
-                             JS_DupValue(m_context, const_fn), 0));
-            }
-        } else {
-            JSValue fn = JS_NewCFunction2(
-                m_context, JSFnTraits<F>::Fn, name.c_str(),
-                refl::list_size_v<typename traits::args>, JS_CFUNC_generic, 0);
             QJS_CALL(m_context,
-                     JS_SetPropertyStr(m_context, m_ctor, name.c_str(), fn));
+                     JS_DefinePropertyValueStr(m_context, m_const_proto,
+                                               name.c_str(), const_fn, 0));
+            QJS_CALL(m_context, JS_DefinePropertyValueStr(
+                                    m_context, m_const_ref_proto, name.c_str(),
+                                    JS_DupValue(m_context, const_fn), 0));
+            QJS_CALL(m_context,
+                     JS_DefinePropertyValueStr(
+                         m_context, m_const_pointer_proto, name.c_str(),
+                         JS_DupValue(m_context, const_fn), 0));
         }
         return *this;
     }
@@ -163,7 +170,8 @@ public:
     template <auto F>
     QJSClass& AddField(const std::string& name) {
         using traits = refl::variable_pointer_traits<F>;
-        static_assert(traits::is_member);
+        static_assert(traits::is_member,
+                      "AddField can only register member variable");
         using js_traits = JSMemberVariableTraits<F>;
 
         JSCFunctionType getter;
@@ -243,10 +251,34 @@ public:
             std::make_unique<QJSEnum<U, QJSClass>>(*this, m_context, name)));
     }
 
+    template <auto F>
+    QJSClass& AddProperty(const std::string& name) {
+        using type = decltype(F);
+        if constexpr (refl::is_function_v<type>) {
+            using traits = refl::function_pointer_traits<F>;
+            if constexpr (traits::is_member) {
+                return AddFunction<F>(name);
+            } else {
+                return AddStaticFunction<F>(name);
+            }
+        } else {
+            using traits = refl::variable_pointer_traits<F>;
+            if constexpr (traits::is_member) {
+                return AddField<F>(name);
+            } else {
+                return AddStaticField(name, F);
+            }
+        }
+    }
+
     template <typename U>
-    QJSClass& AddStaticField(const std::string& name, U* ptr) {
+    QJSClass& AddStaticField(const std::string& name, U ptr) {
+        using traits = refl::variable_traits<U>;
+        static_assert(!traits::is_member,
+                      "AddField can't register member variable");
+
         JS_SetPropertyStr(m_context, m_ctor, name.c_str(),
-                          JSValueWrapper<U>{}.Wrap(m_context, *ptr));
+                          JSValueWrapper<U>{}.Wrap(m_context, ptr));
         return *this;
     }
 

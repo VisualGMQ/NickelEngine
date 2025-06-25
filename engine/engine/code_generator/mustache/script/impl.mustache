@@ -4,14 +4,13 @@
 
 #include "{{header_file}}"
 
-{{#refl_header_files}}
-#include "{{refl_header_file}}"
-{{/refl_header_files}}
+{{#binding_header_files}}
+#include "{{binding_header_file}}"
+{{/binding_header_files}}
 
 namespace nickel::script_binding {
 
-
-void RegisterQJSScript(QJSRuntime& runtime) {
+void RegisterQJSScript(script::QJSRuntime& runtime) {
     auto& module = runtime.GetContext().NewModule("NickelEngine");
 
     {{#func_calls}}

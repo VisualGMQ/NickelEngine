@@ -141,6 +141,7 @@ using function_pointer_traits = detail::function_pointer_traits<F>;
  */
 template <typename T>
 constexpr bool is_function_v =
-    std::is_function_v<T> || std::is_member_function_pointer_v<T>;
+    std::is_function_v<T> || std::is_member_function_pointer_v<T> ||
+    std::is_function_v<std::remove_pointer_t<T>>;
 
 }  // namespace nickel::refl
