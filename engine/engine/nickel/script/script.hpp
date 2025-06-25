@@ -15,6 +15,8 @@ public:
     QuickJSScript Load(const Path&);
     QuickJSScript Load(std::span<const char> content);
 
+    void GC();
+
     ScriptManagerImpl* GetImpl();
 
 private:

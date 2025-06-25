@@ -15,9 +15,12 @@ public:
     QuickJSScript Load(const Path&);
     QuickJSScript Load(std::span<const char> content);
 
+    void GC();
+    
+    BlockMemoryAllocator<QuickJSScriptImpl> m_allocator;
+
 private:
     QJSRuntime m_runtime;
-    BlockMemoryAllocator<QuickJSScriptImpl> m_allocator;
 };
 
 }  // namespace nickel::script

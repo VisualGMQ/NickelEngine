@@ -34,17 +34,18 @@ QuickJSScript ScriptManagerImpl::Load(const Path& filename) {
         Context::GetInst().GetStorageManager().GetUserStorage().ReadStorageFile(
             filename);
     auto& ctx = m_runtime.GetContext();
-    // FIXME: remove new
     return QuickJSScript{
-        new QuickJSScriptImpl(ctx, ctx.Eval(content, filename, true))};
+        m_allocator.Allocate(*this, ctx, ctx.Eval(content, filename, true))};
 }
 
 QuickJSScript ScriptManagerImpl::Load(std::span<const char> content) {
     auto& ctx = m_runtime.GetContext();
-    // FIXME: remove new
     return QuickJSScript{
-        new QuickJSScriptImpl{ctx, ctx.Eval(content, "", true)}
-    };
+        m_allocator.Allocate(*this, ctx, ctx.Eval(content, "", true))};
+}
+
+void ScriptManagerImpl::GC() {
+    m_allocator.GC();
 }
 
 JSValue jsPrint2Console(JSContext* context, JSValue self, int argc,
@@ -82,6 +83,10 @@ QuickJSScript ScriptManager::Load(const Path& filename) {
 
 QuickJSScript ScriptManager::Load(std::span<const char> content) {
     return m_impl->Load(content);
+}
+
+void ScriptManager::GC() {
+    m_impl->GC();
 }
 
 ScriptManagerImpl* ScriptManager::GetImpl() {

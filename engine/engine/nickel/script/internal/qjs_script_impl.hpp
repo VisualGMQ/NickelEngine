@@ -5,9 +5,11 @@
 
 namespace nickel::script {
 
+class ScriptManagerImpl;
+
 class QuickJSScriptImpl : public RefCountable {
 public:
-    QuickJSScriptImpl(QJSContext&, JSValue);
+    QuickJSScriptImpl(ScriptManagerImpl&, QJSContext&, JSValue);
     ~QuickJSScriptImpl();
 
     void OnUpdate();
@@ -17,6 +19,7 @@ public:
 
 private:
     QJSContext& m_ctx;
+    ScriptManagerImpl& m_manager;
     JSValue m_value;
 };
 

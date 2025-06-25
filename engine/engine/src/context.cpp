@@ -258,6 +258,7 @@ void Context::Update() {
     m_physics->GC();
     m_gltf_mgr->GC();
     m_texture_mgr->GC();
+    m_script_mgr->GC();
 }
 
 const Path& Context::GetEngineRelativePath() const {
