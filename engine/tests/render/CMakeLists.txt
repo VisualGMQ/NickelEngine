@@ -1,5 +1,6 @@
 add_library(CommonRenderTestContext STATIC common.hpp common.cpp)
 target_link_libraries(CommonRenderTestContext PUBLIC Catch2 ${NICKEL_MAIN_ENTRY_NAME})
+set_target_properties(CommonRenderTestContext PROPERTIES FOLDER tests/renderer)
 
 add_subdirectory(triangle)
 add_subdirectory(rectangle)

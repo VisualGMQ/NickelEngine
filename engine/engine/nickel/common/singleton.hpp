@@ -69,7 +69,7 @@ public:
      * */
     template <typename... Args>
     static void Init(Args&&... args) {
-        instance_ = std::make_unique<T>(std::forward<Args>(args)...);
+        instance_ = std::unique_ptr<T>(new T{std::forward<Args>(args)...});
     }
 
     /**

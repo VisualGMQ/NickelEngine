@@ -4,14 +4,14 @@
 namespace nickel::graphics {
 
 
-enum  class NICKEL_REFL_ATTR(refl) ImageAspect {
+enum  class NICKEL_REFL_ATTR(refl, script) ImageAspect {
     None = 0x00,
     Color = 0x01,
     Depth = 0x02,
     Stencil = 0x04,
 };
 
-enum class NICKEL_REFL_ATTR(refl) CompareOp {
+enum class NICKEL_REFL_ATTR(refl, script) CompareOp {
     Never,
     Less,
     Equal,
@@ -22,7 +22,7 @@ enum class NICKEL_REFL_ATTR(refl) CompareOp {
     Always,
 };
 
-enum class NICKEL_REFL_ATTR(refl) ImageType {
+enum class NICKEL_REFL_ATTR(refl, script) ImageType {
     Dim1,
     Dim2,
     Dim3,

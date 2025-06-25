@@ -1,0 +1,11 @@
+module.AddClass<{{class_type}}>("{{class_name}}")
+    {{#class_ctor}}
+        .AddConstructor<{{{ctor_params}}}>()
+    {{/class_ctor}}
+    {{#class_properties}}
+    .AddProperty<&{{property_type}}>("{{property_name}}")
+    {{/class_properties}}
+    {{#class_enums}}
+    {{{class_enum_binding}}}
+    {{/class_enums}}
+.EndClass();

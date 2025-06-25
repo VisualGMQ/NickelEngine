@@ -3,13 +3,20 @@ add_subdirectory(3rdlibs)
 option(NICKEL_BUILD_SHARED "build shared engine library" OFF)
 option(NICKEL_BUILD_STATIC "build static engine library" ON)
 
-set(NICKEL_REFL_GENERATE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/refl_generate)
-set(NICKEL_REFL_GENERATE_DIR ${NICKEL_REFL_GENERATE_INCLUDE_DIR}/nickel/refl_generate/)
+set(NICKEL_GENERATE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/generate/)
+set(NICKEL_GENERATE_DIR ${NICKEL_GENERATE_INCLUDE_DIR}/nickel/generate/)
+set(NICKEL_REFL_GENERATE_DIR ${NICKEL_GENERATE_DIR}/refl/)
+set(NICKEL_BINDING_GENERATE_DIR ${NICKEL_GENERATE_DIR}/binding/)
 file(MAKE_DIRECTORY ${NICKEL_REFL_GENERATE_DIR})
+file(MAKE_DIRECTORY ${NICKEL_BINDING_GENERATE_DIR})
+
 # copy tirvial file
-file(COPY_FILE refl_code_generator/mustache/trivial_header.hpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.hpp ONLY_IF_DIFFERENT)
-file(COPY_FILE refl_code_generator/mustache/trivial_impl.cpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ONLY_IF_DIFFERENT)
-add_subdirectory(refl_code_generator)
+file(COPY_FILE code_generator/mustache/refl/trivial_header.hpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.hpp ONLY_IF_DIFFERENT)
+file(COPY_FILE code_generator/mustache/refl/trivial_impl.cpp ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ONLY_IF_DIFFERENT)
+file(COPY_FILE code_generator/mustache/script/trivial_header.hpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.hpp ONLY_IF_DIFFERENT)
+file(COPY_FILE code_generator/mustache/script/trivial_impl.cpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.cpp ONLY_IF_DIFFERENT)
+
+add_subdirectory(code_generator)
 
 file(GLOB_RECURSE ENGINE_SRC src/*.cpp)
 file(GLOB_RECURSE ENGINE_ALL_HEADERS nickel/*.hpp)
@@ -25,7 +32,7 @@ set(ENGINE_EXPORT_HEADERS ${ENGINE_ALL_HEADERS})
 list(REMOVE_ITEM ENGINE_EXPORT_HEADERS ${ENGINE_INTERNAL_HEADERS})
 file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.vert)
 file(GLOB_RECURSE ENGINE_MODEL_FILES assets/models/*)
-file(GLOB_RECURSE ENGINE_REFL_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/*.hpp ${NICKEL_REFL_GENERATE_DIR}/*.cpp)
+set(ENGINE_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.cpp)
 
 compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
 compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
@@ -33,11 +40,11 @@ compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridlin
 compile_shader(assets/shaders/shader_gridline.frag assets/shaders/shader_gridline.frag.spv)
 
 macro(attach_common_config_on_engine target_name)
-    target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_MODEL_FILES} ${ENGINE_SHADER_FILES} ${ENGINE_REFL_GENERATE_FILES})
+    target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_MODEL_FILES} ${ENGINE_SHADER_FILES} ${ENGINE_GENERATE_FILES})
     target_include_directories(${target_name} PUBLIC .)
-    target_include_directories(${target_name} PRIVATE ${NICKEL_REFL_GENERATE_INCLUDE_DIR})
+    target_include_directories(${target_name} PRIVATE ${NICKEL_GENERATE_INCLUDE_DIR})
     target_compile_features(${target_name} PUBLIC cxx_std_20)
-    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus
+    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus qjs
         # PhysX
         PhysXExtensions
         PhysX
@@ -58,7 +65,7 @@ macro(attach_common_config_on_engine target_name)
         NvBlast::ExtStress
     )
     target_link_libraries(${target_name} PUBLIC spdlog::spdlog imgui implot)
-    add_dependencies(${target_name} refl_code_generate)
+    add_dependencies(${target_name} code_generate)
 
     target_precompile_headers(${target_name} PRIVATE nickel/internal/pch.hpp nickel/physics/internal/pch.hpp)
     target_compile_definitions(${target_name} PRIVATE _CRT_SECURE_NO_WARNINGS)

@@ -104,6 +104,7 @@ struct function_traits<Ret (Class::*)(Args...)>
     using type = Ret (Class::*)(Args...);
     using args_with_class = type_list<Class*, Args...>;
     using pointer = Ret (Class::*)(Args...);
+    using clazz = Class;
     static constexpr bool is_member = true;
     static constexpr bool is_const = false;
 };
@@ -114,6 +115,7 @@ struct function_traits<Ret (Class::*)(Args...) const>
     using type = Ret (Class::*)(Args...) const;
     using args_with_class = type_list<Class*, Args...>;
     using pointer = Ret (Class::*)(Args...) const;
+    using clazz = Class;
     static constexpr bool is_member = true;
     static constexpr bool is_const = true;
 };
@@ -139,6 +141,7 @@ using function_pointer_traits = detail::function_pointer_traits<F>;
  */
 template <typename T>
 constexpr bool is_function_v =
-    std::is_function_v<T> || std::is_member_function_pointer_v<T>;
+    std::is_function_v<T> || std::is_member_function_pointer_v<T> ||
+    std::is_function_v<std::remove_pointer_t<T>>;
 
 }  // namespace nickel::refl

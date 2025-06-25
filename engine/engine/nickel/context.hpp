@@ -8,17 +8,18 @@
 #include "nickel/graphics/lowlevel/adapter.hpp"
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/input/device/device_manager.hpp"
-#include "nickel/video/window.hpp"
 #include "nickel/time/time.hpp"
+#include "nickel/video/window.hpp"
 
 #include "imgui.h"
 #include "implot.h"
-#include "misc/Level.hpp"
 #include "misc/cpp/imgui_stdlib.h"
 #include "nickel/graphics/debug_draw.hpp"
 #include "nickel/graphics/gltf.hpp"
+#include "nickel/misc/Level.hpp"
 #include "nickel/physics/context.hpp"
 #include "nickel/refl/custom/flags_refl.hpp"
+#include "nickel/script/script.hpp"
 
 union SDL_Event;
 
@@ -52,6 +53,8 @@ public:
     const graphics::TextureManager& GetTextureManager() const;
     const graphics::GLTFManager& GetGLTFManager() const;
     graphics::GLTFManager& GetGLTFManager();
+    const script::ScriptManager& GetScriptManager() const;
+    script::ScriptManager& GetScriptManager();
     Level& GetCurrentLevel();
     const Level& GetCurrentLevel() const;
     const graphics::DebugDrawer& GetDebugDrawer() const;
@@ -84,6 +87,7 @@ private:
     input::DeviceManager m_device_mgr;
     std::unique_ptr<graphics::TextureManager> m_texture_mgr;
     std::unique_ptr<graphics::GLTFManager> m_gltf_mgr;
+    std::unique_ptr<script::ScriptManager> m_script_mgr;
     std::unique_ptr<Level> m_level;
 
     std::unique_ptr<Application> m_application;

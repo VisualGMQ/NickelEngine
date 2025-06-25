@@ -26,7 +26,7 @@ NickelEngine重写中，老版本备份在[NickelEngine-backup](https://github.c
 先安装`Python3`依赖库：
 
 ```bash
-pip install -r ./engine/engine/refl_code_generator/requirements.txt
+pip install -r ./engine/engine/code_generator/requirements.txt
 ```
 
 然后使用CMake进行编译

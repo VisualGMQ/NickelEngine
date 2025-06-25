@@ -3,16 +3,16 @@
 
 namespace nickel::physics {
 
-enum class NICKEL_REFL_ATTR(refl) ForceMode {
+enum class NICKEL_REFL_ATTR(refl, script) ForceMode {
     Force,
     Acceleration,
     Velocity,
     Impulse,
 };
 
-enum class NICKEL_REFL_ATTR(refl) CombineMode { Average, Min, Max, Multiply };
+enum class NICKEL_REFL_ATTR(refl, script) CombineMode { Average, Min, Max, Multiply };
 
-enum class NICKEL_REFL_ATTR(refl) RigidActorType {
+enum class NICKEL_REFL_ATTR(refl, script) RigidActorType {
     RigidStatic,
     RigidDynamic,
     ArticulationLink,
@@ -21,7 +21,7 @@ enum class NICKEL_REFL_ATTR(refl) RigidActorType {
     PbdParticleSystem,
 };
 
-enum class NICKEL_REFL_ATTR(refl) HitFlag {
+enum class NICKEL_REFL_ATTR(refl, script) HitFlag {
     Position = 1 << 0,
     Normal = 1 << 1,
     UV = 1 << 2,
@@ -35,7 +35,7 @@ enum class NICKEL_REFL_ATTR(refl) HitFlag {
     Default = Position | Normal | FaceIndex,
 };
 
-enum class NICKEL_REFL_ATTR(refl) QueryFlag {
+enum class NICKEL_REFL_ATTR(refl, script) QueryFlag {
     Static = 1 << 0,
     Dynamic = 1 << 1,
     PreFilter = 1 << 2,
@@ -46,7 +46,7 @@ enum class NICKEL_REFL_ATTR(refl) QueryFlag {
     DisableHardcodedFilter = 1 << 7,
 };
 
-enum class NICKEL_REFL_ATTR(refl) QueryHitType {
+enum class NICKEL_REFL_ATTR(refl, script) QueryHitType {
     None,
     Touch,
     Block,

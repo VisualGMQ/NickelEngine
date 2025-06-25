@@ -7,7 +7,7 @@
 #include "nickel/graphics/lowlevel/internal/enum_convert.hpp"
 #include "nickel/graphics/lowlevel/internal/vk_call.hpp"
 #include "nickel/internal/pch.hpp"
-#include "nickel/refl_generate/refl_generate.hpp"
+#include "nickel/generate/refl/refl_generate.hpp"
 
 namespace nickel {
 
@@ -18,6 +18,9 @@ Context::~Context() {
     m_application.reset();
 
     m_level.reset();
+
+    LOGI("release script manager");
+    m_script_mgr.reset();
 
     LOGI("release debug drawer");
     m_debug_drawer.reset();
@@ -66,12 +69,15 @@ void Context::Initialize() {
     m_graphics_ctx = std::make_unique<graphics::Context>(
         *m_graphics_adapter, *m_window, *m_storage_mgr);
 
-    LOGI("init asset managers");
+    LOGI("init asset manager");
     m_gltf_mgr = std::make_unique<graphics::GLTFManager>(
         m_graphics_adapter->GetDevice(),
         m_graphics_ctx->GetImpl()->GetCommonResource(),
         m_graphics_ctx->GetImpl()->GetGLTFRenderPass());
     m_texture_mgr = std::make_unique<graphics::TextureManager>();
+
+    LOGI("init script manager");
+    m_script_mgr = std::make_unique<script::ScriptManager>();
 
     LOGI("init physics context");
     m_physics = std::make_unique<physics::Context>();
@@ -159,6 +165,14 @@ graphics::GLTFManager& Context::GetGLTFManager() {
     return *m_gltf_mgr;
 }
 
+const script::ScriptManager& Context::GetScriptManager() const {
+    return *m_script_mgr;
+}
+
+script::ScriptManager& Context::GetScriptManager() {
+    return *m_script_mgr;
+}
+
 Level& Context::GetCurrentLevel() {
     return *m_level;
 }
@@ -244,6 +258,7 @@ void Context::Update() {
     m_physics->GC();
     m_gltf_mgr->GC();
     m_texture_mgr->GC();
+    m_script_mgr->GC();
 }
 
 const Path& Context::GetEngineRelativePath() const {

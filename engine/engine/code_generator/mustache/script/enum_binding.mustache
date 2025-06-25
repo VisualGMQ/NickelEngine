@@ -1,0 +1,5 @@
+module.AddEnum<{{enum_type}}>("{{enum_name}}")
+    {{#enums}}
+    .AddItem("{{enum_item_name}}", {{enum_item_value}})
+    {{/enums}}
+.EndEnum();
