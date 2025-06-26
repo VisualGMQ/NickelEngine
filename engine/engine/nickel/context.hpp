@@ -6,6 +6,7 @@
 #include "nickel/graphics/camera.hpp"
 #include "nickel/graphics/context.hpp"
 #include "nickel/graphics/lowlevel/adapter.hpp"
+#include "nickel/graphics/lowlevel/shader_compiler.hpp"
 #include "nickel/graphics/texture_manager.hpp"
 #include "nickel/input/device/device_manager.hpp"
 #include "nickel/time/time.hpp"

@@ -44,7 +44,7 @@ macro(attach_common_config_on_engine target_name)
     target_include_directories(${target_name} PUBLIC .)
     target_include_directories(${target_name} PRIVATE ${NICKEL_GENERATE_INCLUDE_DIR})
     target_compile_features(${target_name} PUBLIC cxx_std_20)
-    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus qjs
+    target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus qjs glslang::glslang
         # PhysX
         PhysXExtensions
         PhysX

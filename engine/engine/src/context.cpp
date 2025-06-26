@@ -40,9 +40,15 @@ Context::~Context() {
 
     LOGI("shutdown window system");
     m_window.reset();
+
+    LOGI("shutdown shader compiler system");
+    graphics::ShaderCompiler::ShutdownCompilerSystem();
 }
 
 void Context::Initialize() {
+    LOGI("init shader compiler system");
+    graphics::ShaderCompiler::InitCompilerSystem();
+    
     LOGI("init reflection system");
     refl_generate::RegisterReflectionInfo();
     
