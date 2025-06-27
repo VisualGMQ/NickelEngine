@@ -4,7 +4,7 @@ macro(mark_as_3rdlib target_name)
     endif()
 endmacro()
 
-macro(mark_as_3rdlib_to_folder target_name dst_name)
+macro(mark_as_3rdlib_to_folder target_name dst_folder)
     if (TARGET ${target_name})
         set_target_properties(${target_name} PROPERTIES FOLDER 3rdlibs/${dst_folder})
     endif()
