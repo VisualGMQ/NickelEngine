@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 project(NickelEngine
     DESCRIPTION "a game engine based on ECS"
@@ -20,6 +20,7 @@ if (NOT GLSLC_PROG)
 endif()
 include(cmake/target_category_helper.cmake)
 include(cmake/compile_shader.cmake)
+include(cmake/add_3rdlib.cmake)
 
 
 ## generate path content
