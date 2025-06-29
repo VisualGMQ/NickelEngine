@@ -5,6 +5,7 @@ namespace nickel::graphics {
 
 class ShaderCompilerImpl;
 
+/// Store SpirV code
 struct SpirVBinary {
     std::vector<unsigned int> m_data;
 
@@ -22,12 +23,15 @@ enum class ShaderType {
 
 class ShaderCompiler {
 public:
+    /// @warning  internal usage, init glslang shader compiler system
     static void InitCompilerSystem();
+
+    /// @warning  internal usage, shutdown glslang shader compiler system
     static void ShutdownCompilerSystem();
 
     ShaderCompiler();
     ~ShaderCompiler();
-    
+
     SpirVBinary Compile(std::span<const char> code, ShaderType stage);
 
 private:

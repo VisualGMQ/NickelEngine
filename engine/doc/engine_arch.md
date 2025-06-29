@@ -7,3 +7,4 @@
 ## Engine Tools:
 
 - @ref code_generate_page
+- @ref shader_compiler_page

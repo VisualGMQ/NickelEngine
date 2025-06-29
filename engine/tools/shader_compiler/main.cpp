@@ -1,3 +1,19 @@
+/**
+ * @page shader_compiler_page Shader Compiler
+ * `shader_compiler` is used to compile shader in runtime.
+ *
+ * ## How it works
+ *
+ * It use glslang internally to compile shader. It can compile GLSL to vulkan
+ * supported SpirV
+ *
+ * ## Usage
+ *
+ * ```bash
+ * shader_compiler <shader_file> -o <shader_output_file>
+ * ```
+ */
+
 #include "lyra/lyra.hpp"
 #include "nickel/common/assert.hpp"
 #include "nickel/common/common.hpp"
@@ -84,7 +100,11 @@ int main(int argc, const char** argv) {
     }
 
     std::ofstream out_file(output_filename, std::ios::binary);
-    out_file.write((const char*)spirv.m_data.data(), spirv.m_data.size() * sizeof(decltype(nickel::graphics::SpirVBinary::m_data)::value_type));
+    out_file.write(
+        (const char*)spirv.m_data.data(),
+        spirv.m_data.size() *
+            sizeof(
+                decltype(nickel::graphics::SpirVBinary::m_data)::value_type));
 
     nickel::graphics::ShaderCompiler::ShutdownCompilerSystem();
 
