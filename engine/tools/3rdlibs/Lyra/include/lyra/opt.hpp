@@ -1,0 +1,384 @@
+// Copyright René Ferdinand Rivera Morell
+// Copyright 2017 Two Blue Cubes Ltd. All rights reserved.
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+#ifndef LYRA_OPT_HPP
+#define LYRA_OPT_HPP
+
+#include "lyra/detail/bound.hpp"
+#include "lyra/detail/print.hpp"
+#include "lyra/detail/tokens.hpp"
+#include "lyra/detail/trait_utils.hpp"
+#include "lyra/option_style.hpp"
+#include "lyra/parser.hpp"
+#include "lyra/parser_result.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+namespace lyra {
+
+/* tag::reference[]
+
+[#lyra_opt]
+= `lyra::opt`
+
+A parser for one option with multiple possible names. The option value(s) are
+communicated through a reference to a variable, a container, or a callback.
+
+Is-a <<lyra_bound_parser>>.
+
+end::reference[] */
+class opt : public bound_parser<opt>
+{
+	public:
+	enum class ctor_lambda_e
+	{
+		val
+	};
+	enum class ctor_ref_e
+	{
+		val
+	};
+
+	// Flag option ctors..
+
+	explicit opt(bool & ref);
+
+	template <typename L>
+	explicit opt(L const & ref,
+		typename std::enable_if<detail::is_invocable<L>::value,
+			ctor_lambda_e>::type
+		= ctor_lambda_e::val);
+
+	// Value option ctors..
+
+	template <typename T>
+	opt(T & ref,
+		std::string const & hint,
+		typename std::enable_if<!detail::is_invocable<T>::value,
+			ctor_ref_e>::type
+		= ctor_ref_e::val);
+
+	template <typename L>
+	opt(L const & ref,
+		std::string const & hint,
+		typename std::enable_if<detail::is_invocable<L>::value,
+			ctor_lambda_e>::type
+		= ctor_lambda_e::val);
+
+	// Bound value ctors..
+	template <typename T>
+	explicit opt(detail::BoundVal<T> && val)
+		: bound_parser(val.move_to_shared())
+	{}
+	template <typename T>
+	explicit opt(detail::BoundVal<T> && val, std::string const & hint)
+		: bound_parser(val.move_to_shared(), hint)
+	{}
+
+	// Option specifications..
+
+	opt & name(const std::string & opt_name);
+	opt & operator[](std::string const & opt_name);
+
+	// Internal..
+
+	std::string get_usage_text(const option_style & style) const override
+	{
+		std::string usage;
+		for (std::size_t o = 0; o < opt_names.size(); ++o)
+		{
+			if (o > 0) usage += "|";
+			usage += format_opt(opt_names[o], style);
+		}
+		if (!m_hint.empty()) usage += " <" + m_hint + ">";
+		return usage;
+	}
+
+	bool is_named(const std::string & n) const override
+	{
+		if (bound_parser::is_named(n)) return true;
+		for (auto & name : opt_names)
+			if (n == name) return true;
+		return false;
+	}
+
+	using parser::parse;
+
+	parse_result parse(detail::token_iterator const & tokens,
+		const option_style & style) const override
+	{
+		LYRA_PRINT_SCOPE("opt::parse");
+		auto validationResult = validate();
+		if (!validationResult) return parse_result(validationResult);
+
+		auto remainingTokens = tokens;
+		if (remainingTokens && remainingTokens.has_option_prefix())
+		{
+			auto const & token = remainingTokens.option();
+			if (is_match(token.name, style))
+			{
+				if (m_ref->isFlag())
+				{
+					if (remainingTokens.has_value_delimiter())
+					{
+						return parse_result::error(
+							{ parser_result_type::short_circuit_all,
+								remainingTokens },
+							"Flag option '" + token.name + "' contains value '"
+								+ remainingTokens.value().name + "'.");
+					}
+					remainingTokens.pop(token);
+					auto flagRef
+						= static_cast<detail::BoundFlagRefBase *>(m_ref.get());
+					auto flag_result = flagRef->setFlag(true);
+					if (!flag_result) return parse_result(flag_result);
+					LYRA_PRINT_DEBUG(
+						"(=)", get_usage_text(style), "==", token.name);
+					if (flag_result.value()
+						== parser_result_type::short_circuit_all)
+						return parse_result::ok(detail::parse_state(
+							flag_result.value(), remainingTokens));
+				}
+				else
+				{
+					auto const & argToken = remainingTokens.value();
+					if (argToken.type == detail::token_type::unknown)
+						return parse_result::error(
+							{ parser_result_type::no_match, remainingTokens },
+							"Expected argument following " + token.name);
+					remainingTokens.pop(token, argToken);
+					auto valueRef
+						= static_cast<detail::BoundValueRefBase *>(m_ref.get());
+					if (value_choices)
+					{
+						auto choice_result
+							= value_choices->contains_value(argToken.name);
+						if (!choice_result) return parse_result(choice_result);
+					}
+					auto v_result = valueRef->setValue(argToken.name);
+					if (!v_result)
+					{
+						// Matched the option, but not the value. This is a
+						// hard fail that needs to skip subsequent parsing.
+						return parse_result::error(
+							{ parser_result_type::short_circuit_all,
+								remainingTokens },
+							v_result.message());
+					}
+					LYRA_PRINT_DEBUG("(=)", get_usage_text(style),
+						"==", token.name, argToken.name);
+					if (v_result.value()
+						== parser_result_type::short_circuit_all)
+						return parse_result::ok(detail::parse_state(
+							v_result.value(), remainingTokens));
+				}
+				return parse_result::ok(detail::parse_state(
+					parser_result_type::matched, remainingTokens));
+			}
+			LYRA_PRINT_DEBUG("(!)", get_usage_text(style), "!= ", token.name);
+		}
+		else
+		{
+			LYRA_PRINT_DEBUG("(!)", get_usage_text(style),
+				"!=", remainingTokens.argument().name);
+		}
+
+		return parse_result::ok(
+			detail::parse_state(parser_result_type::no_match, remainingTokens));
+	}
+
+	result validate() const override
+	{
+		if (opt_names.empty())
+			return result::error("No options supplied to opt");
+		if (m_ref->isFlag() && value_choices)
+			return result::error("Flag options cannot contain choices.");
+		for (auto const & name : opt_names)
+		{
+			if (name.empty())
+				return result::error("Option name cannot be empty");
+			if (name[0] != '-')
+				return result::error("Option name must begin with '-'");
+		}
+		return bound_parser::validate();
+	}
+
+	std::unique_ptr<parser> clone() const override
+	{
+		return make_clone<opt>(this);
+	}
+
+	protected:
+	std::vector<std::string> opt_names;
+
+	bool is_match(
+		std::string const & opt_name, const option_style & style) const
+	{
+		auto opt_normalized = normalize_opt(opt_name, style);
+		for (auto const & name : opt_names)
+		{
+			if (normalize_opt(name, style) == opt_normalized) return true;
+		}
+		return false;
+	}
+
+	std::string normalize_opt(
+		std::string const & opt_name, const option_style & style) const
+	{
+		if (detail::token_iterator::is_prefixed(
+				style.short_option_prefix, style.short_option_size, opt_name))
+			return std::string("-") + opt_name.substr(style.short_option_size);
+
+		if (detail::token_iterator::is_prefixed(
+				style.long_option_prefix, style.long_option_size, opt_name))
+			return std::string("--") + opt_name.substr(style.long_option_size);
+
+		return opt_name;
+	}
+
+	std::string format_opt(
+		std::string const & opt_name, const option_style & style) const
+	{
+		if (opt_name[0] == '-' && opt_name[1] == '-')
+			return style.long_option_string() + opt_name.substr(2);
+		else if (opt_name[0] == '-')
+			return style.short_option_string() + opt_name.substr(1);
+		else
+			return opt_name;
+	}
+
+	std::string get_print_order_key(const option_style & style) const override
+	{
+		return format_opt(opt_names[0], style);
+	}
+
+	void print_help_text_details(
+		printer & p, const option_style & style) const override
+	{
+		std::string text;
+		for (auto const & opt_name : opt_names)
+		{
+			if (!text.empty()) text += ", ";
+			text += format_opt(opt_name, style);
+		}
+		if (!m_hint.empty()) ((text += " <") += m_hint) += ">";
+		p.option(style, text, m_description);
+	}
+};
+
+/* tag::reference[]
+
+[#lyra_opt_ctor]
+== Construction
+
+end::reference[] */
+
+/* tag::reference[]
+
+[#lyra_opt_ctor_flags]
+=== Flags
+
+[source]
+----
+lyra::opt::opt(bool& ref);
+
+template <typename L>
+lyra::opt::opt(L const& ref);
+----
+
+Constructs a flag option with a target `bool` to indicate if the flag is
+present. The first form takes a reference to a variable to receive the
+`bool`. The second takes a callback that is called with `true` when the
+option is present.
+
+end::reference[] */
+inline opt::opt(bool & ref)
+	: bound_parser(std::make_shared<detail::BoundFlagRef>(ref))
+{}
+template <typename L>
+opt::opt(L const & ref,
+	typename std::enable_if<detail::is_invocable<L>::value,
+		opt::ctor_lambda_e>::type)
+	: bound_parser(std::make_shared<detail::BoundFlagLambda<L>>(ref))
+{}
+
+/* tag::reference[]
+
+[#lyra_opt_ctor_values]
+=== Values
+
+[source]
+----
+template <typename T>
+lyra::opt::opt(T& ref, std::string const& hint);
+
+template <typename L>
+lyra::opt::opt(L const& ref, std::string const& hint)
+----
+
+Constructs a value option with a target `ref`. The first form takes a reference
+to a variable to receive the value. The second takes a callback that is called
+with the value when the option is present.
+
+end::reference[] */
+template <typename T>
+opt::opt(T & ref,
+	std::string const & hint,
+	typename std::enable_if<!detail::is_invocable<T>::value,
+		opt::ctor_ref_e>::type)
+	: bound_parser(ref, hint)
+{}
+template <typename L>
+opt::opt(L const & ref,
+	std::string const & hint,
+	typename std::enable_if<detail::is_invocable<L>::value,
+		opt::ctor_lambda_e>::type)
+	: bound_parser(ref, hint)
+{}
+
+/* tag::reference[]
+
+[#lyra_opt_specification]
+== Specification
+
+end::reference[] */
+
+/* tag::reference[]
+
+[#lyra_opt_name]
+=== `lyra::opt::name`
+
+[source]
+----
+lyra::opt& lyra::opt::name(const std::string &opt_name)
+lyra::opt& lyra::opt::operator[](const std::string &opt_name)
+----
+
+Add a spelling for the option of the form `--<name>` or `-n`.
+One can add multiple short spellings at once with `-abc`.
+
+end::reference[] */
+inline opt & opt::name(const std::string & opt_name)
+{
+	if (opt_name.size() > 2 && opt_name[0] == '-' && opt_name[1] != '-')
+		for (auto o : opt_name.substr(1))
+			opt_names.push_back(std::string(1, opt_name[0]) + o);
+	else
+		opt_names.push_back(opt_name);
+	return *this;
+}
+inline opt & opt::operator[](const std::string & opt_name)
+{
+	return this->name(opt_name);
+}
+
+} // namespace lyra
+
+#endif

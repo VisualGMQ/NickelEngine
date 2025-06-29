@@ -2,6 +2,19 @@ add_library(CommonRenderTestContext STATIC common.hpp common.cpp)
 target_link_libraries(CommonRenderTestContext PUBLIC Catch2 ${NICKEL_MAIN_ENTRY_NAME})
 set_target_properties(CommonRenderTestContext PROPERTIES FOLDER tests/renderer)
 
+macro(add_render_test name)
+    aux_source_directory(. SRC)
+    file(GLOB_RECURSE SHADER_FILES *.vert *.frag *.tesc *.tese *.comp *.geom)
+    set(SHADER_COMPILED_FILES ${SHADER_FILES})
+    list(TRANSFORM SHADER_COMPILED_FILES APPEND ".spv")
+
+    compile_shader("${SHADER_FILES}")
+
+    add_executable(${name})
+    target_sources(${name} PRIVATE ${SRC} ${SHADER_FILES} ${SHADER_COMPILED_FILES})
+    mark_as_gui_test(${name} renderer)
+endmacro()
+
 add_subdirectory(triangle)
 add_subdirectory(rectangle)
 add_subdirectory(texture_rect)

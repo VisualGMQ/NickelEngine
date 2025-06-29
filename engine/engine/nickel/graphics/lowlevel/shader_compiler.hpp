@@ -1,4 +1,5 @@
 #pragma once
+#include <span>
 
 namespace nickel::graphics {
 

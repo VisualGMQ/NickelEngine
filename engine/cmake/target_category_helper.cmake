@@ -39,3 +39,9 @@ macro(mark_as_tool target_name)
     target_link_libraries(${target_name} PRIVATE ${NICKEL_MAIN_ENTRY_NAME})
 endmacro()
 
+macro(mark_as_tool_without_engine target_name)
+    set_target_properties(${target_name} PROPERTIES
+        FOLDER tools
+        VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endmacro()
+

@@ -420,9 +420,9 @@ private:
 
         auto engine_relative_path = nickel::Context::GetInst().GetEngineRelativePath();
         auto vert_file_content =
-            nickel::ReadWholeFile(engine_relative_path / "tests/render/cube3d/vert.spv");
+            nickel::ReadWholeFile(engine_relative_path / "tests/render/cube3d/shader.vert.spv");
         auto frag_file_content =
-            nickel::ReadWholeFile(engine_relative_path / "tests/render/cube3d/frag.spv");
+            nickel::ReadWholeFile(engine_relative_path / "tests/render/cube3d/shader.frag.spv");
 
         ShaderModule vertex_shader = device.CreateShaderModule(
             (uint32_t*)vert_file_content.data(), vert_file_content.size());
