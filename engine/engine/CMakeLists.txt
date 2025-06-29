@@ -34,17 +34,23 @@ file(GLOB_RECURSE ENGINE_SHADER_FILES assets/shaders/*.frag assets/shaders/*.ver
 file(GLOB_RECURSE ENGINE_MODEL_FILES assets/models/*)
 set(ENGINE_GENERATE_FILES ${NICKEL_REFL_GENERATE_DIR}/refl_generate.cpp ${NICKEL_BINDING_GENERATE_DIR}/script_binding.cpp)
 
-compile_shader(assets/shaders/shader_pbr.vert assets/shaders/shader_pbr.vert.spv)
-compile_shader(assets/shaders/shader_pbr.frag assets/shaders/shader_pbr.frag.spv)
-compile_shader(assets/shaders/shader_gridline.vert assets/shaders/shader_gridline.vert.spv)
-compile_shader(assets/shaders/shader_gridline.frag assets/shaders/shader_gridline.frag.spv)
+set(ENGINE_SHADER_COMPILED_FILES ${ENGINE_SHADER_FILES})
+list(TRANSFORM ENGINE_SHADER_COMPILED_FILES APPEND ".spv")
+compile_shader("${ENGINE_SHADER_FILES}")
 
 macro(attach_common_config_on_engine target_name)
     target_sources(${target_name} PRIVATE ${ENGINE_ALL_HEADERS} ${ENGINE_SRC} ${ENGINE_MODEL_FILES} ${ENGINE_SHADER_FILES} ${ENGINE_GENERATE_FILES})
+    if (GLSLC_PROG)
+        target_sources(${target_name} PRIVATE ${ENGINE_SHADER_COMPILED_FILES})
+    endif()
     target_include_directories(${target_name} PUBLIC .)
     target_include_directories(${target_name} PRIVATE ${NICKEL_GENERATE_INCLUDE_DIR})
     target_compile_features(${target_name} PUBLIC cxx_std_20)
     target_link_libraries(${target_name} PRIVATE SDL3::SDL3 volk::volk stb_image tinygltf tomlplusplus::tomlplusplus qjs
+        # glslang & spriv
+        glslang::glslang
+        glslang::glslang-default-resource-limits
+
         # PhysX
         PhysXExtensions
         PhysX
@@ -108,5 +114,3 @@ else()
 endif()
 
 add_subdirectory(main_entry)
-
-find_package(Python3 COMPONENTS Interpreter REQUIRED)

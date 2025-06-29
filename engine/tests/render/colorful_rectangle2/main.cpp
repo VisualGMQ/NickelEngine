@@ -189,10 +189,10 @@ private:
         auto engine_relative_path = nickel::Context::GetInst().GetEngineRelativePath();
 
         auto vert_file_content = nickel::ReadWholeFile(
-            engine_relative_path / "tests/render/colorful_rectangle2/vert.spv");
+            engine_relative_path / "tests/render/colorful_rectangle2/shader.vert.spv");
 
         auto frag_file_content = nickel::ReadWholeFile(
-            engine_relative_path / "tests/render/colorful_rectangle2/frag.spv");
+            engine_relative_path / "tests/render/colorful_rectangle2/shader.frag.spv");
 
         ShaderModule vertex_shader = device.CreateShaderModule(
             (uint32_t*)vert_file_content.data(), vert_file_content.size());

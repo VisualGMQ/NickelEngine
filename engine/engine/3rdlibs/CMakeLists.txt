@@ -51,3 +51,10 @@ set(QJS_BUILD_COMPILER ON)
 set(QJS_BUILD_REPL ON)
 set(QJS_BUILD_LIBC ON)
 add_3rdlib(quickjs)
+
+set(SPRIV_SKIP_TESTS ON)
+set(SPRIV_SKIP_EXECUTABLES ON)
+add_3rdlib(spirv-tools)
+
+set(BUILD_SHARED_LIBS OFF)
+add_3rdlib(glslang)

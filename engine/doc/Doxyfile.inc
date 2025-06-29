@@ -991,7 +991,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = ../engine/code_generator/parser.py ../engine/nickel ../tests/render ../tests/script @CMAKE_CURRENT_SOURCE_DIR@
+INPUT                  = ../engine/code_generator/parser.py ../engine/nickel ../tests/render ../tests/script ../tools/shader_compiler ../tools/vehicle_editor @CMAKE_CURRENT_SOURCE_DIR@
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

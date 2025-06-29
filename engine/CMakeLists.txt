@@ -32,7 +32,6 @@ string(REPLACE "#PROJECT_PATH#" "${NICKEL_ENGINE_RELATIVE_PATH}" PROJECT_PATH_CO
 
 file(WRITE ${CMAKE_SOURCE_DIR}/nickel_engine_project_path.toml ${PROJECT_PATH_CONTENT})
 
-
 ## build
 
 add_subdirectory(engine)
