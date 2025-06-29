@@ -11,7 +11,10 @@ macro(add_render_test name)
     compile_shader("${SHADER_FILES}")
 
     add_executable(${name})
-    target_sources(${name} PRIVATE ${SRC} ${SHADER_FILES} ${SHADER_COMPILED_FILES})
+    target_sources(${name} PRIVATE ${SRC} ${SHADER_FILES})
+    if (GLSLC_PROG)
+        target_sources(${name} PRIVATE ${SHADER_COMPILED_FILES})
+    endif()
     mark_as_gui_test(${name} renderer)
 endmacro()
 
