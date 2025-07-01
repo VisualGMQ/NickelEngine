@@ -3,6 +3,7 @@
 
 namespace nickel::script {
 
+/// bunche of class id for T, const T, const T*, T*, const T&, T&
 struct QJSClassIDFamily {
     JSClassID m_id{};
     JSClassID m_const_id{};
@@ -31,35 +32,73 @@ struct QJSClassIDFamily {
     }
 };
 
-template <typename>
+template <typename T>
 class QJSClassIDManager {
+public:
+    static void RegisterID(JSClassID id) { QJSClassIDManager::id = id; }
+
+    static JSClassID GetOrGen(JSRuntime* runtime) {
+        if (id == 0) {
+            id = JS_NewClassID(runtime, &id);
+
+            JSClassDef def{};
+            def.class_name = "";
+            if constexpr (!std::is_reference_v<T> && !std::is_pointer_v<T>) {
+                def.finalizer = +[](JSRuntime* rt, JSValue val) {
+                    T* p =
+                        static_cast<T*>(JS_GetOpaque(val, JS_GetClassID(val)));
+                    if (p) delete p;
+                };
+            }
+            if (JS_NewClass(runtime, id, &def) < 0) {
+                LOGE("QJS new class failed");
+            }
+        }
+        return id;
+    }
+
+private:
+    static JSClassID id;
+};
+
+template <typename T>
+JSClassID QJSClassIDManager<T>::id{};
+
+template <typename T>
+concept PureClass =
+    std::is_class_v<T> && !std::is_const_v<T> && !std::is_volatile_v<T>;
+
+/** manage @ref QJSClassIDFamily for class
+ * @note T must be pure class type
+ */
+template <PureClass T>
+class QJSClassIDFamilyManager {
 public:
     static const QJSClassIDFamily& GetOrGen(JSRuntime* runtime) {
         if (!m_id_family) {
-            m_id_family.m_id = JS_NewClassID(runtime, &m_id_family.m_id);
+            m_id_family.m_id = QJSClassIDManager<T>::GetOrGen(runtime);
             m_id_family.m_const_id =
-                JS_NewClassID(runtime, &m_id_family.m_const_id);
+                QJSClassIDManager<const T>::GetOrGen(runtime);
             m_id_family.m_pointer_id =
-                JS_NewClassID(runtime, &m_id_family.m_pointer_id);
+                QJSClassIDManager<T*>::GetOrGen(runtime);
             m_id_family.m_const_pointer_id =
-                JS_NewClassID(runtime, &m_id_family.m_const_pointer_id);
-            m_id_family.m_ref_id =
-                JS_NewClassID(runtime, &m_id_family.m_ref_id);
+                QJSClassIDManager<const T*>::GetOrGen(runtime);
+            m_id_family.m_ref_id = QJSClassIDManager<T&>::GetOrGen(runtime);
             m_id_family.m_const_ref_id =
-                JS_NewClassID(runtime, &m_id_family.m_const_ref_id);
+                QJSClassIDManager<const T&>::GetOrGen(runtime);
         }
 
         return m_id_family;
     }
 
-    static bool IsClassIDCreated() noexcept { return m_id_family; }
+    static bool IsClassIDCreated() noexcept { return m_id_family != 0; }
 
 private:
     static QJSClassIDFamily m_id_family;
 };
 
-template <typename T>
-QJSClassIDFamily QJSClassIDManager<T>::m_id_family;
+template <PureClass T>
+QJSClassIDFamily QJSClassIDFamilyManager<T>::m_id_family;
 
 }  // namespace nickel::script
 

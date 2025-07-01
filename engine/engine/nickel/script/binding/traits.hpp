@@ -21,7 +21,7 @@ template <typename T>
 requires std::is_class_v<T>
 struct FnParamConverter<T&> {
     static T& Convert(JSContext* ctx, JSValue value) {
-        auto& ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        auto& ids = QJSClassIDFamilyManager<T>::GetOrGen(JS_GetRuntime(ctx));
         auto id = JS_GetClassID(value);
         if (id == ids.m_id || id == ids.m_ref_id || id == ids.m_pointer_id) {
             return *static_cast<T*>(JS_GetOpaque(value, id));
@@ -35,7 +35,7 @@ template <typename T>
 requires std::is_class_v<T>
 struct FnParamConverter<T*> {
     static T* Convert(JSContext* ctx, JSValue value) {
-        auto& ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        auto& ids = QJSClassIDFamilyManager<T>::GetOrGen(JS_GetRuntime(ctx));
         auto id = JS_GetClassID(value);
         if (id == ids.m_id || id == ids.m_ref_id || id == ids.m_pointer_id) {
             return static_cast<T*>(JS_GetOpaque(value, id));
@@ -70,7 +70,7 @@ struct JSConstructorTraits {
         Class* p = callConstructor(ctx, argv,
                                    std::make_index_sequence<sizeof...(Args)>{});
 
-        auto id = QJSClassIDManager<Class>::GetOrGen(JS_GetRuntime(ctx)).m_id;
+        auto id = QJSClassIDFamilyManager<Class>::GetOrGen(JS_GetRuntime(ctx)).m_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -122,7 +122,7 @@ private:
         JSClassID id = JS_GetClassID(self);
         NICKEL_ASSERT(id != 0, "call function on unregistered class");
 
-        auto ids = QJSClassIDManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
+        auto ids = QJSClassIDFamilyManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
 
         if (id == ids.m_id) {
             clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
@@ -212,7 +212,7 @@ struct JSMemberVariableTraits {
     static JSValue Getter(JSContext* ctx, JSValue this_val) {
         JSClassID id = JS_GetClassID(this_val);
 
-        auto& ids = QJSClassIDManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
+        auto& ids = QJSClassIDFamilyManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
         NICKEL_ASSERT(id == ids.m_id || id == ids.m_const_id);
         const clazz* p =
             static_cast<const clazz*>(JS_GetOpaque2(ctx, this_val, id));
@@ -234,7 +234,7 @@ struct JSMemberVariableTraits {
 
         clazz* p = static_cast<clazz*>(JS_GetOpaque2(
             ctx, this_val,
-            QJSClassIDManager<clazz>::GetOrGen(JS_GetRuntime(ctx)).m_id));
+            QJSClassIDFamilyManager<clazz>::GetOrGen(JS_GetRuntime(ctx)).m_id));
         if (!p) {
             LOGE("access class variable from nullptr");
             return JS_EXCEPTION;

@@ -14,7 +14,7 @@ class QJSClassFactory {
 public:
     template <typename T>
     QJSClass<T>& CreateOrGet(JSContext* ctx, const std::string& name) {
-        QJSClassIDFamily ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        QJSClassIDFamily ids = QJSClassIDFamilyManager<T>::GetOrGen(JS_GetRuntime(ctx));
 
         if (m_class_ids.contains(ids)) {
             return static_cast<QJSClass<T>&>(*m_classes_map[ids.m_id]);
