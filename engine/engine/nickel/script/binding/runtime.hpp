@@ -1,4 +1,5 @@
 #pragma once
+#include "nickel/script/binding/class_id.hpp"
 
 // forward declare
 struct JSRuntime;
@@ -19,11 +20,15 @@ public:
     const QJSContext& GetContext() const;
     QJSContext& GetContext();
     QJSClassFactory& GetClassFactory();
+    QJSClassIDManager& GetClassIDManager();
+    QJSClassIDFamilyManager& GetClassIDFamilyManager();
 
 private:
     JSRuntime* m_runtime{};
     std::unique_ptr<QJSClassFactory> m_class_factory;
     std::unique_ptr<QJSContext> m_context;
+    std::unique_ptr<QJSClassIDManager> m_id_manager;
+    std::unique_ptr<QJSClassIDFamilyManager> m_id_family_manager;
 };
 
 }  // namespace nickel::script

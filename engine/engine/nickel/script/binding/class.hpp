@@ -57,21 +57,24 @@ public:
         m_ref_def.class_name = m_ref_name.c_str();
         m_const_ref_def.class_name = m_const_ref_name.c_str();
 
-        auto& ids = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(m_context));
+        QJSRuntime& runtime = *static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(m_context)));
+        auto& id_family_manager = runtime.GetClassIDFamilyManager();
+        auto ids = id_family_manager.GetOrGen<T>();
 
-        QJS_CALL(m_context,
-                 JS_NewClass(JS_GetRuntime(m_context), ids.m_id, &m_def));
-        QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context),
-                                        ids.m_const_id, &m_const_type_def));
-        QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context),
-                                        ids.m_pointer_id, &m_pointer_def));
-        QJS_CALL(m_context,
-                 JS_NewClass(JS_GetRuntime(m_context), ids.m_const_pointer_id,
-                             &m_const_pointer_def));
-        QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context), ids.m_ref_id,
-                                        &m_ref_def));
-        QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context),
-                                        ids.m_const_ref_id, &m_const_ref_def));
+        // TODO: reset class name
+        // QJS_CALL(m_context,
+        //          JS_NewClass(JS_GetRuntime(m_context), ids.m_id, &m_def));
+        // QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context),
+        //                                 ids.m_const_id, &m_const_type_def));
+        // QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context),
+        //                                 ids.m_pointer_id, &m_pointer_def));
+        // QJS_CALL(m_context,
+        //          JS_NewClass(JS_GetRuntime(m_context), ids.m_const_pointer_id,
+        //                      &m_const_pointer_def));
+        // QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context), ids.m_ref_id,
+        //                                 &m_ref_def));
+        // QJS_CALL(m_context, JS_NewClass(JS_GetRuntime(m_context),
+        //                                 ids.m_const_ref_id, &m_const_ref_def));
 
         JS_SetClassProto(m_context, ids.m_id, m_proto);
         JS_SetClassProto(m_context, ids.m_const_id, m_const_proto);
@@ -88,9 +91,11 @@ public:
                 JSValue ctor = JS_NewCFunction(
                     m_context,
                     +[](JSContext* ctx, JSValue, int, JSValue*) {
-                        auto id =
-                            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
-                                .m_id;
+                        QJSRuntime& runtime = *static_cast<QJSRuntime*>(
+                            JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+                        auto& id_family_manager =
+                            runtime.GetClassIDFamilyManager();
+                        auto id = id_family_manager.GetOrGen<T>().m_id;
                         JSValue obj = JS_NewObjectClass(ctx, id);
                         if (JS_IsException(obj)) {
                             LogJSException(ctx);
@@ -103,13 +108,14 @@ public:
                 if (JS_IsException(m_ctor)) {
                     LogJSException(m_context);
 
-                    m_ctor = JS_NewCFunction(m_context, trivialCtor, m_name.c_str(), 0);
+                    m_ctor = JS_NewCFunction(m_context, trivialCtor,
+                                             m_name.c_str(), 0);
                     JS_VALUE_CHECK(m_context, ctor);
                 }
                 JS_SetConstructor(m_context, ctor, m_proto);
             }
         }
-        
+
         for (auto& e : m_enums) {
             QJS_CALL(m_context,
                      JS_SetPropertyStr(m_context, m_ctor, e->GetName().c_str(),
@@ -372,10 +378,8 @@ private:
     static JSValue trivialCtor(JSContext*, JSValue, int, JSValue*) {
         return JS_UNDEFINED;
     }
-    
-    static JSValue defaultCtor(JSContext* ctx, JSValue, int, JSValue*) {
 
-    }
+    static JSValue defaultCtor(JSContext* ctx, JSValue, int, JSValue*) {}
 };
 
 }  // namespace nickel::script

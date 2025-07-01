@@ -5,6 +5,7 @@
 #include "nickel/script/binding/common.hpp"
 #include "nickel/script/binding/context.hpp"
 #include "quickjs.h"
+#include "runtime.hpp"
 
 #include <concepts>
 
@@ -13,55 +14,69 @@ namespace nickel::script {
 template <typename T>
 struct JSValueWrapper;
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct JSValueWrapper<T> {
     JSValue Wrap(JSContext* ctx, T value) {
-        JSClassID id = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_id;
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        JSClassID id = id_family_manager.GetOrGen<T>().m_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
-        // FIXME: maybe copy in ?
-        QJS_CALL(ctx, JS_SetOpaque(obj, ::new(std::nothrow) T{value}));
+
+        QJS_CALL(ctx, JS_SetOpaque(obj, ::new (std::nothrow) T{value}));
         return obj;
     }
 
     T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
-        return *static_cast<T*>(JS_GetOpaque(
-            value, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_id));
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        return *static_cast<T*>(
+            JS_GetOpaque(value, id_family_manager.GetOrGen<T>().m_id));
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct JSValueWrapper<const T> {
     JSValue Wrap(JSContext* ctx, T value) {
-        JSClassID id =
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_id;
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        JSClassID id = id_family_manager.GetOrGen<T>().m_const_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
-        QJS_CALL(ctx, JS_SetOpaque(obj, ::new(std::nothrow) T{value}));
+        QJS_CALL(ctx, JS_SetOpaque(obj, ::new (std::nothrow) T{value}));
         return obj;
     }
 
     T& Unwrap(JSContext* ctx, const JSValue& value) {
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
-        return *static_cast<T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_id));
+        return *static_cast<T*>(
+            JS_GetOpaque(value, id_family_manager.GetOrGen<T>().m_const_id));
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct JSValueWrapper<const T*> {
     JSValue Wrap(JSContext* ctx, const T* value) {
-        JSClassID id = QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
-                           .m_const_pointer_id;
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        JSClassID id = id_family_manager.GetOrGen<T>().m_const_pointer_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -73,18 +88,23 @@ struct JSValueWrapper<const T*> {
     const T* Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_RETURN_VALUE_IF_FALSE_LOGE(nullptr, JS_IsObject(value),
                                           "js value is not object");
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
         return static_cast<const T*>(JS_GetOpaque(
-            value, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
-                       .m_const_pointer_id));
+            value, id_family_manager.GetOrGen<T>().m_const_pointer_id));
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct JSValueWrapper<T*> {
     JSValue Wrap(JSContext* ctx, T* value) {
-        JSClassID id =
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id;
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        JSClassID id = id_family_manager.GetOrGen<T>().m_pointer_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -96,18 +116,23 @@ struct JSValueWrapper<T*> {
     T* Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_RETURN_VALUE_IF_FALSE_LOGE(nullptr, JS_IsObject(value),
                                           "js value is not object");
-        return static_cast<T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id));
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        return static_cast<T*>(
+            JS_GetOpaque(value, id_family_manager.GetOrGen<T>().m_pointer_id));
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct JSValueWrapper<T&> {
     JSValue Wrap(JSContext* ctx, T& value) {
-        JSClassID id =
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_ref_id;
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        JSClassID id = id_family_manager.GetOrGen<T>().m_ref_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -118,18 +143,23 @@ struct JSValueWrapper<T&> {
 
     T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
         return *static_cast<T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_ref_id));
+            value, id_family_manager.GetOrGen<T>(JS_GetRuntime(ctx)).m_ref_id));
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct JSValueWrapper<const T&> {
     JSValue Wrap(JSContext* ctx, const T& value) {
-        JSClassID id =
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_ref_id;
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
+        JSClassID id = id_family_manager.GetOrGen<T>().m_const_ref_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -140,9 +170,12 @@ struct JSValueWrapper<const T&> {
 
     const T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDFamilyManager();
         return *static_cast<const T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_ref_id));
+            value, id_family_manager.GetOrGen<T>().m_const_ref_id));
     }
 };
 
@@ -166,9 +199,11 @@ struct JSValueWrapper<T> {
 template <typename T>
 struct JSValueWrapper<T*> {
     JSValue Wrap(JSContext* ctx, T* value) {
-        JSValue obj = JS_NewObjectClass(
-            ctx,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id);
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
+        JSValue obj = JS_NewObjectClass(ctx, id_manager.GetOrGen<T*>());
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
@@ -179,18 +214,24 @@ struct JSValueWrapper<T*> {
     T* Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_RETURN_VALUE_IF_FALSE_LOGE(nullptr, JS_IsObject(value),
                                           "js value is not object");
-        return static_cast<T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_pointer_id));
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
+        return static_cast<T*>(
+            JS_GetOpaque(value, id_manager.GetOrGen<T*>(JS_GetRuntime(ctx))));
     }
 };
 
 template <typename T>
 struct JSValueWrapper<const T&> {
     JSValue Wrap(JSContext* ctx, const T& value) {
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
         JSValue obj = JS_NewObjectClass(
-            ctx,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_ref_id);
+            ctx, id_manager.GetOrGen<const T&>(JS_GetRuntime(ctx)));
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
@@ -200,17 +241,24 @@ struct JSValueWrapper<const T&> {
 
     const T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
         return *static_cast<const T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_ref_id));
+            value, id_manager.GetOrGen<const T&>(JS_GetRuntime(ctx))));
     }
 };
 
 template <typename T>
 struct JSValueWrapper<T&> {
     JSValue Wrap(JSContext* ctx, T& value) {
-        JSValue obj = JS_NewObjectClass(
-            ctx, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_ref_id);
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
+        JSValue obj =
+            JS_NewObjectClass(ctx, id_manager.GetOrGen<T&>(JS_GetRuntime(ctx)));
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
@@ -220,17 +268,24 @@ struct JSValueWrapper<T&> {
 
     T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
-        return *static_cast<T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_ref_id));
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
+        return *static_cast<T*>(
+            JS_GetOpaque(value, id_manager.GetOrGen<T&>(JS_GetRuntime(ctx))));
     }
 };
 
 template <typename T>
 struct JSValueWrapper<const T> {
     JSValue Wrap(JSContext* ctx, const T& value) {
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
         JSValue obj = JS_NewObjectClass(
-            ctx, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_id);
+            ctx, id_manager.GetOrGen<const T>(JS_GetRuntime(ctx)));
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
@@ -240,18 +295,24 @@ struct JSValueWrapper<const T> {
 
     const T& Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_ASSERT(JS_IsObject(value), "js value is not object");
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
         return *static_cast<const T*>(JS_GetOpaque(
-            value,
-            QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx)).m_const_id));
+            value, id_manager.GetOrGen<const T>(JS_GetRuntime(ctx))));
     }
 };
 
 template <typename T>
 struct JSValueWrapper<const T*> {
     JSValue Wrap(JSContext* ctx, const T* value) {
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
         JSValue obj = JS_NewObjectClass(
-            ctx, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
-                     .m_const_pointer_id);
+            ctx, id_manager.GetOrGen<const T*>(JS_GetRuntime(ctx)));
         if (JS_IsException(obj)) {
             LogJSException(ctx);
         }
@@ -262,8 +323,12 @@ struct JSValueWrapper<const T*> {
     const T* Unwrap(JSContext* ctx, const JSValue& value) {
         NICKEL_RETURN_VALUE_IF_FALSE_LOGE(nullptr, JS_IsObject(value),
                                           "js value is not object");
+        JSRuntime* runtime = JS_GetRuntime(ctx);
+        auto& id_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(runtime))
+                ->GetClassIDManager();
         return static_cast<const T*>(JS_GetOpaque(
-            value, QJSClassIDManager<T>::GetOrGen(JS_GetRuntime(ctx))
+            value, id_manager.GetOrGen<const T*>(JS_GetRuntime(ctx))
                        .m_const_pointer_id));
     }
 };
