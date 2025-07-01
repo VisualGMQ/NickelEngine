@@ -1,6 +1,7 @@
 #pragma once
 #include "nickel/common/assert.hpp"
 #include "nickel/refl/util/type_list.hpp"
+#include "nickel/script/binding/class_id.hpp"
 #include "nickel/script/binding/common.hpp"
 #include "nickel/script/binding/value_wrapper.hpp"
 #include "quickjs.h"
@@ -17,11 +18,13 @@ struct FnParamConverter {
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct FnParamConverter<T&> {
     static T& Convert(JSContext* ctx, JSValue value) {
-        auto& ids = QJSClassIDFamilyManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)))
+                ->GetClassIDFamilyManager();
+        auto ids = id_family_manager.GetOrGen<T>();
         auto id = JS_GetClassID(value);
         if (id == ids.m_id || id == ids.m_ref_id || id == ids.m_pointer_id) {
             return *static_cast<T*>(JS_GetOpaque(value, id));
@@ -31,11 +34,13 @@ struct FnParamConverter<T&> {
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct FnParamConverter<T*> {
     static T* Convert(JSContext* ctx, JSValue value) {
-        auto& ids = QJSClassIDFamilyManager<T>::GetOrGen(JS_GetRuntime(ctx));
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)))
+                ->GetClassIDFamilyManager();
+        auto ids = id_family_manager.GetOrGen<T>();
         auto id = JS_GetClassID(value);
         if (id == ids.m_id || id == ids.m_ref_id || id == ids.m_pointer_id) {
             return static_cast<T*>(JS_GetOpaque(value, id));
@@ -45,16 +50,14 @@ struct FnParamConverter<T*> {
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct FnParamConverter<const T*> {
     static const T* Convert(JSContext*, JSValue value) {
         return static_cast<T*>(JS_GetOpaque(value, JS_GetClassID(value)));
     }
 };
 
-template <typename T>
-requires std::is_class_v<T>
+template <PureClass T>
 struct FnParamConverter<const T&> {
     static const T& Convert(JSContext*, JSValue value) {
         return *static_cast<T*>(JS_GetOpaque(value, JS_GetClassID(value)));
@@ -70,7 +73,10 @@ struct JSConstructorTraits {
         Class* p = callConstructor(ctx, argv,
                                    std::make_index_sequence<sizeof...(Args)>{});
 
-        auto id = QJSClassIDFamilyManager<Class>::GetOrGen(JS_GetRuntime(ctx)).m_id;
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)))
+                ->GetClassIDFamilyManager();
+        auto id = id_family_manager.GetOrGen<Class>().m_id;
         JSValue obj = JS_NewObjectClass(ctx, id);
         if (JS_IsException(obj)) {
             LogJSException(ctx);
@@ -122,7 +128,10 @@ private:
         JSClassID id = JS_GetClassID(self);
         NICKEL_ASSERT(id != 0, "call function on unregistered class");
 
-        auto ids = QJSClassIDFamilyManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)))
+                ->GetClassIDFamilyManager();
+        auto ids = id_family_manager.GetOrGen<clazz>();
 
         if (id == ids.m_id) {
             clazz* self_obj = static_cast<clazz*>(JS_GetOpaque(self, id));
@@ -212,7 +221,10 @@ struct JSMemberVariableTraits {
     static JSValue Getter(JSContext* ctx, JSValue this_val) {
         JSClassID id = JS_GetClassID(this_val);
 
-        auto& ids = QJSClassIDFamilyManager<clazz>::GetOrGen(JS_GetRuntime(ctx));
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)))
+                ->GetClassIDFamilyManager();
+        auto ids = id_family_manager.GetOrGen<clazz>();
         NICKEL_ASSERT(id == ids.m_id || id == ids.m_const_id);
         const clazz* p =
             static_cast<const clazz*>(JS_GetOpaque2(ctx, this_val, id));
@@ -232,9 +244,12 @@ struct JSMemberVariableTraits {
             return JS_ThrowTypeError(ctx, "operate on unregistered cpp class");
         }
 
-        clazz* p = static_cast<clazz*>(JS_GetOpaque2(
-            ctx, this_val,
-            QJSClassIDFamilyManager<clazz>::GetOrGen(JS_GetRuntime(ctx)).m_id));
+        auto& id_family_manager =
+            static_cast<QJSRuntime*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)))
+                ->GetClassIDFamilyManager();
+
+        clazz* p = static_cast<clazz*>(
+            JS_GetOpaque2(ctx, this_val, id_family_manager.GetOrGen<clazz>().m_id));
         if (!p) {
             LOGE("access class variable from nullptr");
             return JS_EXCEPTION;

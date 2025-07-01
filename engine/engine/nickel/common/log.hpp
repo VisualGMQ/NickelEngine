@@ -20,51 +20,52 @@ public:
 
 #define LOGE(fmt, ...)                                                         \
     do {                                                                       \
-        ::nickel::LogSystem::GetInst().m_console_logger->error(fmt,            \
-                                                               ##__VA_ARGS__); \
-        ::nickel::LogSystem::GetInst().m_file_logger->error(fmt,               \
-                                                            ##__VA_ARGS__);    \
+        SPDLOG_LOGGER_ERROR(::nickel::LogSystem::GetInst().m_console_logger,   \
+                            fmt, ##__VA_ARGS__);                               \
+        SPDLOG_LOGGER_ERROR(::nickel::LogSystem::GetInst().m_file_logger, fmt, \
+                            ##__VA_ARGS__);                                    \
     } while (0)
 
 #define LOGW(fmt, ...)                                                        \
     do {                                                                      \
-        ::nickel::LogSystem::GetInst().m_console_logger->warn(fmt,            \
-                                                              ##__VA_ARGS__); \
-        ::nickel::LogSystem::GetInst().m_file_logger->warn(fmt,               \
-                                                           ##__VA_ARGS__);    \
+        SPDLOG_LOGGER_WARN(::nickel::LogSystem::GetInst().m_console_logger,   \
+                           fmt, ##__VA_ARGS__);                               \
+        SPDLOG_LOGGER_WARN(::nickel::LogSystem::GetInst().m_file_logger, fmt, \
+                           ##__VA_ARGS__);                                    \
     } while (0)
 
 #define LOGD(fmt, ...)                                                         \
     do {                                                                       \
-        ::nickel::LogSystem::GetInst().m_console_logger->debug(fmt,            \
-                                                               ##__VA_ARGS__); \
-        ::nickel::LogSystem::GetInst().m_file_logger->debug(fmt,               \
-                                                            ##__VA_ARGS__);    \
+        SPDLOG_LOGGER_DEBUG(::nickel::LogSystem::GetInst().m_console_logger,   \
+                            fmt, ##__VA_ARGS__);                               \
+        SPDLOG_LOGGER_DEBUG(::nickel::LogSystem::GetInst().m_file_logger, fmt, \
+                            ##__VA_ARGS__);                                    \
     } while (0)
 
 #define LOGI(fmt, ...)                                                        \
     do {                                                                      \
-        ::nickel::LogSystem::GetInst().m_console_logger->info(fmt,            \
-                                                              ##__VA_ARGS__); \
-        ::nickel::LogSystem::GetInst().m_file_logger->info(fmt,               \
-                                                           ##__VA_ARGS__);    \
+        SPDLOG_LOGGER_INFO(::nickel::LogSystem::GetInst().m_console_logger,   \
+                           fmt, ##__VA_ARGS__);                               \
+        SPDLOG_LOGGER_INFO(::nickel::LogSystem::GetInst().m_file_logger, fmt, \
+                           ##__VA_ARGS__);                                    \
     } while (0)
 
 #define LOGT(fmt, ...)                                                         \
     do {                                                                       \
-        ::nickel::LogSystem::GetInst().m_console_logger->trace(fmt,            \
-                                                               ##__VA_ARGS__); \
-        ::nickel::LogSystem::GetInst().m_file_logger->trace(fmt,               \
-                                                            ##__VA_ARGS__);    \
+        SPDLOG_LOGGER_TRACE(::nickel::LogSystem::GetInst().m_console_logger,   \
+                            fmt, ##__VA_ARGS__);                               \
+        SPDLOG_LOGGER_TRACE(::nickel::LogSystem::GetInst().m_file_logger, fmt, \
+                            ##__VA_ARGS__);                                    \
     } while (0)
 
-#define LOGC(fmt, ...)                                                         \
-    do {                                                                       \
-        ::nickel::LogSystem::GetInst().m_console_logger->critical(             \
-            fmt, ##__VA_ARGS__);                                               \
-        ::nickel::LogSystem::GetInst().m_file_logger->critical(fmt,            \
-                                                               ##__VA_ARGS__); \
-        assert(false);                                                         \
+#define LOGC(fmt, ...)                                                       \
+    do {                                                                     \
+        SPDLOG_LOGGER_CRITICAL(                                              \
+            ::nickel::LogSystem::GetInst().m_console_logger, fmt,            \
+            ##__VA_ARGS__);                                                  \
+        SPDLOG_LOGGER_CRITICAL(::nickel::LogSystem::GetInst().m_file_logger, \
+                               fmt, ##__VA_ARGS__);                          \
+        assert(false);                                                       \
     } while (0)
 
 }  // namespace nickel
