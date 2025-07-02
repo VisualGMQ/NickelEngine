@@ -1,13 +1,15 @@
 #pragma once
+#include "nickel/common/memory/memory.hpp"
 #include "nickel/ecs/internal/entity_operations.hpp"
-#include "nickel/ecs/archetype.hpp"
 #include "nickel/ecs/internal/sparse_set.hpp"
+#include "nickel/ecs/record.hpp"
+#include "nickel/ecs/table.hpp"
 
 namespace nickel::ecs {
 
 struct EntitySparseSetPolicy {
     using key_type = Entity;
-    using value_type = std::shared_ptr<Record>;
+    using value_type = RecordHandle;
 
     size_t GetIndexFromKey(const key_type& key) const noexcept {
         return EntityGetID(key);
@@ -17,24 +19,26 @@ struct EntitySparseSetPolicy {
         return value->m_dense;
     }
 
-    Entity GetInvalidKey() const noexcept { return null_entity; }
+    Entity GetInvalidKey() const noexcept { return null_id; }
 
-    value_type GetInvalidValue() const noexcept { return nullptr; }
+    value_type GetInvalidValue() const noexcept { return {}; }
 
     void RecordDenseIndex(value_type& value, size_t idx) noexcept {
         value->m_dense = idx;
     }
 
     void ReuseKey(key_type& key) noexcept {
-        // make next generation key
+        // TODO: make next generation key
     }
 };
 
 class World {
 public:
 private:
-    std::shared_ptr<Table> m_root_table;
-    SparseSet<Entity, std::shared_ptr<Record>, EntitySparseSetPolicy> m_records;
+    TableHandle m_root_table;
+    SparseSet<Entity, RecordHandle, EntitySparseSetPolicy> m_records;
+    BlockMemoryAllocator<Table> m_table_allocator;
+    BlockMemoryAllocator<Record> m_record_allocator;
 };
 
 }

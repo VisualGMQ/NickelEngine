@@ -8,7 +8,7 @@ class ImplWrapper {
 public:
     template <typename T>
     friend class Ref;
-    
+
     ImplWrapper() = default;
 
     ImplWrapper(ImplT* impl) : m_impl{impl} {}
@@ -19,7 +19,9 @@ public:
         }
     }
 
-    ImplWrapper(ImplWrapper&& o) noexcept : m_impl{o.m_impl} { o.m_impl = nullptr; }
+    ImplWrapper(ImplWrapper&& o) noexcept : m_impl{o.m_impl} {
+        o.m_impl = nullptr;
+    }
 
     ImplWrapper& operator=(const ImplWrapper& o) {
         if (o.m_impl != m_impl) {
