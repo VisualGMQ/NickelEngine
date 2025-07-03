@@ -8,7 +8,10 @@
 namespace nickel::ecs {
 
 template <typename T>
-concept is_unsigned_integral = std::is_integral_v<T> && std::is_unsigned_v<T>;
+concept is_unsigned_integral =
+    (std::is_integral_v<T> && std::is_unsigned_v<T>) ||
+    (std::is_enum_v<T> && std::is_integral_v<std::underlying_type_t<T>> &&
+     std::is_unsigned_v<std::underlying_type_t<T>>);
 
 template <typename KeyT, typename ValueT, typename Policy>
 concept is_sparse_set_policy = requires(Policy t, Policy& policy_ref, ValueT& value_ref, KeyT& key_ref)

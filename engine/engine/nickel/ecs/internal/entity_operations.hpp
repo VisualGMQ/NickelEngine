@@ -22,4 +22,9 @@ constexpr Entity CreateEntity(bool is_alive, IDUnderlyingType id,
                                EntityVersionMask.GenerateByValue(version));
 }
 
+constexpr Entity EntityIncreaseVersion(Entity e) noexcept {
+    return CreateEntity(EntityIsAlive(e), EntityGetID(e),
+                        EntityGetVersion(e) + 1);
+}
+
 }  // namespace nickel::ecs

@@ -7,6 +7,12 @@
 
 namespace nickel::ecs {
 
+struct ComponentRecord {
+    ComponentID m_id = null_id;
+
+    // SparseSet m_sparse_set;
+};
+
 struct EntitySparseSetPolicy {
     using key_type = Entity;
     using value_type = RecordHandle;
@@ -21,24 +27,35 @@ struct EntitySparseSetPolicy {
 
     Entity GetInvalidKey() const noexcept { return null_id; }
 
-    value_type GetInvalidValue() const noexcept { return {}; }
+    value_type GetInvalidValue() const noexcept { return value_type{}; }
 
     void RecordDenseIndex(value_type& value, size_t idx) noexcept {
         value->m_dense = idx;
     }
 
     void ReuseKey(key_type& key) noexcept {
-        // TODO: make next generation key
+        key = EntityIncreaseVersion(key);
+        if (key == null_id) {
+            key = EntityIncreaseVersion(key);
+        }
     }
 };
 
 class World {
 public:
+    World();
+
+    ComponentRecord* GetComponentRecord(ComponentID);
+
 private:
     TableHandle m_root_table;
     SparseSet<Entity, RecordHandle, EntitySparseSetPolicy> m_records;
+    
+    std::array<ComponentRecord, LowComponentID> m_lo_component_records;
+    std::unordered_map<ComponentID, ComponentRecord> m_hi_component_records;
+    
     BlockMemoryAllocator<Table> m_table_allocator;
     BlockMemoryAllocator<Record> m_record_allocator;
 };
 
-}
+}  // namespace nickel::ecs
